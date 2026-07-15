@@ -119,13 +119,13 @@ class _SurveyPageState extends State<SurveyPage> {
 
 
   static const List<Map<String, String>> workDayOptions = [
-    {'key': 'Mon', 'label': 'Pzt'},
-    {'key': 'Tue', 'label': 'Sal'},
-    {'key': 'Wed', 'label': 'Car'},
-    {'key': 'Thu', 'label': 'Per'},
-    {'key': 'Fri', 'label': 'Cum'},
-    {'key': 'Sat', 'label': 'Cmt'},
-    {'key': 'Sun', 'label': 'Paz'},
+    {'key': 'Mon', 'labelKey': 'dayMonShort'},
+    {'key': 'Tue', 'labelKey': 'dayTueShort'},
+    {'key': 'Wed', 'labelKey': 'dayWedShort'},
+    {'key': 'Thu', 'labelKey': 'dayThuShort'},
+    {'key': 'Fri', 'labelKey': 'dayFriShort'},
+    {'key': 'Sat', 'labelKey': 'daySatShort'},
+    {'key': 'Sun', 'labelKey': 'daySunShort'},
   ];
 
   String get _resolvedPacksPerDay {
@@ -971,11 +971,11 @@ class _SurveyPageState extends State<SurveyPage> {
                 },
               ),
               const SizedBox(height: 10),
-              const Align(
+              Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Calistigin gunler',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  context.t('workDaysLabel'),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(height: 8),
@@ -986,7 +986,7 @@ class _SurveyPageState extends State<SurveyPage> {
                   final key = day['key']!;
                   final selected = workingDays.contains(key);
                   return FilterChip(
-                    label: Text(day['label']!),
+                    label: Text(context.t(day['labelKey']!)),
                     selected: selected,
                     onSelected: (value) {
                       setState(() {
@@ -1003,22 +1003,22 @@ class _SurveyPageState extends State<SurveyPage> {
               const SizedBox(height: 10),
               DropdownButtonFormField<String>(
                 initialValue: weekendSmokingPattern,
-                decoration: const InputDecoration(
-                  labelText: 'Hafta sonu icim paterni',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: context.t('weekendPatternLabel'),
+                  border: const OutlineInputBorder(),
                 ),
-                items: const [
+                items: [
                   DropdownMenuItem(
                     value: 'Ayni',
-                    child: Text('Hafta ici ile ayni'),
+                    child: Text(context.t('weekendPatternSame')),
                   ),
                   DropdownMenuItem(
                     value: 'HaftaSonuDahaFazla',
-                    child: Text('Hafta sonu daha fazla'),
+                    child: Text(context.t('weekendPatternMore')),
                   ),
                   DropdownMenuItem(
                     value: 'HaftaSonuDahaAz',
-                    child: Text('Hafta sonu daha az'),
+                    child: Text(context.t('weekendPatternLess')),
                   ),
                 ],
                 onChanged: (value) {
@@ -1031,7 +1031,7 @@ class _SurveyPageState extends State<SurveyPage> {
               if (workplaceSmokingRule != 'Hayır')
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Is yerinde sigara molasi var mi?'),
+                  title: Text(context.t('smokingBreakExists')),
                   value: hasSmokingBreaks,
                   onChanged: (value) {
                     setState(() {
@@ -1050,9 +1050,9 @@ class _SurveyPageState extends State<SurveyPage> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: breakStart1,
-                  decoration: const InputDecoration(
-                    labelText: '1. mola baslangic',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.t('break1Start'),
+                    border: const OutlineInputBorder(),
                   ),
                   hint: Text(context.t('selectOption')),
                   items: workTimeOptions
@@ -1072,9 +1072,9 @@ class _SurveyPageState extends State<SurveyPage> {
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: breakEnd1,
-                  decoration: const InputDecoration(
-                    labelText: '1. mola bitis',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.t('break1End'),
+                    border: const OutlineInputBorder(),
                   ),
                   hint: Text(context.t('selectOption')),
                   items: workTimeOptions
@@ -1093,7 +1093,7 @@ class _SurveyPageState extends State<SurveyPage> {
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('2. mola var'),
+                  title: Text(context.t('break2Exists')),
                   value: hasSecondBreak,
                   onChanged: (value) {
                     setState(() {
@@ -1109,9 +1109,9 @@ class _SurveyPageState extends State<SurveyPage> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: breakStart2,
-                    decoration: const InputDecoration(
-                      labelText: '2. mola baslangic',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: context.t('break2Start'),
+                      border: const OutlineInputBorder(),
                     ),
                     hint: Text(context.t('selectOption')),
                     items: workTimeOptions
@@ -1131,9 +1131,9 @@ class _SurveyPageState extends State<SurveyPage> {
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     initialValue: breakEnd2,
-                    decoration: const InputDecoration(
-                      labelText: '2. mola bitis',
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: context.t('break2End'),
+                      border: const OutlineInputBorder(),
                     ),
                     hint: Text(context.t('selectOption')),
                     items: workTimeOptions
