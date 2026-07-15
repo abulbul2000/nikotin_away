@@ -881,30 +881,13 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    final lastPromptRaw = await _storageService.loadSetting(
-      'last_weekly_survey_prompt_at',
-    );
-    final now = DateTime.now();
-    var promptedToday = false;
-    if (lastPromptRaw != null && lastPromptRaw.trim().isNotEmpty) {
-      final parsed = DateTime.tryParse(lastPromptRaw);
-      if (parsed != null &&
-          parsed.year == now.year &&
-          parsed.month == now.month &&
-          parsed.day == now.day) {
-        promptedToday = true;
-      }
-    }
-
+    final promptedToday = await _storageService.hasWeeklySurveyBeenPromptedToday();
     if (promptedToday) {
       return;
     }
 
     _weeklySurveyPromptShownSession = true;
-    await _storageService.saveSetting(
-      'last_weekly_survey_prompt_at',
-      now.toIso8601String(),
-    );
+    await _storageService.markWeeklySurveyPromptedToday();
 
     if (!mounted) {
       return;

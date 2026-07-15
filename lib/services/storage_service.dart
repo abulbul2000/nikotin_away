@@ -46,7 +46,7 @@ class StorageService {
     final path = p.join(documentsDirectory.path, 'no_smoke.db');
     return openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -76,6 +76,7 @@ class StorageService {
         await _ensureBehaviorSnapshotTable(db);
         await _ensureTaskFollowUpTable(db);
         await _ensureProtocolViolationTable(db);
+        await _ensureIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         await _ensureColumn(db, 'packsPerDay', 'TEXT');
@@ -92,6 +93,9 @@ class StorageService {
         await _ensureBehaviorSnapshotTable(db);
         await _ensureTaskFollowUpTable(db);
         await _ensureProtocolViolationTable(db);
+        if (oldVersion < 9) {
+          await _ensureIndexes(db);
+        }
       },
     );
   }
@@ -237,6 +241,32 @@ class StorageService {
       _protocolViolationTable,
       'source',
       "TEXT NOT NULL DEFAULT 'app_flow'",
+    );
+  }
+
+  Future<void> _ensureIndexes(Database db) async {
+    // app_events: sıralama ve tür filtreleri için
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_app_events_completedAt ON $_tableName (completedAt)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_app_events_type ON $_tableName (type)',
+    );
+    // sensor_usage_events: tarih aralığı sorguları için
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sensor_usage_createdAt ON $_sensorUsageTable (createdAt)',
+    );
+    // behavior_snapshots: son snapshot'a erişim için
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_behavior_snapshot_createdAt ON $_behaviorSnapshotTable (createdAt)',
+    );
+    // task_followups: bekleyen görevler için
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_task_followups_status_scheduledAt ON $_taskFollowUpTable (status, scheduledAt)',
+    );
+    // protocol_violations: çözülmemiş ihlaller için
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_protocol_violations_resolved_createdAt ON $_protocolViolationTable (resolved, createdAt)',
     );
   }
 
@@ -860,6 +890,30 @@ class StorageService {
       return null;
     }
     return lastSurveyDate.add(maxAge);
+  }
+
+  /// Bugün kullanıcıya haftalık anket hatırlatıcısı gösterildi mi?
+  Future<bool> hasWeeklySurveyBeenPromptedToday() async {
+    final raw = await loadSetting('last_weekly_survey_prompt_at');
+    if (raw == null || raw.trim().isEmpty) {
+      return false;
+    }
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) {
+      return false;
+    }
+    final now = DateTime.now();
+    return parsed.year == now.year &&
+        parsed.month == now.month &&
+        parsed.day == now.day;
+  }
+
+  /// Bugün için haftalık anket hatırlatıcısının gösterildiğini işaretle.
+  Future<void> markWeeklySurveyPromptedToday() async {
+    await saveSetting(
+      'last_weekly_survey_prompt_at',
+      DateTime.now().toIso8601String(),
+    );
   }
 
   Future<void> saveSleepTime(String sleepTime) async {
