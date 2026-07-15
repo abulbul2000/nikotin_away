@@ -2,6 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+/// Android-native foreground servis + alarm tabanlı watchdog köprüsü.
+///
+/// iOS / masaüstü gibi Android-dışı platformlarda tüm metodlar sessizce
+/// no-op döner; uygulama çökmez ancak yanıtsızlık ihlalleri üretilmez.
+/// iOS için watchdog desteği gerekiyorsa bu sınıfa paralel bir
+/// iOS implementasyonu eklenmelidir.
 class AndroidWatchdogService {
   static const MethodChannel _channel = MethodChannel('no_smoke/watchdog');
 

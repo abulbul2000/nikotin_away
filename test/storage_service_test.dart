@@ -148,4 +148,94 @@ void main() {
     expect(await storage.loadIsProfileCompleted(), isTrue);
     expect(await storage.loadInitialRegistrationCompleted(), isTrue);
   });
+
+  // --- Haftalık kadans iş kuralları ---
+
+  test('isWeeklySurveyOverdue: anket yoksa false döner', () async {
+    final storage = StorageService();
+    expect(await storage.isWeeklySurveyOverdue(), isFalse);
+  });
+
+  test('isWeeklySurveyOverdue: 6 gün geçmişse false döner', () async {
+    final storage = StorageService();
+    final sixDaysAgo = DateTime.now().subtract(const Duration(days: 6));
+    await storage.saveSurveyRecord(
+      SurveyRecord(
+        id: 'w1',
+        completedAt: sixDaysAgo,
+        type: 'initial',
+        title: 'Başlangıç',
+        name: 'Test',
+        packsPerDay: '1',
+        exhaleTestSeconds: 5,
+        inhaleTestSeconds: 5,
+        riskScore: 30,
+        riskLevel: 'DÜŞÜK',
+      ),
+    );
+    expect(await storage.isWeeklySurveyOverdue(), isFalse);
+  });
+
+  test('isWeeklySurveyOverdue: 8 gün geçmişse true döner', () async {
+    final storage = StorageService();
+    final eightDaysAgo = DateTime.now().subtract(const Duration(days: 8));
+    await storage.saveSurveyRecord(
+      SurveyRecord(
+        id: 'w2',
+        completedAt: eightDaysAgo,
+        type: 'weekly',
+        title: 'Haftalık',
+        name: 'Test',
+        packsPerDay: '1',
+        exhaleTestSeconds: 5,
+        inhaleTestSeconds: 5,
+        riskScore: 35,
+        riskLevel: 'ORTA',
+      ),
+    );
+    expect(await storage.isWeeklySurveyOverdue(), isTrue);
+  });
+
+  test('loadWeeklySurveyDueDate: son anketten 7 gün sonrasını döner', () async {
+    final storage = StorageService();
+    final surveyDate = DateTime(2025, 3, 1);
+    await storage.saveSurveyRecord(
+      SurveyRecord(
+        id: 'w3',
+        completedAt: surveyDate,
+        type: 'initial',
+        title: 'Başlangıç',
+        name: 'Test',
+        packsPerDay: '1',
+        exhaleTestSeconds: 5,
+        inhaleTestSeconds: 5,
+        riskScore: 30,
+        riskLevel: 'DÜŞÜK',
+      ),
+    );
+    final dueDate = await storage.loadWeeklySurveyDueDate();
+    expect(dueDate, equals(DateTime(2025, 3, 8)));
+  });
+
+  test('hasWeeklySurveyBeenPromptedToday: başlangıçta false', () async {
+    final storage = StorageService();
+    expect(await storage.hasWeeklySurveyBeenPromptedToday(), isFalse);
+  });
+
+  test('markWeeklySurveyPromptedToday: işaretlendikten sonra true döner', () async {
+    final storage = StorageService();
+    await storage.markWeeklySurveyPromptedToday();
+    expect(await storage.hasWeeklySurveyBeenPromptedToday(), isTrue);
+  });
+
+  test('markWeeklySurveyPromptedToday: geçmiş tarihten sonra false döner', () async {
+    final storage = StorageService();
+    // Dün için kayıt
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    await storage.saveSetting(
+      'last_weekly_survey_prompt_at',
+      yesterday.toIso8601String(),
+    );
+    expect(await storage.hasWeeklySurveyBeenPromptedToday(), isFalse);
+  });
 }
