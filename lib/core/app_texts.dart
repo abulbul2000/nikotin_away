@@ -74,6 +74,9 @@ class AppTexts {
     'updatedWorkStart': 'Yeni mesai başlangıç saati',
     'updatedWorkEnd': 'Yeni mesai bitiş saati',
     'updatedWorkplaceRule': 'İş yerinde sigara kuralı',
+    'trialInfoTitle': '14 Gunluk Ucretsiz Deneme',
+    'trialInfoMessage':
+      'No Smoke uygulamasini 14 gun boyunca ucretsiz deneyebilirsin. Bu surede gunluk gorevler, nefes testleri ve haftalik anketlerle birakma surecini yakindan takip edecegiz.',
   };
 
   // English - Full translation
@@ -149,6 +152,9 @@ class AppTexts {
     'updatedWorkStart': 'Updated work start time',
     'updatedWorkEnd': 'Updated work end time',
     'updatedWorkplaceRule': 'Workplace smoking rule',
+    'trialInfoTitle': '14-Day Free Trial',
+    'trialInfoMessage':
+      'You can use No Smoke free for 14 days. During this period, we guide your quit journey with daily tasks, breath tests, and weekly surveys.',
   };
 
   // All 40 languages - each inherits from EN, with top keys translated

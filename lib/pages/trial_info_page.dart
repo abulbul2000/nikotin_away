@@ -66,7 +66,9 @@ class TrialInfoPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -81,18 +83,24 @@ class TrialInfoPage extends StatelessWidget {
                   Text(
                     context.t('trialInfoTitle'),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
+                      color: colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Card(
+                    color: colorScheme.surfaceContainerHighest,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
                         context.t('trialInfoMessage'),
-                        style: const TextStyle(fontSize: 16, height: 1.45),
+                        style: TextStyle(
+                          fontSize: 16,
+                          height: 1.45,
+                          color: colorScheme.onSurface,
+                        ),
                         textAlign: TextAlign.left,
                       ),
                     ),

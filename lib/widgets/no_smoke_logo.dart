@@ -5,17 +5,21 @@ class NoSmokeLogo extends StatelessWidget {
   final double size;
   final bool showLabel;
   final Color? iconColor;
+  final Color? labelColor;
 
   const NoSmokeLogo({
     super.key,
     this.size = 96,
     this.showLabel = false,
     this.iconColor,
+    this.labelColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final logoSize = size.clamp(48, 240).toDouble();
+    final effectiveIconColor = iconColor ?? Theme.of(context).colorScheme.onSurface;
+    final effectiveLabelColor = labelColor ?? Theme.of(context).colorScheme.onSurface;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -26,9 +30,7 @@ class NoSmokeLogo extends StatelessWidget {
             child: SvgPicture.asset(
               'assets/images/no_smoke_logo.svg',
               fit: BoxFit.cover,
-              colorFilter: iconColor == null
-                  ? null
-                  : ColorFilter.mode(iconColor!, BlendMode.srcIn),
+              colorFilter: ColorFilter.mode(effectiveIconColor, BlendMode.srcIn),
               placeholderBuilder: (_) => _buildPlaceholder(logoSize),
             ),
           ),
@@ -40,7 +42,7 @@ class NoSmokeLogo extends StatelessWidget {
                 fontSize: (logoSize * 0.17).clamp(14, 28).toDouble(),
                 fontWeight: FontWeight.w800,
                 letterSpacing: 2.2,
-                color: Colors.white,
+                color: effectiveLabelColor,
               ),
             ),
           ],
