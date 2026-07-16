@@ -185,7 +185,7 @@ class RiskResultPage extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
-           i       children: [
+                  children: [
                     Text(
                       context.t('taskCountToday'),
                       style: const TextStyle(
