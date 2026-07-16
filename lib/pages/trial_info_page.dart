@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
-import '../models/survey_record.dart';
+import '../core/home_seed_resolver.dart';
 import '../services/storage_service.dart';
 import '../widgets/no_smoke_logo.dart';
 import 'breath_test_page.dart';
@@ -9,29 +9,6 @@ import 'survey_page.dart';
 
 class TrialInfoPage extends StatelessWidget {
   const TrialInfoPage({super.key});
-
-  Map<String, dynamic> _resolveHomeSeed(List<SurveyRecord> records) {
-    String name = 'User';
-    String packsPerDay = '1 paketten az';
-
-    for (final record in records.reversed) {
-      if (record.name.toString().trim().isNotEmpty) {
-        name = record.name.toString().trim();
-        break;
-      }
-    }
-
-    for (final record in records.reversed) {
-      if (record.type == 'breath_test' ||
-          record.type == 'weekly' ||
-          record.type == 'initial') {
-        packsPerDay = record.packsPerDay;
-        break;
-      }
-    }
-
-    return {'name': name, 'packsPerDay': packsPerDay};
-  }
 
   Future<void> _continue(BuildContext context) async {
     final storage = StorageService();
@@ -50,13 +27,13 @@ class TrialInfoPage extends StatelessWidget {
       return;
     }
 
-    final seed = _resolveHomeSeed(records);
+    final seed = HomeSeedResolver.fromRecords(records);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => BreathTestPage(
-          name: seed['name'] as String,
-          packsPerDay: seed['packsPerDay'] as String,
+          name: seed.name,
+          packsPerDay: seed.packsPerDay,
           navigateToHomeOnComplete: true,
           askWeeklySurveyOnComplete: true,
         ),

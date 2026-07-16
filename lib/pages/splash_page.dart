@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../core/home_seed_resolver.dart';
 import '../main.dart';
-import '../models/survey_record.dart';
 import '../services/language_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/no_smoke_logo.dart';
@@ -76,38 +76,6 @@ class _SplashPageState extends State<SplashPage> {
     }
   }
 
-  Map<String, dynamic> _resolveHomeSeed(List<SurveyRecord> records) {
-    String name = 'User';
-    String packsPerDay = '1 paketten az';
-    int riskScore = 40;
-    String riskLevel = 'ORTA';
-
-    for (final record in records.reversed) {
-      if (record.name.toString().trim().isNotEmpty) {
-        name = record.name.toString().trim();
-        break;
-      }
-    }
-
-    for (final record in records.reversed) {
-      if (record.type == 'breath_test' ||
-          record.type == 'weekly' ||
-          record.type == 'initial') {
-        packsPerDay = record.packsPerDay;
-        riskScore = record.riskScore;
-        riskLevel = record.riskLevel;
-        break;
-      }
-    }
-
-    return {
-      'name': name,
-      'packsPerDay': packsPerDay,
-      'riskScore': riskScore,
-      'riskLevel': riskLevel,
-    };
-  }
-
   Future<void> _goNext() async {
     if (!mounted) return;
 
@@ -127,13 +95,13 @@ class _SplashPageState extends State<SplashPage> {
     }
 
     // Setup yapılmışsa BreathTestPage'e git
-    final seed = _resolveHomeSeed(records);
+    final seed = HomeSeedResolver.fromRecords(records);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
         builder: (_) => BreathTestPage(
-          name: seed['name'] as String,
-          packsPerDay: seed['packsPerDay'] as String,
+          name: seed.name,
+          packsPerDay: seed.packsPerDay,
           navigateToHomeOnComplete: true,
           askWeeklySurveyOnComplete: true,
         ),
