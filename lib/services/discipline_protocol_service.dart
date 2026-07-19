@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../models/adaptive_task_models.dart';
 import '../models/sensor_usage_event.dart';
 
 class DisciplineProtocolService {
@@ -260,5 +261,230 @@ class DisciplineProtocolService {
       }
     }
     return false;
+  }
+
+  AdaptiveTaskPlan buildDailyAdaptivePlan({
+    required DateTime now,
+    required DateTime sleepAt,
+    required List<String> riskyHours,
+    required AdaptiveTaskState state,
+    required List<AdaptiveHourlyProfileEntry> hourlyProfiles,
+    int baselineTaskCount = 5,
+  }) {
+    final successRate = state.movingSuccessRate.clamp(0, 1);
+    final failureRate = state.movingFailureRate.clamp(0, 1);
+    final postponeRate = state.postponeRate.clamp(0, 1);
+
+    var targetTaskCount = baselineTaskCount;
+    if (successRate >= 0.75) {
+      targetTaskCount += 1;
+    }
+    if (successRate >= 0.88) {
+      targetTaskCount += 1;
+    }
+    if (failureRate >= 0.45) {
+      targetTaskCount -= 1;
+    }
+    if (postponeRate >= 0.5) {
+      targetTaskCount -= 1;
+    }
+
+    targetTaskCount += _random.nextInt(3) - 1;
+    targetTaskCount = targetTaskCount.clamp(3, 9);
+
+    var baseDurationMinutes =
+        10 + ((state.difficultyLevel - 1) * 4).round() +
+        (state.selfControlScore / 30).round();
+    baseDurationMinutes += _random.nextInt(4) - 1;
+    baseDurationMinutes = baseDurationMinutes.clamp(10, 180);
+
+    final moments = generateUnpredictableMoments(
+      now: now,
+      sleepAt: sleepAt,
+      riskyHours: riskyHours,
+      minCount: targetTaskCount,
+      successRate: successRate.toDouble(),
+    );
+
+    final items = <AdaptiveTaskPlanItem>[];
+    for (var i = 0; i < targetTaskCount; i++) {
+      final scheduledAt = i < moments.length
+          ? moments[i]
+          : now.add(Duration(minutes: 20 + (i * 35) + _random.nextInt(20)));
+      final hourEntry = _findProfileEntry(
+        hour: scheduledAt.hour,
+        hourlyProfiles: hourlyProfiles,
+      );
+
+      final strainOffset = hourEntry == null
+          ? 0
+          : (hourEntry.strainScore >= 70
+                ? -2
+                : hourEntry.strainScore <= 35
+                ? 2
+                : 0);
+      final progressiveStep = i == 0
+          ? 0
+          : (2 + (state.difficultyLevel / 3).floor());
+      final duration = (baseDurationMinutes +
+              (progressiveStep * i) +
+              strainOffset +
+              (_random.nextInt(5) - 2))
+          .clamp(8, 180)
+          .toInt();
+
+      items.add(
+        AdaptiveTaskPlanItem(
+          scheduledAt: scheduledAt,
+          durationMinutes: duration,
+          taskTitle: 'ADAPTIVE_NO_SMOKE:$duration',
+        ),
+      );
+    }
+
+    return AdaptiveTaskPlan(
+      targetTaskCount: targetTaskCount,
+      baseDurationMinutes: baseDurationMinutes,
+      items: items,
+    );
+  }
+
+  Duration computeAdaptivePostponeDelay({
+    required AdaptiveTaskState state,
+    int baseMinutes = 10,
+  }) {
+    var minutes = baseMinutes;
+    if (state.postponeRate >= 0.45) {
+      minutes += 4;
+    }
+    if (state.postponeRate >= 0.65) {
+      minutes += 3;
+    }
+    if (state.movingSuccessRate >= 0.75) {
+      minutes -= 1;
+    }
+    if (state.avgResponseMinutes >= 15) {
+      minutes += 2;
+    }
+
+    minutes += _random.nextInt(7) - 2;
+    return Duration(minutes: minutes.clamp(8, 25).toInt());
+  }
+
+  AdaptiveTaskState evolveStateFromOutcome({
+    required AdaptiveTaskState current,
+    required String outcome,
+    required int responseDelayMinutes,
+  }) {
+    final isSuccess = outcome == AdaptiveTaskOutcome.success;
+    final isDeferred = outcome == AdaptiveTaskOutcome.deferred;
+    final isSmoked = outcome == AdaptiveTaskOutcome.smoked;
+
+    var selfControl = current.selfControlScore;
+    var difficulty = current.difficultyLevel;
+    var capacity = current.dailyTaskCapacity;
+    var successStreak = current.successStreak;
+    var failureStreak = current.failureStreak;
+
+    if (isSuccess) {
+      selfControl += 2.8;
+      difficulty += 0.24;
+      capacity += 0.10;
+      successStreak += 1;
+      failureStreak = 0;
+    } else if (isDeferred) {
+      selfControl -= 0.6;
+      difficulty -= 0.03;
+      capacity -= 0.02;
+      successStreak = 0;
+    } else if (isSmoked) {
+      selfControl -= 2.3;
+      difficulty -= 0.33;
+      capacity -= 0.12;
+      failureStreak += 1;
+      successStreak = 0;
+    }
+
+    final updated = current.copyWith(
+      selfControlScore: selfControl.clamp(5, 100),
+      difficultyLevel: difficulty.clamp(1, 10),
+      dailyTaskCapacity: capacity.clamp(3, 9),
+      postponeRate: _ewma(
+        previous: current.postponeRate,
+        incoming: isDeferred ? 1 : 0,
+        alpha: 0.15,
+      ).clamp(0, 1),
+      movingSuccessRate: _ewma(
+        previous: current.movingSuccessRate,
+        incoming: isSuccess ? 1 : 0,
+        alpha: 0.18,
+      ).clamp(0, 1),
+      movingFailureRate: _ewma(
+        previous: current.movingFailureRate,
+        incoming: isSmoked ? 1 : 0,
+        alpha: 0.18,
+      ).clamp(0, 1),
+      avgResponseMinutes: _ewma(
+        previous: current.avgResponseMinutes,
+        incoming: responseDelayMinutes.toDouble(),
+        alpha: 0.20,
+      ).clamp(1, 240),
+      successStreak: successStreak,
+      failureStreak: failureStreak,
+      updatedAt: DateTime.now(),
+    );
+
+    return updated;
+  }
+
+  AdaptiveHourlyProfileEntry evolveHourlyProfileFromOutcome({
+    required AdaptiveHourlyProfileEntry current,
+    required String outcome,
+    required int responseDelayMinutes,
+  }) {
+    final isSuccess = outcome == AdaptiveTaskOutcome.success;
+    final isDeferred = outcome == AdaptiveTaskOutcome.deferred;
+    final isSmoked = outcome == AdaptiveTaskOutcome.smoked;
+
+    final strainDelta = isSuccess
+        ? -0.45
+        : isDeferred
+        ? 0.30
+        : isSmoked
+        ? 0.85
+        : 0.0;
+
+    return current.copyWith(
+      strainScore: (current.strainScore + strainDelta).clamp(0, 100),
+      successCount: current.successCount + (isSuccess ? 1 : 0),
+      failureCount: current.failureCount + (isSmoked ? 1 : 0),
+      deferCount: current.deferCount + (isDeferred ? 1 : 0),
+      avgResponseMinutes: _ewma(
+        previous: current.avgResponseMinutes,
+        incoming: responseDelayMinutes.toDouble(),
+        alpha: 0.20,
+      ).clamp(1, 240),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  AdaptiveHourlyProfileEntry? _findProfileEntry({
+    required int hour,
+    required List<AdaptiveHourlyProfileEntry> hourlyProfiles,
+  }) {
+    for (final entry in hourlyProfiles) {
+      if (entry.hour == hour) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  double _ewma({
+    required double previous,
+    required double incoming,
+    required double alpha,
+  }) {
+    return (previous * (1 - alpha)) + (incoming * alpha);
   }
 }

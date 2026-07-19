@@ -15,6 +15,7 @@ class RiskResultPage extends StatelessWidget {
   final int exhaleTestSeconds;
   final int inhaleTestSeconds;
   final UserBehaviorProfile? behaviorProfile;
+  final bool persistBreathResultOnContinue;
 
   const RiskResultPage({
     super.key,
@@ -25,6 +26,7 @@ class RiskResultPage extends StatelessWidget {
     this.exhaleTestSeconds = 0,
     this.inhaleTestSeconds = 0,
     this.behaviorProfile,
+    this.persistBreathResultOnContinue = true,
   });
 
   Color getRiskColor() {
@@ -259,6 +261,23 @@ class RiskResultPage extends StatelessWidget {
               child: ElevatedButton(
                 key: const ValueKey('risk_result_continue_button'),
                 onPressed: () async {
+                  if (!persistBreathResultOnContinue) {
+                    if (!context.mounted) return;
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => HomePage(
+                          name: name,
+                          riskScore: riskScore,
+                          riskLevel: riskLevel,
+                          autoCompleteRegistrationOnLoad: true,
+                        ),
+                      ),
+                      (route) => false,
+                    );
+                    return;
+                  }
+
                   try {
                     final storage = StorageService();
                     final breathTitle = context.t('breathTestRecordTitle');

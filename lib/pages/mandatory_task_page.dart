@@ -36,7 +36,7 @@ class MandatoryTaskPage extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      taskTitle,
+                      AppTexts.localizeCanonicalText(context, taskTitle),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 18,

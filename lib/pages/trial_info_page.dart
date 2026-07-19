@@ -55,7 +55,11 @@ class TrialInfoPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const NoSmokeLogo(size: 150, showLabel: true),
+                  const NoSmokeLogo(
+                    size: 150,
+                    showLabel: true,
+                    iconColor: Color(0xFFE3425A),
+                  ),
                   const SizedBox(height: 24),
                   Text(
                     context.t('trialInfoTitle'),

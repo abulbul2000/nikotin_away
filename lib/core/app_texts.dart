@@ -1,6 +1,17 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'generated_language_data.dart';
 
 class AppTexts {
+  static final Map<String, Map<String, String>> _runtimeLanguageData =
+      <String, Map<String, String>>{};
+  static final Map<String, Future<void>> _languageLoadFutures =
+      <String, Future<void>>{};
+  static const String _runtimeCachePrefix = 'runtime_i18n_';
   // Turkish - Full translation
   static const Map<String, String> _tr = {
     'appName': 'NO SMOKE',
@@ -13,6 +24,7 @@ class AppTexts {
     'weeklySurvey': 'Haftalık Anket',
     'riskAnalysis': 'Risk Analizi',
     'retry': 'Tekrar dene',
+    'iBreathed': 'Nefes Aldim',
     'start': 'Başla',
     'test': 'Test',
     'good': 'İyi',
@@ -35,6 +47,23 @@ class AppTexts {
     'triggerTitle': 'Sigara Tetikleyicileri',
     'stressTitle': 'Stres Seviyesi',
     'quitReasonTitle': 'Bırakma Sebebi',
+    'heartDisease': 'Kalp Hastaligi',
+    'packsPerDayQuestion': 'Gunde kac paket?',
+    'firstCigaretteWhen': 'Ilk sigara ne zaman?',
+    'firstCigarette10to30': 'Uyandiktan 10-30 dk sonra',
+    'maxSmokeFreeDuration': 'Sigarasiz kalabildigin maksimum sure',
+    'smokeFree30to60': '30-60 dakika',
+    'smokingYears': 'Kac yildir iciyorsun?',
+    'triggerCoffee': 'Kahve',
+    'triggerMeal': 'Yemek sonrasi',
+    'triggerDriving': 'Arac kullanirken',
+    'triggerStress': 'Stresliyken',
+    'triggerPhone': 'Telefonda',
+    'triggerSocial': 'Sosyal ortam',
+    'triggerAlcohol': 'Alkol',
+    'stressMedium': 'Orta',
+    'quitReason': 'Birakma sebebi',
+    'quitHealth': 'Sagligim icin',
     'riskCritical': 'KRİTİK',
     'riskHigh': 'YÜKSEK',
     'riskMedium': 'ORTA',
@@ -44,6 +73,7 @@ class AppTexts {
     'validationGenderRequired': 'Lütfen cinsiyet seçin.',
     'hello': 'Merhaba',
     'weeklySavePrompt': 'Bu haftaki durumunuzu kaydedin.',
+    'weeklySurveyPromptAsk': 'Haftalik anketi simdi doldurmak ister misiniz?',
     'saveErrorRetry': 'Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.',
     'smokeFreeStreak': 'Sigara İçmeme Serisi',
     'healthMetrics': 'Sağlık Metrikleri',
@@ -74,6 +104,472 @@ class AppTexts {
     'updatedWorkStart': 'Yeni mesai başlangıç saati',
     'updatedWorkEnd': 'Yeni mesai bitiş saati',
     'updatedWorkplaceRule': 'İş yerinde sigara kuralı',
+    'searchLanguages': 'Dilleri ara...',
+    'otherLanguages': 'Diğer diller',
+    'backToMain': 'Ana listeye dön',
+    'notSpecified': 'Belirtilmedi',
+    'unknownValue': 'Bilinmiyor',
+    'breathRestInstruction':
+      'Kısa dinlenme: Normal nefes alın.\nSonraki denemeye hazırlanın.',
+    'breathActiveInstruction':
+      'Dik oturun, burundan derin nefes alın,\n2 saniye tutun ve tek seferde kontrollü verin.\n\n3 deneme yapılacak, en iyi skor kaydedilir.',
+    'completeRegistrationError':
+      'Kaydı tamamlanırken bir hata oluştu. Lütfen tekrar deneyin.',
+    'dayUnit': 'gün',
+    'exhaleCapacity': 'Nefes Verme Kapasitesi (Exhale)',
+    'inhaleCapacity': 'Nefes Alma Kapasitesi (Inhale)',
+    'trendLabel': 'Trend',
+    'levelLabel': 'Seviye',
+    'totalTestCount': 'Toplam Test Sayısı',
+    'firstTestDate': 'İlk test',
+    'averageExhale': 'Ortalama Exhale',
+    'averageInhale': 'Ortalama Inhale',
+    'minLabel': 'Min',
+    'maxLabel': 'Max',
+    'exhaleLabel': 'Exhale',
+    'inhaleLabel': 'Inhale',
+    'few': 'Az',
+    'veryHigh': 'Çok',
+    'weeklyAvgDailyCigarettes': 'Ortalama günlük sigara',
+    'asthma': 'Astim',
+    'chainSmokingAsk': 'Arka arkaya sigara icer misin?',
+    'chainSmokingCountAsk': 'Genelde kac adet arka arkaya iciyorsun?',
+    'chainSmokingSituation': 'Ardisik icim durumu',
+    'continueWithoutPermission': 'Izinsiz devam et',
+    'copd': 'KOAH',
+    'diabetes': 'Diyabet',
+    'firstCigarette0to5': 'Uyandiktan 0-5 dk sonra',
+    'firstCigarette5to10': 'Uyandiktan 5-10 dk sonra',
+    'firstCigarette30to60': 'Uyandiktan 30-60 dk sonra',
+    'firstCigarette60plus': 'Uyandiktan 60+ dk sonra',
+    'fivePack': '5 paket',
+    'fivePlusCig': '5+ adet',
+    'fourCig': '4 adet',
+    'fourPack': '4 paket',
+    'hypertension': 'Hipertansiyon',
+    'initialRecordTitle': 'Baslangic Kaydi',
+    'lessThanOnePack': '1 paketten az',
+    'notificationPermissionRequired':
+      'Bildirim izni olmadan hatirlaticilar calismayabilir.',
+    'onePack': '1 paket',
+    'onlyBreaks': 'Sadece mola saatlerinde',
+    'openAlarmReminderSettings': 'Alarm/Hatirlatici Ayarlari',
+    'openSettings': 'Ayarlari Ac',
+    'packsApproxQuestion': 'Yaklasik kac paket?',
+    'permissionsRetryMessage':
+      'Gerekli izinler olmadan uygulama ozellikleri sinirli calisir.',
+    'permissionsRetryTitle': 'Izinleri tekrar dene',
+    'professionEngineer': 'Muhendis',
+    'professionFreelance': 'Serbest Calisiyor',
+    'professionHealthcare': 'Saglik Calisani',
+    'professionOfficer': 'Memur',
+    'professionOther': 'Diger',
+    'professionRetired': 'Emekli',
+    'professionStudent': 'Ogrenci',
+    'professionTeacher': 'Ogretmen',
+    'professionTradesman': 'Esnaf',
+    'professionWorker': 'Isci',
+    'quitChildren': 'Cocuklarim icin',
+    'quitFamily': 'Ailem icin',
+    'quitMoney': 'Maddi nedenler',
+    'quitPerformance': 'Performansimi artirmak',
+    'sensorPermissionRecommended':
+      'Daha dogru takip icin hareket/sensor izni onerilir.',
+    'sevenPlusPack': '7+ paket',
+    'sixPack': '6 paket',
+    'sleepTime': 'Uyku saati',
+    'smokeFree0to15': '0-15 dakika',
+    'smokeFree15to30': '15-30 dakika',
+    'smokeFree60to120': '60-120 dakika',
+    'smokeFree120to240': '120-240 dakika',
+    'smokeFree240plus': '240+ dakika',
+    'stressHigh': 'Yuksek',
+    'stressLow': 'Dusuk',
+    'threeCig': '3 adet',
+    'threePack': '3 paket',
+    'threePlusPack': '3+ paket',
+    'twoCig': '2 adet',
+    'twoPack': '2 paket',
+    'validationChainCountRequired':
+      'Lutfen ardisik icim adedini secin.',
+    'validationChainHabitRequired':
+      'Lutfen ardisik icim durumunu secin.',
+    'validationSleepTimeRequired': 'Lutfen uyku saatini secin.',
+    'validationSmokeYearsRange':
+      'Sigara suresi 0 ile 90 yil arasinda olmalidir.',
+    'validationWakeTimeRequired': 'Lutfen uyanis saatini secin.',
+    'wakeTime': 'Uyanis saati',
+    'workEnd': 'Mesai bitis',
+    'workplaceSmoking': 'Is yerinde sigara kurali',
+    'workStart': 'Mesai baslangic',
+    'weeklyComparedLastWeek': 'Geçen haftaya göre',
+    'weeklyDecrease': 'Azaldı',
+    'weeklySame': 'Aynı',
+    'weeklyIncrease': 'Arttı',
+    'weeklyLapseCount': 'Kayma sayısı (lapse)',
+    'weeklyCravingAvg': 'Craving ortalama (0-10)',
+    'weeklyCravingMax': 'Craving maksimum (0-10)',
+    'weeklyWithdrawalSymptoms': 'Yoksunluk belirtileri (0-3)',
+    'weeklyIrritability': 'Sinirlilik',
+    'weeklyAnxiety': 'Anksiyete',
+    'weeklySleepIssue': 'Uyku problemi',
+    'weeklyConcentrationIssue': 'Konsantrasyon problemi',
+    'weeklyAppetiteIncrease': 'İştah artışı',
+    'weeklyTriggerExposure': 'Tetikleyici maruziyeti (gün/saat 0-7)',
+    'weeklyVehicleUse': 'Araç kullanımı',
+    'weeklyAlcoholTrigger': 'Alkol tetiği',
+    'weeklyAlcoholDays': 'Alkol kullanılan gün',
+    'weeklySocialSmokingDays': 'Sigaralı sosyal ortam günü',
+    'weeklyMedicationUse': 'Tedavi/NRT kullanımı',
+    'weeklyNone': 'Yok',
+    'weeklyIrregular': 'Düzenli değil',
+    'weeklyRegular': 'Düzenli',
+    'weeklySideEffectsExperienced': 'İlaç/NRT yan etkisi yaşandı',
+    'weeklyUsedCounseling': 'Danışmanlık/quitline kullanıldı',
+    'weeklyMedicationAdherence': 'Tedavi uyumu (0-10)',
+    'weeklyFamilySupport': 'Aile/sosyal destek (0-10)',
+    'weeklySelfEfficacy': 'Öz yeterlilik (0-10)',
+    'weeklyMotivation': 'Motivasyon (0-10)',
+    'weeklyTaskCompletion': 'Haftalık görev tamamlama (0-10)',
+    'weeklyTaskAdherence': 'Günlük görevlere ne kadar uydun?',
+    'weeklyCommandBurden': 'Komutlar seni rahatsız etti mi?',
+    'weeklyDailyBreathTarget': 'Günlük nefes testi sayısı tercihin (min 1)',
+    'weeklyBreathOnceMandatory': '1 kez (zorunlu minimum)',
+    'weeklyBreathTwice': '2 kez',
+    'weeklyBreathThree': '3 kez',
+    'weeklyBreathFour': '4 kez',
+    'weeklyMmrcGrade': 'Nefes darlığı derecesi (mMRC benzeri 1-5)',
+    'weeklyMmrc1': '1 - Sadece hızlı yürüyüşte/yokuşta zorlanma',
+    'weeklyMmrc2': '2 - Düz yolda yaşıtlara göre daha yavaş',
+    'weeklyMmrc3': '3 - Düz yolda bir süre sonra durma ihtiyacı',
+    'weeklyMmrc4': '4 - 100 metre civarı yürüyüşte durma',
+    'weeklyMmrc5': '5 - Ev içinde belirgin nefes darlığı',
+    'weeklyRespiratoryBurden': 'Solunum semptom yükü (CAT benzeri 0-5)',
+    'weeklyCough': 'Öksürük',
+    'weeklyPhlegm': 'Balgam',
+    'weeklyChestTightness': 'Göğüste sıkışma',
+    'weeklyBreathlessnessStairs': 'Merdiven/yokuş nefes darlığı',
+    'weeklyActivityLimitation': 'Günlük aktivite kısıtlanması',
+    'weeklyConfidenceLeavingHome': 'Dışarı çıkma güveni düşüklüğü',
+    'weeklySleepQualityResp': 'Solunuma bağlı uyku bozulması',
+    'weeklyEnergyLevelResp': 'Solunuma bağlı enerji düşüklüğü',
+    'weeklyWarningSigns': 'Uyarı işaretleri (haftalık gün 0-7)',
+    'weeklyNightBreathlessness': 'Gece artan nefes darlığı',
+    'weeklySputumIncrease': 'Balgam artışı',
+    'weeklySputumColorChange': 'Balgam renginde değişim',
+    'weeklyWheeze': 'Hırıltı/wheeze',
+    'weeklyLunchTime': 'Tahmini öğle yemeği saati',
+    'weeklyDinnerTime': 'Tahmini akşam yemeği saati',
+    'weeklyProfileChanged': 'İlk profile göre iş/uyku/çalışma düzeni değişti mi?',
+    'weeklyQuickModeInfo':
+      'Hızlı mod seçili. Temel sorulara göre risk otomatik hesaplanır. İstersen Detaylı moda geçip tüm parametreleri düzenleyebilirsin.',
+    'durationBarrierTitle': 'Sigara İçmeme Süresi Tercihi',
+    'durationBarrierHow': 'Sigara içmeme süresini nasıl buluyorsun?',
+    'durationBarrierLike': 'Beğeniyorum',
+    'durationBarrierNeutral': 'Farketmez',
+    'durationBarrierDislike': 'Beğenmiyorum',
+    'durationBarrierOff': 'İstemiyorum',
+    'durationBarrierFrequencyHow': 'Sigara içmeme süresi sıklığı nasıl olmalı?',
+    'respClinicalReview': 'Klinik degerlendirme onerilir',
+    'respMonitorCloser': 'Yakin izlem',
+    'respStable': 'Stabil',
+    'dailyBreathMandatoryTitle': 'Gunluk nefes testi gerekli',
+    'dailyBreathMandatoryContent':
+      'Gelisimi dogru takip etmek icin her gun en az 1 profesyonel nefes testi yapilmali. Simdi testi baslatalim.',
+    'dailyBreathMandatoryStart': 'Testi Baslat',
+    'weeklyMandatoryTitle': 'Haftalik anket zorunlu',
+    'weeklyMandatoryContent':
+      'Risk skorunun guncel kalmasi icin en az 7 gunde bir haftalik anket doldurmalisin.',
+    'weeklyMandatoryGo': 'Ankete git',
+    'commandSaved': 'Komut tamamlandi olarak kaydedildi.',
+    'barrierStartedTitle': 'Sigara içmeme süresi başladı',
+    'barrierStartedBody': 'Sigara içmeme sayacı çalışıyor.',
+    'barrierStartedDuration': 'Sayaç süresi',
+    'smokeFreeCounterTitle': 'Sigara içmeme sayacı',
+    'smokeFreeCounterRemaining': 'Kalan sure',
+    'barrierEvaluationTitle': 'Sigara içmeme süresi değerlendirme',
+    'barrierEvaluationPromptNoMinutes':
+      'Sigara içmeme süresi tamamlandı. Başarılı oldun mu?',
+    'barrierEvaluationPromptMinutes':
+      'dakikalık sigara içmeme süresi bitti. Başarılı oldun mu?',
+    'barrierFail': 'Basarisiz',
+    'barrierSuccess': 'Basarili',
+    'barrierSavedSuccess':
+      'Sigara içmeme süresi başarılı kaydedildi. Sonraki süreler buna göre ayarlanacak.',
+    'barrierSavedFailure':
+      'Sigara içmeme süresi başarısız kaydedildi. Sonraki süreler uyuma göre güncellenecek.',
+    'commandDeferred10': 'Komut 10 dakika ertelendi.',
+    'barrierDeferred10': 'Sigara içmeme süresi 10 dakika ertelendi.',
+    'weeklyRiskLine': 'Haftalik anket riski',
+    'respiratoryStatusLine': 'Respiratuar durum',
+    'weeklyTopDriversLine': 'Haftalik ust risk etkenleri',
+    'commandModeLabel': 'Komut modu',
+    'learnedWeightsLabel': 'Ogrenilen agirliklar',
+    'personalCommandsTitle': 'Kisisel komutlar',
+    'durationBarriersTitle': 'Sigara içmeme süreleri (ayrı çalışır)',
+    'doneShort': 'Tamam',
+    'defer10m': 'Ertele 10 dk',
+    'commandScoreLabel': 'Komut basari puanlari',
+    'categoryInsightLabel': 'Kategori basari icgorusu',
+    'riskScoreExplanationTitle': 'Risk skoru aciklamasi',
+    'quickMenuTitle': 'Hizli menu',
+    'menuBreathTest': 'Nefes Testi',
+    'menuWeeklySurvey': 'Haftalik Anket',
+    'menuPersonalProgress': 'Kisisel Takip',
+    'menuViolationReport': 'Ihlal Raporu',
+    'notificationContextReasonLabel': 'Bildirim baglam nedeni',
+    'smokingYearsHintExample': 'orn: 5',
+    'dataLoadFailed': 'Veri yuklenemedi.',
+    'progressSummaryTitle': 'Genel Ozet',
+    'totalRecords': 'Toplam kayit',
+    'latestRiskScore': 'Son risk skoru',
+    'breathProgressTitle': 'Nefes Gelisimi',
+    'dailyAverageLabel': 'Gunluk ortalama',
+    'weeklyAverageLabel': 'Haftalik ortalama',
+    'monthlyAverageLabel': 'Aylik ortalama',
+    'firstToLastAverageDiff': 'Ilk -> Son ortalama fark',
+    'latestVsPrevious': 'Son test vs onceki',
+    'bestConsecutiveDay': 'En iyi ardisik gun',
+    'respFollowUpTitle': 'Respiratuar Izlem (KOAH-benzeri, tanisal degil)',
+    'latestRespBurden': 'Son respiratuar yuk',
+    'latestStatus': 'Son durum',
+    'mmrcLikeGrade': 'mMRC benzeri derece',
+    'catLikeTotal': 'CAT-benzeri toplam',
+    'warningDaysTotal': 'Uyari gunleri toplami',
+    'respFollowUpNote':
+      'Not: Bu izlem tani koymaz; belirti kotulesirse klinik degerlendirme alin.',
+    'trendChartsTitle': 'Trend Grafikler',
+    'weeklyRiskTrendTitle': 'Haftalik risk trendi (son 12 olcum)',
+    'noWeeklyDataForChart': 'Grafik icin yeterli haftalik veri yok.',
+    'breathTrendTitle': 'Nefes ortalama trendi (gunluk son 14 veri)',
+    'noBreathDataForChart': 'Grafik icin yeterli nefes testi verisi yok.',
+    'respiratoryTrendTitle': 'Respiratuar yuk trendi (haftalik son 12)',
+    'noRespDataForChart': 'Grafik icin yeterli respiratuar veri yok.',
+    'taskBarrierComplianceTitle': 'Gorev ve Bariyer Uyum',
+    'last10Successful': 'Son 10 basarili',
+    'last10Failed': 'Son 10 basarisiz',
+    'achievementsSinceStartTitle': 'Baslangictan Bugune Basarilar',
+    'riskChange': 'Risk degisimi',
+    'weeklyImprovementPeriod': 'Haftalik iyilesen donem',
+    'planDayLabel': 'Plan gunu',
+    'remainingDaysLabel': 'Kalan gun',
+    'respAlertHistoryTitle': 'Respiratuar Uyari Gecmisi',
+    'noCriticalRespAlertRecord': 'Kritik respiratuar uyari kaydi yok.',
+    'weeklyHistoryTitle': 'Haftalik Gecmis',
+    'noWeeklyRecordYet': 'Henuz haftalik anket kaydi yok.',
+    'breathTestHistoryTitle': 'Nefes Testi Gecmisi',
+    'noBreathRecordYet': 'Henuz nefes testi kaydi yok.',
+    'surveyModeTitle': 'Anket modu',
+    'surveyModeQuick': 'Hızlı (15 sn)',
+    'surveyModeDetailed': 'Detaylı',
+    'surveyModeAutoDetailedHint':
+      'Geçen hafta risk yüksek görünüyor. İstersen Detaylı moda geçerek daha ince ayar yapabilirsin.',
+    'weeklyQuickRespTitle': 'Hızlı Solunum Kontrolü',
+    'weeklyQuickRespHint':
+      'Kısa modda da solunum durumunu daha doğru yansıtmak için 3 alan doldur.',
+    'adaptiveSummary': 'Uyarlanabilir ozet',
+    'addNote': 'Not ekle',
+    'backToHome': 'Ana sayfaya don',
+    'breathAverageComparison': 'Ortalama ile karsilastirma',
+    'breathComparedAverageDeclined': 'Ortalamanin altinda',
+    'breathComparedAverageImproved': 'Ortalamanin ustunde',
+    'breathComparedAverageStable': 'Ortalamaya yakin',
+    'breathComparedPreviousDeclined': 'Onceki teste gore dusus',
+    'breathComparedPreviousImproved': 'Onceki teste gore artis',
+    'breathComparedPreviousStable': 'Onceki teste gore stabil',
+    'breathImprovementSummary': 'Nefes gelisim ozeti',
+    'breathNoReferenceYet': 'Karsilastirma icin yeterli referans yok.',
+    'breathPreviousComparison': 'Onceki test ile karsilastirma',
+    'breathTestRecordTitle': 'Nefes Testi Kaydi',
+    'breathTrend': 'Nefes trengi',
+    'chainSmoking': 'Ardisik icim',
+    'chainSmokingLatest': 'Son ardisik icim',
+    'chainSmokingTrend': 'Ardisik icim trengi',
+    'completeRegistration': 'Kaydi tamamla',
+    'daily': 'Gunluk',
+    'dailyBreathStatus': 'Gunluk nefes durumu',
+    'days': 'gun',
+    'evaluation': 'Degerlendirme',
+    'exhaleDelta': 'Exhale farki',
+    'failedTaskCount': 'Basarisiz gorev',
+    'firstEvaluation': 'Ilk degerlendirme',
+    'firstTaskNoSmoke15': 'Ilk gorev: 15 dakika sigarasiz kal',
+    'goal180CadenceLabel': '180 gun hedef temposu',
+    'goal180CadenceOneDay': 'Her gun duzenli',
+    'goal180CadenceTwoDays': 'Iki gunde bir guclu takip',
+    'goal180CadenceWeek': 'Haftalik toparlama plani',
+    'goal180GuideEarly': 'Erken donemde daha sik destek normaldir.',
+    'goal180GuideLate': 'Ileri donemde istikrar on planda.',
+    'goal180GuideLateHard': 'Ileri donemde zorlanma varsa yuk hafifletilir.',
+    'goal180GuideMid': 'Orta donemde ritim yerlesir.',
+    'goal180GuideMidHard': 'Orta donemde tetikleyici odakli duzenleme yapilir.',
+    'goal180ProgressLabel': '180 gun ilerleme',
+    'goal180RemainingLabel': '180 gune kalan',
+    'inhaleDelta': 'Inhale farki',
+    'lastBreathTest': 'Son nefes testi',
+    'lastExhale': 'Son exhale',
+    'lastInhale': 'Son inhale',
+    'lastSurveyDate': 'Son anket tarihi',
+    'mandatoryTaskCommand': 'Zorunlu gorev komutu',
+    'mandatoryTaskHint': 'Bugun zorunlu gorevi tamamla.',
+    'mandatoryTaskStartButton': 'Gorevi baslat',
+    'mandatoryTaskTitle': 'Zorunlu gorev',
+    'monthly': 'Aylik',
+    'monthlyImprovement': 'Aylik iyilesme',
+    'noRecordYet': 'Henuz kayit yok.',
+    'noSurveyYet': 'Henuz anket yok.',
+    'noTaskToday': 'Bugun gorev yok.',
+    'openTaskFollowUpScreen': 'Gorev takibine git',
+    'openViolationReportScreen': 'Ihlal raporunu ac',
+    'packChangeDaily': 'Gunluk paket degisimi',
+    'pointShort': 'puan',
+    'predictedRiskTime': 'Tahmini risk saati',
+    'predictedTrigger': 'Tahmini tetikleyici',
+    'predictionConfidence': 'Tahmin guveni',
+    'premiumActive': 'Premium aktif',
+    'previousRecord': 'Onceki kayit',
+    'progressNegative': 'Gerileme var',
+    'progressNegativeDetail': 'Bu hafta risk artisi goruldu.',
+    'progressPositive': 'Ilerleme var',
+    'progressPositiveDetail': 'Bu hafta risk azalisi goruldu.',
+    'progressRegression': 'Regresyon',
+    'progressSummary': 'Ilerleme ozeti',
+    'registrationCompleted': 'Kayit tamamlandi',
+    'riskDelta': 'Risk farki',
+    'riskyHours': 'Riskli saatler',
+    'riskyTriggers': 'Riskli tetikleyiciler',
+    'secShort': 'sn',
+    'status': 'Durum',
+    'subscriptionEnd': 'Abonelik bitis',
+    'subscriptionInfo': 'Abonelik bilgisi',
+    'subscriptionStart': 'Abonelik baslangic',
+    'subscriptionType': 'Abonelik tipi',
+    'successfulTaskCount': 'Basarili gorev',
+    'surveyHistory': 'Anket gecmisi',
+    'taskBreathExercise2': '2 dakikalik nefes egzersizi yap',
+    'taskCountToday': 'Bugunku gorev sayisi',
+    'taskDeferredTenMinutes': 'Gorev 10 dakika ertelendi',
+    'taskDelayFirstSmoke10': 'Ilk sigarayi 10 dakika ertele',
+    'taskDelayFirstSmoke25': 'Ilk sigarayi 25 dakika ertele',
+    'taskDrinkWater': 'Bir bardak su ic',
+    'taskFollowUpEmpty': 'Bekleyen gorev takibi yok.',
+    'taskFollowUpPendingCount': 'Bekleyen takip sayisi',
+    'taskFollowUpScheduledAt': 'Planlanan takip saati',
+    'taskFollowUpTitle': 'Gorev takipleri',
+    'taskNoSmoke10': '10 dakika sigarasiz kal',
+    'taskNoSmoke120': '120 dakika sigarasiz kal',
+    'taskNoSmoke30': '30 dakika sigarasiz kal',
+    'taskNoSmoke45': '45 dakika sigarasiz kal',
+    'taskNoSmoke60': '60 dakika sigarasiz kal',
+    'taskNoSmoke90': '90 dakika sigarasiz kal',
+    'adaptiveNoSmokeTaskTemplate':
+      'Onumuzdeki {minutes} dakika boyunca sigara icmeyin.',
+    'taskNoteCraving': 'Kriz anini not et',
+    'taskNotNowButton': 'Simdi degil',
+    'taskOutcomeNo': 'Hayir',
+    'taskOutcomeQuestion': 'Gorevi basariyla tamamladin mi?',
+    'taskOutcomeYes': 'Evet',
+    'taskPlanOneDayDelayAllCravings':
+      '1 gun sigarasiz kalma gorevi: bugun tum kriz anlarinda sigarayi erteleyin.',
+    'taskPlanOneDayDelayFirst90':
+      '1 gun sigarasiz kalma gorevi: ilk sigarayi en az 90 dakika erteleyin.',
+    'taskPlanOneWeekCompleteAll':
+      '1 hafta sigarasiz kalma hedefi: 7 gun boyunca tum gorevleri tamamlayin.',
+    'taskPlanTwoDaysBreathAndWater':
+      '2 gun sigarasiz kalma plani: kriz aninda 10 derin nefes + su uygulayin.',
+    'taskPlanTwoDaysDelayTriggers':
+      '2 gun sigarasiz kalma gorevi: 48 saat boyunca tetikleyicilerde sigarayi erteleyin.',
+    'taskReasonCadence': 'Gorev ritmi',
+    'taskReasonCardTitle': 'Neden bu gorev?',
+    'taskReasonCause': 'Neden',
+    'taskReasonCauseBalanced': 'Dengeli zorluk secildi',
+    'taskReasonCauseBootstrap': 'Yeni baslangic modu aktif',
+    'taskReasonCauseFailurePressure': 'Sonuc baskisi nedeniyle ayarlandi',
+    'taskReasonCauseHighRisk': 'Yuksek risk nedeniyle secildi',
+    'taskReasonCauseLowRisk': 'Dusuk riskte koruyucu gorev',
+    'taskReasonCauseSuccessStability': 'Basariya gore istikrar gorevi',
+    'taskReasonCauseTopHour': 'En riskli saate gore secildi',
+    'taskReasonCauseTopTrigger': 'En riskli tetikleyiciye gore secildi',
+    'taskReasonNextNotification': 'Sonraki hatirlatma',
+    'taskReasonNoPlanned': 'Planli gorev yok',
+    'taskReasonNoRecentData': 'Yeterli guncel veri yok',
+    'taskReasonRecentRatio': 'Son performans orani',
+    'taskReasonRiskLine': 'Risk aciklamasi',
+    'taskSkipOneCig': 'Bugun bir sigarayi atla',
+    'taskSmokeTwoLess': 'Bugun 2 sigara eksik ic',
+    'taskStartTitle': 'Gorev basladi',
+    'taskStateCompleted': 'Tamamlandi',
+    'taskStateDeferred': 'Ertelendi',
+    'taskStateFailed': 'Basarisiz',
+    'taskStateNew': 'Yeni',
+    'taskSuspiciousReset': 'Supheli davranis nedeniyle sifirlandi',
+    'taskUnit': 'gorev',
+    'taskUseGumAtRiskHour': 'Riskli saatte seker sakiz kullan',
+    'todaysTasks': 'Bugunun gorevleri',
+    'totalUsage': 'Toplam kullanim',
+    'trendDeclining': 'Dususte',
+    'trendImproving': 'Iyilesiyor',
+    'trendStable': 'Stabil',
+    'trialStatus': 'Deneme durumu',
+    'unnamedUser': 'Isimsiz kullanici',
+    'viewAllSurveys': 'Tum anketleri gor',
+    'violationHigh': 'Yuksek',
+    'violationLow': 'Dusuk',
+    'violationMedium': 'Orta',
+    'violationReportEmpty': 'Ihlal kaydi bulunamadi.',
+    'violationReportTitle': 'Ihlal Raporu',
+    'violationSource': 'Kaynak',
+    'violationTask': 'Gorev',
+    'violationTime': 'Zaman',
+    'weekly': 'Haftalik',
+    'weeklyImprovement': 'Haftalik iyilesme',
+    'weeklyMood': 'Haftalik ruh hali',
+    'weeklyRecordTitle': 'Haftalik Kayit',
+    'weeklyRiskTarget': 'Haftalik risk hedefi',
+    'welcome': 'Hos geldin',
+    'taskActionDone': 'Gorevi Baslat',
+    'taskActionNotNow': 'Simdi Uygun Degil',
+    'taskActionDoneLabel': 'Gorevi Baslat',
+    'taskActionNotNowLabel': 'Simdi uygun degil',
+    'taskFollowUpActionYes': 'Evet',
+    'taskFollowUpActionNo': 'Hayir',
+    'disciplineCommand': 'Su andan itibaren sigara icme',
+    'disciplineCommandBody':
+      'Protokol aktif. Bildirim kapanmasi icin gorevi baslat.',
+    'breathReminderTitle': 'Nefes Testi',
+    'breathReminderBody': 'Gunluk nefes testi zamani geldi.',
+    'breathReminderDriving':
+      'Suruste guvenliginiz icin hatirlatma kisa sure ertelendi.',
+    'breathReminderWorkout':
+      'Aktivite tamamlaninca hatirlatma tekrar gonderilecek.',
+    'breathReminderPostMeal':
+      'Yemek sonrasi sigarayi ertelemek icin nefes rutinini simdi uygula.',
+    'taskFollowUpTitlePush': 'Gorev Takibi',
+    'taskFollowUpQuestion': 'Gorevi basariyla tamamladiniz mi?',
+    'taskFollowUpQuestionDriving':
+      'Surus sonrasi cevaplayin: Gorevi basariyla tamamladiniz mi?',
+    'taskFollowUpQuestionWorkout':
+      'Aktivite sonrasi cevaplayin: Gorevi basariyla tamamladiniz mi?',
+    'taskFollowUpQuestionPostMeal':
+      'Yemek sonrasi sigara istegini yonetebildiniz mi?',
+    'postMealShieldCommand':
+      'Yemek sonrasi 10 dakika ertele + su + sakiz rutini uygula.',
+    'contextReasonDriving':
+      'Bildirim surus/ulasim durumu nedeniyle ertelendi',
+    'contextReasonWorkout':
+      'Bildirim kosu/egzersiz durumu nedeniyle ertelendi',
+    'contextReasonEating':
+      'Bildirim yemek penceresi nedeniyle yemek sonrasina kaydirildi',
+    'contextReasonNormal': 'Bildirim normal plana gore ayarlandi',
+    'taskEscalationTitle': 'Gorev guncellendi',
+    'taskEscalationBodyPrefix':
+      '15 saniye icinde yanit alinmadi. 10 dakika sonra gorev tekrarlanacak:',
+    'taskTimerStartedBody': 'Gorev basladi:',
+    'taskTimerDuration': 'Sayac',
+    'minutesShort': 'dakika',
+    'weeklySurveyReminderTitle': 'Haftalik anket zamani',
+    'weeklySurveyReminderBody':
+      'Risk skorunu guncellemek icin haftalik anketi doldurman gerekiyor.',
     'trialInfoTitle': '14 Gunluk Ucretsiz Deneme',
     'trialInfoMessage':
       'No Smoke uygulamasini 14 gun boyunca ucretsiz deneyebilirsin. Bu surede gunluk gorevler, nefes testleri ve haftalik anketlerle birakma surecini yakindan takip edecegiz.',
@@ -91,6 +587,7 @@ class AppTexts {
     'weeklySurvey': 'Weekly Survey',
     'riskAnalysis': 'Risk Analysis',
     'retry': 'Retry',
+    'iBreathed': 'I Breathed',
     'start': 'Start',
     'test': 'Test',
     'good': 'Good',
@@ -113,6 +610,23 @@ class AppTexts {
     'triggerTitle': 'Smoking Triggers',
     'stressTitle': 'Stress Level',
     'quitReasonTitle': 'Quit Reason',
+    'heartDisease': 'Heart Disease',
+    'packsPerDayQuestion': 'How many packs per day?',
+    'firstCigaretteWhen': 'When is your first cigarette?',
+    'firstCigarette10to30': '10-30 minutes after waking',
+    'maxSmokeFreeDuration': 'Longest smoke-free duration',
+    'smokeFree30to60': '30-60 minutes',
+    'smokingYears': 'Smoking years',
+    'triggerCoffee': 'Coffee',
+    'triggerMeal': 'After meals',
+    'triggerDriving': 'While driving',
+    'triggerStress': 'When stressed',
+    'triggerPhone': 'On phone calls',
+    'triggerSocial': 'Social situations',
+    'triggerAlcohol': 'Alcohol',
+    'stressMedium': 'Medium',
+    'quitReason': 'Quit reason',
+    'quitHealth': 'For my health',
     'riskCritical': 'CRITICAL',
     'riskHigh': 'HIGH',
     'riskMedium': 'MEDIUM',
@@ -122,6 +636,7 @@ class AppTexts {
     'validationGenderRequired': 'Please select a gender.',
     'hello': 'Hello',
     'weeklySavePrompt': 'Save your status for this week.',
+    'weeklySurveyPromptAsk': 'Would you like to complete the weekly survey now?',
     'saveErrorRetry': 'An error occurred while saving. Please try again.',
     'smokeFreeStreak': 'Smoke-Free Streak',
     'healthMetrics': 'Health Metrics',
@@ -152,6 +667,472 @@ class AppTexts {
     'updatedWorkStart': 'Updated work start time',
     'updatedWorkEnd': 'Updated work end time',
     'updatedWorkplaceRule': 'Workplace smoking rule',
+    'searchLanguages': 'Search languages...',
+    'otherLanguages': 'Other languages',
+    'backToMain': 'Back to main',
+    'notSpecified': 'Not specified',
+    'unknownValue': 'Unknown',
+    'breathRestInstruction':
+      'Short rest: Breathe normally.\nPrepare for the next attempt.',
+    'breathActiveInstruction':
+      'Sit upright, take a deep breath through your nose,\nhold for 2 seconds, then exhale in one controlled breath.\n\n3 attempts will be performed, best score is saved.',
+    'completeRegistrationError':
+      'An error occurred while completing registration. Please try again.',
+    'dayUnit': 'day',
+    'exhaleCapacity': 'Exhale Capacity',
+    'inhaleCapacity': 'Inhale Capacity',
+    'trendLabel': 'Trend',
+    'levelLabel': 'Level',
+    'totalTestCount': 'Total Test Count',
+    'firstTestDate': 'First test',
+    'averageExhale': 'Average Exhale',
+    'averageInhale': 'Average Inhale',
+    'minLabel': 'Min',
+    'maxLabel': 'Max',
+    'exhaleLabel': 'Exhale',
+    'inhaleLabel': 'Inhale',
+    'few': 'Low',
+    'veryHigh': 'High',
+    'weeklyAvgDailyCigarettes': 'Average daily cigarettes',
+    'weeklyComparedLastWeek': 'Compared to last week',
+    'weeklyDecrease': 'Decreased',
+    'weeklySame': 'Same',
+    'weeklyIncrease': 'Increased',
+    'weeklyLapseCount': 'Lapse count',
+    'weeklyCravingAvg': 'Average craving (0-10)',
+    'weeklyCravingMax': 'Maximum craving (0-10)',
+    'weeklyWithdrawalSymptoms': 'Withdrawal symptoms (0-3)',
+    'weeklyIrritability': 'Irritability',
+    'weeklyAnxiety': 'Anxiety',
+    'weeklySleepIssue': 'Sleep issues',
+    'weeklyConcentrationIssue': 'Concentration issues',
+    'weeklyAppetiteIncrease': 'Increased appetite',
+    'weeklyTriggerExposure': 'Trigger exposure (days 0-7)',
+    'weeklyVehicleUse': 'Driving',
+    'weeklyAlcoholTrigger': 'Alcohol trigger',
+    'weeklyAlcoholDays': 'Days with alcohol',
+    'weeklySocialSmokingDays': 'Days in smoking social settings',
+    'weeklyMedicationUse': 'Medication/NRT usage',
+    'weeklyNone': 'None',
+    'weeklyIrregular': 'Irregular',
+    'weeklyRegular': 'Regular',
+    'weeklySideEffectsExperienced': 'Medication/NRT side effects experienced',
+    'weeklyUsedCounseling': 'Counseling/quitline used',
+    'weeklyMedicationAdherence': 'Treatment adherence (0-10)',
+    'weeklyFamilySupport': 'Family/social support (0-10)',
+    'weeklySelfEfficacy': 'Self-efficacy (0-10)',
+    'weeklyMotivation': 'Motivation (0-10)',
+    'weeklyTaskCompletion': 'Weekly task completion (0-10)',
+    'weeklyTaskAdherence': 'How much did you follow daily tasks?',
+    'weeklyCommandBurden': 'Did commands bother you?',
+    'weeklyDailyBreathTarget': 'Preferred daily breath test count (min 1)',
+    'weeklyBreathOnceMandatory': '1 time (required minimum)',
+    'weeklyBreathTwice': '2 times',
+    'weeklyBreathThree': '3 times',
+    'weeklyBreathFour': '4 times',
+    'weeklyMmrcGrade': 'Breathlessness grade (mMRC-like 1-5)',
+    'weeklyMmrc1': '1 - Shortness of breath only on fast walk/uphill',
+    'weeklyMmrc2': '2 - Walks slower than peers on flat ground',
+    'weeklyMmrc3': '3 - Needs to stop after a while on flat ground',
+    'weeklyMmrc4': '4 - Stops after around 100 meters',
+    'weeklyMmrc5': '5 - Marked breathlessness indoors',
+    'weeklyRespiratoryBurden': 'Respiratory symptom burden (CAT-like 0-5)',
+    'weeklyCough': 'Cough',
+    'weeklyPhlegm': 'Phlegm',
+    'weeklyChestTightness': 'Chest tightness',
+    'weeklyBreathlessnessStairs': 'Breathlessness on stairs/hills',
+    'weeklyActivityLimitation': 'Daily activity limitation',
+    'weeklyConfidenceLeavingHome': 'Low confidence leaving home',
+    'weeklySleepQualityResp': 'Respiratory-related sleep disturbance',
+    'weeklyEnergyLevelResp': 'Respiratory-related low energy',
+    'weeklyWarningSigns': 'Warning signs (weekly days 0-7)',
+    'weeklyNightBreathlessness': 'Nighttime breathlessness',
+    'weeklySputumIncrease': 'Increased sputum',
+    'weeklySputumColorChange': 'Change in sputum color',
+    'weeklyWheeze': 'Wheeze',
+    'weeklyLunchTime': 'Estimated lunch time',
+    'weeklyDinnerTime': 'Estimated dinner time',
+    'weeklyProfileChanged':
+      'Has work/sleep/routine changed since the initial profile?',
+    'weeklyQuickModeInfo':
+      'Quick mode selected. Risk is computed from core answers. You can switch to Detailed mode to adjust all parameters.',
+    'durationBarrierTitle': 'Smoke-free duration preference',
+    'durationBarrierHow': 'How do you feel about smoke-free durations?',
+    'durationBarrierLike': 'I like it',
+    'durationBarrierNeutral': 'Neutral',
+    'durationBarrierDislike': 'I do not like it',
+    'durationBarrierOff': 'I do not want it',
+    'durationBarrierFrequencyHow': 'How often should smoke-free durations appear?',
+    'respClinicalReview': 'Clinical review recommended',
+    'respMonitorCloser': 'Monitor closer',
+    'respStable': 'Stable',
+    'dailyBreathMandatoryTitle': 'Daily breath test required',
+    'dailyBreathMandatoryContent':
+      'To track progress accurately, at least one professional breath test should be done daily. Let us start now.',
+    'dailyBreathMandatoryStart': 'Start Test',
+    'weeklyMandatoryTitle': 'Weekly survey required',
+    'weeklyMandatoryContent':
+      'To keep your risk score up to date, complete the weekly survey at least once every 7 days.',
+    'weeklyMandatoryGo': 'Go to survey',
+    'commandSaved': 'Command marked as completed.',
+    'barrierEvaluationTitle': 'Smoke-free duration evaluation',
+    'barrierEvaluationPromptNoMinutes':
+      'Smoke-free duration completed. Were you successful?',
+    'barrierEvaluationPromptMinutes':
+      'minute smoke-free duration ended. Were you successful?',
+    'barrierFail': 'Failed',
+    'barrierSuccess': 'Successful',
+    'barrierSavedSuccess':
+      'Smoke-free duration saved as successful. Next durations will be tuned accordingly.',
+    'barrierSavedFailure':
+      'Smoke-free duration saved as failed. Next durations will be adjusted to your adherence.',
+    'commandDeferred10': 'Command deferred by 10 minutes.',
+    'barrierDeferred10': 'Smoke-free duration deferred by 10 minutes.',
+    'weeklyRiskLine': 'Weekly survey risk',
+    'respiratoryStatusLine': 'Respiratory status',
+    'weeklyTopDriversLine': 'Top weekly risk drivers',
+    'commandModeLabel': 'Command mode',
+    'learnedWeightsLabel': 'Learned weights',
+    'personalCommandsTitle': 'Personal commands',
+    'durationBarriersTitle': 'Smoke-free durations (separate flow)',
+    'doneShort': 'Done',
+    'defer10m': 'Defer 10 min',
+    'commandScoreLabel': 'Command success scores',
+    'categoryInsightLabel': 'Category success insight',
+    'riskScoreExplanationTitle': 'Risk score explanation',
+    'quickMenuTitle': 'Quick menu',
+    'menuBreathTest': 'Breath Test',
+    'menuWeeklySurvey': 'Weekly Survey',
+    'menuPersonalProgress': 'Personal Progress',
+    'menuViolationReport': 'Violation Report',
+    'notificationContextReasonLabel': 'Notification context reason',
+    'smokingYearsHintExample': 'e.g.: 5',
+    'dataLoadFailed': 'Failed to load data.',
+    'progressSummaryTitle': 'General Summary',
+    'totalRecords': 'Total records',
+    'latestRiskScore': 'Latest risk score',
+    'breathProgressTitle': 'Breath Progress',
+    'dailyAverageLabel': 'Daily average',
+    'weeklyAverageLabel': 'Weekly average',
+    'monthlyAverageLabel': 'Monthly average',
+    'firstToLastAverageDiff': 'First -> Last average difference',
+    'latestVsPrevious': 'Latest test vs previous',
+    'bestConsecutiveDay': 'Best consecutive days',
+    'respFollowUpTitle': 'Respiratory Follow-up (COPD-like, non-diagnostic)',
+    'latestRespBurden': 'Latest respiratory burden',
+    'latestStatus': 'Latest status',
+    'mmrcLikeGrade': 'mMRC-like grade',
+    'catLikeTotal': 'CAT-like total',
+    'warningDaysTotal': 'Total warning days',
+    'respFollowUpNote':
+      'Note: This follow-up does not diagnose; seek clinical evaluation if symptoms worsen.',
+    'trendChartsTitle': 'Trend Charts',
+    'weeklyRiskTrendTitle': 'Weekly risk trend (last 12 points)',
+    'noWeeklyDataForChart': 'Not enough weekly data for chart.',
+    'breathTrendTitle': 'Breath average trend (daily last 14 points)',
+    'noBreathDataForChart': 'Not enough breath test data for chart.',
+    'respiratoryTrendTitle': 'Respiratory burden trend (weekly last 12)',
+    'noRespDataForChart': 'Not enough respiratory data for chart.',
+    'taskBarrierComplianceTitle': 'Task and Barrier Compliance',
+    'last10Successful': 'Last 10 successful',
+    'last10Failed': 'Last 10 failed',
+    'achievementsSinceStartTitle': 'Achievements Since Start',
+    'riskChange': 'Risk change',
+    'weeklyImprovementPeriod': 'Weekly improvement period',
+    'planDayLabel': 'Plan day',
+    'remainingDaysLabel': 'Remaining day',
+    'respAlertHistoryTitle': 'Respiratory Alert History',
+    'noCriticalRespAlertRecord': 'No critical respiratory alert record.',
+    'weeklyHistoryTitle': 'Weekly History',
+    'noWeeklyRecordYet': 'No weekly survey record yet.',
+    'breathTestHistoryTitle': 'Breath Test History',
+    'noBreathRecordYet': 'No breath test record yet.',
+    'surveyModeTitle': 'Survey mode',
+    'surveyModeQuick': 'Quick (15 sec)',
+    'surveyModeDetailed': 'Detailed',
+    'surveyModeAutoDetailedHint':
+      'Last week looks high-risk. You can switch to Detailed mode for finer adjustment.',
+    'weeklyQuickRespTitle': 'Quick Respiratory Check',
+    'weeklyQuickRespHint':
+      'Fill 3 fields in quick mode to better reflect your respiratory status.',
+    'adaptiveSummary': 'Adaptive summary',
+    'addNote': 'Add note',
+    'asthma': 'Asthma',
+    'backToHome': 'Back to home',
+    'breathAverageComparison': 'Average comparison',
+    'breathComparedAverageDeclined': 'Below average',
+    'breathComparedAverageImproved': 'Above average',
+    'breathComparedAverageStable': 'Close to average',
+    'breathComparedPreviousDeclined': 'Declined vs previous test',
+    'breathComparedPreviousImproved': 'Improved vs previous test',
+    'breathComparedPreviousStable': 'Stable vs previous test',
+    'breathImprovementSummary': 'Breath improvement summary',
+    'breathNoReferenceYet': 'Not enough reference data yet.',
+    'breathPreviousComparison': 'Previous test comparison',
+    'breathTestRecordTitle': 'Breath Test Record',
+    'breathTrend': 'Breath trend',
+    'chainSmoking': 'Chain smoking',
+    'chainSmokingAsk': 'Do you smoke consecutively?',
+    'chainSmokingCountAsk': 'How many do you smoke consecutively?',
+    'chainSmokingLatest': 'Latest chain smoking status',
+    'chainSmokingSituation': 'Chain smoking status',
+    'chainSmokingTrend': 'Chain smoking trend',
+    'completeRegistration': 'Complete registration',
+    'continueWithoutPermission': 'Continue without permission',
+    'copd': 'COPD',
+    'daily': 'Daily',
+    'dailyBreathStatus': 'Daily breath status',
+    'days': 'days',
+    'diabetes': 'Diabetes',
+    'evaluation': 'Evaluation',
+    'exhaleDelta': 'Exhale delta',
+    'failedTaskCount': 'Failed tasks',
+    'firstCigarette0to5': '0-5 minutes after waking',
+    'firstCigarette30to60': '30-60 minutes after waking',
+    'firstCigarette5to10': '5-10 minutes after waking',
+    'firstCigarette60plus': '60+ minutes after waking',
+    'firstEvaluation': 'First evaluation',
+    'firstTaskNoSmoke15': 'First task: Stay smoke-free for 15 minutes',
+    'fivePack': '5 packs',
+    'fivePlusCig': '5+ cigarettes',
+    'fourCig': '4 cigarettes',
+    'fourPack': '4 packs',
+    'goal180CadenceLabel': '180-day goal cadence',
+    'goal180CadenceOneDay': 'Steady daily cadence',
+    'goal180CadenceTwoDays': 'Strong every-two-days cadence',
+    'goal180CadenceWeek': 'Weekly recovery cadence',
+    'goal180GuideEarly': 'Frequent support is normal in early phase.',
+    'goal180GuideLate': 'Stability is prioritized in late phase.',
+    'goal180GuideLateHard': 'If hard in late phase, burden is reduced.',
+    'goal180GuideMid': 'Rhythm settles in mid phase.',
+    'goal180GuideMidHard': 'Trigger-focused tuning in mid phase.',
+    'goal180ProgressLabel': '180-day progress',
+    'goal180RemainingLabel': 'Remaining to 180 days',
+    'hypertension': 'Hypertension',
+    'inhaleDelta': 'Inhale delta',
+    'initialRecordTitle': 'Initial Record',
+    'lastBreathTest': 'Last breath test',
+    'lastExhale': 'Last exhale',
+    'lastInhale': 'Last inhale',
+    'lastSurveyDate': 'Last survey date',
+    'lessThanOnePack': 'Less than 1 pack',
+    'mandatoryTaskCommand': 'Mandatory task command',
+    'mandatoryTaskHint': 'Complete the mandatory task today.',
+    'mandatoryTaskStartButton': 'Start task',
+    'mandatoryTaskTitle': 'Mandatory task',
+    'monthly': 'Monthly',
+    'monthlyImprovement': 'Monthly improvement',
+    'noRecordYet': 'No record yet.',
+    'noSurveyYet': 'No survey yet.',
+    'noTaskToday': 'No task today.',
+    'notificationPermissionRequired':
+      'Reminders may not work without notification permission.',
+    'onePack': '1 pack',
+    'onlyBreaks': 'Only during breaks',
+    'openAlarmReminderSettings': 'Open Alarm/Reminder Settings',
+    'openSettings': 'Open Settings',
+    'openTaskFollowUpScreen': 'Open task follow-up screen',
+    'openViolationReportScreen': 'Open violation report screen',
+    'packChangeDaily': 'Daily pack change',
+    'packsApproxQuestion': 'Approximately how many packs?',
+    'permissionsRetryMessage':
+      'App features are limited without required permissions.',
+    'permissionsRetryTitle': 'Retry permissions',
+    'pointShort': 'pts',
+    'predictedRiskTime': 'Predicted risk time',
+    'predictedTrigger': 'Predicted trigger',
+    'predictionConfidence': 'Prediction confidence',
+    'premiumActive': 'Premium active',
+    'previousRecord': 'Previous record',
+    'professionEngineer': 'Engineer',
+    'professionFreelance': 'Freelance',
+    'professionHealthcare': 'Healthcare worker',
+    'professionOfficer': 'Officer',
+    'professionOther': 'Other',
+    'professionRetired': 'Retired',
+    'professionStudent': 'Student',
+    'professionTeacher': 'Teacher',
+    'professionTradesman': 'Tradesman',
+    'professionWorker': 'Worker',
+    'progressNegative': 'Negative progress',
+    'progressNegativeDetail': 'Risk increased this week.',
+    'progressPositive': 'Positive progress',
+    'progressPositiveDetail': 'Risk decreased this week.',
+    'progressRegression': 'Regression',
+    'progressSummary': 'Progress summary',
+    'quitChildren': 'For my children',
+    'quitFamily': 'For my family',
+    'quitMoney': 'Financial reasons',
+    'quitPerformance': 'To improve my performance',
+    'registrationCompleted': 'Registration completed',
+    'riskDelta': 'Risk delta',
+    'riskyHours': 'Risky hours',
+    'riskyTriggers': 'Risky triggers',
+    'secShort': 'sec',
+    'sensorPermissionRecommended':
+      'Motion/sensor permission is recommended for better tracking.',
+    'sevenPlusPack': '7+ packs',
+    'sixPack': '6 packs',
+    'sleepTime': 'Sleep time',
+    'smokeFree0to15': '0-15 minutes',
+    'smokeFree120to240': '120-240 minutes',
+    'smokeFree15to30': '15-30 minutes',
+    'smokeFree240plus': '240+ minutes',
+    'smokeFree60to120': '60-120 minutes',
+    'status': 'Status',
+    'stressHigh': 'High',
+    'stressLow': 'Low',
+    'subscriptionEnd': 'Subscription end',
+    'subscriptionInfo': 'Subscription info',
+    'subscriptionStart': 'Subscription start',
+    'subscriptionType': 'Subscription type',
+    'successfulTaskCount': 'Successful tasks',
+    'surveyHistory': 'Survey history',
+    'taskBreathExercise2': 'Do a 2-minute breathing exercise',
+    'taskCountToday': 'Today\'s task count',
+    'taskDeferredTenMinutes': 'Task deferred by 10 minutes',
+    'taskDelayFirstSmoke10': 'Delay first cigarette by 10 minutes',
+    'taskDelayFirstSmoke25': 'Delay first cigarette by 25 minutes',
+    'taskDrinkWater': 'Drink a glass of water',
+    'taskFollowUpEmpty': 'No pending task follow-up.',
+    'taskFollowUpPendingCount': 'Pending follow-up count',
+    'taskFollowUpScheduledAt': 'Scheduled follow-up time',
+    'taskFollowUpTitle': 'Task follow-ups',
+    'taskNoSmoke10': 'Stay smoke-free for 10 minutes',
+    'taskNoSmoke120': 'Stay smoke-free for 120 minutes',
+    'taskNoSmoke30': 'Stay smoke-free for 30 minutes',
+    'taskNoSmoke45': 'Stay smoke-free for 45 minutes',
+    'taskNoSmoke60': 'Stay smoke-free for 60 minutes',
+    'taskNoSmoke90': 'Stay smoke-free for 90 minutes',
+    'adaptiveNoSmokeTaskTemplate':
+      'Do not smoke for the next {minutes} minutes.',
+    'taskNoteCraving': 'Take a note of the craving moment',
+    'taskNotNowButton': 'Not now',
+    'taskOutcomeNo': 'No',
+    'taskOutcomeQuestion': 'Did you complete the task successfully?',
+    'taskOutcomeYes': 'Yes',
+    'taskPlanOneDayDelayAllCravings':
+      '1-day smoke-free task: delay cigarettes during all craving moments today.',
+    'taskPlanOneDayDelayFirst90':
+      '1-day smoke-free task: delay first cigarette by at least 90 minutes.',
+    'taskPlanOneWeekCompleteAll':
+      '1-week smoke-free goal: complete all tasks for 7 days.',
+    'taskPlanTwoDaysBreathAndWater':
+      '2-day smoke-free plan: 10 deep breaths + water during cravings.',
+    'taskPlanTwoDaysDelayTriggers':
+      '2-day smoke-free task: delay smoking in triggers for 48 hours.',
+    'taskReasonCadence': 'Task cadence',
+    'taskReasonCardTitle': 'Why this task?',
+    'taskReasonCause': 'Reason',
+    'taskReasonCauseBalanced': 'Balanced difficulty selected',
+    'taskReasonCauseBootstrap': 'Bootstrap mode is active',
+    'taskReasonCauseFailurePressure': 'Adjusted due to failure pressure',
+    'taskReasonCauseHighRisk': 'Selected due to high risk',
+    'taskReasonCauseLowRisk': 'Protective task in low risk',
+    'taskReasonCauseSuccessStability': 'Stability task based on success',
+    'taskReasonCauseTopHour': 'Selected by highest-risk hour',
+    'taskReasonCauseTopTrigger': 'Selected by top trigger',
+    'taskReasonNextNotification': 'Next reminder',
+    'taskReasonNoPlanned': 'No planned task',
+    'taskReasonNoRecentData': 'No sufficient recent data',
+    'taskReasonRecentRatio': 'Recent performance ratio',
+    'taskReasonRiskLine': 'Risk line',
+    'taskSkipOneCig': 'Skip one cigarette today',
+    'taskSmokeTwoLess': 'Smoke two fewer cigarettes today',
+    'taskStartTitle': 'Task started',
+    'taskStateCompleted': 'Completed',
+    'taskStateDeferred': 'Deferred',
+    'taskStateFailed': 'Failed',
+    'taskStateNew': 'New',
+    'taskSuspiciousReset': 'Reset due to suspicious behavior',
+    'taskUnit': 'task',
+    'taskUseGumAtRiskHour': 'Use sugar-free gum at risky hour',
+    'threeCig': '3 cigarettes',
+    'threePack': '3 packs',
+    'threePlusPack': '3+ packs',
+    'todaysTasks': 'Today\'s tasks',
+    'totalUsage': 'Total usage',
+    'trendDeclining': 'Declining',
+    'trendImproving': 'Improving',
+    'trendStable': 'Stable',
+    'trialStatus': 'Trial status',
+    'twoCig': '2 cigarettes',
+    'twoPack': '2 packs',
+    'unnamedUser': 'Unnamed user',
+    'validationChainCountRequired':
+      'Please select consecutive smoking count.',
+    'validationChainHabitRequired':
+      'Please select consecutive smoking habit.',
+    'validationSleepTimeRequired': 'Please select sleep time.',
+    'validationSmokeYearsRange':
+      'Smoking duration must be between 0 and 90 years.',
+    'validationWakeTimeRequired': 'Please select wake-up time.',
+    'viewAllSurveys': 'View all surveys',
+    'violationHigh': 'High',
+    'violationLow': 'Low',
+    'violationMedium': 'Medium',
+    'violationReportEmpty': 'No violation records found.',
+    'violationReportTitle': 'Violation Report',
+    'violationSource': 'Source',
+    'violationTask': 'Task',
+    'violationTime': 'Time',
+    'wakeTime': 'Wake-up time',
+    'weekly': 'Weekly',
+    'weeklyImprovement': 'Weekly improvement',
+    'weeklyMood': 'Weekly mood',
+    'weeklyRecordTitle': 'Weekly Record',
+    'weeklyRiskTarget': 'Weekly risk target',
+    'welcome': 'Welcome',
+    'workEnd': 'Work end',
+    'workplaceSmoking': 'Workplace smoking rule',
+    'workStart': 'Work start',
+    'taskActionDone': 'Start Task',
+    'taskActionNotNow': 'Not now',
+    'taskActionDoneLabel': 'Start Task',
+    'taskActionNotNowLabel': 'Not now',
+    'taskFollowUpActionYes': 'Yes',
+    'taskFollowUpActionNo': 'No',
+    'disciplineCommand': 'Do not smoke from this moment',
+    'disciplineCommandBody':
+      'Protocol is active. Start the task to clear this alert.',
+    'breathReminderTitle': 'Breath Test',
+    'breathReminderBody': 'Time for your daily breath test.',
+    'breathReminderDriving': 'Reminder delayed briefly for driving safety.',
+    'breathReminderWorkout':
+      'Reminder deferred until your activity cool-down window.',
+    'breathReminderPostMeal':
+      'Use a post-meal breathing routine now to avoid smoking.',
+    'taskFollowUpTitlePush': 'Task Follow-up',
+    'taskFollowUpQuestion': 'Did you complete the task successfully?',
+    'taskFollowUpQuestionDriving':
+      'Answer after driving: Did you complete the task successfully?',
+    'taskFollowUpQuestionWorkout':
+      'Answer after your activity: Did you complete the task successfully?',
+    'taskFollowUpQuestionPostMeal':
+      'After the meal window, did you manage the urge without smoking?',
+    'postMealShieldCommand':
+      'After meal: delay 10 minutes, drink water, and use gum.',
+    'contextReasonDriving':
+      'Notification deferred due to driving/transport context',
+    'contextReasonWorkout':
+      'Notification deferred due to running/workout context',
+    'contextReasonEating':
+      'Notification shifted to post-meal anti-smoking window',
+    'contextReasonNormal': 'Notification scheduled in normal mode',
+    'taskEscalationTitle': 'Task updated',
+    'taskEscalationBodyPrefix':
+      'No response in 15 seconds. Task will repeat after 10 minutes:',
+    'taskTimerStartedBody': 'Task started:',
+    'taskTimerDuration': 'Timer',
+    'minutesShort': 'minutes',
+    'barrierStartedTitle': 'Duration barrier started',
+    'barrierStartedBody': 'Smoke-free timer is running.',
+    'barrierStartedDuration': 'Timer duration',
+    'smokeFreeCounterTitle': 'Smoke-free timer',
+    'smokeFreeCounterRemaining': 'Remaining time',
+    'weeklySurveyReminderTitle': 'Weekly survey due',
+    'weeklySurveyReminderBody':
+      'Please complete the weekly survey to refresh your risk score.',
     'trialInfoTitle': '14-Day Free Trial',
     'trialInfoMessage':
       'You can use No Smoke free for 14 days. During this period, we guide your quit journey with daily tasks, breath tests, and weekly surveys.',
@@ -630,10 +1611,319 @@ class AppTexts {
     },
   };
 
-  static String text(BuildContext context, String key) {
-    final code = Localizations.localeOf(context).languageCode;
+  static String textForCode(String code, String key) {
+    if (code == 'tr') {
+      return _tr[key] ?? _en[key] ?? key;
+    }
+    if (code == 'en') {
+      return _en[key] ?? _tr[key] ?? key;
+    }
+
+    final generatedMap = generatedLanguageData[code];
+    if (generatedMap != null && generatedMap.containsKey(key)) {
+      return generatedMap[key] ?? _en[key] ?? _tr[key] ?? key;
+    }
+
+    final runtimeMap = _runtimeLanguageData[code];
+    if (runtimeMap != null && runtimeMap.containsKey(key)) {
+      return runtimeMap[key] ?? _en[key] ?? _tr[key] ?? key;
+    }
+
     final langMap = _data[code] ?? _data['en']!;
     return langMap[key] ?? _data['en']![key] ?? _data['tr']![key] ?? key;
+  }
+
+  static Future<void> ensureLanguageLoaded(String code) async {
+    if (code == 'tr' || code == 'en' || generatedLanguageData.containsKey(code)) {
+      return;
+    }
+    if (_runtimeLanguageData.containsKey(code)) {
+      return;
+    }
+
+    final inflight = _languageLoadFutures[code];
+    if (inflight != null) {
+      return inflight;
+    }
+
+    final future = _loadRuntimeLanguage(code);
+    _languageLoadFutures[code] = future;
+    try {
+      await future;
+    } finally {
+      _languageLoadFutures.remove(code);
+    }
+  }
+
+  static Future<void> _loadRuntimeLanguage(String code) async {
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('$_runtimeCachePrefix$code');
+    if (cached != null && cached.isNotEmpty) {
+      final decoded = jsonDecode(cached) as Map<String, dynamic>;
+      _runtimeLanguageData[code] = decoded.map(
+        (key, value) => MapEntry(key, value.toString()),
+      );
+      return;
+    }
+
+    final translated = await _translateLanguageMap(code);
+    _runtimeLanguageData[code] = translated;
+    await prefs.setString('$_runtimeCachePrefix$code', jsonEncode(translated));
+  }
+
+  static Future<Map<String, String>> _translateLanguageMap(String code) async {
+    const batchSize = 8;
+    final keys = _en.keys.toList(growable: false);
+    final values = keys.map((key) => _en[key] ?? key).toList(growable: false);
+    final translated = <String, String>{};
+
+    for (var offset = 0; offset < values.length; offset += batchSize) {
+      final end = (offset + batchSize < values.length)
+          ? offset + batchSize
+          : values.length;
+      final batchValues = values.sublist(offset, end);
+      final batchKeys = keys.sublist(offset, end);
+      final translatedValues = await _translateBatchResilient(code, batchValues);
+      for (var index = 0; index < batchKeys.length; index++) {
+        translated[batchKeys[index]] = translatedValues[index];
+      }
+    }
+
+    return translated;
+  }
+
+  static Future<List<String>> _translateBatchResilient(
+    String code,
+    List<String> texts,
+  ) async {
+    try {
+      return await _translateBatch(code, texts);
+    } catch (_) {
+      if (texts.length <= 1) {
+        rethrow;
+      }
+      final mid = texts.length ~/ 2;
+      final left = await _translateBatchResilient(code, texts.sublist(0, mid));
+      final right = await _translateBatchResilient(code, texts.sublist(mid));
+      return <String>[...left, ...right];
+    }
+  }
+
+  static Future<List<String>> _translateBatch(
+    String code,
+    List<String> texts,
+  ) async {
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 30);
+    try {
+      if (texts.length == 1) {
+        final single = texts.first.replaceAll('\n', '__NSMOKE_NL__');
+        final translated = await _requestTranslation(client, code, single);
+        return <String>[translated.replaceAll('__NSMOKE_NL__', '\n').trim()];
+      }
+
+      final joined = List<String>.generate(
+        texts.length,
+        (index) => '[$index] ${texts[index].replaceAll('\n', '__NSMOKE_NL__')}',
+      ).join(' ');
+      final translated = await _requestTranslation(client, code, joined);
+      final matchExp = RegExp(r'\[(\d+)\]\s*(.*?)(?=\s*\[\d+\]|$)');
+      final matches = matchExp.allMatches(translated).toList(growable: false);
+      if (matches.length != texts.length) {
+        throw StateError('Split mismatch for $code');
+      }
+
+      final ordered = List<String>.filled(texts.length, '');
+      for (final match in matches) {
+        final slot = int.parse(match.group(1)!);
+        ordered[slot] = match
+            .group(2)!
+            .replaceAll('__NSMOKE_NL__', '\n')
+            .trim();
+      }
+      return ordered;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  static Future<String> _requestTranslation(
+    HttpClient client,
+    String code,
+    String text,
+  ) async {
+    final encoded = Uri.encodeQueryComponent(text);
+    final uri = Uri.parse(
+      'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=$code&dt=t&q=$encoded',
+    );
+    final request = await client.getUrl(uri);
+    final response = await request.close().timeout(const Duration(seconds: 30));
+    final body = await response.transform(utf8.decoder).join();
+    final decoded = jsonDecode(body) as List<dynamic>;
+    final segments = decoded.first as List<dynamic>;
+    return segments
+        .map((segment) => (segment as List<dynamic>).first?.toString() ?? '')
+        .join();
+  }
+
+  static String text(BuildContext context, String key) {
+    final code = Localizations.localeOf(context).languageCode;
+    return textForCode(code, key);
+  }
+
+  static String localizeCanonicalTextForCode(String code, String value) {
+    final normalized = value.trim();
+
+    final adaptiveCanonical = RegExp(
+      r'^ADAPTIVE_NO_SMOKE:(\d+)$',
+      caseSensitive: false,
+    ).firstMatch(normalized);
+    if (adaptiveCanonical != null) {
+      final minutes = adaptiveCanonical.group(1) ?? '15';
+      final template = textForCode(code, 'adaptiveNoSmokeTaskTemplate');
+      return template.replaceAll('{minutes}', minutes);
+    }
+
+    final adaptiveLegacyTr = RegExp(
+      r'^Onumuzdeki\s+(\d+)\s+dakika\s+boyunca\s+sigara\s+icmeyin\.?$',
+      caseSensitive: false,
+    ).firstMatch(normalized);
+    if (adaptiveLegacyTr != null) {
+      final minutes = adaptiveLegacyTr.group(1) ?? '15';
+      final template = textForCode(code, 'adaptiveNoSmokeTaskTemplate');
+      return template.replaceAll('{minutes}', minutes);
+    }
+
+    switch (normalized) {
+      case 'Evet':
+        return textForCode(code, 'yes');
+      case 'Hayır':
+      case 'Hayir':
+        return textForCode(code, 'no');
+      case '2 adet':
+        return textForCode(code, 'twoCig');
+      case '3 adet':
+        return textForCode(code, 'threeCig');
+      case '4 adet':
+        return textForCode(code, 'fourCig');
+      case '5+ adet':
+        return textForCode(code, 'fivePlusCig');
+      case '1 paketten az':
+        return textForCode(code, 'lessThanOnePack');
+      case '1 paket':
+        return textForCode(code, 'onePack');
+      case '2 paket':
+        return textForCode(code, 'twoPack');
+      case '3 paket':
+        return textForCode(code, 'threePack');
+      case '3+ paket':
+        return textForCode(code, 'threePlusPack');
+      case '4 paket':
+        return textForCode(code, 'fourPack');
+      case '5 paket':
+        return textForCode(code, 'fivePack');
+      case '6 paket':
+        return textForCode(code, 'sixPack');
+      case '7+ paket':
+        return textForCode(code, 'sevenPlusPack');
+      case 'Kahve':
+        return textForCode(code, 'triggerCoffee');
+      case 'Yemek Sonrasi':
+        return textForCode(code, 'triggerMeal');
+      case 'Arac':
+        return textForCode(code, 'triggerDriving');
+      case 'Stres':
+        return textForCode(code, 'triggerStress');
+      case 'Telefon':
+        return textForCode(code, 'triggerPhone');
+      case 'Sosyal Ortam':
+        return textForCode(code, 'triggerSocial');
+      case 'Alkol':
+        return textForCode(code, 'triggerAlcohol');
+      case 'Belirtilmedi':
+        return textForCode(code, 'notSpecified');
+      case 'unknown':
+        return textForCode(code, 'unknownValue');
+      case 'Ayni':
+        return textForCode(code, 'weekendPatternSame');
+      case 'Farketmez':
+        return textForCode(code, 'durationBarrierNeutral');
+      case 'Orta':
+        return textForCode(code, 'stressMedium');
+      case 'Sağlık':
+      case 'Saglik':
+        return textForCode(code, 'quitHealth');
+      case 'İyi':
+        return textForCode(code, 'good');
+      case 'Kötü':
+      case 'Kotu':
+        return textForCode(code, 'bad');
+      case 'KRİTİK':
+      case 'KRITIK':
+        return textForCode(code, 'riskCritical');
+      case 'YÜKSEK':
+      case 'YUKSEK':
+      case 'high':
+        return textForCode(code, 'riskHigh');
+      case 'ORTA':
+      case 'medium':
+        return textForCode(code, 'riskMedium');
+      case 'DÜŞÜK':
+      case 'DUSUK':
+      case 'low':
+        return textForCode(code, 'riskLow');
+      case 'Ilk sigarayi 10 dakika ertele':
+        return textForCode(code, 'taskDelayFirstSmoke10');
+      case 'Bir bardak su ic':
+        return textForCode(code, 'taskDrinkWater');
+      case '2 dakikalik nefes egzersizi yap':
+        return textForCode(code, 'taskBreathExercise2');
+      case '10 dakika sigarasiz kal':
+        return textForCode(code, 'taskNoSmoke10');
+      case 'Kriz anini not et':
+        return textForCode(code, 'taskNoteCraving');
+      case 'Ilk sigarayi 25 dakika ertele':
+        return textForCode(code, 'taskDelayFirstSmoke25');
+      case 'Bugun bir sigarayi atla':
+        return textForCode(code, 'taskSkipOneCig');
+      case '30 dakika sigarasiz kal':
+        return textForCode(code, 'taskNoSmoke30');
+      case 'Riskli saatte seker sakiz kullan':
+        return textForCode(code, 'taskUseGumAtRiskHour');
+      case '45 dakika sigarasiz kal':
+        return textForCode(code, 'taskNoSmoke45');
+      case '60 dakika sigarasiz kal':
+        return textForCode(code, 'taskNoSmoke60');
+      case 'Bugun 2 sigara eksik ic':
+        return textForCode(code, 'taskSmokeTwoLess');
+      case '90 dakika sigarasiz kal':
+        return textForCode(code, 'taskNoSmoke90');
+      case '120 dakika sigarasiz kal':
+        return textForCode(code, 'taskNoSmoke120');
+      case 'Aksam saatinde destek kisisiyle iletisim kur':
+        return textForCode(code, 'taskContactSupportEvening');
+      case '1 gun sigarasiz kalma gorevi: bugun tum kriz anlarinda sigarayi erteleyin.':
+        return textForCode(code, 'taskPlanOneDayDelayAllCravings');
+      case '1 gun sigarasiz kalma gorevi: ilk sigarayi en az 90 dakika erteleyin.':
+        return textForCode(code, 'taskPlanOneDayDelayFirst90');
+      case '2 gun sigarasiz kalma gorevi: 48 saat boyunca tetikleyicilerde sigarayi erteleyin.':
+        return textForCode(code, 'taskPlanTwoDaysDelayTriggers');
+      case '2 gun sigarasiz kalma plani: kriz aninda 10 derin nefes + su uygulayin.':
+        return textForCode(code, 'taskPlanTwoDaysBreathAndWater');
+      case '1 hafta sigarasiz kalma hedefi: 7 gun boyunca tum gorevleri tamamlayin.':
+        return textForCode(code, 'taskPlanOneWeekCompleteAll');
+    }
+
+    final parts = normalized.split(' - ');
+    if (parts.length == 2) {
+      return '${localizeCanonicalTextForCode(code, parts[0])} - ${localizeCanonicalTextForCode(code, parts[1])}';
+    }
+
+    return value;
+  }
+
+  static String localizeCanonicalText(BuildContext context, String value) {
+    final code = Localizations.localeOf(context).languageCode;
+    return localizeCanonicalTextForCode(code, value);
   }
 }
 

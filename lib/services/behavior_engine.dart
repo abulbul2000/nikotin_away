@@ -1057,9 +1057,19 @@ class BehaviorEngine {
     final nextRiskWindow = riskyHours.isNotEmpty
         ? riskyHours.first
         : '20:00-22:00';
-    final nextRiskTrigger = riskyTriggers.isNotEmpty
+    var nextRiskTrigger = riskyTriggers.isNotEmpty
         ? riskyTriggers.first
         : 'Stres';
+
+    if (sensorEvents.isNotEmpty) {
+      final recent = sensorEvents.sublist(max(0, sensorEvents.length - 8));
+      final recentMealLikelihood =
+          recent.map((item) => item.mealSoundLikelihood).reduce((a, b) => a + b) /
+          recent.length;
+      if (recentMealLikelihood >= 0.65) {
+        nextRiskTrigger = 'Meal context';
+      }
+    }
 
     var confidence = 45;
     confidence += min(riskyHours.length, 3) * 8;
@@ -1084,6 +1094,7 @@ class BehaviorEngine {
     required List<String> todaysTasks,
     required List<String> coachCommands,
     required List<String> durationBarrierCommands,
+    required int durationBarrierHistoryCount,
     required Map<String, double> commandSuccessScores,
     required Map<String, double> commandCategoryScores,
     required String commandMixMode,
@@ -1134,6 +1145,7 @@ class BehaviorEngine {
       todaysTasks: todaysTasks,
       coachCommands: coachCommands,
       durationBarrierCommands: durationBarrierCommands,
+      durationBarrierHistoryCount: durationBarrierHistoryCount,
       commandSuccessScores: commandSuccessScores,
       commandCategoryScores: commandCategoryScores,
       commandMixMode: commandMixMode,
@@ -1484,7 +1496,22 @@ class BehaviorEngine {
         .where((item) => item.activityState != 'idle')
         .length;
     final activityRatio = activeCount / recent.length;
-    return (activityRatio * 12).round();
+    var boost = (activityRatio * 12).round();
+
+    final avgMealLikelihood =
+        recent.map((item) => item.mealSoundLikelihood).reduce((a, b) => a + b) /
+        recent.length;
+    final avgAmbientMean =
+        recent.map((item) => item.ambientMeanDecibel).reduce((a, b) => a + b) /
+        recent.length;
+    if (avgMealLikelihood >= 0.55) {
+      boost += 3;
+    }
+    if (avgAmbientMean >= 50 && avgAmbientMean <= 80) {
+      boost += 2;
+    }
+
+    return boost;
   }
 
   int _breathRiskAdjustmentFromRecords(List<SurveyRecord> breathRecords) {
@@ -1629,7 +1656,9 @@ class BehaviorEngine {
           (event) =>
               event.screenUnlockCount >= 12 ||
               event.appUsageMinutes >= 40 ||
-              event.activityState == 'driving',
+              event.activityState == 'driving' ||
+              event.mealSoundLikelihood >= 0.65 ||
+              event.ambientPeakDecibel >= 78,
         )
         .length;
     final ratio = highPressureCount / recent.length;

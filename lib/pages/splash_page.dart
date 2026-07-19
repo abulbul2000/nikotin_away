@@ -1,10 +1,14 @@
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../core/app_texts.dart';
 import '../core/home_seed_resolver.dart';
 import '../main.dart';
+import '../services/ambient_audio_service.dart';
 import '../services/language_service.dart';
+import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/no_smoke_logo.dart';
 import 'breath_test_page.dart';
@@ -33,11 +37,14 @@ class _SplashPageState extends State<SplashPage> {
     // Dil seçimi yapılmışsa, normal akışı izle
     if (hasSavedLanguage) {
       final selectedCode = await LanguageService.loadSelectedLanguageCode();
+      await AppTexts.ensureLanguageLoaded(selectedCode);
+      await NotificationService.refreshLocalizedResources();
       if (!mounted) return;
-      
+
       NoSmokeApp.setLocale(
         context,
-        LanguageService.supportedLanguages[selectedCode] ?? const Locale('en'),
+        LanguageService.supportedLanguages[selectedCode] ??
+            const Locale('en'),
       );
 
       await Future.delayed(const Duration(milliseconds: 1800));
@@ -49,16 +56,19 @@ class _SplashPageState extends State<SplashPage> {
 
     // Dil seçimi yapılmamışsa, cihaz dilini kontrol et
     final deviceLanguageCode = LanguageService.getDeviceLanguageCode();
-    
+
     if (deviceLanguageCode != null) {
-      // Cihaz dili destekleniyor → otomatik seç
-      await LanguageService.saveSelectedLanguageCode(deviceLanguageCode);
+      // Cihaz dili destekleniyor → otomatik uygula
+      await AppTexts.ensureLanguageLoaded(deviceLanguageCode);
       if (!mounted) return;
-      
+
       NoSmokeApp.setLocale(
         context,
-        LanguageService.supportedLanguages[deviceLanguageCode] ?? const Locale('en'),
+        LanguageService.supportedLanguages[deviceLanguageCode] ??
+            const Locale('en'),
       );
+
+      await NotificationService.refreshLocalizedResources();
 
       await Future.delayed(const Duration(milliseconds: 1800));
       if (!mounted) return;
@@ -71,7 +81,9 @@ class _SplashPageState extends State<SplashPage> {
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const LanguageSelectionPage()),
+        MaterialPageRoute(
+          builder: (_) => const LanguageSelectionPage(),
+        ),
       );
     }
   }
@@ -81,7 +93,8 @@ class _SplashPageState extends State<SplashPage> {
 
     final storage = StorageService();
     final records = await storage.loadSurveyHistory();
-    final hasInitialSetup = records.any((record) => record.type == 'initial');
+    final hasInitialSetup =
+        records.any((record) => record.type == 'initial');
 
     if (!mounted) return;
 
@@ -89,13 +102,19 @@ class _SplashPageState extends State<SplashPage> {
     if (!hasInitialSetup) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const TrialInfoPage()),
+        MaterialPageRoute(
+          builder: (_) => const TrialInfoPage(),
+        ),
       );
       return;
     }
 
     // Setup yapılmışsa BreathTestPage'e git
     final seed = HomeSeedResolver.fromRecords(records);
+
+    await AmbientAudioService().startMonitoring();
+    if (!mounted) return;
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -119,7 +138,13 @@ class _SplashPageState extends State<SplashPage> {
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [const NoSmokeLogo(size: 180, showLabel: true)],
+              children: const [
+                NoSmokeLogo(
+                  size: 180,
+                  showLabel: true,
+                  iconColor: Color(0xFFE3425A),
+                ),
+              ],
             ),
           ),
         ),

@@ -66,6 +66,8 @@
 			<string>UIInterfaceOrientationLandscapeLeft</string>
 			<string>UIInterfaceOrientationLandscapeRight</string>
 		</array>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>No Smoke uses brief ambient sound level samples to improve personalized trigger prediction.</string>
 		<key>UIStatusBarHidden</key>
 		<false/>
 	</dict>

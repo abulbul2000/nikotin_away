@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../core/app_texts.dart';
 import '../pages/breath_test_page.dart';
 import 'android_watchdog_service.dart';
 import 'language_service.dart';
@@ -115,6 +116,10 @@ class NotificationService {
     );
 
     await _syncWatchdogViolationsFromNative();
+  }
+
+  static Future<void> refreshLocalizedResources() async {
+    await initialize(navigatorKey: _navigatorKey);
   }
 
   static Future<void> _syncWatchdogViolationsFromNative() async {
@@ -358,6 +363,17 @@ class NotificationService {
   }
 
   static Duration _resolveInitialTaskDelay(String taskTitle) {
+    final adaptiveCanonical = RegExp(
+      r'^ADAPTIVE_NO_SMOKE:(\d+)$',
+      caseSensitive: false,
+    ).firstMatch(taskTitle.trim());
+    if (adaptiveCanonical != null) {
+      final minutes = int.tryParse(adaptiveCanonical.group(1) ?? '');
+      if (minutes != null && minutes > 0) {
+        return Duration(minutes: minutes);
+      }
+    }
+
     final minuteMatch = RegExp(
       r'(\d+)\s*(dakika|minute|minutes|min)',
       caseSensitive: false,
@@ -396,8 +412,8 @@ class NotificationService {
         ? _text(code, 'taskFollowUpTitlePush')
         : _text(code, 'taskEscalationTitle');
     final body = isFollowUp
-        ? '${_text(code, 'taskFollowUpQuestion')}\n$taskTitle'
-        : '${_text(code, 'taskEscalationBodyPrefix')}\n$taskTitle';
+      ? '${_text(code, 'taskFollowUpQuestion')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}'
+      : '${_text(code, 'taskEscalationBodyPrefix')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}';
     final androidCategory = isFollowUp
         ? AndroidNotificationCategory.call
         : AndroidNotificationCategory.reminder;
@@ -465,7 +481,7 @@ class NotificationService {
     );
     final adjustedDescription = contextLabel == 'eating'
         ? _text(code, 'postMealShieldCommand')
-        : taskDescription;
+      : AppTexts.localizeCanonicalTextForCode(code, taskDescription);
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
     final reminderId = _deriveReminderId(id);
     final watchdogId = 'wdg_$id';
@@ -557,7 +573,7 @@ class NotificationService {
     final fireAt = now.add(delay).add(Duration(minutes: extraDelay));
     final adjustedDescription = contextLabel == 'eating'
         ? _text(code, 'postMealShieldCommand')
-        : taskDescription;
+      : AppTexts.localizeCanonicalTextForCode(code, taskDescription);
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
     final reminderId = _deriveReminderId(id);
     final watchdogId = 'wdg_$id';
@@ -810,7 +826,7 @@ class NotificationService {
         ? _text(code, 'taskFollowUpQuestionWorkout')
         : contextLabel == 'eating'
         ? _text(code, 'taskFollowUpQuestionPostMeal')
-        : '${_text(code, 'taskFollowUpQuestion')}\n$taskTitle';
+        : '${_text(code, 'taskFollowUpQuestion')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}';
 
     final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
       2147483647,
@@ -929,7 +945,7 @@ class NotificationService {
     await _plugin.show(
       id,
       _text(code, 'taskTimerStartedTitle'),
-      '${_text(code, 'taskTimerStartedBody')}\n$taskTitle\n${_text(code, 'taskTimerDuration')}: ${duration.inMinutes} ${_text(code, 'minutesShort')}.',
+      '${_text(code, 'taskTimerStartedBody')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}\n${_text(code, 'taskTimerDuration')}: ${duration.inMinutes} ${_text(code, 'minutesShort')}.',
       const NotificationDetails(
         android: AndroidNotificationDetails(
           _taskStartChannelId,
@@ -943,6 +959,53 @@ class NotificationService {
         iOS: DarwinNotificationDetails(presentSound: true),
       ),
     );
+  }
+
+  static Future<void> showDurationBarrierStartedNotification({
+    required String taskTitle,
+    required Duration duration,
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
+    final durationText = _formatBarrierDuration(duration, code);
+    final instruction = code == 'tr'
+        ? 'Lütfen önümüzdeki $durationText boyunca sigara içmeyin.'
+        : 'Please do not smoke for the next $durationText.';
+    await _plugin.show(
+      id,
+      _text(code, 'barrierStartedTitle'),
+      '$instruction\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}\n${_text(code, 'barrierStartedDuration')}: $durationText.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _taskStartChannelId,
+          'Duration barrier call',
+          importance: Importance.max,
+          priority: Priority.high,
+          playSound: true,
+          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+          category: AndroidNotificationCategory.call,
+          fullScreenIntent: true,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: true),
+      ),
+    );
+  }
+
+  static String _formatBarrierDuration(Duration duration, String code) {
+    final totalMinutes = duration.inMinutes;
+    if (totalMinutes >= 60) {
+      final hours = totalMinutes ~/ 60;
+      final remainingMinutes = totalMinutes % 60;
+      if (remainingMinutes == 0) {
+        return code == 'tr' ? '$hours saat' : '$hours hour${hours == 1 ? '' : 's'}';
+      }
+      return code == 'tr'
+          ? '$hours saat $remainingMinutes dakika'
+          : '$hours hour${hours == 1 ? '' : 's'} $remainingMinutes minute${remainingMinutes == 1 ? '' : 's'}';
+    }
+    return code == 'tr'
+        ? '$totalMinutes dakika'
+        : '$totalMinutes minute${totalMinutes == 1 ? '' : 's'}';
   }
 
   static Future<void> scheduleCoachCommandNotifications({
@@ -1123,106 +1186,6 @@ class NotificationService {
   }
 
   static String _text(String code, String key) {
-    const tr = <String, String>{
-      'yes': 'Evet',
-      'no': 'Hayır',
-      'taskActionDone': 'Gorevi Baslat',
-      'taskActionNotNow': 'Şimdi Uygun Değil',
-      'taskActionDoneLabel': 'Gorevi Baslat',
-      'taskActionNotNowLabel': 'Simdi uygun degil',
-      'taskFollowUpActionYes': 'Evet',
-      'taskFollowUpActionNo': 'Hayir',
-      'taskStartTitle': 'Gorev Hatirlatmasi',
-      'disciplineCommand': 'Su andan itibaren sigara icme',
-      'disciplineCommandBody':
-          'Protokol aktif. Bildirim kapanmasi icin gorevi baslat.',
-      'breathReminderTitle': 'Nefes Testi',
-      'breathReminderBody': 'Günlük nefes testi zamanı geldi.',
-      'breathReminderDriving':
-          'Sürüşte güvenliğiniz için hatırlatma kısa süre ertelendi.',
-        'breathReminderWorkout':
-          'Aktivite tamamlaninca hatirlatma tekrar gonderilecek.',
-        'breathReminderPostMeal':
-          'Yemek sonrasi sigarayi ertelemek icin nefes rutinini simdi uygula.',
-      'taskFollowUpTitlePush': 'Görev Takibi',
-      'taskFollowUpQuestion': 'Gorevi basariyla tamamladiniz mi?',
-      'taskFollowUpQuestionDriving':
-          'Surus sonrasi cevaplayin: Gorevi basariyla tamamladiniz mi?',
-        'taskFollowUpQuestionWorkout':
-          'Aktivite sonrasi cevaplayin: Gorevi basariyla tamamladiniz mi?',
-        'taskFollowUpQuestionPostMeal':
-          'Yemek sonrasi sigara istegini yonetebildiniz mi?',
-        'postMealShieldCommand':
-          'Yemek sonrasi 10 dakika ertele + su + sakiz rutini uygula.',
-          'contextReasonDriving':
-            'Bildirim surus/ulasim durumu nedeniyle ertelendi',
-          'contextReasonWorkout':
-            'Bildirim kosu/egzersiz durumu nedeniyle ertelendi',
-          'contextReasonEating':
-            'Bildirim yemek penceresi nedeniyle yemek sonrasina kaydirildi',
-          'contextReasonNormal': 'Bildirim normal plana gore ayarlandi',
-      'taskTimerStartedTitle': 'İlk Görev',
-      'taskTimerStartedBody': 'Görev başladı:',
-      'taskEscalationTitle': 'Gorev guncellendi',
-      'taskEscalationBodyPrefix':
-          '15 saniye icinde yanit alinmadi. 10 dakika sonra gorev tekrarlanacak:',
-      'taskTimerDuration': 'Sayaç',
-      'minutesShort': 'dakika',
-      'weeklySurveyReminderTitle': 'Haftalik anket zamani',
-      'weeklySurveyReminderBody':
-          'Risk skorunu guncellemek icin haftalik anketi doldurman gerekiyor.',
-    };
-
-    const en = <String, String>{
-      'yes': 'Yes',
-      'no': 'No',
-      'taskActionDone': 'Start Task',
-      'taskActionNotNow': 'Not now',
-      'taskActionDoneLabel': 'Start Task',
-      'taskActionNotNowLabel': 'Not now',
-      'taskFollowUpActionYes': 'Yes',
-      'taskFollowUpActionNo': 'No',
-      'taskStartTitle': 'Task Reminder',
-      'disciplineCommand': 'Do not smoke from this moment',
-      'disciplineCommandBody':
-          'Protocol is active. Start the task to clear this alert.',
-      'breathReminderTitle': 'Breath Test',
-      'breathReminderBody': 'Time for your daily breath test.',
-      'breathReminderDriving': 'Reminder delayed briefly for driving safety.',
-        'breathReminderWorkout':
-          'Reminder deferred until your activity cool-down window.',
-        'breathReminderPostMeal':
-          'Use a post-meal breathing routine now to avoid smoking.',
-      'taskFollowUpTitlePush': 'Task Follow-up',
-      'taskFollowUpQuestion': 'Did you complete the task successfully?',
-      'taskFollowUpQuestionDriving':
-          'Answer after driving: Did you complete the task successfully?',
-        'taskFollowUpQuestionWorkout':
-          'Answer after your activity: Did you complete the task successfully?',
-        'taskFollowUpQuestionPostMeal':
-          'After the meal window, did you manage the urge without smoking?',
-        'postMealShieldCommand':
-          'After meal: delay 10 minutes, drink water, and use gum.',
-          'contextReasonDriving':
-            'Notification deferred due to driving/transport context',
-          'contextReasonWorkout':
-            'Notification deferred due to running/workout context',
-          'contextReasonEating':
-            'Notification shifted to post-meal anti-smoking window',
-          'contextReasonNormal': 'Notification scheduled in normal mode',
-      'taskTimerStartedTitle': 'First Task',
-      'taskTimerStartedBody': 'Task started:',
-      'taskEscalationTitle': 'Task updated',
-      'taskEscalationBodyPrefix':
-          'No response in 15 seconds. Task will repeat after 10 minutes:',
-      'taskTimerDuration': 'Timer',
-      'minutesShort': 'minutes',
-      'weeklySurveyReminderTitle': 'Weekly survey due',
-      'weeklySurveyReminderBody':
-          'Please complete the weekly survey to refresh your risk score.',
-    };
-
-    final map = code == 'tr' ? tr : en;
-    return map[key] ?? en[key] ?? key;
+    return AppTexts.textForCode(code, key);
   }
 }

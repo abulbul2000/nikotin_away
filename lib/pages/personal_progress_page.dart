@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_texts.dart';
 import '../models/behavior_dashboard.dart';
 import '../models/survey_record.dart';
 import '../services/storage_service.dart';
@@ -44,7 +45,7 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Kisisel Gelisim Takibi')),
+      appBar: AppBar(title: Text(context.t('menuPersonalProgress'))),
       body: FutureBuilder<_ProgressData>(
         future: _dataFuture,
         builder: (context, snapshot) {
@@ -52,7 +53,7 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData) {
-            return const Center(child: Text('Veri yuklenemedi.'));
+            return Center(child: Text(context.t('dataLoadFailed')));
           }
 
           final data = snapshot.data!;
@@ -113,65 +114,68 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
               padding: const EdgeInsets.all(16),
               children: [
                 _sectionCard(
-                  title: 'Genel Ozet',
+                  title: context.t('progressSummaryTitle'),
                   children: [
-                    _row('Toplam kayit', '${data.history.length}'),
-                    _row('Haftalik anket', '${weeklyRecords.length}'),
-                    _row('Nefes testi', '${breathTests.length}'),
+                    _row(context.t('totalRecords'), '${data.history.length}'),
+                    _row(context.t('menuWeeklySurvey'), '${weeklyRecords.length}'),
+                    _row(context.t('menuBreathTest'), '${breathTests.length}'),
                     _row(
-                      'Son risk skoru',
+                      context.t('latestRiskScore'),
                       data.behavior?.riskScore.toString() ?? '-',
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 _sectionCard(
-                  title: 'Nefes Gelisimi',
+                  title: context.t('breathProgressTitle'),
                   children: [
                     _row(
-                      'Gunluk ortalama',
+                      context.t('dailyAverageLabel'),
                       (data.breathMetrics['dailyAverage'] ?? 0).toStringAsFixed(
                         1,
                       ),
                     ),
                     _row(
-                      'Haftalik ortalama',
+                      context.t('weeklyAverageLabel'),
                       (data.breathMetrics['weeklyAverage'] ?? 0)
                           .toStringAsFixed(1),
                     ),
                     _row(
-                      'Aylik ortalama',
+                      context.t('monthlyAverageLabel'),
                       (data.breathMetrics['monthlyAverage'] ?? 0)
                           .toStringAsFixed(1),
                     ),
                     _row(
-                      'Ilk -> Son ortalama fark',
+                      context.t('firstToLastAverageDiff'),
                       breathTests.isEmpty
                           ? '-'
                           : '${breathDelta >= 0 ? '+' : ''}${breathDelta.toStringAsFixed(1)} sn',
                     ),
                     _row(
-                      'Son test vs onceki',
+                      context.t('latestVsPrevious'),
                       ((data.breathProgress['deltaFromPrevious'] as num?)
                                   ?.toDouble() ??
                               0)
                           .toStringAsFixed(1),
                     ),
-                    _row('En iyi ardısık gun', '$bestBreathStreak gun'),
+                    _row(
+                      context.t('bestConsecutiveDay'),
+                      '$bestBreathStreak ${context.t('dayUnit')}',
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 _sectionCard(
-                  title: 'Respiratuar Izlem (KOAH-benzeri, tanisal degil)',
+                  title: context.t('respFollowUpTitle'),
                   children: [
                     _row(
-                      'Son respiratuar yuk',
+                      context.t('latestRespBurden'),
                       latestRespiratory == null
                           ? '-'
                           : '${(_toDouble(latestRespiratory['burden'])).toStringAsFixed(1)} / 100',
                     ),
                     _row(
-                      'Son durum',
+                      context.t('latestStatus'),
                       latestRespiratory == null
                           ? '-'
                           : _respiratoryStateLabel(
@@ -180,41 +184,41 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                             ),
                     ),
                     _row(
-                      'mMRC benzeri derece',
+                      context.t('mmrcLikeGrade'),
                       latestRespiratory == null
                           ? '-'
                           : '${_toInt(latestRespiratory['mmrc'])}',
                     ),
                     _row(
-                      'CAT-benzeri toplam',
+                      context.t('catLikeTotal'),
                       latestRespiratory == null
                           ? '-'
                           : '${_toInt(latestRespiratory['catTotal'])} / 40',
                     ),
                     _row(
-                      'Uyari gunleri toplami',
+                      context.t('warningDaysTotal'),
                       latestRespiratory == null
                           ? '-'
                           : '${_toInt(latestRespiratory['warningTotal'])} / 28',
                     ),
                     const SizedBox(height: 6),
-                    const Text(
-                      'Not: Bu izlem tani koymaz; belirti kotulesirse klinik degerlendirme alin.',
+                    Text(
+                      context.t('respFollowUpNote'),
                       style: TextStyle(fontSize: 12),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 _sectionCard(
-                  title: 'Trend Grafikler',
+                  title: context.t('trendChartsTitle'),
                   children: [
-                    const Text(
-                      'Haftalik risk trendi (son 12 olcum)',
+                    Text(
+                      context.t('weeklyRiskTrendTitle'),
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
                     if (weeklyRiskTrend.isEmpty)
-                      const Text('Grafik icin yeterli haftalik veri yok.')
+                      Text(context.t('noWeeklyDataForChart'))
                     else
                       _MiniLineChart(
                         values: weeklyRiskTrend,
@@ -223,13 +227,13 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                         lineLabel: 'Risk',
                       ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Nefes ortalama trendi (gunluk son 14 veri)',
+                    Text(
+                      context.t('breathTrendTitle'),
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
                     if (breathTrend.isEmpty)
-                      const Text('Grafik icin yeterli nefes testi verisi yok.')
+                      Text(context.t('noBreathDataForChart'))
                     else
                       _MiniLineChart(
                         values: breathTrend,
@@ -238,13 +242,13 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                         lineLabel: 'sn',
                       ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Respiratuar yuk trendi (haftalik son 12)',
+                    Text(
+                      context.t('respiratoryTrendTitle'),
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
                     if (respiratoryTrend.isEmpty)
-                      const Text('Grafik icin yeterli respiratuar veri yok.')
+                      Text(context.t('noRespDataForChart'))
                     else
                       _MiniLineChart(
                         values: respiratoryTrend,
@@ -256,57 +260,57 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                 ),
                 const SizedBox(height: 12),
                 _sectionCard(
-                  title: 'Gorev ve Bariyer Uyum',
+                  title: context.t('taskBarrierComplianceTitle'),
                   children: [
                     _row(
-                      'Basarili gorev',
+                      context.t('successfulTaskCount'),
                       '${data.taskSummary['successCount'] ?? 0}',
                     ),
                     _row(
-                      'Basarisiz gorev',
+                      context.t('failedTaskCount'),
                       '${data.taskSummary['failureCount'] ?? 0}',
                     ),
                     _row(
-                      'Son 10 basarili',
+                      context.t('last10Successful'),
                       '${data.taskSummary['recentSuccessCount'] ?? 0}',
                     ),
                     _row(
-                      'Son 10 basarisiz',
+                      context.t('last10Failed'),
                       '${data.taskSummary['recentFailureCount'] ?? 0}',
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 _sectionCard(
-                  title: 'Baslangictan Bugune Basarilar',
+                  title: context.t('achievementsSinceStartTitle'),
                   children: [
                     _row(
-                      'Risk degisimi',
+                      context.t('riskChange'),
                       firstRecord == null || latestRecord == null
                           ? '-'
                           : '${firstRecord.riskScore} -> ${latestRecord.riskScore} (${riskDelta >= 0 ? '+' : ''}$riskDelta)',
                     ),
                     _row(
-                      'Haftalik iyilesen donem',
-                      '$weeklyImprovements hafta',
+                      context.t('weeklyImprovementPeriod'),
+                      '$weeklyImprovements ${context.t('weeklySurvey')}',
                     ),
                     _row(
-                      'Plan gunu',
+                      context.t('planDayLabel'),
                       data.behavior == null
                           ? '-'
                           : '${data.behavior!.plan.currentDay}/${data.behavior!.plan.targetDays}',
                     ),
                     _row(
-                      'Kalan gun',
+                      context.t('remainingDaysLabel'),
                       data.behavior?.plan.daysRemaining.toString() ?? '-',
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 _sectionCard(
-                  title: 'Respiratuar Uyari Gecmisi',
+                  title: context.t('respAlertHistoryTitle'),
                   children: respiratoryAlerts.isEmpty
-                      ? const [Text('Kritik respiratuar uyari kaydi yok.')]
+                      ? [Text(context.t('noCriticalRespAlertRecord'))]
                       : respiratoryAlerts
                             .take(12)
                             .map(
@@ -319,16 +323,16 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                 ),
                 const SizedBox(height: 12),
                 _sectionCard(
-                  title: 'Haftalik Gecmis',
+                  title: context.t('weeklyHistoryTitle'),
                   children: weeklyRecords.isEmpty
-                      ? const [Text('Henuz haftalik anket kaydi yok.')]
+                      ? [Text(context.t('noWeeklyRecordYet'))]
                       : weeklyRecords.reversed
                             .take(20)
                             .map(
                               (r) => Padding(
                                 padding: const EdgeInsets.only(bottom: 6),
                                 child: Text(
-                                  '${_dateLabel(r.completedAt)}  |  Risk: ${r.riskScore} (${r.riskLevel})  |  Paket: ${r.packsPerDay}',
+                                  '${_dateLabel(r.completedAt)}  |  ${context.t('risk')}: ${r.riskScore} (${AppTexts.localizeCanonicalText(context, r.riskLevel)})  |  Paket: ${AppTexts.localizeCanonicalText(context, r.packsPerDay)}',
                                 ),
                               ),
                             )
@@ -336,9 +340,9 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                 ),
                 const SizedBox(height: 12),
                 _sectionCard(
-                  title: 'Nefes Testi Gecmisi',
+                  title: context.t('breathTestHistoryTitle'),
                   children: breathTests.isEmpty
-                      ? const [Text('Henuz nefes testi kaydi yok.')]
+                      ? [Text(context.t('noBreathRecordYet'))]
                       : breathTests.reversed
                             .take(30)
                             .map(
@@ -650,11 +654,11 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
   String _respiratoryStateLabel(String state) {
     switch (state) {
       case 'monitor_closer':
-        return 'Yakin izlem';
+        return context.t('respMonitorCloser');
       case 'clinical_review_recommended':
-        return 'Klinik degerlendirme onerilir';
+        return context.t('respClinicalReview');
       default:
-        return 'Stabil';
+        return context.t('respStable');
     }
   }
 }

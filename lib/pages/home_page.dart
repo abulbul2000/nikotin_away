@@ -3,16 +3,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
+import '../main.dart';
+import '../models/adaptive_task_models.dart';
 import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/health_metrics_page.dart';
+import '../pages/language_selection_page.dart';
 import '../pages/mandatory_task_page.dart';
 import '../pages/personal_progress_page.dart';
 import '../pages/protocol_violations_page.dart';
 import '../pages/task_follow_up_page.dart';
 import '../pages/weekly_survey_page.dart';
 import '../services/discipline_protocol_service.dart';
+import '../services/language_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/no_smoke_logo.dart';
@@ -41,9 +45,12 @@ class _HomePageState extends State<HomePage> {
       DisciplineProtocolService();
   final Map<String, String> _taskStates = {};
   final Map<String, Timer> _taskFollowUpTimers = {};
+  final Map<String, Timer> _durationBarrierTimers = {};
   final Map<String, DateTime> _taskStartedAt = {};
+  final Map<String, DateTime> _durationBarrierEndsAt = {};
   final Set<String> _notifiedTaskTitles = <String>{};
   StreamSubscription<Map<String, String>>? _taskActionSubscription;
+  Timer? _durationBarrierTicker;
   List<Map<String, dynamic>> _pendingFollowUps = const [];
   bool _mandatoryTaskShown = false;
   bool _weeklySurveyMandatoryShown = false;
@@ -74,6 +81,7 @@ class _HomePageState extends State<HomePage> {
   List<String> _riskyTriggers = const [];
   List<String> _riskyHours = const [];
   List<String> _todaysTasks = const [];
+  List<AdaptiveTaskPlanItem> _adaptivePlanItems = const [];
   List<String> _coachCommands = const [];
   List<String> _durationBarrierCommands = const [];
   Map<String, double> _commandSuccessScores = const {};
@@ -97,6 +105,7 @@ class _HomePageState extends State<HomePage> {
   String _durationBarrierPreference = 'neutral';
   String _durationBarrierFrequencyPreference = 'orta';
   bool _durationBarrierEnabled = true;
+  int _durationBarrierHistoryCount = 0;
   int _lastRespiratoryBurden = 25;
   String _lastRespiratoryState = 'stable';
   double _weeklyAverage = 0;
@@ -119,6 +128,10 @@ class _HomePageState extends State<HomePage> {
     for (final timer in _taskFollowUpTimers.values) {
       timer.cancel();
     }
+    for (final timer in _durationBarrierTimers.values) {
+      timer.cancel();
+    }
+    _durationBarrierTicker?.cancel();
     super.dispose();
   }
 
@@ -134,6 +147,92 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  void _scheduleLocalDurationBarrierFollowUp(
+    String taskTitle,
+    DateTime scheduledAt,
+  ) {
+    final remaining = scheduledAt.difference(DateTime.now());
+    final delay = remaining.isNegative ? Duration.zero : remaining;
+    _durationBarrierTimers[taskTitle]?.cancel();
+    _durationBarrierTimers[taskTitle] = Timer(delay, () {
+      if (!mounted) {
+        return;
+      }
+      _completeDurationBarrier(taskTitle);
+    });
+    _ensureDurationBarrierTicker();
+  }
+
+  void _ensureDurationBarrierTicker() {
+    final hasActiveBarrier = _durationBarrierEndsAt.values.any(
+      (endAt) => endAt.isAfter(DateTime.now()),
+    );
+    if (!hasActiveBarrier) {
+      _durationBarrierTicker?.cancel();
+      _durationBarrierTicker = null;
+      return;
+    }
+
+    _durationBarrierTicker ??= Timer.periodic(
+      const Duration(seconds: 1),
+      (_) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {});
+        final stillActive = _durationBarrierEndsAt.values.any(
+          (endAt) => endAt.isAfter(DateTime.now()),
+        );
+        if (!stillActive) {
+          _durationBarrierTicker?.cancel();
+          _durationBarrierTicker = null;
+        }
+      },
+    );
+  }
+
+  bool _isDurationBarrierTask(String taskTitle) {
+    final normalized = taskTitle.toLowerCase();
+    return normalized.contains('sure bariyeri') ||
+      normalized.contains('sigara içmeme süresi') ||
+      normalized.contains('sigara icmeme suresi') ||
+      taskTitle.contains('SURE-BARIYERI') ||
+      taskTitle.contains('Sigara içmeme süresi') ||
+      taskTitle.contains('SIGARA_ICMEME_SURESI');
+  }
+
+  List<Map<String, dynamic>> _activeDurationBarriers() {
+    final now = DateTime.now();
+    return _pendingFollowUps
+        .where((row) {
+          final title = row['taskTitle']?.toString() ?? '';
+          final scheduledAt = row['scheduledAt'];
+          return _isDurationBarrierTask(title) &&
+              scheduledAt is DateTime &&
+              scheduledAt.isAfter(now);
+        })
+        .toList()
+      ..sort(
+        (a, b) => (a['scheduledAt'] as DateTime).compareTo(
+          b['scheduledAt'] as DateTime,
+        ),
+      );
+  }
+
+  String _formatRemainingDuration(Duration duration) {
+    final totalSeconds = duration.inSeconds < 0 ? 0 : duration.inSeconds;
+    final totalMinutes = (totalSeconds / 60).ceil();
+    if (totalMinutes >= 60) {
+      final hours = totalMinutes ~/ 60;
+      final remainingMinutes = totalMinutes % 60;
+      if (remainingMinutes == 0) {
+        return '$hours saat';
+      }
+      return '$hours saat $remainingMinutes dakika';
+    }
+    return '$totalMinutes dakika';
+  }
+
   Future<void> _restorePendingFollowUps() async {
     final pending = await _storageService.loadPendingTaskFollowUps();
     if (!mounted) {
@@ -147,9 +246,16 @@ class _HomePageState extends State<HomePage> {
     for (final row in pending) {
       final taskTitle = row['taskTitle'] as String;
       final scheduledAt = row['scheduledAt'] as DateTime;
-      _scheduleLocalFollowUp(taskTitle, scheduledAt);
-      _taskStates[taskTitle] = 'deferred';
+      if (_isDurationBarrierTask(taskTitle)) {
+        _durationBarrierEndsAt[taskTitle] = scheduledAt;
+        _scheduleLocalDurationBarrierFollowUp(taskTitle, scheduledAt);
+        _taskStates[taskTitle] = 'deferred';
+      } else {
+        _scheduleLocalFollowUp(taskTitle, scheduledAt);
+        _taskStates[taskTitle] = 'deferred';
+      }
     }
+    _ensureDurationBarrierTicker();
   }
 
   String _calculateImprovementLabel(double current, double baseline) {
@@ -176,37 +282,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _localizeCanonicalToken(String value) {
-    switch (value.trim()) {
-      case 'Evet':
-        return context.t('yes');
-      case 'Hayır':
-      case 'Hayir':
-        return context.t('no');
-      case '2 adet':
-        return context.t('twoCig');
-      case '3 adet':
-        return context.t('threeCig');
-      case '4 adet':
-        return context.t('fourCig');
-      case '5+ adet':
-        return context.t('fivePlusCig');
-      case 'Kahve':
-        return context.t('triggerCoffee');
-      case 'Yemek Sonrasi':
-        return context.t('triggerMeal');
-      case 'Arac':
-        return context.t('triggerDriving');
-      case 'Stres':
-        return context.t('triggerStress');
-      case 'Telefon':
-        return context.t('triggerPhone');
-      case 'Sosyal Ortam':
-        return context.t('triggerSocial');
-      case 'Alkol':
-        return context.t('triggerAlcohol');
-      default:
-        return value;
-    }
+    return AppTexts.localizeCanonicalText(context, value);
   }
 
   String _localizeConsecutiveLabel(String value) {
@@ -218,37 +294,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   String _localizeTaskText(String task) {
-    final taskMap = <String, String>{
-      'Ilk sigarayi 10 dakika ertele': context.t('taskDelayFirstSmoke10'),
-      'Bir bardak su ic': context.t('taskDrinkWater'),
-      '2 dakikalik nefes egzersizi yap': context.t('taskBreathExercise2'),
-      '10 dakika sigarasiz kal': context.t('taskNoSmoke10'),
-      'Kriz anini not et': context.t('taskNoteCraving'),
-      'Ilk sigarayi 25 dakika ertele': context.t('taskDelayFirstSmoke25'),
-      'Bugun bir sigarayi atla': context.t('taskSkipOneCig'),
-      '30 dakika sigarasiz kal': context.t('taskNoSmoke30'),
-      'Riskli saatte seker sakiz kullan': context.t('taskUseGumAtRiskHour'),
-      '45 dakika sigarasiz kal': context.t('taskNoSmoke45'),
-      '60 dakika sigarasiz kal': context.t('taskNoSmoke60'),
-      'Bugun 2 sigara eksik ic': context.t('taskSmokeTwoLess'),
-      '90 dakika sigarasiz kal': context.t('taskNoSmoke90'),
-      '120 dakika sigarasiz kal': context.t('taskNoSmoke120'),
-      'Aksam saatinde destek kisisiyle iletisim kur': context.t(
-        'taskContactSupportEvening',
-      ),
-      '1 gun sigarasiz kalma gorevi: bugun tum kriz anlarinda sigarayi erteleyin.':
-          context.t('taskPlanOneDayDelayAllCravings'),
-      '1 gun sigarasiz kalma gorevi: ilk sigarayi en az 90 dakika erteleyin.':
-          context.t('taskPlanOneDayDelayFirst90'),
-      '2 gun sigarasiz kalma gorevi: 48 saat boyunca tetikleyicilerde sigarayi erteleyin.':
-          context.t('taskPlanTwoDaysDelayTriggers'),
-      '2 gun sigarasiz kalma plani: kriz aninda 10 derin nefes + su uygulayin.':
-          context.t('taskPlanTwoDaysBreathAndWater'),
-      '1 hafta sigarasiz kalma hedefi: 7 gun boyunca tum gorevleri tamamlayin.':
-          context.t('taskPlanOneWeekCompleteAll'),
-    };
-
-    return taskMap[task] ?? task;
+    return AppTexts.localizeCanonicalText(context, task);
   }
 
   Future<void> _askTaskOutcome(String taskTitle) async {
@@ -309,7 +355,7 @@ class _HomePageState extends State<HomePage> {
       builder: (dialogContext) {
         return AlertDialog(
           title: Text(context.t('taskOutcomeQuestion')),
-          content: Text(taskTitle),
+          content: Text(_localizeTaskText(taskTitle)),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -367,11 +413,7 @@ class _HomePageState extends State<HomePage> {
 
     if (actionId == 'task_done') {
       final now = DateTime.now();
-      final baseDelay = _resolveInitialTaskDelay(taskTitle);
-      final delay = _disciplineProtocolService.computeAdaptiveTaskDuration(
-        baseDuration: baseDelay,
-        successRate: _currentSuccessRate(),
-      );
+      final delay = _resolveInitialTaskDelay(taskTitle);
       final followUpAt = now.add(delay);
       await _storageService.saveTaskResult(
         taskTitle: taskTitle,
@@ -409,7 +451,7 @@ class _HomePageState extends State<HomePage> {
         taskTitle: taskTitle,
         details: 'User deferred task start for 10 minutes.',
       );
-      final delay = const Duration(minutes: 10);
+      final delay = await _storageService.resolveAdaptivePostponeDelay();
       final followUpAt = DateTime.now().add(delay);
       await _storageService.saveTaskFollowUp(
         taskTitle: taskTitle,
@@ -424,6 +466,14 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (actionId == 'followup_done' || actionId == 'smoked_yes') {
+      final plannedMinutes = _resolveInitialTaskDelay(taskTitle).inMinutes;
+      await _storageService.recordAdaptiveTaskOutcome(
+        taskTitle: taskTitle,
+        outcome: AdaptiveTaskOutcome.success,
+        plannedDurationMinutes: plannedMinutes,
+        scheduledAt: _taskStartedAt[taskTitle],
+        respondedAt: DateTime.now(),
+      );
       await _storageService.saveTaskResult(
         taskTitle: taskTitle,
         taskResult: 'willpower_success',
@@ -451,8 +501,16 @@ class _HomePageState extends State<HomePage> {
         taskTitle: taskTitle,
         details: 'Follow-up response deferred for 10 minutes.',
       );
-      final delay = const Duration(minutes: 10);
+      final delay = await _storageService.resolveAdaptivePostponeDelay();
       final followUpAt = DateTime.now().add(delay);
+      final plannedMinutes = _resolveInitialTaskDelay(taskTitle).inMinutes;
+      await _storageService.recordAdaptiveTaskOutcome(
+        taskTitle: taskTitle,
+        outcome: AdaptiveTaskOutcome.deferred,
+        plannedDurationMinutes: plannedMinutes,
+        scheduledAt: DateTime.now(),
+        respondedAt: DateTime.now(),
+      );
       await _storageService.saveTaskFollowUp(
         taskTitle: taskTitle,
         scheduledAt: followUpAt,
@@ -503,6 +561,30 @@ class _HomePageState extends State<HomePage> {
     final behavior = registrationCompleted
         ? await _storageService.loadBehaviorDashboard()
         : await _storageService.loadLatestBehaviorSnapshot();
+    AdaptiveTaskPlan? adaptivePlan;
+    if (registrationCompleted) {
+      final sleepRaw = await _storageService.loadSleepTime() ?? '21:00';
+      final parts = sleepRaw.split(':');
+      final sleepHour = int.tryParse(parts.first) ?? 21;
+      final sleepMinute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+      final now = DateTime.now();
+      var sleepAt = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        sleepHour,
+        sleepMinute,
+      );
+      if (!sleepAt.isAfter(now)) {
+        sleepAt = sleepAt.add(const Duration(days: 1));
+      }
+
+      adaptivePlan = await _storageService.buildAdaptiveNoSmokePlan(
+        now: now,
+        sleepAt: sleepAt,
+        riskyHours: behavior?.riskyHours ?? const <String>[],
+      );
+    }
     final pendingFollowUps = await _storageService.loadPendingTaskFollowUps();
     if (!mounted) return;
     setState(() {
@@ -553,9 +635,14 @@ class _HomePageState extends State<HomePage> {
       _riskyHours = behavior?.riskyHours ?? const [];
       _breathTrendText = behavior?.breathTrend ?? 'Stable';
       _progressSummaryText = behavior?.progressSummary ?? 'Stable';
-      _todaysTasks = behavior?.todaysTasks ?? const [];
+        _adaptivePlanItems = adaptivePlan?.items ?? const [];
+        _todaysTasks = _adaptivePlanItems.isNotEmpty
+          ? _adaptivePlanItems.map((item) => item.taskTitle).toList()
+          : behavior?.todaysTasks ?? const [];
       _coachCommands = behavior?.coachCommands ?? const [];
       _durationBarrierCommands = behavior?.durationBarrierCommands ?? const [];
+        _durationBarrierHistoryCount =
+          behavior?.durationBarrierHistoryCount ?? 0;
       _commandSuccessScores = behavior?.commandSuccessScores ?? const {};
       _commandCategoryScores = behavior?.commandCategoryScores ?? const {};
       _commandMixMode = behavior?.commandMixMode ?? 'balanced';
@@ -703,11 +790,11 @@ class _HomePageState extends State<HomePage> {
   String _respiratoryStateLabel() {
     switch (_lastRespiratoryState) {
       case 'clinical_review_recommended':
-        return 'Klinik degerlendirme onerilir';
+        return context.t('respClinicalReview');
       case 'monitor_closer':
-        return 'Yakin izlem';
+        return context.t('respMonitorCloser');
       default:
-        return 'Stabil';
+        return context.t('respStable');
     }
   }
 
@@ -727,14 +814,12 @@ class _HomePageState extends State<HomePage> {
       barrierDismissible: false,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('Gunluk nefes testi gerekli'),
-          content: const Text(
-            'Gelişimi doğru takip etmek için her gün en az 1 profesyonel nefes testi yapılmalı. Şimdi testi başlatalım.',
-          ),
+          title: Text(context.t('dailyBreathMandatoryTitle')),
+          content: Text(context.t('dailyBreathMandatoryContent')),
           actions: [
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Testi Baslat'),
+              child: Text(context.t('dailyBreathMandatoryStart')),
             ),
           ],
         );
@@ -847,14 +932,12 @@ class _HomePageState extends State<HomePage> {
         barrierDismissible: false,
         builder: (dialogContext) {
           return AlertDialog(
-            title: const Text('Haftalik anket zorunlu'),
-            content: const Text(
-              'Risk skorunun guncel kalmasi icin en az 7 gunde bir haftalik anket doldurmalisin.',
-            ),
+            title: Text(context.t('weeklyMandatoryTitle')),
+            content: Text(context.t('weeklyMandatoryContent')),
             actions: [
               ElevatedButton(
                 onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text('Ankete git'),
+                child: Text(context.t('weeklyMandatoryGo')),
               ),
             ],
           );
@@ -998,7 +1081,7 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Komut tamamlandi olarak kaydedildi.')),
+      SnackBar(content: Text(context.t('commandSaved'))),
     );
     await _loadHomeMetrics();
   }
@@ -1013,19 +1096,19 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (dialogContext) {
         final prompt = minutes == null
-            ? 'Sure bariyeri tamamlandi. Basarili oldun mu?'
-            : '$minutes dakikalik sure bariyeri bitti. Basarili oldun mu?';
+            ? context.t('barrierEvaluationPromptNoMinutes')
+            : '$minutes ${context.t('barrierEvaluationPromptMinutes')}';
         return AlertDialog(
-          title: const Text('Sure bariyeri degerlendirme'),
+          title: Text(context.t('barrierEvaluationTitle')),
           content: Text(prompt),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Basarisiz'),
+              child: Text(context.t('barrierFail')),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Basarili'),
+              child: Text(context.t('barrierSuccess')),
             ),
           ],
         );
@@ -1035,6 +1118,10 @@ class _HomePageState extends State<HomePage> {
     if (result == null) {
       return;
     }
+
+    _durationBarrierTimers[command]?.cancel();
+    _durationBarrierTimers.remove(command);
+    _durationBarrierEndsAt.remove(command);
 
     await _storageService.saveTaskResult(
       taskTitle: command,
@@ -1047,9 +1134,11 @@ class _HomePageState extends State<HomePage> {
         severity: 'medium',
         source: 'app_flow',
         taskTitle: command,
-        details: 'User marked duration barrier as failed after timer end.',
+        details: 'User marked smoke-free duration as failed after timer end.',
       );
     }
+
+    await _storageService.resolveTaskFollowUpByTitle(command);
 
     if (!mounted) {
       return;
@@ -1058,12 +1147,51 @@ class _HomePageState extends State<HomePage> {
       SnackBar(
         content: Text(
           result
-              ? 'Sure bariyeri basarili kaydedildi. Sonraki bariyerler buna gore ayarlanacak.'
-              : 'Sure bariyeri basarisiz kaydedildi. Sonraki bariyerler uyuma gore guncellenecek.',
+              ? context.t('barrierSavedSuccess')
+              : context.t('barrierSavedFailure'),
         ),
       ),
     );
     await _loadHomeMetrics();
+    _ensureDurationBarrierTicker();
+  }
+
+  Future<void> _startDurationBarrier(String command) async {
+    final minutes = _extractDurationBarrierMinutes(command) ?? 30;
+    if (_durationBarrierEndsAt.containsKey(command)) {
+      return;
+    }
+
+    final duration = Duration(minutes: minutes);
+    final endAt = DateTime.now().add(duration);
+
+    await _storageService.saveTaskFollowUp(
+      taskTitle: command,
+      scheduledAt: endAt,
+    );
+    _durationBarrierEndsAt[command] = endAt;
+    _scheduleLocalDurationBarrierFollowUp(command, endAt);
+    await NotificationService.showDurationBarrierStartedNotification(
+      taskTitle: command,
+      duration: duration,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _taskStates[command] = 'deferred';
+      _pendingFollowUps = [
+        ..._pendingFollowUps,
+        {'taskTitle': command, 'scheduledAt': endAt, 'status': 'pending'},
+      ];
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('${context.t('smokeFreeCounterTitle')}: ${_formatRemainingDuration(duration)}'),
+      ),
+    );
   }
 
   Future<void> _deferCoachCommand(String command) async {
@@ -1081,7 +1209,7 @@ class _HomePageState extends State<HomePage> {
     }
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Komut 10 dakika ertelendi.')));
+    ).showSnackBar(SnackBar(content: Text(context.t('commandDeferred10'))));
     await _loadHomeMetrics();
   }
 
@@ -1099,7 +1227,7 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sure bariyeri 10 dakika ertelendi.')),
+      SnackBar(content: Text(context.t('barrierDeferred10'))),
     );
     await _loadHomeMetrics();
   }
@@ -1116,6 +1244,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   int _resolveDurationBarrierNotificationLimit() {
+    if (_durationBarrierHistoryCount == 0) {
+      return 5;
+    }
+
     var limit = _durationBarrierFrequencyPreference == 'az'
         ? 1
         : _durationBarrierFrequencyPreference == 'cok'
@@ -1219,11 +1351,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _startTaskFromMandatoryScreen(String taskTitle) async {
     final now = DateTime.now();
-    final baseDelay = _resolveInitialTaskDelay(taskTitle);
-    final delay = _disciplineProtocolService.computeAdaptiveTaskDuration(
-      baseDuration: baseDelay,
-      successRate: _currentSuccessRate(),
-    );
+    final delay = _resolveInitialTaskDelay(taskTitle);
     final followUpAt = now.add(delay);
 
     await _storageService.saveTaskResult(
@@ -1258,6 +1386,42 @@ class _HomePageState extends State<HomePage> {
     if (_todaysTasks.isEmpty) {
       return;
     }
+
+    if (_adaptivePlanItems.isNotEmpty) {
+      DateTime? nextAt;
+      for (final item in _adaptivePlanItems) {
+        final task = item.taskTitle;
+        if (_notifiedTaskTitles.contains(task)) {
+          continue;
+        }
+        if ((_taskStates[task] ?? 'new') != 'new') {
+          continue;
+        }
+
+        var delay = item.scheduledAt.difference(DateTime.now());
+        if (delay.inSeconds <= 0) {
+          delay = const Duration(minutes: 1);
+        }
+
+        await NotificationService.scheduleFirstTaskTriggerNotification(
+          taskDescription: task,
+          delay: delay,
+        );
+
+        _notifiedTaskTitles.add(task);
+        if (nextAt == null || item.scheduledAt.isBefore(nextAt)) {
+          nextAt = item.scheduledAt;
+        }
+      }
+
+      if (nextAt != null && mounted) {
+        setState(() {
+          _nextTaskNotificationText = _formatDateTime(nextAt!);
+        });
+      }
+      return;
+    }
+
     final timingContext = await _storageService.loadLatestTaskTimingContext();
     var index = 0;
     for (final task in _todaysTasks) {
@@ -1359,21 +1523,37 @@ class _HomePageState extends State<HomePage> {
       final nextAt = sorted.first['scheduledAt'] as DateTime;
       label = _formatDateTime(nextAt);
     } else {
-      final nextNewTaskIndex = _todaysTasks.indexWhere(
-        (task) =>
-            (_taskStates[task] ?? 'new') == 'new' &&
-            !_notifiedTaskTitles.contains(task),
-      );
-
-      if (nextNewTaskIndex >= 0) {
-        final timingContext = await _storageService
-            .loadLatestTaskTimingContext();
-        final delay = _resolveTaskNotificationDelay(
-          taskTitle: _todaysTasks[nextNewTaskIndex],
-          index: nextNewTaskIndex,
-          timingContext: timingContext,
+      if (_adaptivePlanItems.isNotEmpty) {
+        final now = DateTime.now();
+        final upcoming = _adaptivePlanItems.where(
+          (item) =>
+              item.scheduledAt.isAfter(now) &&
+              (_taskStates[item.taskTitle] ?? 'new') == 'new' &&
+              !_notifiedTaskTitles.contains(item.taskTitle),
         );
-        label = _formatDateTime(DateTime.now().add(delay));
+
+        if (upcoming.isNotEmpty) {
+          final sorted = [...upcoming]
+            ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+          label = _formatDateTime(sorted.first.scheduledAt);
+        }
+      } else {
+        final nextNewTaskIndex = _todaysTasks.indexWhere(
+          (task) =>
+              (_taskStates[task] ?? 'new') == 'new' &&
+              !_notifiedTaskTitles.contains(task),
+        );
+
+        if (nextNewTaskIndex >= 0) {
+          final timingContext = await _storageService
+              .loadLatestTaskTimingContext();
+          final delay = _resolveTaskNotificationDelay(
+            taskTitle: _todaysTasks[nextNewTaskIndex],
+            index: nextNewTaskIndex,
+            timingContext: timingContext,
+          );
+          label = _formatDateTime(DateTime.now().add(delay));
+        }
       }
     }
 
@@ -1394,6 +1574,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   Duration _resolveInitialTaskDelay(String taskTitle) {
+    final adaptiveCanonical = RegExp(
+      r'^ADAPTIVE_NO_SMOKE:(\d+)$',
+      caseSensitive: false,
+    ).firstMatch(taskTitle.trim());
+    if (adaptiveCanonical != null) {
+      final minutes = int.tryParse(adaptiveCanonical.group(1) ?? '');
+      if (minutes != null && minutes > 0) {
+        return Duration(minutes: minutes);
+      }
+    }
+
     final minuteMatch = RegExp(
       r'(\d+)\s*dakika',
       caseSensitive: false,
@@ -1570,6 +1761,10 @@ class _HomePageState extends State<HomePage> {
     return context.t('riskLow');
   }
 
+  String _localizedWeeklyRiskLevel() {
+    return AppTexts.localizeCanonicalText(context, _weeklySurveyRiskLevel);
+  }
+
   void _showRegistrationError(String message) {
     if (!mounted) {
       return;
@@ -1577,6 +1772,41 @@ class _HomePageState extends State<HomePage> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _openLanguageSettings() async {
+    final initialCode = await LanguageService.loadSelectedLanguageCode();
+    if (!mounted) {
+      return;
+    }
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (modalContext) {
+        return LanguageSelectionModal(
+          selectedCode: initialCode,
+          onLanguageSelected: (code) async {
+            await LanguageService.saveSelectedLanguageCode(code);
+            await AppTexts.ensureLanguageLoaded(code);
+            await NotificationService.refreshLocalizedResources();
+            if (!mounted) {
+              return;
+            }
+            NoSmokeApp.setLocale(
+              context,
+              LanguageService.supportedLanguages[code] ?? const Locale('en'),
+            );
+            if (modalContext.mounted) {
+              Navigator.of(modalContext).pop();
+            }
+          },
+        );
+      },
+    );
   }
 
   Future<bool> _validateRegistrationInputs() async {
@@ -1692,11 +1922,12 @@ class _HomePageState extends State<HomePage> {
         return;
       }
       final firstTask = context.t('firstTaskNoSmoke15');
-      final taskStartTitle = context.t('taskStartTitle');
 
       debugPrint('[CompleteRegistration] Creating first task: $firstTask');
       final createdAt = DateTime.now();
+      const firstTaskDelay = Duration(minutes: 10);
       const followUpDelay = Duration(minutes: 5);
+      const followUpRetryDelay = Duration(seconds: 30);
 
       try {
         await _storageService.saveTaskResult(
@@ -1713,22 +1944,22 @@ class _HomePageState extends State<HomePage> {
       }
 
       try {
-        await NotificationService.showFirstTaskTriggerNotification(
-          taskTitle: taskStartTitle,
+        await NotificationService.scheduleFirstTaskTriggerNotification(
           taskDescription: firstTask,
+          delay: firstTaskDelay,
         );
 
         await NotificationService.scheduleFirstTaskTriggerNotification(
           taskDescription: firstTask,
-          delay: const Duration(seconds: 30),
+          delay: firstTaskDelay + followUpRetryDelay,
         );
 
         await NotificationService.scheduleFirstTaskTriggerNotification(
           taskDescription: firstTask,
-          delay: followUpDelay,
+          delay: firstTaskDelay + followUpDelay,
         );
         debugPrint(
-          '[CompleteRegistration] first task notification shown now + scheduled (30s, 5m)',
+          '[CompleteRegistration] first task notification scheduled (10m, +30s, +5m)',
         );
       } catch (error, stackTrace) {
         debugPrint(
@@ -1766,7 +1997,7 @@ class _HomePageState extends State<HomePage> {
       debugPrint('[CompleteRegistration] Failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       _showRegistrationError(
-        'Kaydı tamamlanırken bir hata oluştu. Lütfen tekrar deneyin.',
+        context.t('completeRegistrationError'),
       );
     } finally {
       if (mounted) {
@@ -1789,6 +2020,13 @@ class _HomePageState extends State<HomePage> {
             Text(context.t('home')),
           ],
         ),
+        actions: [
+          IconButton(
+            onPressed: _openLanguageSettings,
+            icon: const Icon(Icons.language),
+            tooltip: context.t('selectLanguage'),
+          ),
+        ],
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -1831,7 +2069,7 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     Text(
-                      _smokeFreeDays == 1 ? 'gün' : 'gün',
+                      context.t('dayUnit'),
                       style: const TextStyle(
                         fontSize: 18,
                         color: Colors.teal,
@@ -2019,7 +2257,7 @@ class _HomePageState extends State<HomePage> {
             Text('${context.t('weeklyRiskTarget')}: $_weeklyRiskTarget / 100'),
             const SizedBox(height: 6),
             Text(
-              'Haftalik anket riski: $_weeklySurveyRiskScore/100 (${_weeklySurveyRiskLevel.toUpperCase()})',
+              '${context.t('weeklyRiskLine')}: $_weeklySurveyRiskScore/100 (${_localizedWeeklyRiskLevel()})',
             ),
             const SizedBox(height: 8),
             Container(
@@ -2031,7 +2269,7 @@ class _HomePageState extends State<HomePage> {
                 border: Border.all(color: _respiratoryBandColor()),
               ),
               child: Text(
-                'Respiratuar durum: ${_respiratoryStateLabel()} • Yuk: $_lastRespiratoryBurden/100',
+                '${context.t('respiratoryStatusLine')}: ${_respiratoryStateLabel()} • ${context.t('levelLabel')}: $_lastRespiratoryBurden/100',
                 style: TextStyle(
                   color: _respiratoryBandColor(),
                   fontWeight: FontWeight.w700,
@@ -2041,26 +2279,26 @@ class _HomePageState extends State<HomePage> {
             if (_weeklyTopRiskDrivers.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                'Haftalik ust risk etkenleri: ${_weeklyTopRiskDrivers.join(' | ')}',
+                '${context.t('weeklyTopDriversLine')}: ${_weeklyTopRiskDrivers.join(' | ')}',
               ),
             ],
             const SizedBox(height: 6),
             Row(
               children: [
-                const Text('Komut modu: '),
+                Text('${context.t('commandModeLabel')}: '),
                 _buildCommandMixBadge(_commandMixMode),
               ],
             ),
             if (_learnedWeights.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                'Ogrenilen agirliklar: ${_formatLearnedWeights(_learnedWeights)}',
+                '${context.t('learnedWeightsLabel')}: ${_formatLearnedWeights(_learnedWeights)}',
               ),
             ],
             if (_coachCommands.isNotEmpty) ...[
               const SizedBox(height: 10),
-              const Text(
-                'Kisisel komutlar',
+              Text(
+                context.t('personalCommandsTitle'),
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
@@ -2077,11 +2315,11 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           OutlinedButton(
                             onPressed: () => _completeCoachCommand(command),
-                            child: const Text('Tamam'),
+                            child: Text(context.t('doneShort')),
                           ),
                           TextButton(
                             onPressed: () => _deferCoachCommand(command),
-                            child: const Text('Ertele 10 dk'),
+                            child: Text(context.t('defer10m')),
                           ),
                         ],
                       ),
@@ -2092,11 +2330,37 @@ class _HomePageState extends State<HomePage> {
             ],
             if (_durationBarrierCommands.isNotEmpty) ...[
               const SizedBox(height: 10),
-              const Text(
-                'Sure bariyerleri (ayri calisir)',
+              Text(
+                context.t('durationBarriersTitle'),
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
+              if (_activeDurationBarriers().isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.withValues(alpha: 0.35)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.t('smokeFreeCounterTitle'),
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${context.t('smokeFreeCounterRemaining')}: ${_formatRemainingDuration((_activeDurationBarriers().first['scheduledAt'] as DateTime).difference(DateTime.now()))}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               ..._durationBarrierCommands.map(
                 (command) => Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -2109,12 +2373,12 @@ class _HomePageState extends State<HomePage> {
                         spacing: 8,
                         children: [
                           OutlinedButton(
-                            onPressed: () => _completeDurationBarrier(command),
-                            child: const Text('Tamam'),
+                            onPressed: () => _startDurationBarrier(command),
+                            child: Text(context.t('start')),
                           ),
                           TextButton(
                             onPressed: () => _deferDurationBarrier(command),
-                            child: const Text('Ertele 10 dk'),
+                            child: Text(context.t('defer10m')),
                           ),
                         ],
                       ),
@@ -2127,19 +2391,19 @@ class _HomePageState extends State<HomePage> {
                 _commandSuccessScores.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
-                'Komut basari puanlari: ${_formatCommandScores(_coachCommands, _commandSuccessScores)}',
+                '${context.t('commandScoreLabel')}: ${_formatCommandScores(_coachCommands, _commandSuccessScores)}',
               ),
             ],
             if (_commandCategoryScores.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                'Kategori basari icgorusu: ${_formatCategoryScores(_commandCategoryScores)}',
+                '${context.t('categoryInsightLabel')}: ${_formatCategoryScores(_commandCategoryScores)}',
               ),
             ],
             if (_riskExplanation.isNotEmpty) ...[
               const SizedBox(height: 10),
-              const Text(
-                'Risk skoru aciklamasi',
+              Text(
+                context.t('riskScoreExplanationTitle'),
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 6),
@@ -2175,8 +2439,8 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Hizli menu',
+            Text(
+              context.t('quickMenuTitle'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
@@ -2189,7 +2453,7 @@ class _HomePageState extends State<HomePage> {
                   child: ElevatedButton.icon(
                     onPressed: _openBreathTestFromMenu,
                     icon: const Icon(Icons.air),
-                    label: const Text('Nefes Testi'),
+                    label: Text(context.t('menuBreathTest')),
                   ),
                 ),
                 SizedBox(
@@ -2197,7 +2461,7 @@ class _HomePageState extends State<HomePage> {
                   child: OutlinedButton.icon(
                     onPressed: _openWeeklySurveyFromMenu,
                     icon: const Icon(Icons.assignment),
-                    label: const Text('Haftalik Anket'),
+                    label: Text(context.t('menuWeeklySurvey')),
                   ),
                 ),
                 SizedBox(
@@ -2205,7 +2469,7 @@ class _HomePageState extends State<HomePage> {
                   child: OutlinedButton.icon(
                     onPressed: _openPersonalProgressScreen,
                     icon: const Icon(Icons.insights),
-                    label: const Text('Kisisel Takip'),
+                    label: Text(context.t('menuPersonalProgress')),
                   ),
                 ),
                 SizedBox(
@@ -2220,7 +2484,7 @@ class _HomePageState extends State<HomePage> {
                       );
                     },
                     icon: const Icon(Icons.report_gmailerrorred),
-                    label: const Text('Ihlal Raporu'),
+                    label: Text(context.t('menuViolationReport')),
                   ),
                 ),
               ],
@@ -2327,7 +2591,9 @@ class _HomePageState extends State<HomePage> {
               '${context.t('taskReasonNextNotification')}: $_nextTaskNotificationText',
             ),
             const SizedBox(height: 6),
-            Text('Bildirim baglam nedeni: $_notificationContextReasonText'),
+            Text(
+              '${context.t('notificationContextReasonLabel')}: $_notificationContextReasonText',
+            ),
             const SizedBox(height: 6),
             Text(
               '${context.t('taskReasonCause')}:',

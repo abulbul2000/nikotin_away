@@ -148,6 +148,7 @@ class MentorEngine {
 		required String barrierPreference,
 		required String barrierFrequencyPreference,
 		required bool barrierEnabled,
+		required int durationBarrierHistoryCount,
 	}) {
 		if (!barrierEnabled) {
 			return const [];
@@ -190,6 +191,20 @@ class MentorEngine {
 			((1.0 - recentTaskCompletionRate.clamp(0.0, 1.0)) * 1.1) +
 			(nicotineLoad / 6)
 		).round();
+
+		if (durationBarrierHistoryCount == 0) {
+			count = 5;
+		} else {
+			final progressionTier = (durationBarrierHistoryCount / 2).floor().clamp(1, 4);
+			final riskTier = riskScore >= 70
+				? 2
+				: riskScore >= 50
+				? 1
+				: 0;
+			count = (count + riskTier + (progressionTier >= 3 ? 1 : 0)).clamp(1, 6);
+			minMinutes += progressionTier * 4 + riskTier * 3;
+			dynamicSpan += progressionTier * 6 + riskTier * 4;
+		}
 
 		final barrierScore = _dailyBarrierScore(
 			barrierSuccessRate: barrierSuccessRate,
@@ -267,12 +282,12 @@ class MentorEngine {
 				maxMinutes: minMax.$2,
 				existing: commands,
 			);
-			commands.add('SURE-BARIYERI: Sonraki $minute dakika sigara yok.');
+			commands.add('Sigara içmeme süresi: Sonraki $minute dakika sigara içmeyin.');
 		}
 
 		if ((predictedWindow ?? '').isNotEmpty) {
 			commands.add(
-				'SURE-BARIYERI: ${predictedWindow!} penceresi oncesi en az ${minMax.$1} dakika sigara icme.',
+				'Sigara içmeme süresi: ${predictedWindow!} penceresi öncesi en az ${minMax.$1} dakika sigara içmeyin.',
 			);
 		}
 

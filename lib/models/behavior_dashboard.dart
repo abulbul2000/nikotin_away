@@ -11,6 +11,7 @@ class BehaviorDashboard {
   final List<String> todaysTasks;
   final List<String> coachCommands;
   final List<String> durationBarrierCommands;
+  final int durationBarrierHistoryCount;
   final Map<String, double> commandSuccessScores;
   final Map<String, double> commandCategoryScores;
   final String commandMixMode;
@@ -35,6 +36,7 @@ class BehaviorDashboard {
     required this.todaysTasks,
     required this.coachCommands,
     required this.durationBarrierCommands,
+    required this.durationBarrierHistoryCount,
     required this.commandSuccessScores,
     required this.commandCategoryScores,
     required this.commandMixMode,

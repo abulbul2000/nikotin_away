@@ -7,15 +7,19 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../models/adaptive_plan.dart';
+import '../models/adaptive_task_models.dart';
 import '../models/behavior_dashboard.dart';
+import '../models/breath_test_result.dart';
 import '../models/protocol_violation.dart';
 import '../models/sensor_usage_event.dart';
 import '../models/survey_record.dart';
 import '../models/task_history.dart';
 import '../models/user_profile_snapshot.dart';
+import '../engines/breath_test_engine.dart';
 import '../engines/mentor_engine.dart';
 import '../engines/prediction_engine.dart';
 import 'behavior_engine.dart';
+import 'discipline_protocol_service.dart';
 
 class StorageService {
   static const _tableName = 'app_events';
@@ -24,16 +28,23 @@ class StorageService {
   static const _profileSnapshotTable = 'user_profile_snapshots';
   static const _languageHistoryTable = 'language_history';
   static const _sensorUsageTable = 'sensor_usage_events';
+  static const _breathTestResultsTable = 'breath_test_results';
   static const _behaviorSnapshotTable = 'behavior_snapshots';
   static const _taskFollowUpTable = 'task_followups';
   static const _protocolViolationTable = 'protocol_violations';
+  static const _adaptiveTaskStateTable = 'adaptive_task_state';
+  static const _adaptiveTaskEventTable = 'adaptive_task_events';
+  static const _adaptiveHourlyProfileTable = 'adaptive_hourly_profile';
   static const _behaviorDirtyKey = 'behavior_dirty';
   static const _registrationCompletedKey = 'registration_completed';
   static const _isProfileCompletedKey = 'isProfileCompleted';
   static const _surveyTypes = {'initial', 'weekly'};
   final BehaviorEngine _behaviorEngine = BehaviorEngine();
+  final BreathTestEngine _breathTestEngine = BreathTestEngine();
   final PredictionEngine _predictionEngine = PredictionEngine();
   final MentorEngine _mentorEngine = MentorEngine();
+  final DisciplineProtocolService _disciplineProtocolService =
+      DisciplineProtocolService();
   Database? _database;
 
   Future<Database> get database async {
@@ -46,7 +57,7 @@ class StorageService {
     final path = p.join(documentsDirectory.path, 'no_smoke.db');
     return openDatabase(
       path,
-      version: 9,
+      version: 11,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -73,9 +84,13 @@ class StorageService {
         await _ensureProfileSnapshotTable(db);
         await _ensureLanguageHistoryTable(db);
         await _ensureSensorUsageTable(db);
+        await _ensureBreathTestResultsTable(db);
         await _ensureBehaviorSnapshotTable(db);
         await _ensureTaskFollowUpTable(db);
         await _ensureProtocolViolationTable(db);
+        await _ensureAdaptiveTaskStateTable(db);
+        await _ensureAdaptiveTaskEventTable(db);
+        await _ensureAdaptiveHourlyProfileTable(db);
         await _ensureIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -90,10 +105,20 @@ class StorageService {
         await _ensureProfileSnapshotTable(db);
         await _ensureLanguageHistoryTable(db);
         await _ensureSensorUsageTable(db);
+        await _ensureBreathTestResultsTable(db);
         await _ensureBehaviorSnapshotTable(db);
         await _ensureTaskFollowUpTable(db);
         await _ensureProtocolViolationTable(db);
+        await _ensureAdaptiveTaskStateTable(db);
+        await _ensureAdaptiveTaskEventTable(db);
+        await _ensureAdaptiveHourlyProfileTable(db);
         if (oldVersion < 9) {
+          await _ensureIndexes(db);
+        }
+        if (oldVersion < 10) {
+          await _ensureIndexes(db);
+        }
+        if (oldVersion < 11) {
           await _ensureIndexes(db);
         }
       },
@@ -193,12 +218,112 @@ class StorageService {
         activityState TEXT NOT NULL,
         accelerometerMagnitude REAL NOT NULL,
         gyroscopeMagnitude REAL NOT NULL,
+        ambientMeanDecibel REAL NOT NULL DEFAULT 0,
+        ambientPeakDecibel REAL NOT NULL DEFAULT 0,
+        mealSoundLikelihood REAL NOT NULL DEFAULT 0,
         screenUnlockCount INTEGER NOT NULL,
         appUsageMinutes INTEGER NOT NULL,
         idleMinutes INTEGER NOT NULL,
         charging INTEGER NOT NULL
       )
     ''');
+    await _ensureTableColumn(
+      db,
+      _sensorUsageTable,
+      'ambientMeanDecibel',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _sensorUsageTable,
+      'ambientPeakDecibel',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _sensorUsageTable,
+      'mealSoundLikelihood',
+      'REAL NOT NULL DEFAULT 0',
+    );
+  }
+
+  Future<void> _ensureBreathTestResultsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_breathTestResultsTable (
+        id TEXT PRIMARY KEY,
+        createdAt TEXT NOT NULL,
+        holdDuration REAL NOT NULL,
+        blowDuration REAL NOT NULL,
+        blowIntensity REAL NOT NULL,
+        blowStability REAL NOT NULL,
+        holdRisk INTEGER NOT NULL,
+        blowRisk INTEGER NOT NULL,
+        intensityRisk INTEGER NOT NULL,
+        stabilityRisk INTEGER NOT NULL,
+        breathScore REAL NOT NULL,
+        riskContribution REAL NOT NULL
+      )
+    ''');
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'holdDuration',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'blowDuration',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'blowIntensity',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'blowStability',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'holdRisk',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'blowRisk',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'intensityRisk',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'stabilityRisk',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'breathScore',
+      'REAL NOT NULL DEFAULT 0',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'riskContribution',
+      'REAL NOT NULL DEFAULT 0',
+    );
   }
 
   Future<void> _ensureBehaviorSnapshotTable(Database db) async {
@@ -244,6 +369,54 @@ class StorageService {
     );
   }
 
+  Future<void> _ensureAdaptiveTaskStateTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_adaptiveTaskStateTable (
+        id TEXT PRIMARY KEY,
+        selfControlScore REAL NOT NULL,
+        difficultyLevel REAL NOT NULL,
+        dailyTaskCapacity REAL NOT NULL,
+        postponeRate REAL NOT NULL,
+        movingSuccessRate REAL NOT NULL,
+        movingFailureRate REAL NOT NULL,
+        avgResponseMinutes REAL NOT NULL,
+        successStreak INTEGER NOT NULL,
+        failureStreak INTEGER NOT NULL,
+        updatedAt TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _ensureAdaptiveTaskEventTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_adaptiveTaskEventTable (
+        id TEXT PRIMARY KEY,
+        taskTitle TEXT NOT NULL,
+        scheduledAt TEXT NOT NULL,
+        respondedAt TEXT NOT NULL,
+        outcome TEXT NOT NULL,
+        plannedDurationMinutes INTEGER NOT NULL,
+        responseDelayMinutes INTEGER NOT NULL,
+        hourBucket INTEGER NOT NULL,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _ensureAdaptiveHourlyProfileTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_adaptiveHourlyProfileTable (
+        hour INTEGER PRIMARY KEY,
+        strainScore REAL NOT NULL,
+        successCount INTEGER NOT NULL,
+        failureCount INTEGER NOT NULL,
+        deferCount INTEGER NOT NULL,
+        avgResponseMinutes REAL NOT NULL,
+        updatedAt TEXT NOT NULL
+      )
+    ''');
+  }
+
   Future<void> _ensureIndexes(Database db) async {
     // app_events: sıralama ve tür filtreleri için
     await db.execute(
@@ -256,6 +429,9 @@ class StorageService {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_sensor_usage_createdAt ON $_sensorUsageTable (createdAt)',
     );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_breath_results_createdAt ON $_breathTestResultsTable (createdAt)',
+    );
     // behavior_snapshots: son snapshot'a erişim için
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_behavior_snapshot_createdAt ON $_behaviorSnapshotTable (createdAt)',
@@ -267,6 +443,15 @@ class StorageService {
     // protocol_violations: çözülmemiş ihlaller için
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_protocol_violations_resolved_createdAt ON $_protocolViolationTable (resolved, createdAt)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_adaptive_task_events_createdAt ON $_adaptiveTaskEventTable (createdAt)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_adaptive_task_events_outcome ON $_adaptiveTaskEventTable (outcome)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_adaptive_task_events_hourBucket ON $_adaptiveTaskEventTable (hourBucket)',
     );
   }
 
@@ -520,12 +705,43 @@ class StorageService {
       'activityState': event.activityState,
       'accelerometerMagnitude': event.accelerometerMagnitude,
       'gyroscopeMagnitude': event.gyroscopeMagnitude,
+      'ambientMeanDecibel': event.ambientMeanDecibel,
+      'ambientPeakDecibel': event.ambientPeakDecibel,
+      'mealSoundLikelihood': event.mealSoundLikelihood,
       'screenUnlockCount': event.screenUnlockCount,
       'appUsageMinutes': event.appUsageMinutes,
       'idleMinutes': event.idleMinutes,
       'charging': event.charging ? 1 : 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
     await markBehaviorDirty();
+  }
+
+  Future<void> saveBreathTestResult(BreathTestResult result) async {
+    final db = await database;
+    await db.insert(
+      _breathTestResultsTable,
+      result.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    await markBehaviorDirty();
+  }
+
+  Future<List<BreathTestResult>> loadBreathTestResults({int limit = 50}) async {
+    final db = await database;
+    final rows = await db.query(
+      _breathTestResultsTable,
+      orderBy: 'createdAt ASC',
+      limit: limit,
+    );
+    return rows.map((row) => BreathTestResult.fromJson(row)).toList();
+  }
+
+  Future<BreathTestResult?> loadLatestBreathTestResult() async {
+    final rows = await loadBreathTestResults(limit: 1);
+    if (rows.isEmpty) {
+      return null;
+    }
+    return rows.last;
   }
 
   Future<void> saveSetting(String key, String value) async {
@@ -582,6 +798,12 @@ class StorageService {
         accelerometerMagnitude: (row['accelerometerMagnitude'] as num)
             .toDouble(),
         gyroscopeMagnitude: (row['gyroscopeMagnitude'] as num).toDouble(),
+        ambientMeanDecibel:
+          (row['ambientMeanDecibel'] as num?)?.toDouble() ?? 0,
+        ambientPeakDecibel:
+          (row['ambientPeakDecibel'] as num?)?.toDouble() ?? 0,
+        mealSoundLikelihood:
+          (row['mealSoundLikelihood'] as num?)?.toDouble() ?? 0,
         screenUnlockCount: (row['screenUnlockCount'] as num).toInt(),
         appUsageMinutes: (row['appUsageMinutes'] as num).toInt(),
         idleMinutes: (row['idleMinutes'] as num).toInt(),
@@ -610,6 +832,12 @@ class StorageService {
         accelerometerMagnitude: (row['accelerometerMagnitude'] as num)
             .toDouble(),
         gyroscopeMagnitude: (row['gyroscopeMagnitude'] as num).toDouble(),
+        ambientMeanDecibel:
+          (row['ambientMeanDecibel'] as num?)?.toDouble() ?? 0,
+        ambientPeakDecibel:
+          (row['ambientPeakDecibel'] as num?)?.toDouble() ?? 0,
+        mealSoundLikelihood:
+          (row['mealSoundLikelihood'] as num?)?.toDouble() ?? 0,
         screenUnlockCount: (row['screenUnlockCount'] as num).toInt(),
         appUsageMinutes: (row['appUsageMinutes'] as num).toInt(),
         idleMinutes: (row['idleMinutes'] as num).toInt(),
@@ -673,6 +901,7 @@ class StorageService {
       'failureCount': failureCount,
       'recentSuccessCount': recentSuccessCount,
       'recentFailureCount': recentFailureCount,
+      'totalBarrierOutcomes': successCount + failureCount,
     };
   }
 
@@ -722,6 +951,179 @@ class StorageService {
       'status': 'pending',
       'createdAt': now.toIso8601String(),
     }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<AdaptiveTaskState> loadAdaptiveTaskState() async {
+    final db = await database;
+    final rows = await db.query(
+      _adaptiveTaskStateTable,
+      where: 'id = ?',
+      whereArgs: ['default'],
+      limit: 1,
+    );
+    if (rows.isNotEmpty) {
+      return AdaptiveTaskState.fromJson(rows.first);
+    }
+
+    final initial = AdaptiveTaskState.initial();
+    await saveAdaptiveTaskState(initial);
+    return initial;
+  }
+
+  Future<void> saveAdaptiveTaskState(AdaptiveTaskState state) async {
+    final db = await database;
+    await db.insert(
+      _adaptiveTaskStateTable,
+      state.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<AdaptiveHourlyProfileEntry>> loadAdaptiveHourlyProfile() async {
+    final db = await database;
+    final rows = await db.query(
+      _adaptiveHourlyProfileTable,
+      orderBy: 'hour ASC',
+    );
+    if (rows.isNotEmpty) {
+      return rows.map((row) => AdaptiveHourlyProfileEntry.fromJson(row)).toList();
+    }
+
+    final seeded = List<AdaptiveHourlyProfileEntry>.generate(
+      24,
+      (index) => AdaptiveHourlyProfileEntry.initial(index),
+    );
+    final batch = db.batch();
+    for (final entry in seeded) {
+      batch.insert(
+        _adaptiveHourlyProfileTable,
+        entry.toJson(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+    return seeded;
+  }
+
+  Future<void> saveAdaptiveHourlyProfileEntry(
+    AdaptiveHourlyProfileEntry entry,
+  ) async {
+    final db = await database;
+    await db.insert(
+      _adaptiveHourlyProfileTable,
+      entry.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> saveAdaptiveTaskEvent(AdaptiveTaskEvent event) async {
+    final db = await database;
+    await db.insert(
+      _adaptiveTaskEventTable,
+      event.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<AdaptiveTaskEvent>> loadRecentAdaptiveTaskEvents({
+    int limit = 200,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      _adaptiveTaskEventTable,
+      orderBy: 'createdAt DESC',
+      limit: limit,
+    );
+    return rows
+        .map(
+          (row) => AdaptiveTaskEvent(
+            id: row['id'] as String,
+            taskTitle: row['taskTitle'] as String,
+            scheduledAt: DateTime.parse(row['scheduledAt'] as String),
+            respondedAt: DateTime.parse(row['respondedAt'] as String),
+            outcome: row['outcome'] as String,
+            plannedDurationMinutes:
+                (row['plannedDurationMinutes'] as num).toInt(),
+            responseDelayMinutes: (row['responseDelayMinutes'] as num).toInt(),
+            hourBucket: (row['hourBucket'] as num).toInt(),
+          ),
+        )
+        .toList();
+  }
+
+  Future<AdaptiveTaskPlan> buildAdaptiveNoSmokePlan({
+    required DateTime now,
+    required DateTime sleepAt,
+    required List<String> riskyHours,
+  }) async {
+    final state = await loadAdaptiveTaskState();
+    final hourly = await loadAdaptiveHourlyProfile();
+    return _disciplineProtocolService.buildDailyAdaptivePlan(
+      now: now,
+      sleepAt: sleepAt,
+      riskyHours: riskyHours,
+      state: state,
+      hourlyProfiles: hourly,
+    );
+  }
+
+  Future<Duration> resolveAdaptivePostponeDelay({
+    int baseMinutes = 10,
+  }) async {
+    final state = await loadAdaptiveTaskState();
+    return _disciplineProtocolService.computeAdaptivePostponeDelay(
+      state: state,
+      baseMinutes: baseMinutes,
+    );
+  }
+
+  Future<void> recordAdaptiveTaskOutcome({
+    required String taskTitle,
+    required String outcome,
+    required int plannedDurationMinutes,
+    DateTime? scheduledAt,
+    DateTime? respondedAt,
+  }) async {
+    final responded = respondedAt ?? DateTime.now();
+    final scheduled =
+        scheduledAt ?? responded.subtract(Duration(minutes: plannedDurationMinutes));
+    final responseDelay =
+      responded.difference(scheduled).inMinutes.clamp(1, 720).toInt();
+
+    final state = await loadAdaptiveTaskState();
+    final hourly = await loadAdaptiveHourlyProfile();
+
+    final nextState = _disciplineProtocolService.evolveStateFromOutcome(
+      current: state,
+      outcome: outcome,
+      responseDelayMinutes: responseDelay,
+    );
+    await saveAdaptiveTaskState(nextState);
+
+    final hourBucket = scheduled.hour.clamp(0, 23);
+    final currentEntry = hourly.firstWhere(
+      (item) => item.hour == hourBucket,
+      orElse: () => AdaptiveHourlyProfileEntry.initial(hourBucket),
+    );
+    final nextEntry = _disciplineProtocolService.evolveHourlyProfileFromOutcome(
+      current: currentEntry,
+      outcome: outcome,
+      responseDelayMinutes: responseDelay,
+    );
+    await saveAdaptiveHourlyProfileEntry(nextEntry);
+
+    final event = AdaptiveTaskEvent(
+      id: 'adaptive_${responded.microsecondsSinceEpoch}',
+      taskTitle: taskTitle,
+      scheduledAt: scheduled,
+      respondedAt: responded,
+      outcome: outcome,
+      plannedDurationMinutes: plannedDurationMinutes,
+      responseDelayMinutes: responseDelay,
+      hourBucket: hourBucket,
+    );
+    await saveAdaptiveTaskEvent(event);
+    await markBehaviorDirty();
   }
 
   Future<void> saveProtocolViolation({
@@ -991,6 +1393,8 @@ class StorageService {
           (data['durationBarrierCommands'] as List<dynamic>? ?? const [])
               .map((item) => item.toString())
               .toList(),
+        durationBarrierHistoryCount:
+          (data['durationBarrierHistoryCount'] as num?)?.toInt() ?? 0,
       commandSuccessScores:
           (data['commandSuccessScores'] as Map<String, dynamic>? ??
                   const <String, dynamic>{})
@@ -1416,13 +1820,18 @@ class StorageService {
         );
 
     final taskAdjustment = _taskOutcomeRiskAdjustment(taskHistory);
+    final taskPerformanceRisk = _taskPerformanceRiskScore(taskHistory);
 
-    final preWeeklyRisk =
-        (dynamicCoreRisk +
-                personalizedAdjustment +
-                profileAdjustment +
-                taskAdjustment)
-            .clamp(0, 100);
+    final breathResults = await loadBreathTestResults(limit: 50);
+    final latestBreathScore = breathResults.isNotEmpty
+      ? breathResults.last.breathScore
+      : _legacyBreathScoreEstimate(breathRecords);
+    final breathTrendAnalysis = _breathTestEngine.analyzeTrend(breathResults);
+
+    final behaviorRisk =
+      (dynamicCoreRisk + personalizedAdjustment + profileAdjustment)
+        .clamp(0, 100)
+        .toDouble();
 
     final weeklyPayload =
         (latestContext['weeklyPayload'] as Map<String, dynamic>?) ??
@@ -1444,7 +1853,15 @@ class StorageService {
             .map((item) => item.toString())
             .toList();
 
-    var dynamicRisk = ((preWeeklyRisk * 0.7) + (weeklyRiskScore * 0.3)).round();
+    var dynamicRisk = _breathTestEngine.calculateFinalRisk(
+      surveyRisk: weeklyRiskScore.toDouble(),
+      behaviorRisk: behaviorRisk,
+      taskPerformanceRisk: taskPerformanceRisk.toDouble(),
+      breathScore: latestBreathScore,
+      trendAdjustment: breathTrendAnalysis.riskAdjustment,
+    );
+
+    // Weekly self-report extremes still add bounded safety adjustments.
     final lapseCount = (weeklyPayload['lapseCount'] as num?)?.toInt() ?? 0;
     final cravingMax = (weeklyPayload['cravingMax'] as num?)?.toInt() ?? 0;
     final selfEfficacy = (weeklyPayload['selfEfficacy'] as num?)?.toInt() ?? 0;
@@ -1618,6 +2035,7 @@ class StorageService {
             barrierPreference: barrierPreferenceRaw,
             barrierFrequencyPreference: barrierFrequencyRaw,
             barrierEnabled: barrierEnabled,
+            durationBarrierHistoryCount: totalBarrierOutcomes,
           )
         : const <String>[];
 
@@ -1628,6 +2046,12 @@ class StorageService {
       profileAdjustment: profileAdjustment,
       taskAdjustment: taskAdjustment,
       finalRisk: dynamicRisk,
+    );
+    riskExplanation.add(
+      'Yeni risk formulu: survey ${weeklyRiskScore.toStringAsFixed(0)} *0.40 + behavior ${behaviorRisk.toStringAsFixed(0)} *0.25 + task ${taskPerformanceRisk.toString()} *0.15 + breath ${latestBreathScore.toStringAsFixed(1)} *0.20',
+    );
+    riskExplanation.add(
+      'Nefes trendi: ortalama ${breathTrendAnalysis.averageBreathScore.toStringAsFixed(1)}, son3 ${breathTrendAnalysis.trendLast3}, son7 ${breathTrendAnalysis.trendLast7}, trend duzeltme ${breathTrendAnalysis.riskAdjustment >= 0 ? '+' : ''}${breathTrendAnalysis.riskAdjustment}',
     );
     riskExplanation.add(
       'Haftalik anket skoru: $weeklyRiskScore ($weeklyRiskLevel)',
@@ -1655,6 +2079,7 @@ class StorageService {
       todaysTasks: orderedTasks,
       coachCommands: balancedCoachCommands,
       durationBarrierCommands: durationBarrierCommands,
+      durationBarrierHistoryCount: totalBarrierOutcomes,
       commandSuccessScores: commandSuccessScores,
       commandCategoryScores: commandCategoryScores,
       commandMixMode: commandMixMode,
@@ -1676,6 +2101,7 @@ class StorageService {
       'todaysTasks': dashboard.todaysTasks,
       'coachCommands': dashboard.coachCommands,
       'durationBarrierCommands': dashboard.durationBarrierCommands,
+      'durationBarrierHistoryCount': dashboard.durationBarrierHistoryCount,
       'commandSuccessScores': dashboard.commandSuccessScores,
       'commandCategoryScores': dashboard.commandCategoryScores,
       'commandMixMode': dashboard.commandMixMode,
@@ -1717,6 +2143,56 @@ class StorageService {
       adjustment += item.completed ? -2 : 3;
     }
     return adjustment.clamp(-6, 12);
+  }
+
+  int _taskPerformanceRiskScore(List<TaskHistory> taskHistory) {
+    if (taskHistory.isEmpty) {
+      return 55;
+    }
+
+    final sorted = [...taskHistory]..sort((a, b) => a.date.compareTo(b.date));
+    final recent =
+        sorted.length > 14 ? sorted.sublist(sorted.length - 14) : sorted;
+    final successCount = recent.where((item) => item.completed).length;
+    final successRate = successCount / recent.length;
+
+    var risk = ((1 - successRate) * 100).round();
+    final streakWindow =
+        recent.length > 5 ? recent.sublist(recent.length - 5) : recent;
+    if (streakWindow.every((item) => item.completed)) {
+      risk -= 4;
+    } else if (streakWindow.every((item) => !item.completed)) {
+      risk += 6;
+    }
+
+    return risk.clamp(0, 100);
+  }
+
+  double _legacyBreathScoreEstimate(List<SurveyRecord> breathRecords) {
+    if (breathRecords.isEmpty) {
+      return 55;
+    }
+
+    final latest = breathRecords.last;
+    final holdRisk = _breathTestEngine.holdRisk(
+      latest.exhaleTestSeconds.toDouble(),
+    );
+    final blowRisk = _breathTestEngine.blowDurationRisk(
+      latest.inhaleTestSeconds.toDouble(),
+    );
+
+    final estimatedStability = 0.65;
+    final estimatedIntensity = _breathTestEngine.estimateBlowIntensity(
+      holdDuration: latest.exhaleTestSeconds.toDouble(),
+      blowDuration: latest.inhaleTestSeconds.toDouble(),
+    );
+
+    return _breathTestEngine.breathScore(
+      holdRisk: holdRisk,
+      blowRisk: blowRisk,
+      stabilityRisk: _breathTestEngine.stabilityRisk(estimatedStability),
+      intensityRisk: _breathTestEngine.intensityRisk(estimatedIntensity),
+    );
   }
 
   String _resolveCommandMixMode({
@@ -2101,7 +2577,12 @@ class StorageService {
     await db.delete(_profileSnapshotTable);
     await db.delete(_languageHistoryTable);
     await db.delete(_sensorUsageTable);
+    await db.delete(_breathTestResultsTable);
     await db.delete(_behaviorSnapshotTable);
     await db.delete(_taskFollowUpTable);
+    await db.delete(_protocolViolationTable);
+    await db.delete(_adaptiveTaskStateTable);
+    await db.delete(_adaptiveTaskEventTable);
+    await db.delete(_adaptiveHourlyProfileTable);
   }
 }

@@ -101,7 +101,8 @@ class LanguageService {
 
   static Future<String> loadSelectedLanguageCode() async {
     final prefs = await SharedPreferences.getInstance();
-    final code = prefs.getString(_languageCodeKey) ?? 'en';
+    final code =
+        prefs.getString(_languageCodeKey) ?? getDeviceLanguageCode() ?? 'en';
     return supportedLanguages.containsKey(code) ? code : 'en';
   }
 
@@ -124,16 +125,30 @@ class LanguageService {
     await StorageService().saveLanguageSelectionHistory(code);
   }
 
-  /// Cihazın dil ayarını al (dil kodu döndür veya null)
+  static Future<void> clearSelectedLanguageCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_languageCodeKey);
+  }
+
+  /// Cihazın dil ayarını al (dil kodu döndür veya null).
+  /// Kullanıcının telefonda tanımlı TÜM tercih ettiği dilleri sırayla
+  /// kontrol eder (ör. birincil dil desteklenmiyorsa ikincil tercihe
+  /// bakar), böylece "telefonunda hangi dil varsa" en iyi eşleşme bulunur.
   static String? getDeviceLanguageCode() {
-    final locale = PlatformDispatcher.instance.locale;
-    final deviceCode = locale.languageCode.toLowerCase();
-    
-    // Eğer desteklenen dillerden biriyse, kodunu döndür
-    if (supportedLanguages.containsKey(deviceCode)) {
-      return deviceCode;
+    for (final locale in PlatformDispatcher.instance.locales) {
+      final code = locale.languageCode.toLowerCase();
+      if (supportedLanguages.containsKey(code)) {
+        return code;
+      }
     }
-    
+
+    // Geriye dönük uyumluluk: locales listesi boşsa tekil locale'e bak.
+    final fallbackCode =
+        PlatformDispatcher.instance.locale.languageCode.toLowerCase();
+    if (supportedLanguages.containsKey(fallbackCode)) {
+      return fallbackCode;
+    }
+
     // Desteklenmiyorsa null
     return null;
   }

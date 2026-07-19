@@ -4,9 +4,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
-import '../models/survey_record.dart';
-import '../models/user_profile_snapshot.dart';
-import '../services/storage_service.dart';
+import '../engines/breath_test_engine.dart';
+import '../services/breath_test_service.dart';
 import 'home_page.dart';
 import 'risk_result_page.dart';
 import 'weekly_survey_page.dart';
@@ -16,13 +15,15 @@ class BreathTestPage extends StatefulWidget {
   final String packsPerDay;
   final bool navigateToHomeOnComplete;
   final bool askWeeklySurveyOnComplete;
+  final BreathTestService? breathTestService;
 
   const BreathTestPage({
     super.key,
-    this.name = 'User',
+    this.name = '',
     this.packsPerDay = '1 paketten az',
     this.navigateToHomeOnComplete = false,
     this.askWeeklySurveyOnComplete = false,
+    this.breathTestService,
   });
 
   @override
@@ -31,13 +32,20 @@ class BreathTestPage extends StatefulWidget {
 
 class _BreathTestPageState extends State<BreathTestPage> {
   final Stopwatch _stopwatch = Stopwatch();
-  final StorageService _storageService = StorageService();
+  final BreathTestEngine _breathTestEngine = BreathTestEngine();
+  late final BreathTestService _breathTestService;
   Timer? _timer;
   int _currentTest = 1;
   final List<int> _attemptSeconds = <int>[];
   bool _isResting = false;
   int _restSecondsLeft = 0;
   bool _isRunning = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _breathTestService = widget.breathTestService ?? BreathTestService();
+  }
 
   @override
   void dispose() {
@@ -115,129 +123,85 @@ class _BreathTestPageState extends State<BreathTestPage> {
   }
 
   Future<void> _navigateToResult() async {
-    final sorted = [..._attemptSeconds]..sort((a, b) => b.compareTo(a));
-    final bestSeconds = sorted.first;
-    final averageSeconds =
-        (_attemptSeconds.reduce((a, b) => a + b) / _attemptSeconds.length)
-            .round();
-    final consistencyGap = sorted.length >= 2 ? (sorted[0] - sorted[1]) : 0;
-    late int riskScore;
-    late final String riskLevel;
+    try {
+      final sorted = [..._attemptSeconds]..sort((a, b) => b.compareTo(a));
+      final bestSeconds = sorted.first;
+      final averageSeconds =
+          (_attemptSeconds.reduce((a, b) => a + b) / _attemptSeconds.length)
+              .round();
 
-    if (bestSeconds <= 5) {
-      riskScore = 85;
-      riskLevel = 'KRİTİK';
-    } else if (bestSeconds <= 9) {
-      riskScore = 65;
-      riskLevel = 'YÜKSEK';
-    } else if (bestSeconds <= 14) {
-      riskScore = 45;
-      riskLevel = 'ORTA';
-    } else {
-      riskScore = 20;
-      riskLevel = 'DÜŞÜK';
-    }
+      final blowStability = _breathTestEngine.estimateBlowStabilityFromAttempts(
+        _attemptSeconds,
+      );
+      final blowIntensity = _breathTestEngine.estimateBlowIntensity(
+        holdDuration: bestSeconds.toDouble(),
+        blowDuration: averageSeconds.toDouble(),
+      );
 
-    if (consistencyGap >= 4) {
-      // Low repeatability means measurements may be unstable, keep risk cautious.
-      riskScore = (riskScore + 6).clamp(0, 100);
-    }
+      final processed = await _breathTestService.processBreathTest(
+        name: widget.name,
+        packsPerDay: widget.packsPerDay,
+        holdDuration: bestSeconds.toDouble(),
+        blowDuration: averageSeconds.toDouble(),
+        blowStability: blowStability,
+        blowIntensity: blowIntensity,
+        title: context.t('breathTestRecordTitle'),
+      );
 
-    if (!mounted) {
-      return;
-    }
+      if (!mounted) {
+        return;
+      }
 
-    if (widget.navigateToHomeOnComplete) {
-      await _saveBreathResultAndOpenHome(riskScore);
-      return;
-    }
+      if (widget.navigateToHomeOnComplete) {
+        await _openHomeOrWeekly(
+          finalRiskScore: processed.finalRiskScore,
+          finalRiskLevel: processed.finalRiskLevel,
+          bestSeconds: bestSeconds,
+          averageSeconds: averageSeconds,
+        );
+        return;
+      }
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => RiskResultPage(
-          name: widget.name,
-          riskScore: riskScore,
-          riskLevel: riskLevel,
-          packsPerDay: widget.packsPerDay,
-          exhaleTestSeconds: bestSeconds,
-          inhaleTestSeconds: averageSeconds,
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => RiskResultPage(
+            name: widget.name,
+            riskScore: processed.finalRiskScore,
+            riskLevel: processed.finalRiskLevel,
+            packsPerDay: widget.packsPerDay,
+            exhaleTestSeconds: bestSeconds,
+            inhaleTestSeconds: averageSeconds,
+            persistBreathResultOnContinue: false,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (error, stackTrace) {
+      debugPrint('[BreathTestPage] Failed to process breath test: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Nefes testi sonucu kaydedilemedi. Lutfen tekrar deneyin.',
+            ),
+          ),
+        );
+    }
   }
 
-  Future<void> _saveBreathResultAndOpenHome(int baseRiskScore) async {
-    final sorted = [..._attemptSeconds]..sort((a, b) => b.compareTo(a));
-    final bestSeconds = sorted.first;
-    final averageSeconds =
-        (_attemptSeconds.reduce((a, b) => a + b) / _attemptSeconds.length)
-            .round();
-
-    final adjustedRiskScore = await _storageService.calculateAdjustedRiskScore(
-      baseScore: baseRiskScore,
-      exhaleSeconds: bestSeconds,
-      inhaleSeconds: averageSeconds,
-    );
-
+  Future<void> _openHomeOrWeekly({
+    required int finalRiskScore,
+    required String finalRiskLevel,
+    required int bestSeconds,
+    required int averageSeconds,
+  }) async {
     if (!mounted) {
       return;
-    }
-
-    final adjustedRiskLevel = adjustedRiskScore >= 80
-        ? 'KRİTİK'
-        : adjustedRiskScore >= 60
-            ? 'YÜKSEK'
-            : adjustedRiskScore >= 40
-                ? 'ORTA'
-                : 'DÜŞÜK';
-
-    final record = SurveyRecord(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      completedAt: DateTime.now(),
-      type: 'breath_test',
-      title: context.t('breathTestRecordTitle'),
-      name: widget.name,
-      packsPerDay: widget.packsPerDay,
-      exhaleTestSeconds: bestSeconds,
-      inhaleTestSeconds: averageSeconds,
-      riskScore: adjustedRiskScore,
-      riskLevel: adjustedRiskLevel,
-    );
-    await _storageService.saveSurveyRecord(record);
-    await _storageService.saveUserProfileSnapshot(
-      UserProfileSnapshot(
-        id: 'profile_${record.id}',
-        createdAt: record.completedAt,
-        riskScore: adjustedRiskScore,
-        packsPerDay: widget.packsPerDay,
-        firstCigaretteRange: 'unknown',
-        smokeFreeRange: 'unknown',
-        consecutiveSmokingHabit: 'Hayır',
-        consecutiveSmokingCount: null,
-        triggers: const [],
-        healthConditions: const [],
-        profession: 'Belirtilmedi',
-        sleepTime: '21:00',
-        wakeTime: '07:00',
-        latestExhaleSeconds: bestSeconds,
-        latestInhaleSeconds: averageSeconds,
-      ),
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    late final String baseRiskLevel;
-    if (baseRiskScore >= 80) {
-      baseRiskLevel = 'KRİTİK';
-    } else if (baseRiskScore >= 60) {
-      baseRiskLevel = 'YÜKSEK';
-    } else if (baseRiskScore >= 40) {
-      baseRiskLevel = 'ORTA';
-    } else {
-      baseRiskLevel = 'DÜŞÜK';
     }
 
     if (widget.askWeeklySurveyOnComplete) {
@@ -283,11 +247,12 @@ class _BreathTestPageState extends State<BreathTestPage> {
         MaterialPageRoute(
           builder: (_) => RiskResultPage(
             name: widget.name,
-            riskScore: baseRiskScore,
-            riskLevel: baseRiskLevel,
+            riskScore: finalRiskScore,
+            riskLevel: finalRiskLevel,
             packsPerDay: widget.packsPerDay,
             exhaleTestSeconds: bestSeconds,
             inhaleTestSeconds: averageSeconds,
+            persistBreathResultOnContinue: false,
           ),
         ),
       );
@@ -299,8 +264,8 @@ class _BreathTestPageState extends State<BreathTestPage> {
       MaterialPageRoute(
         builder: (_) => HomePage(
           name: widget.name,
-          riskScore: adjustedRiskScore,
-          riskLevel: adjustedRiskLevel,
+          riskScore: finalRiskScore,
+          riskLevel: finalRiskLevel,
         ),
       ),
     );
@@ -308,9 +273,9 @@ class _BreathTestPageState extends State<BreathTestPage> {
 
   String _getInstruction() {
     if (_isResting) {
-      return 'Kısa dinlenme: Normal nefes alın.\nSonraki denemeye hazırlanın.';
+      return context.t('breathRestInstruction');
     }
-    return 'Dik oturun, burundan derin nefes alın, \n2 saniye tutun ve tek seferde kontrollü verin.\n\n3 deneme yapılacak, en iyi skor kaydedilir.';
+    return context.t('breathActiveInstruction');
   }
 
   @override
@@ -362,16 +327,6 @@ class _BreathTestPageState extends State<BreathTestPage> {
   Widget _buildProgressIndicator() {
     return Column(
       children: [
-        Text(
-          'Deneme Ilerlemesi',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[600],
-            letterSpacing: 0.5,
-          ),
-        ),
-        const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(3, (index) {
@@ -410,14 +365,7 @@ class _BreathTestPageState extends State<BreathTestPage> {
                                 color: Colors.white,
                                 size: 28,
                               )
-                            : Text(
-                                testNumber.toString(),
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: isCurrent ? Colors.white : Colors.grey[600],
-                                ),
-                              ),
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -455,23 +403,10 @@ class _BreathTestPageState extends State<BreathTestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(
-                  _isResting ? Icons.psychology : Icons.info,
-                  color: Colors.blue[700],
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  _isResting ? 'Dinlenme' : 'Talimatlar',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue[900],
-                  ),
-                ),
-              ],
+            Icon(
+              _isResting ? Icons.psychology : Icons.info,
+              color: Colors.blue[700],
+              size: 24,
             ),
             const SizedBox(height: 12),
             Text(
@@ -524,15 +459,6 @@ class _BreathTestPageState extends State<BreathTestPage> {
                   fontFamily: 'monospace',
                   color: isResting ? Colors.orange[700] : Colors.blue[700],
                   letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                isResting ? 'Saniye' : 'Saniye',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[600],
                 ),
               ),
             ],

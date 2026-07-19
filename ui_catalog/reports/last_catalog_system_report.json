@@ -1,0 +1,24 @@
+﻿{
+    "generatedAt":  "2026-07-16T18:30:35.8321681+03:00",
+    "activeLanguageCode":  "tr",
+    "totalFoundScreens":  35,
+    "totalGeneratedScreens":  34,
+    "notGeneratedScreens":  [
+                                {
+                                    "reason":  "page_file_empty",
+                                    "screenId":  null,
+                                    "screenName":  "profile_page",
+                                    "expectedPath":  "C:\\Users\\Dell\\Projects\\no_smoke\\lib\\pages\\profile_page.dart"
+                                }
+                            ],
+    "screenFolderAbsolutePath":  "C:\\Users\\Dell\\Projects\\no_smoke\\ui_catalog\\screens",
+    "catalogJsonAbsolutePath":  "C:\\Users\\Dell\\Projects\\no_smoke\\ui_catalog\\catalog\\screen_catalog.json",
+    "catalogMarkdownAbsolutePath":  "C:\\Users\\Dell\\Projects\\no_smoke\\ui_catalog\\catalog\\screen_catalog.md",
+    "helperFilesAbsolutePaths":  [
+                                     "C:\\Users\\Dell\\Projects\\no_smoke\\ui_catalog\\screens",
+                                     "C:\\Users\\Dell\\Projects\\no_smoke\\ui_catalog\\catalog\\screen_catalog.json",
+                                     "C:\\Users\\Dell\\Projects\\no_smoke\\ui_catalog\\catalog\\screen_catalog.md",
+                                     "C:\\Users\\Dell\\Projects\\no_smoke\\ui_catalog\\reports\\last_capture_report.json",
+                                     "C:\\Users\\Dell\\Projects\\no_smoke\\ui_catalog\\reports\\last_catalog_system_report.json"
+                                 ]
+}

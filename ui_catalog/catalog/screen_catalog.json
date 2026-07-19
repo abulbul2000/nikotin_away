@@ -1,0 +1,111 @@
+{
+  "generatedAt": "2026-07-16T15:57:58.787214",
+  "activeLanguageCode": "tr",
+  "catalogRoot": "ui_catalog",
+  "screenFolder": "ui_catalog/screens",
+  "catalogFile": "ui_catalog/catalog/screen_catalog.json",
+  "screens": [
+    {
+      "screenId": "SCR-0001-SPLASH",
+      "screenName": "Splash",
+      "captureProfile": "baseline",
+      "appLocation": "App start",
+      "screenshotPath": "ui_catalog/screens/SCR-0001-SPLASH.png",
+      "sourceFiles": [
+        "lib/pages/splash_page.dart"
+      ],
+      "uiComponents": [
+        "Scaffold",
+        "NoSmokeLogo",
+        "SafeArea"
+      ],
+      "translationKeys": [
+        "appName"
+      ],
+      "styleSources": [
+        "lib/pages/splash_page.dart"
+      ],
+      "themeSources": [
+        "lib/core/app_theme.dart"
+      ]
+    },
+    {
+      "screenId": "SCR-0002-LANGUAGE",
+      "screenName": "LanguageSelection",
+      "captureProfile": "baseline",
+      "appLocation": "Onboarding -> language",
+      "screenshotPath": "ui_catalog/screens/SCR-0002-LANGUAGE.png",
+      "sourceFiles": [
+        "lib/pages/language_selection_page.dart"
+      ],
+      "uiComponents": [
+        "NoSmokeLogo",
+        "GestureDetector",
+        "Container"
+      ],
+      "translationKeys": [
+        "selectLanguage",
+        "continue",
+        "otherLanguages"
+      ],
+      "styleSources": [
+        "lib/pages/language_selection_page.dart"
+      ],
+      "themeSources": [
+        "lib/core/app_theme.dart"
+      ]
+    },
+    {
+      "screenId": "SCR-0003-LANGUAGE-MODAL",
+      "screenName": "LanguageSelectionModal",
+      "captureProfile": "baseline",
+      "appLocation": "LanguageSelection -> bottom sheet",
+      "screenshotPath": "ui_catalog/screens/SCR-0003-LANGUAGE-MODAL.png",
+      "sourceFiles": [
+        "lib/pages/language_selection_page.dart"
+      ],
+      "uiComponents": [
+        "DraggableScrollableSheet",
+        "TextField",
+        "ListTile"
+      ],
+      "translationKeys": [
+        "searchLanguages",
+        "otherLanguages",
+        "backToMain"
+      ],
+      "styleSources": [
+        "lib/pages/language_selection_page.dart"
+      ],
+      "themeSources": [
+        "lib/core/app_theme.dart"
+      ]
+    },
+    {
+      "screenId": "SCR-0004-TRIAL-INFO",
+      "screenName": "TrialInfo",
+      "captureProfile": "seeded",
+      "appLocation": "Onboarding -> trial info",
+      "screenshotPath": "ui_catalog/screens/SCR-0004-TRIAL-INFO.png",
+      "sourceFiles": [
+        "lib/pages/trial_info_page.dart"
+      ],
+      "uiComponents": [
+        "NoSmokeLogo",
+        "Card",
+        "FilledButton"
+      ],
+      "translationKeys": [
+        "trialInfoTitle",
+        "trialInfoMessage",
+        "continue"
+      ],
+      "styleSources": [
+        "lib/pages/trial_info_page.dart"
+      ],
+      "themeSources": [
+        "lib/core/app_theme.dart"
+      ]
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import 'home_page.dart';
 import '../services/storage_service.dart';
 import '../widgets/consecutive_smoking_section.dart';
 import '../widgets/packs_per_day_section.dart';
+import '../widgets/survey_section_header.dart';
 
 class WeeklySurveyPage extends StatefulWidget {
   final bool navigateToHomeAfterSave;
@@ -157,12 +158,15 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     final effectiveDailyBreathTarget = _resolveEffectiveDailyBreathTarget(
       weeklyPayload,
     );
+    final unnamedUserLabel = context.t('unnamedUser');
+    final weeklyRecordTitle = context.t('weeklyRecordTitle');
+    final latestUserName = await _resolveLatestUserName(unnamedUserLabel);
     final record = SurveyRecord(
       id: recordId,
       completedAt: now,
       type: 'weekly',
-      title: context.t('weeklyRecordTitle'),
-      name: 'User',
+      title: weeklyRecordTitle,
+      name: latestUserName,
       packsPerDay: _resolvedPacksPerDay,
       exhaleTestSeconds: 0,
       inhaleTestSeconds: 0,
@@ -851,8 +855,8 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Anket modu',
+            Text(
+              context.t('surveyModeTitle'),
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
@@ -860,7 +864,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               spacing: 8,
               children: [
                 ChoiceChip(
-                  label: const Text('Hizli (15 sn)'),
+                  label: Text(context.t('surveyModeQuick')),
                   selected: !_detailedMode,
                   onSelected: (_) {
                     setState(() {
@@ -869,7 +873,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                   },
                 ),
                 ChoiceChip(
-                  label: const Text('Detayli'),
+                  label: Text(context.t('surveyModeDetailed')),
                   selected: _detailedMode,
                   onSelected: (_) {
                     setState(() {
@@ -881,8 +885,8 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
             ),
             if (_autoDetailedByRisk) ...[
               const SizedBox(height: 8),
-              const Text(
-                'Gecen hafta risk yuksek gorunuyor. Istersen Detayli moda gecerek daha ince ayar yapabilirsin.',
+              Text(
+                context.t('surveyModeAutoDetailedHint'),
                 style: TextStyle(fontSize: 12),
               ),
             ],
@@ -899,20 +903,20 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Hizli Solunum Kontrolu',
+            Text(
+              context.t('weeklyQuickRespTitle'),
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Kisa modda da solunum durumunu daha dogru yansitmak icin 3 alan doldur.',
+            Text(
+              context.t('weeklyQuickRespHint'),
               style: TextStyle(fontSize: 12),
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<int>(
               initialValue: _mmrcGrade,
-              decoration: const InputDecoration(
-                labelText: 'Nefes darligi derecesi (mMRC benzeri 1-5)',
+              decoration: InputDecoration(
+                labelText: context.t('weeklyMmrcGrade'),
                 border: OutlineInputBorder(),
               ),
               items: const [
@@ -926,21 +930,21 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
             ),
             const SizedBox(height: 8),
             _intSlider(
-              label: 'Oksuruk (0-5)',
+              label: '${context.t('weeklyCough')} (0-5)',
               value: _catCough,
               min: 0,
               max: 5,
               onChanged: (v) => setState(() => _catCough = v),
             ),
             _intSlider(
-              label: 'Merdivende nefes darligi (0-5)',
+              label: '${context.t('weeklyBreathlessnessStairs')} (0-5)',
               value: _catBreathlessnessStairs,
               min: 0,
               max: 5,
               onChanged: (v) => setState(() => _catBreathlessnessStairs = v),
             ),
             _intSlider(
-              label: 'Gece artan nefes darligi gunu (0-7)',
+              label: '${context.t('weeklyNightBreathlessness')} (0-7)',
               value: _warningNightBreathlessnessDays,
               min: 0,
               max: 7,
@@ -953,14 +957,14 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     );
   }
 
-  Future<String> _resolveLatestUserName() async {
+  Future<String> _resolveLatestUserName(String fallbackName) async {
     final records = await _storageService.loadSurveyHistory();
     for (final record in records.reversed) {
       if (record.name.trim().isNotEmpty) {
         return record.name.trim();
       }
     }
-    return 'User';
+    return fallbackName;
   }
 
   @override
@@ -988,12 +992,22 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.orange.shade200),
               ),
-              child: const Text(
+              child: Text(
                 'Bu bolum tani testi degildir. KOAH tanisi icin spirometri ve doktor degerlendirmesi gerekir. Sonuclar takip amaclidir.',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.orange.shade900,
+                  height: 1.35,
+                ),
               ),
             ),
             const SizedBox(height: 12),
+            const SurveySectionHeader(
+              title: 'Genel Durum',
+              icon: Icons.smoking_rooms,
+              withTopSpacing: false,
+            ),
             PacksPerDaySection(
               selectedPackOption: _packOption,
               selectedHighPackOption: _highPackOption,
@@ -1038,7 +1052,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
             if (_detailedMode) ...[
               const SizedBox(height: 12),
               _intSlider(
-                label: 'Ortalama gunluk sigara',
+                label: context.t('weeklyAvgDailyCigarettes'),
                 value: _avgCigarettesPerDay,
                 min: 0,
                 max: 40,
@@ -1046,206 +1060,222 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               ),
               DropdownButtonFormField<String>(
                 initialValue: _deltaVsLastWeek,
-                decoration: const InputDecoration(
-                  labelText: 'Gecen haftaya gore',
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyComparedLastWeek'),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'decreased', child: Text('Azaldi')),
-                  DropdownMenuItem(value: 'same', child: Text('Ayni')),
-                  DropdownMenuItem(value: 'increased', child: Text('Artti')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'decreased',
+                    child: Text(context.t('weeklyDecrease')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'same',
+                    child: Text(context.t('weeklySame')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'increased',
+                    child: Text(context.t('weeklyIncrease')),
+                  ),
                 ],
                 onChanged: (value) =>
                     setState(() => _deltaVsLastWeek = value ?? 'same'),
               ),
               const SizedBox(height: 12),
               _intSlider(
-                label: 'Kayma sayisi (lapse)',
+                label: context.t('weeklyLapseCount'),
                 value: _lapseCount,
                 min: 0,
                 max: 10,
                 onChanged: (v) => setState(() => _lapseCount = v),
               ),
               _intSlider(
-                label: 'Craving ortalama (0-10)',
+                label: context.t('weeklyCravingAvg'),
                 value: _cravingAvg,
                 min: 0,
                 max: 10,
                 onChanged: (v) => setState(() => _cravingAvg = v),
               ),
               _intSlider(
-                label: 'Craving maksimum (0-10)',
+                label: context.t('weeklyCravingMax'),
                 value: _cravingMax,
                 min: 0,
                 max: 10,
                 onChanged: (v) => setState(() => _cravingMax = v),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Yoksunluk belirtileri (0-3)',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              SurveySectionHeader(
+                title: context.t('weeklyWithdrawalSymptoms'),
+                icon: Icons.mood_bad_outlined,
               ),
               _intSlider(
-                label: 'Sinirlilik',
+                label: context.t('weeklyIrritability'),
                 value: _withdrawIrritability,
                 min: 0,
                 max: 3,
                 onChanged: (v) => setState(() => _withdrawIrritability = v),
               ),
               _intSlider(
-                label: 'Anksiyete',
+                label: context.t('weeklyAnxiety'),
                 value: _withdrawAnxiety,
                 min: 0,
                 max: 3,
                 onChanged: (v) => setState(() => _withdrawAnxiety = v),
               ),
               _intSlider(
-                label: 'Uyku problemi',
+                label: context.t('weeklySleepIssue'),
                 value: _withdrawSleep,
                 min: 0,
                 max: 3,
                 onChanged: (v) => setState(() => _withdrawSleep = v),
               ),
               _intSlider(
-                label: 'Konsantrasyon problemi',
+                label: context.t('weeklyConcentrationIssue'),
                 value: _withdrawConcentration,
                 min: 0,
                 max: 3,
                 onChanged: (v) => setState(() => _withdrawConcentration = v),
               ),
               _intSlider(
-                label: 'Istah artisi',
+                label: context.t('weeklyAppetiteIncrease'),
                 value: _withdrawAppetite,
                 min: 0,
                 max: 3,
                 onChanged: (v) => setState(() => _withdrawAppetite = v),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Tetikleyici maruziyeti (gun/saat 0-7)',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              SurveySectionHeader(
+                title: context.t('weeklyTriggerExposure'),
+                icon: Icons.warning_amber_outlined,
               ),
               _intSlider(
-                label: 'Kahve',
+                label: context.t('triggerCoffee'),
                 value: _triggerCoffeeDays,
                 min: 0,
                 max: 7,
                 onChanged: (v) => setState(() => _triggerCoffeeDays = v),
               ),
               _intSlider(
-                label: 'Yemek sonrasi',
+                label: context.t('triggerMeal'),
                 value: _triggerMealDays,
                 min: 0,
                 max: 7,
                 onChanged: (v) => setState(() => _triggerMealDays = v),
               ),
               _intSlider(
-                label: 'Arac kullanimi',
+                label: context.t('weeklyVehicleUse'),
                 value: _triggerDrivingDays,
                 min: 0,
                 max: 7,
                 onChanged: (v) => setState(() => _triggerDrivingDays = v),
               ),
               _intSlider(
-                label: 'Stres',
+                label: context.t('triggerStress'),
                 value: _triggerStressDays,
                 min: 0,
                 max: 7,
                 onChanged: (v) => setState(() => _triggerStressDays = v),
               ),
               _intSlider(
-                label: 'Telefon',
+                label: context.t('triggerPhone'),
                 value: _triggerPhoneDays,
                 min: 0,
                 max: 7,
                 onChanged: (v) => setState(() => _triggerPhoneDays = v),
               ),
               _intSlider(
-                label: 'Sosyal ortam',
+                label: context.t('triggerSocial'),
                 value: _triggerSocialDays,
                 min: 0,
                 max: 7,
                 onChanged: (v) => setState(() => _triggerSocialDays = v),
               ),
               _intSlider(
-                label: 'Alkol tetigi',
+                label: context.t('weeklyAlcoholTrigger'),
                 value: _triggerAlcoholDays,
                 min: 0,
                 max: 7,
                 onChanged: (v) => setState(() => _triggerAlcoholDays = v),
               ),
               _intSlider(
-                label: 'Alkol kullanilan gun',
+                label: context.t('weeklyAlcoholDays'),
                 value: _alcoholDays,
                 min: 0,
                 max: 7,
                 onChanged: (v) => setState(() => _alcoholDays = v),
               ),
               _intSlider(
-                label: 'Sigarali sosyal ortam gunu',
+                label: context.t('weeklySocialSmokingDays'),
                 value: _socialSmokingContextDays,
                 min: 0,
                 max: 7,
                 onChanged: (v) => setState(() => _socialSmokingContextDays = v),
               ),
-              const SizedBox(height: 8),
+              SurveySectionHeader(
+                title: context.t('weeklyMedicationUse'),
+                icon: Icons.medication_outlined,
+              ),
               DropdownButtonFormField<String>(
                 initialValue: _medicationUse,
-                decoration: const InputDecoration(
-                  labelText: 'Tedavi/NRT kullanimi',
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyMedicationUse'),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'none', child: Text('Yok')),
+                items: [
+                  DropdownMenuItem(
+                    value: 'none',
+                    child: Text(context.t('weeklyNone')),
+                  ),
                   DropdownMenuItem(
                     value: 'irregular',
-                    child: Text('Duzenli degil'),
+                    child: Text(context.t('weeklyIrregular')),
                   ),
-                  DropdownMenuItem(value: 'regular', child: Text('Duzenli')),
+                  DropdownMenuItem(
+                    value: 'regular',
+                    child: Text(context.t('weeklyRegular')),
+                  ),
                 ],
                 onChanged: (value) =>
                     setState(() => _medicationUse = value ?? 'regular'),
               ),
               SwitchListTile(
-                title: const Text('Ilac/NRT yan etkisi yasandi'),
+                title: Text(context.t('weeklySideEffectsExperienced')),
                 value: _sideEffects,
                 onChanged: (v) => setState(() => _sideEffects = v),
               ),
               SwitchListTile(
-                title: const Text('Danismanlik/quitline kullanildi'),
+                title: Text(context.t('weeklyUsedCounseling')),
                 value: _usedCounselingOrQuitline,
                 onChanged: (v) => setState(() => _usedCounselingOrQuitline = v),
               ),
               _intSlider(
-                label: 'Tedavi uyumu (0-10)',
+                label: context.t('weeklyMedicationAdherence'),
                 value: _medicationAdherence,
                 min: 0,
                 max: 10,
                 onChanged: (v) => setState(() => _medicationAdherence = v),
               ),
               _intSlider(
-                label: 'Aile/sosyal destek (0-10)',
+                label: context.t('weeklyFamilySupport'),
                 value: _familySupport,
                 min: 0,
                 max: 10,
                 onChanged: (v) => setState(() => _familySupport = v),
               ),
               _intSlider(
-                label: 'Oz yeterlilik (0-10)',
+                label: context.t('weeklySelfEfficacy'),
                 value: _selfEfficacy,
                 min: 0,
                 max: 10,
                 onChanged: (v) => setState(() => _selfEfficacy = v),
               ),
               _intSlider(
-                label: 'Motivasyon (0-10)',
+                label: context.t('weeklyMotivation'),
                 value: _motivation,
                 min: 0,
                 max: 10,
                 onChanged: (v) => setState(() => _motivation = v),
               ),
               _intSlider(
-                label: 'Haftalik gorev tamamlama (0-10)',
+                label: context.t('weeklyTaskCompletion'),
                 value: _weeklyCompletionRate,
                 min: 0,
                 max: 10,
@@ -1254,14 +1284,20 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _dailyTaskAdherenceLevel,
-                decoration: const InputDecoration(
-                  labelText: 'Gunluk gorevlere ne kadar uydun?',
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyTaskAdherence'),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'az', child: Text('Az')),
-                  DropdownMenuItem(value: 'orta', child: Text('Orta')),
-                  DropdownMenuItem(value: 'cok', child: Text('Cok')),
+                items: [
+                  DropdownMenuItem(value: 'az', child: Text(context.t('few'))),
+                  DropdownMenuItem(
+                    value: 'orta',
+                    child: Text(context.t('stressMedium')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'cok',
+                    child: Text(context.t('veryHigh')),
+                  ),
                 ],
                 onChanged: (value) =>
                     setState(() => _dailyTaskAdherenceLevel = value ?? 'orta'),
@@ -1269,14 +1305,20 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _commandBurdenLevel,
-                decoration: const InputDecoration(
-                  labelText: 'Komutlar seni rahatsiz etti mi?',
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyCommandBurden'),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'az', child: Text('Az')),
-                  DropdownMenuItem(value: 'orta', child: Text('Orta')),
-                  DropdownMenuItem(value: 'cok', child: Text('Cok')),
+                items: [
+                  DropdownMenuItem(value: 'az', child: Text(context.t('few'))),
+                  DropdownMenuItem(
+                    value: 'orta',
+                    child: Text(context.t('stressMedium')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'cok',
+                    child: Text(context.t('veryHigh')),
+                  ),
                 ],
                 onChanged: (value) =>
                     setState(() => _commandBurdenLevel = value ?? 'orta'),
@@ -1284,18 +1326,27 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
                 initialValue: _dailyBreathTestTarget,
-                decoration: const InputDecoration(
-                  labelText: 'Gunluk nefes testi sayisi tercihin (min 1)',
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyDailyBreathTarget'),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
+                items: [
                   DropdownMenuItem(
                     value: 1,
-                    child: Text('1 kez (zorunlu minimum)'),
+                    child: Text(context.t('weeklyBreathOnceMandatory')),
                   ),
-                  DropdownMenuItem(value: 2, child: Text('2 kez')),
-                  DropdownMenuItem(value: 3, child: Text('3 kez')),
-                  DropdownMenuItem(value: 4, child: Text('4 kez')),
+                  DropdownMenuItem(
+                    value: 2,
+                    child: Text(context.t('weeklyBreathTwice')),
+                  ),
+                  DropdownMenuItem(
+                    value: 3,
+                    child: Text(context.t('weeklyBreathThree')),
+                  ),
+                  DropdownMenuItem(
+                    value: 4,
+                    child: Text(context.t('weeklyBreathFour')),
+                  ),
                 ],
                 onChanged: (value) =>
                     setState(() => _dailyBreathTestTarget = value ?? 1),
@@ -1303,102 +1354,100 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               const SizedBox(height: 8),
               DropdownButtonFormField<int>(
                 initialValue: _mmrcGrade,
-                decoration: const InputDecoration(
-                  labelText: 'Nefes darligi derecesi (mMRC benzeri 1-5)',
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyMmrcGrade'),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
+                items: [
                   DropdownMenuItem(
                     value: 1,
-                    child: Text('1 - Sadece hizli yuruyuste/yokusta zorlanma'),
+                    child: Text(context.t('weeklyMmrc1')),
                   ),
                   DropdownMenuItem(
                     value: 2,
-                    child: Text('2 - Duz yolda yasitlara gore daha yavas'),
+                    child: Text(context.t('weeklyMmrc2')),
                   ),
                   DropdownMenuItem(
                     value: 3,
-                    child: Text('3 - Duz yolda bir sure sonra durma ihtiyaci'),
+                    child: Text(context.t('weeklyMmrc3')),
                   ),
                   DropdownMenuItem(
                     value: 4,
-                    child: Text('4 - 100 metre civari yuruyuste durma'),
+                    child: Text(context.t('weeklyMmrc4')),
                   ),
                   DropdownMenuItem(
                     value: 5,
-                    child: Text('5 - Ev icinde belirgin nefes darligi'),
+                    child: Text(context.t('weeklyMmrc5')),
                   ),
                 ],
                 onChanged: (value) => setState(() => _mmrcGrade = value ?? 2),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Solunum semptom yuk (CAT benzeri 0-5)',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              SurveySectionHeader(
+                title: context.t('weeklyRespiratoryBurden'),
+                icon: Icons.air_outlined,
               ),
               _intSlider(
-                label: 'Oksuruk',
+                label: context.t('weeklyCough'),
                 value: _catCough,
                 min: 0,
                 max: 5,
                 onChanged: (v) => setState(() => _catCough = v),
               ),
               _intSlider(
-                label: 'Balgam',
+                label: context.t('weeklyPhlegm'),
                 value: _catPhlegm,
                 min: 0,
                 max: 5,
                 onChanged: (v) => setState(() => _catPhlegm = v),
               ),
               _intSlider(
-                label: 'Goguste sikisma',
+                label: context.t('weeklyChestTightness'),
                 value: _catChestTightness,
                 min: 0,
                 max: 5,
                 onChanged: (v) => setState(() => _catChestTightness = v),
               ),
               _intSlider(
-                label: 'Merdiven/yokus nefes darligi',
+                label: context.t('weeklyBreathlessnessStairs'),
                 value: _catBreathlessnessStairs,
                 min: 0,
                 max: 5,
                 onChanged: (v) => setState(() => _catBreathlessnessStairs = v),
               ),
               _intSlider(
-                label: 'Gunluk aktivite kisitlanmasi',
+                label: context.t('weeklyActivityLimitation'),
                 value: _catActivityLimitation,
                 min: 0,
                 max: 5,
                 onChanged: (v) => setState(() => _catActivityLimitation = v),
               ),
               _intSlider(
-                label: 'Disari cikma guveni dusuklugu',
+                label: context.t('weeklyConfidenceLeavingHome'),
                 value: _catConfidenceLeavingHome,
                 min: 0,
                 max: 5,
                 onChanged: (v) => setState(() => _catConfidenceLeavingHome = v),
               ),
               _intSlider(
-                label: 'Solunuma bagli uyku bozulmasi',
+                label: context.t('weeklySleepQualityResp'),
                 value: _catSleepQualityResp,
                 min: 0,
                 max: 5,
                 onChanged: (v) => setState(() => _catSleepQualityResp = v),
               ),
               _intSlider(
-                label: 'Solunuma bagli enerji dusuklugu',
+                label: context.t('weeklyEnergyLevelResp'),
                 value: _catEnergyLevelResp,
                 min: 0,
                 max: 5,
                 onChanged: (v) => setState(() => _catEnergyLevelResp = v),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Uyari isaretleri (haftalik gun 0-7)',
-                style: TextStyle(fontWeight: FontWeight.w700),
+              SurveySectionHeader(
+                title: context.t('weeklyWarningSigns'),
+                icon: Icons.report_problem_outlined,
               ),
               _intSlider(
-                label: 'Gece artan nefes darligi',
+                label: context.t('weeklyNightBreathlessness'),
                 value: _warningNightBreathlessnessDays,
                 min: 0,
                 max: 7,
@@ -1406,7 +1455,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                     setState(() => _warningNightBreathlessnessDays = v),
               ),
               _intSlider(
-                label: 'Balgam artisi',
+                label: context.t('weeklySputumIncrease'),
                 value: _warningSputumIncreaseDays,
                 min: 0,
                 max: 7,
@@ -1414,7 +1463,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                     setState(() => _warningSputumIncreaseDays = v),
               ),
               _intSlider(
-                label: 'Balgam renginde degisim',
+                label: context.t('weeklySputumColorChange'),
                 value: _warningSputumColorChangeDays,
                 min: 0,
                 max: 7,
@@ -1422,7 +1471,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                     setState(() => _warningSputumColorChangeDays = v),
               ),
               _intSlider(
-                label: 'Hirilti/wheeze',
+                label: context.t('weeklyWheeze'),
                 value: _warningWheezeDays,
                 min: 0,
                 max: 7,
@@ -1431,8 +1480,8 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _lunchTime,
-                decoration: const InputDecoration(
-                  labelText: 'Tahmini ogle yemegi saati',
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyLunchTime'),
                   border: OutlineInputBorder(),
                 ),
                 items: _timeOptions()
@@ -1449,8 +1498,8 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
                 initialValue: _dinnerTime,
-                decoration: const InputDecoration(
-                  labelText: 'Tahmini aksam yemegi saati',
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyDinnerTime'),
                   border: OutlineInputBorder(),
                 ),
                 items: _timeOptions()
@@ -1467,9 +1516,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               const SizedBox(height: 12),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: const Text(
-                  'Ilk profile gore is/uyku/calisma duzeni degisti mi?',
-                ),
+                title: Text(context.t('weeklyProfileChanged')),
                 value: _profileContextChanged,
                 onChanged: (value) {
                   setState(() {
@@ -1716,42 +1763,36 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               ],
             ] else ...[
               const SizedBox(height: 10),
-              const Text(
-                'Hizli mod secili. Temel sorulara gore risk otomatik hesaplanir. Istersen Detayli moda gecip tum parametreleri duzenleyebilirsin.',
-              ),
+              Text(context.t('weeklyQuickModeInfo')),
               const SizedBox(height: 10),
               _buildQuickRespiratoryMiniCard(),
             ],
-            const SizedBox(height: 20),
-            const Divider(thickness: 2),
-            const SizedBox(height: 20),
-            const Text(
-              'Süre Bariyeri Tercihi',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            SurveySectionHeader(
+              title: context.t('durationBarrierTitle'),
+              icon: Icons.timer_outlined,
             ),
-            const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _durationBarrierPreference,
-              decoration: const InputDecoration(
-                labelText: 'Süre bariyerlerini nasıl buluyorsun?',
+              decoration: InputDecoration(
+                labelText: context.t('durationBarrierHow'),
                 border: OutlineInputBorder(),
               ),
-              items: const [
+              items: [
                 DropdownMenuItem(
                   value: 'Begeniyorum',
-                  child: Text('Beğeniyorum'),
+                  child: Text(context.t('durationBarrierLike')),
                 ),
                 DropdownMenuItem(
                   value: 'Farketmez',
-                  child: Text('Farketmez'),
+                  child: Text(context.t('durationBarrierNeutral')),
                 ),
                 DropdownMenuItem(
                   value: 'Begenmiyorum',
-                  child: Text('Beğenmiyorum'),
+                  child: Text(context.t('durationBarrierDislike')),
                 ),
                 DropdownMenuItem(
                   value: 'Istemiyorum',
-                  child: Text('İstemiyorum'),
+                  child: Text(context.t('durationBarrierOff')),
                 ),
               ],
               onChanged: (value) {
@@ -1764,14 +1805,20 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
             if (_durationBarrierPreference != 'Istemiyorum')
               DropdownButtonFormField<String>(
                 initialValue: _durationBarrierFrequencyPreference,
-                decoration: const InputDecoration(
-                  labelText: 'Süre bariyeri sıklığı nasıl olmalı?',
+                decoration: InputDecoration(
+                  labelText: context.t('durationBarrierFrequencyHow'),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'Az', child: Text('Az')),
-                  DropdownMenuItem(value: 'Orta', child: Text('Orta')),
-                  DropdownMenuItem(value: 'Cok', child: Text('Çok')),
+                items: [
+                  DropdownMenuItem(value: 'Az', child: Text(context.t('few'))),
+                  DropdownMenuItem(
+                    value: 'Orta',
+                    child: Text(context.t('stressMedium')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Cok',
+                    child: Text(context.t('veryHigh')),
+                  ),
                 ],
                 onChanged: (value) {
                   setState(() {
@@ -1796,7 +1843,10 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                 });
               },
             ),
-            const SizedBox(height: 12),
+            const SurveySectionHeader(
+              title: 'Ek Notlar',
+              icon: Icons.edit_note_outlined,
+            ),
             TextField(
               controller: _noteController,
               maxLines: 3,
@@ -1816,8 +1866,11 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                       : _buildQuickWeeklyPayload();
                   final score = _calculateWeeklyRiskScore(payload);
                   final level = _levelFromScore(score);
+                  final unnamedUserLabel = context.t('unnamedUser');
                   await _saveWeeklySurvey();
-                  final latestUserName = await _resolveLatestUserName();
+                  final latestUserName = await _resolveLatestUserName(
+                    unnamedUserLabel,
+                  );
                   if (!mounted) return;
                   if (!context.mounted) return;
 

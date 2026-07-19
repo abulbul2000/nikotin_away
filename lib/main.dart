@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'core/app_texts.dart';
 import 'core/app_theme.dart';
 import 'pages/splash_page.dart';
 import 'services/language_service.dart';
@@ -12,6 +13,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.initialize(navigatorKey: navigatorKey);
   final locale = await LanguageService.loadSelectedLocale();
+  await AppTexts.ensureLanguageLoaded(locale.languageCode);
   runApp(NoSmokeApp(initialLocale: locale));
 }
 
@@ -52,14 +54,9 @@ class _NoSmokeAppState extends State<NoSmokeApp> {
       title: 'No Smoke',
       theme: AppTheme.darkTheme,
       locale: _locale,
-      supportedLocales: const [
-        Locale('tr'),
-        Locale('en'),
-        Locale('de'),
-        Locale('ar'),
-        Locale('fr'),
-        Locale('es'),
-      ],
+      supportedLocales: LanguageService.supportedLanguages.values.toList(
+        growable: false,
+      ),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

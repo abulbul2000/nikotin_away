@@ -3,12 +3,14 @@
 import '../core/app_texts.dart';
 import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
+import '../services/ambient_audio_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/permission_service.dart';
 import '../widgets/consecutive_smoking_section.dart';
 import '../widgets/no_smoke_logo.dart';
 import '../widgets/packs_per_day_section.dart';
+import '../widgets/survey_wizard.dart';
 import 'breath_test_page.dart';
 
 class SurveyPage extends StatefulWidget {
@@ -513,6 +515,10 @@ class _SurveyPageState extends State<SurveyPage> {
       _showValidationMessage(context.t('notificationPermissionRequired'));
     }
 
+    if (result.telemetryGranted) {
+      await AmbientAudioService().startMonitoring();
+    }
+
     await _saveInitialProfileSnapshot(recordId);
 
     if (result.notificationsGranted) {
@@ -650,118 +656,109 @@ class _SurveyPageState extends State<SurveyPage> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const NoSmokeLogo(size: 110, showLabel: true),
-              const SizedBox(height: 20),
-              Text(
-                context.t('initialSurvey'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
+  Widget _stepPersonalInfo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const NoSmokeLogo(size: 90, showLabel: true),
+        const SizedBox(height: 16),
+        TextFormField(
+          controller: nameController,
+          decoration: InputDecoration(
+            labelText: context.t('name'),
+            border: OutlineInputBorder(),
+          ),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return '';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          controller: ageController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            labelText: context.t('age'),
+            border: OutlineInputBorder(),
+          ),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return '';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(
+          key: const ValueKey('gender_dropdown'),
+          initialValue: gender,
+          decoration: InputDecoration(
+            labelText: context.t('gender'),
+            border: OutlineInputBorder(),
+          ),
+          hint: Text(context.t('selectOption')),
+          items: [
+            DropdownMenuItem(
+              value: 'Erkek',
+              child: Text(context.t('male')),
+            ),
+            DropdownMenuItem(
+              value: 'Kadın',
+              child: Text(context.t('female')),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              gender = value;
+            });
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return '';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(
+          key: const ValueKey('profession_dropdown'),
+          initialValue: profession,
+          decoration: InputDecoration(
+            labelText: context.t('professionLabel'),
+            border: OutlineInputBorder(),
+          ),
+          hint: Text(context.t('selectOption')),
+          items: professionOptions
+              .map(
+                (value) => DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(_professionLabel(value, context)),
                 ),
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: nameController,
-                decoration: InputDecoration(
-                  labelText: context.t('name'),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 10),
-              TextFormField(
-                controller: ageController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: context.t('age'),
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return '';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                key: const ValueKey('gender_dropdown'),
-                initialValue: gender,
-                decoration: InputDecoration(
-                  labelText: context.t('gender'),
-                  border: OutlineInputBorder(),
-                ),
-                hint: Text(context.t('selectOption')),
-                items: [
-                  DropdownMenuItem(
-                    value: 'Erkek',
-                    child: Text(context.t('male')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Kadın',
-                    child: Text(context.t('female')),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    gender = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                key: const ValueKey('profession_dropdown'),
-                initialValue: profession,
-                decoration: InputDecoration(
-                  labelText: context.t('professionLabel'),
-                  border: OutlineInputBorder(),
-                ),
-                hint: Text(context.t('selectOption')),
-                items: professionOptions
-                    .map(
-                      (value) => DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(_professionLabel(value, context)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    profession = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return '';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 10),
-              sectionTitle(context.t('smokingInfo')),
-              PacksPerDaySection(
+              )
+              .toList(),
+          onChanged: (value) {
+            setState(() {
+              profession = value;
+            });
+          },
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return '';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _stepSmokingInfo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        PacksPerDaySection(
                 selectedPackOption: packOption,
                 selectedHighPackOption: highPackOption,
                 onPackOptionChanged: (value) {
@@ -860,7 +857,7 @@ class _SurveyPageState extends State<SurveyPage> {
                 initialValue: smokingYears,
                 decoration: InputDecoration(
                   labelText: context.t('smokingYears'),
-                  hintText: 'örn: 5',
+                  hintText: context.t('smokingYearsHintExample'),
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
@@ -898,9 +895,15 @@ class _SurveyPageState extends State<SurveyPage> {
                   });
                 },
               ),
-              const SizedBox(height: 20),
-              sectionTitle(context.t('lifeRoutine')),
-              _buildTimePickerRow(
+      ],
+    );
+  }
+
+  Widget _stepLifeRoutine() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildTimePickerRow(
                 label: context.t('sleepTime'),
                 currentValue: sleepTime,
                 minuteOptions: [0, 15, 30, 45],
@@ -1152,9 +1155,15 @@ class _SurveyPageState extends State<SurveyPage> {
                   ),
                 ],
               ],
-              const SizedBox(height: 20),
-              sectionTitle(context.t('healthStatus')),
-              CheckboxListTile(
+      ],
+    );
+  }
+
+  Widget _stepHealthStatus() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        CheckboxListTile(
                 value: hypertension,
                 title: Text(context.t('hypertension')),
                 onChanged: (value) =>
@@ -1181,9 +1190,15 @@ class _SurveyPageState extends State<SurveyPage> {
                 onChanged: (value) =>
                     setState(() => heartDisease = value ?? false),
               ),
-              const SizedBox(height: 20),
-              sectionTitle(context.t('triggerTitle')),
-              triggerTile(context.t('triggerCoffee'), 'coffee'),
+      ],
+    );
+  }
+
+  Widget _stepTriggersAndStress() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        triggerTile(context.t('triggerCoffee'), 'coffee'),
               triggerTile(context.t('triggerMeal'), 'meal'),
               triggerTile(context.t('triggerDriving'), 'driving'),
               triggerTile(context.t('triggerStress'), 'stress'),
@@ -1218,95 +1233,131 @@ class _SurveyPageState extends State<SurveyPage> {
                   });
                 },
               ),
-              const SizedBox(height: 10),
-              sectionTitle(context.t('quitReasonTitle')),
-              DropdownButtonFormField<String>(
-                initialValue: quitReason,
-                decoration: InputDecoration(
-                  labelText: context.t('quitReason'),
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: 'Sağlık',
-                    child: Text(context.t('quitHealth')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Aile',
-                    child: Text(context.t('quitFamily')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Maddi sebepler',
-                    child: Text(context.t('quitMoney')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Çocuklar',
-                    child: Text(context.t('quitChildren')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Performans',
-                    child: Text(context.t('quitPerformance')),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    quitReason = value!;
-                  });
-                },
+      ],
+    );
+  }
+
+  Widget _stepQuitReason() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        DropdownButtonFormField<String>(
+          initialValue: quitReason,
+          decoration: InputDecoration(
+            labelText: context.t('quitReason'),
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            DropdownMenuItem(
+              value: 'Sağlık',
+              child: Text(context.t('quitHealth')),
+            ),
+            DropdownMenuItem(
+              value: 'Aile',
+              child: Text(context.t('quitFamily')),
+            ),
+            DropdownMenuItem(
+              value: 'Maddi sebepler',
+              child: Text(context.t('quitMoney')),
+            ),
+            DropdownMenuItem(
+              value: 'Çocuklar',
+              child: Text(context.t('quitChildren')),
+            ),
+            DropdownMenuItem(
+              value: 'Performans',
+              child: Text(context.t('quitPerformance')),
+            ),
+          ],
+          onChanged: (value) {
+            setState(() {
+              quitReason = value!;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  /// Runs the exact same validation → save → permission-flow → navigation
+  /// sequence the old single-page "Devam Et" button used to run, now
+  /// triggered from the wizard's final "Tamamla" button.
+  Future<bool> _submitSurvey() async {
+    _formKey.currentState?.validate();
+    final missingMessage = _missingRequiredFieldMessage();
+    final saveErrorMessage = context.t('saveErrorRetry');
+
+    if (missingMessage != null) {
+      if (!mounted) return false;
+      _showValidationMessage(missingMessage);
+      return false;
+    }
+
+    late final String recordId;
+    try {
+      recordId = await _saveInitialSurveyRecord();
+    } catch (error, stackTrace) {
+      debugPrint('[SurveyPage] Initial survey save failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return false;
+      _showValidationMessage(saveErrorMessage);
+      return false;
+    }
+
+    await _runBulkPermissionFlow(recordId);
+
+    if (!mounted) return false;
+    if (!context.mounted) return false;
+
+    final navigator = Navigator.of(context);
+    await navigator.push(
+      MaterialPageRoute(
+        builder: (_) => BreathTestPage(
+          name: nameController.text.trim(),
+          packsPerDay: _resolvedPacksPerDay,
+        ),
+      ),
+    );
+    return true;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: SurveyWizard(
+            finishLabel: context.t('continue'),
+            nextLabel: context.t('continue'),
+            steps: [
+              SurveyStep(
+                title: context.t('initialSurvey'),
+                content: _stepPersonalInfo(),
               ),
-              const SizedBox(height: 25),
-              SizedBox(
-                width: double.infinity,
-                height: 60,
-                child: ElevatedButton(
-                  key: const ValueKey('survey_continue_button'),
-                  onPressed: () async {
-                    _formKey.currentState?.validate();
-                    final missingMessage = _missingRequiredFieldMessage();
-                    final saveErrorMessage = context.t('saveErrorRetry');
-
-                    if (missingMessage != null) {
-                      if (!mounted) return;
-                      _showValidationMessage(missingMessage);
-                      return;
-                    }
-
-                    late final String recordId;
-                    try {
-                      recordId = await _saveInitialSurveyRecord();
-                    } catch (error, stackTrace) {
-                      debugPrint(
-                        '[SurveyPage] Initial survey save failed: $error',
-                      );
-                      debugPrintStack(stackTrace: stackTrace);
-                      if (!mounted) return;
-                      _showValidationMessage(saveErrorMessage);
-                      return;
-                    }
-
-                    await _runBulkPermissionFlow(recordId);
-
-                    if (!mounted) return;
-
-                    if (!context.mounted) return;
-                    final navigator = Navigator.of(context);
-                    await navigator.push(
-                      MaterialPageRoute(
-                        builder: (_) => BreathTestPage(
-                          name: nameController.text.trim(),
-                          packsPerDay: _resolvedPacksPerDay,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    context.t('continue'),
-                    style: TextStyle(fontSize: 20),
-                  ),
-                ),
+              SurveyStep(
+                title: context.t('smokingInfo'),
+                content: _stepSmokingInfo(),
               ),
-              const SizedBox(height: 30),
+              SurveyStep(
+                title: context.t('lifeRoutine'),
+                content: _stepLifeRoutine(),
+              ),
+              SurveyStep(
+                title: context.t('healthStatus'),
+                content: _stepHealthStatus(),
+              ),
+              SurveyStep(
+                title: context.t('triggerTitle'),
+                subtitle: context.t('stressTitle'),
+                content: _stepTriggersAndStress(),
+              ),
+              SurveyStep(
+                title: context.t('quitReasonTitle'),
+                content: _stepQuitReason(),
+              ),
             ],
+            onFinish: _submitSurvey,
           ),
         ),
       ),

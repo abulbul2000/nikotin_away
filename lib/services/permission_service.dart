@@ -42,6 +42,13 @@ class PermissionService {
       // Some platforms do not expose this permission.
     }
 
+    try {
+      final microphone = await Permission.microphone.request();
+      granted = granted && microphone.isGranted;
+    } catch (_) {
+      // Some platforms may deny or not expose this permission.
+    }
+
     return granted;
   }
 }

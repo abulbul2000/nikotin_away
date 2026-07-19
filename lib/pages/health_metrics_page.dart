@@ -124,21 +124,21 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
                       const SizedBox(height: 16),
                       // Exhale trend
                       _buildMetricCard(
-                        'Nefes Verme Kapasitesi (Exhale)',
+                        context.t('exhaleCapacity'),
                         '${_breathTests.last.exhaleTestSeconds}s',
-                        'Trend: ${_calculateTrend(_breathTests.map((r) => r.exhaleTestSeconds).toList())}%',
+                        '${context.t('trendLabel')}: ${_calculateTrend(_breathTests.map((r) => r.exhaleTestSeconds).toList())}%',
                       ),
                       // Inhale trend
                       _buildMetricCard(
-                        'Nefes Alma Kapasitesi (Inhale)',
+                        context.t('inhaleCapacity'),
                         '${_breathTests.last.inhaleTestSeconds}s',
-                        'Trend: ${_calculateTrend(_breathTests.map((r) => r.inhaleTestSeconds).toList())}%',
+                        '${context.t('trendLabel')}: ${_calculateTrend(_breathTests.map((r) => r.inhaleTestSeconds).toList())}%',
                       ),
                       // Risk score trend
                       _buildMetricCard(
-                        'Risk Score',
+                        context.t('riskScore'),
                         '${_breathTests.last.riskScore}/100',
-                        'Seviye: ${_breathTests.last.riskLevel}',
+                        '${context.t('levelLabel')}: ${_breathTests.last.riskLevel}',
                       ),
                       const SizedBox(height: 24),
                       // Statistics
@@ -151,19 +151,19 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
                       ),
                       const SizedBox(height: 12),
                       _buildMetricCard(
-                        'Toplam Test Sayısı',
+                        context.t('totalTestCount'),
                         '${_breathTests.length}',
-                        'İlk test: ${_breathTests.first.completedAt.day}/${_breathTests.first.completedAt.month}/${_breathTests.first.completedAt.year}',
+                        '${context.t('firstTestDate')}: ${_breathTests.first.completedAt.day}/${_breathTests.first.completedAt.month}/${_breathTests.first.completedAt.year}',
                       ),
                       _buildMetricCard(
-                        'Ortalama Exhale',
+                        context.t('averageExhale'),
                         '${(_breathTests.map((r) => r.exhaleTestSeconds).reduce((a, b) => a + b) / _breathTests.length).toStringAsFixed(1)}s',
-                        'Min: ${_breathTests.map((r) => r.exhaleTestSeconds).reduce((a, b) => a < b ? a : b)}s, Max: ${_breathTests.map((r) => r.exhaleTestSeconds).reduce((a, b) => a > b ? a : b)}s',
+                        '${context.t('minLabel')}: ${_breathTests.map((r) => r.exhaleTestSeconds).reduce((a, b) => a < b ? a : b)}s, ${context.t('maxLabel')}: ${_breathTests.map((r) => r.exhaleTestSeconds).reduce((a, b) => a > b ? a : b)}s',
                       ),
                       _buildMetricCard(
-                        'Ortalama Inhale',
+                        context.t('averageInhale'),
                         '${(_breathTests.map((r) => r.inhaleTestSeconds).reduce((a, b) => a + b) / _breathTests.length).toStringAsFixed(1)}s',
-                        'Min: ${_breathTests.map((r) => r.inhaleTestSeconds).reduce((a, b) => a < b ? a : b)}s, Max: ${_breathTests.map((r) => r.inhaleTestSeconds).reduce((a, b) => a > b ? a : b)}s',
+                        '${context.t('minLabel')}: ${_breathTests.map((r) => r.inhaleTestSeconds).reduce((a, b) => a < b ? a : b)}s, ${context.t('maxLabel')}: ${_breathTests.map((r) => r.inhaleTestSeconds).reduce((a, b) => a > b ? a : b)}s',
                       ),
                       const SizedBox(height: 24),
                       // Recent tests
@@ -193,13 +193,16 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
                                       ),
                                     ),
                                     Text(
-                                      'Exhale: ${test.exhaleTestSeconds}s | Inhale: ${test.inhaleTestSeconds}s',
+                                      '${context.t('exhaleLabel')}: ${test.exhaleTestSeconds}s | ${context.t('inhaleLabel')}: ${test.inhaleTestSeconds}s',
                                       style: const TextStyle(fontSize: 12),
                                     ),
                                   ],
                                 ),
                                 Text(
-                                  test.riskLevel,
+                                  AppTexts.localizeCanonicalText(
+                                    context,
+                                    test.riskLevel,
+                                  ),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     color: _riskColor(test.riskLevel),

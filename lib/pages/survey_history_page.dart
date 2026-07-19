@@ -49,7 +49,7 @@ class _SurveyHistoryPageState extends State<SurveyHistoryPage> {
                 child: ListTile(
                   title: Text(record.name.isEmpty ? context.t('unnamedUser') : record.name),
                   subtitle: Text(
-                    '${record.title} • ${record.completedAt.day}/${record.completedAt.month}/${record.completedAt.year} • ${context.t('risk')}: ${record.riskScore} • ${record.riskLevel}',
+                    '${record.title} • ${record.completedAt.day}/${record.completedAt.month}/${record.completedAt.year} • ${context.t('risk')}: ${record.riskScore} • ${AppTexts.localizeCanonicalText(context, record.riskLevel)}',
                   ),
                   trailing: const Icon(Icons.history),
                 ),

@@ -1,0 +1,16 @@
+{
+  "updates": [
+    {
+      "screenId": "SCR-0008-HOME",
+      "file": "lib/pages/home_page.dart",
+      "find": "quickMenuTitle",
+      "replace": "quickMenuTitle"
+    },
+    {
+      "screenId": "SCR-0009-WEEKLY-SURVEY",
+      "file": "lib/pages/weekly_survey_page.dart",
+      "find": "weeklyQuickModeInfo",
+      "replace": "weeklyQuickModeInfo"
+    }
+  ]
+}

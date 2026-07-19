@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
+import '../models/adaptive_task_models.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 
@@ -35,9 +36,13 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
 
   Future<void> _saveOutcome({
     required String taskTitle,
-    required bool success,
+    required String outcome,
+    DateTime? scheduledAt,
   }) async {
-    if (!success) {
+    final success = outcome == AdaptiveTaskOutcome.success;
+    final smoked = outcome == AdaptiveTaskOutcome.smoked;
+
+    if (smoked) {
       await _storageService.saveProtocolViolation(
         type: 'followup_failed',
         severity: 'medium',
@@ -46,6 +51,16 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
         details: 'Task follow-up marked as unsuccessful.',
       );
     }
+
+    final plannedMinutes = _extractPlannedMinutes(taskTitle);
+    await _storageService.recordAdaptiveTaskOutcome(
+      taskTitle: taskTitle,
+      outcome: outcome,
+      plannedDurationMinutes: plannedMinutes,
+      scheduledAt: scheduledAt,
+      respondedAt: DateTime.now(),
+    );
+
     await _storageService.saveTaskResult(
       taskTitle: taskTitle,
       taskResult: success ? 'willpower_success' : 'willpower_weakness',
@@ -56,6 +71,18 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
   }
 
   Future<void> _deferAgain(String taskTitle) async {
+    final delay = await _storageService.resolveAdaptivePostponeDelay();
+    final nextTime = DateTime.now().add(delay);
+
+    final plannedMinutes = _extractPlannedMinutes(taskTitle);
+    await _storageService.recordAdaptiveTaskOutcome(
+      taskTitle: taskTitle,
+      outcome: AdaptiveTaskOutcome.deferred,
+      plannedDurationMinutes: plannedMinutes,
+      scheduledAt: DateTime.now(),
+      respondedAt: DateTime.now(),
+    );
+
     await _storageService.saveProtocolViolation(
       type: 'followup_deferred',
       severity: 'low',
@@ -63,11 +90,10 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
       taskTitle: taskTitle,
       details: 'User deferred follow-up from dedicated follow-up screen.',
     );
-    final nextTime = DateTime.now().add(const Duration(minutes: 10));
     await _storageService.saveTaskFollowUp(taskTitle: taskTitle, scheduledAt: nextTime);
     await NotificationService.scheduleTaskFollowUpReminder(
       taskTitle: taskTitle,
-      delay: const Duration(minutes: 10),
+      delay: delay,
     );
     if (!mounted) {
       return;
@@ -84,6 +110,31 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
     final hour = value.hour.toString().padLeft(2, '0');
     final minute = value.minute.toString().padLeft(2, '0');
     return '$day/$month $hour:$minute';
+  }
+
+  int _extractPlannedMinutes(String taskTitle) {
+    final adaptiveCanonical = RegExp(
+      r'^ADAPTIVE_NO_SMOKE:(\d+)$',
+      caseSensitive: false,
+    ).firstMatch(taskTitle.trim());
+    if (adaptiveCanonical != null) {
+      final minutes = int.tryParse(adaptiveCanonical.group(1) ?? '');
+      if (minutes != null && minutes > 0) {
+        return minutes;
+      }
+    }
+
+    final minuteMatch = RegExp(
+      r'(\d+)\s*(dakika|minute|minutes|min)',
+      caseSensitive: false,
+    ).firstMatch(taskTitle);
+    if (minuteMatch != null) {
+      final minutes = int.tryParse(minuteMatch.group(1) ?? '');
+      if (minutes != null && minutes > 0) {
+        return minutes;
+      }
+    }
+    return 15;
   }
 
   @override
@@ -113,7 +164,7 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              taskTitle,
+                              AppTexts.localizeCanonicalText(context, taskTitle),
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 16,
@@ -127,16 +178,24 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
                               runSpacing: 8,
                               children: [
                                 ElevatedButton(
-                                  onPressed: () => _saveOutcome(taskTitle: taskTitle, success: true),
-                                  child: Text(context.t('taskOutcomeYes')),
+                                  onPressed: () => _saveOutcome(
+                                    taskTitle: taskTitle,
+                                    outcome: AdaptiveTaskOutcome.success,
+                                    scheduledAt: scheduledAt,
+                                  ),
+                                  child: const Text('Basardim'),
                                 ),
                                 OutlinedButton(
-                                  onPressed: () => _saveOutcome(taskTitle: taskTitle, success: false),
-                                  child: Text(context.t('taskOutcomeNo')),
+                                  onPressed: () => _saveOutcome(
+                                    taskTitle: taskTitle,
+                                    outcome: AdaptiveTaskOutcome.smoked,
+                                    scheduledAt: scheduledAt,
+                                  ),
+                                  child: const Text('Sigara ictim'),
                                 ),
                                 TextButton(
                                   onPressed: () => _deferAgain(taskTitle),
-                                  child: Text(context.t('taskNotNowButton')),
+                                  child: const Text('Ertele'),
                                 ),
                               ],
                             ),

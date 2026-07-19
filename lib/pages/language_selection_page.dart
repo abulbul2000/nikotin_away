@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_texts.dart';
 import '../main.dart';
 import '../services/language_service.dart';
+import '../services/notification_service.dart';
 import '../widgets/no_smoke_logo.dart';
 import 'trial_info_page.dart';
 
@@ -34,6 +36,8 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
   Future<void> _continue(BuildContext context, String languageCode) async {
     // Dili kaydet
     await LanguageService.saveSelectedLanguageCode(languageCode);
+    await AppTexts.ensureLanguageLoaded(languageCode);
+    await NotificationService.refreshLocalizedResources();
     if (!context.mounted) return;
     
     // Locale'i set et
@@ -92,7 +96,7 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
                   ),
                   const SizedBox(height: 28),
                   Text(
-                    'Select language',
+                    context.t('selectLanguage'),
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 24,
@@ -112,9 +116,9 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            'Select language',
-                            style: TextStyle(
+                          Text(
+                            context.t('selectLanguage'),
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
@@ -217,7 +221,9 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      _showOtherLanguages ? 'Other languages' : 'Select language',
+                      _showOtherLanguages
+                          ? context.t('otherLanguages')
+                          : context.t('selectLanguage'),
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -237,7 +243,7 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                     });
                   },
                   decoration: InputDecoration(
-                    hintText: 'Search languages...',
+                    hintText: context.t('searchLanguages'),
                     hintStyle: TextStyle(color: Colors.white54),
                     filled: true,
                     fillColor: Colors.white10,
@@ -347,14 +353,14 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                         backgroundColor: Colors.white12,
                         foregroundColor: Colors.white,
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.language),
-                          SizedBox(width: 8),
+                          const Icon(Icons.language),
+                          const SizedBox(width: 8),
                           Text(
-                            'Other languages →',
-                            style: TextStyle(
+                            '${context.t('otherLanguages')} →',
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -378,7 +384,7 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                         });
                       },
                       icon: const Icon(Icons.arrow_back),
-                      label: const Text('Back to main'),
+                      label: Text(context.t('backToMain')),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         side: const BorderSide(color: Colors.white30),
