@@ -12,10 +12,14 @@ uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <application
-        android:label="no_smoke"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+    
+<application
+    android:label="no_smoke"
+    android:name="${applicationName}"
+    android:icon="@mipmap/ic_launcher"
+    android:allowBackup="false"
+    android:fullBackupContent="false">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -112,10 +112,7 @@ class _SurveyWizardState extends State<SurveyWizard> {
                   const Spacer(),
                   Text(
                     current.title,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -126,7 +123,9 @@ class _SurveyWizardState extends State<SurveyWizard> {
                   value: (_index + 1) / total,
                   minHeight: 6,
                   backgroundColor: Colors.white12,
-                  valueColor: const AlwaysStoppedAnimation(AppTheme.noSmokeGreen),
+                  valueColor: const AlwaysStoppedAnimation(
+                    AppTheme.noSmokeGreen,
+                  ),
                 ),
               ),
             ],
@@ -190,7 +189,9 @@ class _SurveyWizardState extends State<SurveyWizard> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : Text(_isLastStep ? widget.finishLabel : widget.nextLabel),
+                      : Text(
+                          _isLastStep ? widget.finishLabel : widget.nextLabel,
+                        ),
                 ),
               ),
             ],

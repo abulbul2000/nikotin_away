@@ -1,4 +1,3 @@
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -43,8 +42,7 @@ class _SplashPageState extends State<SplashPage> {
 
       NoSmokeApp.setLocale(
         context,
-        LanguageService.supportedLanguages[selectedCode] ??
-            const Locale('en'),
+        LanguageService.supportedLanguages[selectedCode] ?? const Locale('en'),
       );
 
       await Future.delayed(const Duration(milliseconds: 1800));
@@ -81,9 +79,7 @@ class _SplashPageState extends State<SplashPage> {
     if (mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const LanguageSelectionPage(),
-        ),
+        MaterialPageRoute(builder: (_) => const LanguageSelectionPage()),
       );
     }
   }
@@ -93,8 +89,8 @@ class _SplashPageState extends State<SplashPage> {
 
     final storage = StorageService();
     final records = await storage.loadSurveyHistory();
-    final hasInitialSetup =
-        records.any((record) => record.type == 'initial');
+
+    final hasInitialSetup = records.any((record) => record.type == 'initial');
 
     if (!mounted) return;
 
@@ -102,9 +98,7 @@ class _SplashPageState extends State<SplashPage> {
     if (!hasInitialSetup) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const TrialInfoPage(),
-        ),
+        MaterialPageRoute(builder: (_) => const TrialInfoPage()),
       );
       return;
     }
