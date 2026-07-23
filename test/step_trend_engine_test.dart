@@ -104,5 +104,80 @@ void main() {
         'Stable',
       );
     });
+
+    group('isMostRecentDaySedentary', () {
+      test('false with fewer than 3 days of history', () {
+        expect(
+          engine.isMostRecentDaySedentary([
+            DailyStepCount(date: DateTime(2026, 1, 1), steps: 5000),
+            DailyStepCount(date: DateTime(2026, 1, 2), steps: 100),
+          ]),
+          isFalse,
+        );
+      });
+
+      test('true when the most recent day is well below the prior average', () {
+        expect(
+          engine.isMostRecentDaySedentary([
+            DailyStepCount(date: DateTime(2026, 1, 1), steps: 6000),
+            DailyStepCount(date: DateTime(2026, 1, 2), steps: 5000),
+            DailyStepCount(date: DateTime(2026, 1, 3), steps: 1500),
+          ]),
+          isTrue,
+        );
+      });
+
+      test('false when the most recent day is close to the prior average', () {
+        expect(
+          engine.isMostRecentDaySedentary([
+            DailyStepCount(date: DateTime(2026, 1, 1), steps: 6000),
+            DailyStepCount(date: DateTime(2026, 1, 2), steps: 5000),
+            DailyStepCount(date: DateTime(2026, 1, 3), steps: 4800),
+          ]),
+          isFalse,
+        );
+      });
+    });
+
+    group('isSedentaryWindow', () {
+      test('false with fewer than 2 samples', () {
+        expect(
+          engine.isSedentaryWindow([_sample(DateTime(2026, 1, 1, 10), 100)]),
+          isFalse,
+        );
+      });
+
+      test('false when the gap between samples is too short to mean anything', () {
+        final samples = [
+          _sample(DateTime(2026, 1, 1, 10, 0), 1000),
+          _sample(DateTime(2026, 1, 1, 10, 20), 1000),
+        ];
+        expect(engine.isSedentaryWindow(samples), isFalse);
+      });
+
+      test('true when a long gap has almost no step increase', () {
+        final samples = [
+          _sample(DateTime(2026, 1, 1, 9, 0), 1000),
+          _sample(DateTime(2026, 1, 1, 11, 0), 1050),
+        ];
+        expect(engine.isSedentaryWindow(samples), isTrue);
+      });
+
+      test('false when a long gap has real step increase', () {
+        final samples = [
+          _sample(DateTime(2026, 1, 1, 9, 0), 1000),
+          _sample(DateTime(2026, 1, 1, 11, 0), 3000),
+        ];
+        expect(engine.isSedentaryWindow(samples), isFalse);
+      });
+
+      test('handles a reboot reset without going negative', () {
+        final samples = [
+          _sample(DateTime(2026, 1, 1, 9, 0), 9000),
+          _sample(DateTime(2026, 1, 1, 11, 0), 50),
+        ];
+        expect(engine.isSedentaryWindow(samples), isTrue);
+      });
+    });
   });
 }

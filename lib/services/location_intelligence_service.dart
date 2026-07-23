@@ -19,6 +19,7 @@ class LocationIntelligenceService {
   final PlaceClusteringEngine _clusteringEngine;
 
   static const Duration _minSampleInterval = Duration(hours: 1);
+  static const String consentTextVersion = 'v1';
 
   LocationIntelligenceService({
     StorageService? storageService,
@@ -45,17 +46,32 @@ class LocationIntelligenceService {
   Future<bool> enable() async {
     final foreground = await Permission.locationWhenInUse.request();
     if (!foreground.isGranted) {
+      await _storageService.recordConsentDecision(
+        featureKey: 'location_intelligence',
+        granted: false,
+        consentTextVersion: consentTextVersion,
+      );
       return false;
     }
     final background = await Permission.locationAlways.request();
     await _storageService.saveSetting('location_intelligence_enabled', '1');
     await _syncGeofences();
+    await _storageService.recordConsentDecision(
+      featureKey: 'location_intelligence',
+      granted: true,
+      consentTextVersion: consentTextVersion,
+    );
     return background.isGranted;
   }
 
   Future<void> disable() async {
     await _storageService.saveSetting('location_intelligence_enabled', '0');
     await GeofencingService.clearGeofences();
+    await _storageService.recordConsentDecision(
+      featureKey: 'location_intelligence',
+      granted: false,
+      consentTextVersion: consentTextVersion,
+    );
   }
 
   Future<void> updateNotificationText({
@@ -92,11 +108,18 @@ class LocationIntelligenceService {
       return;
     }
 
+    // A GPS/network fix isn't guaranteed to ever arrive (weak signal
+    // indoors, flaky Play Services, etc.) — without a time limit this call
+    // can hang indefinitely, which was live-reproduced this session as a
+    // genuinely stuck UI (see ARCHITECTURE_ROADMAP.md's Phase 6 notes).
+    // Caught the same as any other failure: no fix this cycle, try again
+    // next time this is due.
     Position position;
     try {
       position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.low,
+          timeLimit: Duration(seconds: 15),
         ),
       );
     } catch (_) {

@@ -79,5 +79,57 @@ class StepTrendEngine {
     return 'Stable';
   }
 
+  /// True when the most recent day's step count is markedly below the
+  /// average of the prior days — physical activity is well-established to
+  /// reduce cravings, so a sudden drop from the user's own baseline is a
+  /// small, personalized craving-risk signal (Phase 11). Requires at least
+  /// 2 prior days plus the most recent one — comparing against a single
+  /// prior day would be too noisy to trust.
+  bool isMostRecentDaySedentary(
+    List<DailyStepCount> dailyCounts, {
+    double thresholdRatio = 0.4,
+  }) {
+    if (dailyCounts.length < 3) {
+      return false;
+    }
+    final sorted = [...dailyCounts]..sort((a, b) => a.date.compareTo(b.date));
+    final mostRecent = sorted.last;
+    final priorDays = sorted.sublist(0, sorted.length - 1);
+    final average =
+        priorDays.fold<int>(0, (sum, day) => sum + day.steps) /
+        priorDays.length;
+    if (average <= 0) {
+      return false;
+    }
+    return mostRecent.steps < average * thresholdRatio;
+  }
+
+  /// True when the earliest and latest sample in [samples] span at least
+  /// [minGap] but almost no steps were taken in between — a real "sat
+  /// still for a while" signal, not just "the app happened to be opened
+  /// twice in quick succession" (samples are only ever written on a
+  /// throttled foreground read or the daily native probe, never
+  /// continuously, so a short gap between two samples says nothing about
+  /// activity level either way).
+  bool isSedentaryWindow(
+    List<StepCounterSample> samples, {
+    Duration minGap = const Duration(hours: 1, minutes: 30),
+    int stepThreshold = 150,
+  }) {
+    if (samples.length < 2) {
+      return false;
+    }
+    final sorted = [...samples]
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    final first = sorted.first;
+    final last = sorted.last;
+    if (last.createdAt.difference(first.createdAt) < minGap) {
+      return false;
+    }
+    final rawDelta = last.cumulativeSteps - first.cumulativeSteps;
+    final delta = rawDelta >= 0 ? rawDelta : last.cumulativeSteps;
+    return delta < stepThreshold;
+  }
+
   DateTime _dateOnly(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 }

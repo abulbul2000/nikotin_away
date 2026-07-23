@@ -28,8 +28,11 @@ import '../engines/mentor_engine.dart';
 import '../engines/prediction_engine.dart';
 import '../engines/sleep_intelligence_engine.dart';
 import '../engines/smoking_time_prediction_engine.dart';
+import '../engines/step_trend_engine.dart';
+import '../engines/wearable_signal_engine.dart';
 import 'behavior_engine.dart';
 import 'discipline_protocol_service.dart';
+import 'health_connect_service.dart';
 
 class StorageService {
   static const _tableName = 'app_events';
@@ -51,12 +54,16 @@ class StorageService {
   static const _adaptiveHourlyProfileTable = 'adaptive_hourly_profile';
   static const _smokingEventsTable = 'smoking_events';
   static const _mentorMessagesTable = 'mentor_messages';
+  static const _consentEventsTable = 'consent_events';
   static const _behaviorDirtyKey = 'behavior_dirty';
   static const _registrationCompletedKey = 'registration_completed';
   static const _isProfileCompletedKey = 'isProfileCompleted';
   static const _surveyTypes = {'initial', 'weekly'};
   final BehaviorEngine _behaviorEngine = BehaviorEngine();
   final BreathTestEngine _breathTestEngine = BreathTestEngine();
+  final StepTrendEngine _stepTrendEngine = StepTrendEngine();
+  final WearableSignalEngine _wearableSignalEngine = WearableSignalEngine();
+  final HealthConnectService _healthConnectService = HealthConnectService();
   final PredictionEngine _predictionEngine = PredictionEngine();
   final SleepIntelligenceEngine _sleepIntelligenceEngine =
       SleepIntelligenceEngine();
@@ -78,7 +85,7 @@ class StorageService {
     final path = p.join(documentsDirectory.path, 'no_smoke.db');
     return openDatabase(
       path,
-      version: 18,
+      version: 19,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -117,6 +124,7 @@ class StorageService {
         await _ensureSleepProbeTable(db);
         await _ensureLocationIntelligenceTables(db);
         await _ensureStepCounterTable(db);
+        await _ensureConsentEventsTable(db);
         await _ensureIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -143,6 +151,7 @@ class StorageService {
         await _ensureSleepProbeTable(db);
         await _ensureLocationIntelligenceTables(db);
         await _ensureStepCounterTable(db);
+        await _ensureConsentEventsTable(db);
         if (oldVersion < 9) {
           await _ensureIndexes(db);
         }
@@ -154,6 +163,146 @@ class StorageService {
         }
       },
     );
+  }
+
+  /// Append-only KVKK/GDPR consent trail — separate from the plain '1'/'0'
+  /// enable flags each opt-in service already persists (Sleep/Location/
+  /// Wearable Intelligence). KVKK's "parçalı açık rıza" guidance expects a
+  /// record of *who* (this device's single local user) consented to *what*
+  /// (featureKey), *when* (createdAt), and to *which version* of the
+  /// disclosure text (consentTextVersion) — and expects withdrawal to be
+  /// recorded too, not just silently overwrite the grant. A single mutable
+  /// row per feature can't represent that history, so this is a real
+  /// table (one INSERT per decision) rather than another settings key.
+  Future<void> _ensureConsentEventsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_consentEventsTable (
+        id TEXT PRIMARY KEY,
+        featureKey TEXT NOT NULL,
+        granted INTEGER NOT NULL,
+        consentTextVersion TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> recordConsentDecision({
+    required String featureKey,
+    required bool granted,
+    required String consentTextVersion,
+  }) async {
+    final db = await database;
+    final now = DateTime.now();
+    await db.insert(_consentEventsTable, {
+      'id': 'consent_${featureKey}_${now.microsecondsSinceEpoch}',
+      'featureKey': featureKey,
+      'granted': granted ? 1 : 0,
+      'consentTextVersion': consentTextVersion,
+      'createdAt': now.toIso8601String(),
+    });
+  }
+
+  /// Most recent decision for a feature, or null if it was never asked
+  /// about. Used to show "ne zaman izin verdin" in a future privacy
+  /// screen, and as the audit trail if a Data Safety/KVKK request ever
+  /// needs to demonstrate consent provenance.
+  Future<Map<String, dynamic>?> loadLatestConsentDecision(
+    String featureKey,
+  ) async {
+    final db = await database;
+    final rows = await db.query(
+      _consentEventsTable,
+      where: 'featureKey = ?',
+      whereArgs: [featureKey],
+      orderBy: 'createdAt DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    final row = rows.first;
+    return {
+      'granted': row['granted'] == 1,
+      'consentTextVersion': row['consentTextVersion'],
+      'createdAt': DateTime.parse(row['createdAt'] as String),
+    };
+  }
+
+  static const _wearableRiskAdjustmentKey = 'wearable_risk_adjustment';
+  static const _wearableRiskAdjustmentAtKey =
+      'wearable_risk_adjustment_updated_at';
+  static const _wearableRiskRefreshInterval = Duration(hours: 1);
+  static const _elevatedHeartRateAdjustment = 4;
+
+  /// Refreshes the cached wearable-derived risk adjustment (Phase 11).
+  /// Deliberately **not** called from [loadBehaviorDashboard] itself —
+  /// that function runs on every app open with no staleness check (a
+  /// known hot path, see Phase 9's notes on why a live Health Connect
+  /// fetch was never wired in directly). Reading a native platform
+  /// channel every single time the home screen loads would add real,
+  /// unpredictable latency to that path for a signal only a minority of
+  /// users will have enabled at all. Instead: callers (home_page.dart)
+  /// invoke this out-of-band and throttled (at most once/hour, same
+  /// cadence as LocationIntelligenceService's foreground sampling); it
+  /// persists a small cached int that [loadBehaviorDashboard] just reads
+  /// via a plain [loadSetting] call — cheap, synchronous-feeling, no
+  /// native I/O in the hot path itself.
+  Future<void> refreshWearableRiskSignal({bool force = false}) async {
+    final enabled = (await loadSetting('wearable_intelligence_enabled')) == '1';
+    if (!enabled) {
+      return;
+    }
+    if (!force) {
+      final lastRaw = await loadSetting(_wearableRiskAdjustmentAtKey);
+      final last = lastRaw != null ? DateTime.tryParse(lastRaw) : null;
+      if (last != null &&
+          DateTime.now().difference(last) < _wearableRiskRefreshInterval) {
+        return;
+      }
+    }
+
+    var adjustment = 0;
+    try {
+      final snapshot = await _healthConnectService.fetchRecentSnapshot();
+      final latest = snapshot.latestHeartRateBpm;
+      final baseline = snapshot.baselineHeartRateBpm;
+      if (latest != null &&
+          baseline != null &&
+          _wearableSignalEngine.isElevatedHeartRate(
+            latestBpm: latest,
+            baselineBpm: baseline,
+          )) {
+        adjustment = _elevatedHeartRateAdjustment;
+      }
+    } catch (_) {
+      // No usable wearable data right now — cache a neutral adjustment
+      // rather than leaving a stale (possibly elevated) one in place.
+      adjustment = 0;
+    }
+
+    await saveSetting(_wearableRiskAdjustmentKey, adjustment.toString());
+    await saveSetting(
+      _wearableRiskAdjustmentAtKey,
+      DateTime.now().toIso8601String(),
+    );
+  }
+
+  Future<int> _loadCachedWearableRiskAdjustment() async {
+    final raw = await loadSetting(_wearableRiskAdjustmentKey);
+    return int.tryParse(raw ?? '') ?? 0;
+  }
+
+  /// Phase 11 "uzun süre oturma" detector — reuses the step samples
+  /// already collected for the report/trend features, no new sensor or
+  /// permission. See [StepTrendEngine.isSedentaryWindow] for why the gap
+  /// between samples matters as much as the step count itself.
+  Future<bool> isRecentlySedentary({
+    Duration lookback = const Duration(hours: 3),
+  }) async {
+    final samples = await loadStepCounterSamples(
+      since: DateTime.now().subtract(lookback),
+    );
+    return _stepTrendEngine.isSedentaryWindow(samples);
   }
 
   Future<void> _ensureSmokingEventsTable(Database db) async {
@@ -1452,6 +1601,77 @@ class StorageService {
     return plan;
   }
 
+  static const _notifiedTaskTitlesDateKey = 'notified_task_titles_date';
+  static const _notifiedTaskTitlesJsonKey = 'notified_task_titles_json';
+  static const _minimumTaskNotificationsDateKey =
+      'minimum_task_notifications_ensured_date';
+
+  String _todayKey(DateTime now) =>
+      '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+  /// Which task titles have already had their trigger notification
+  /// scheduled today — persisted (not just in-memory) so a process restart
+  /// mid-day doesn't forget and reschedule duplicates. Same root-cause
+  /// pattern as [buildAdaptiveNoSmokePlan]'s caching: the in-memory-only
+  /// version of this guard reset on every relaunch, so every time the app
+  /// was reopened it re-scheduled a fresh notification for every task
+  /// still marked 'new', stacking on top of whatever was already pending
+  /// from earlier that day.
+  Future<Set<String>> loadNotifiedTaskTitlesToday({DateTime? now}) async {
+    final todayKey = _todayKey(now ?? DateTime.now());
+    final cachedDate = await loadSetting(_notifiedTaskTitlesDateKey);
+    if (cachedDate != todayKey) {
+      return <String>{};
+    }
+    final cachedJson = await loadSetting(_notifiedTaskTitlesJsonKey);
+    if (cachedJson == null) {
+      return <String>{};
+    }
+    try {
+      return (jsonDecode(cachedJson) as List<dynamic>)
+          .map((e) => e.toString())
+          .toSet();
+    } catch (_) {
+      return <String>{};
+    }
+  }
+
+  Future<void> markTaskTitleNotifiedToday(
+    String taskTitle, {
+    DateTime? now,
+  }) async {
+    final todayKey = _todayKey(now ?? DateTime.now());
+    final existing = await loadNotifiedTaskTitlesToday(now: now);
+    existing.add(taskTitle);
+    await saveSetting(_notifiedTaskTitlesDateKey, todayKey);
+    await saveSetting(
+      _notifiedTaskTitlesJsonKey,
+      jsonEncode(existing.toList()),
+    );
+  }
+
+  /// Guards `_ensureMinimumFiveNotificationsUntilSleep` (home_page.dart) —
+  /// without this, that function scheduled a fresh batch of >=5 additional
+  /// notifications on *every* app open with no persisted memory of having
+  /// already done so that day, the other half of the same duplicate-
+  /// notification bug the title-based guard above fixes.
+  Future<bool> hasEnsuredMinimumTaskNotificationsToday({
+    DateTime? now,
+  }) async {
+    final todayKey = _todayKey(now ?? DateTime.now());
+    final cachedDate = await loadSetting(_minimumTaskNotificationsDateKey);
+    return cachedDate == todayKey;
+  }
+
+  Future<void> markMinimumTaskNotificationsEnsuredToday({
+    DateTime? now,
+  }) async {
+    await saveSetting(
+      _minimumTaskNotificationsDateKey,
+      _todayKey(now ?? DateTime.now()),
+    );
+  }
+
   Future<Duration> resolveAdaptivePostponeDelay({
     int baseMinutes = 10,
   }) async {
@@ -2681,6 +2901,26 @@ class StorageService {
       dynamicRisk = (dynamicRisk - 4).clamp(0, 100).toInt();
     }
 
+    // Phase 11: step count and heart rate feeding the actual risk score,
+    // not just reports/UI. Both read from local data already collected by
+    // the existing native probes (Phase 7/9) — no new I/O here. Bounded
+    // and small, same scale as the other adjustments above.
+    final stepSamples = await loadStepCounterSamples(
+      since: DateTime.now().subtract(const Duration(days: 8)),
+    );
+    final dailySteps = _stepTrendEngine.computeDailySteps(stepSamples);
+    final sedentaryToday = _stepTrendEngine.isMostRecentDaySedentary(
+      dailySteps,
+    );
+    if (sedentaryToday) {
+      dynamicRisk = (dynamicRisk + 3).clamp(0, 100).toInt();
+    }
+
+    final wearableRiskAdjustment = await _loadCachedWearableRiskAdjustment();
+    if (wearableRiskAdjustment > 0) {
+      dynamicRisk = (dynamicRisk + wearableRiskAdjustment).clamp(0, 100).toInt();
+    }
+
     final startDate = surveyRecords.isNotEmpty
         ? surveyRecords.first.completedAt
         : DateTime.now();
@@ -2835,6 +3075,14 @@ class StorageService {
     riskExplanation.add(
       'Sure bariyeri tercihi: $barrierPreferenceRaw / siklik: $barrierFrequencyRaw / aktif: ${barrierEnabled ? 'evet' : 'hayir'}',
     );
+    riskExplanation.add(
+      'Adim aktivitesi: ${sedentaryToday ? 'bugun belirgin dusuk (+3)' : 'normal'}',
+    );
+    if (wearableRiskAdjustment > 0) {
+      riskExplanation.add(
+        'Bileklik nabzi: kisisel esikten yuksek okuma (+$wearableRiskAdjustment)',
+      );
+    }
 
     final dashboard = _behaviorEngine.buildDashboard(
       riskScore: dynamicRisk,
@@ -3363,6 +3611,7 @@ class StorageService {
       await txn.delete(_significantPlacesTable);
       await txn.delete(_locationVisitEventsTable);
       await txn.delete(_stepCounterSamplesTable);
+      await txn.delete(_consentEventsTable);
     });
   }
 }

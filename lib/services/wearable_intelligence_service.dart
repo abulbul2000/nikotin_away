@@ -11,6 +11,8 @@ class WearableIntelligenceService {
   final StorageService _storageService;
   final HealthConnectService _healthConnectService;
 
+  static const String consentTextVersion = 'v1';
+
   WearableIntelligenceService({
     StorageService? storageService,
     HealthConnectService? healthConnectService,
@@ -33,6 +35,11 @@ class WearableIntelligenceService {
       return false;
     }
     final granted = await _healthConnectService.requestPermissions();
+    await _storageService.recordConsentDecision(
+      featureKey: 'wearable_intelligence',
+      granted: granted,
+      consentTextVersion: consentTextVersion,
+    );
     if (!granted) {
       return false;
     }
@@ -42,5 +49,10 @@ class WearableIntelligenceService {
 
   Future<void> disable() async {
     await _storageService.saveSetting('wearable_intelligence_enabled', '0');
+    await _storageService.recordConsentDecision(
+      featureKey: 'wearable_intelligence',
+      granted: false,
+      consentTextVersion: consentTextVersion,
+    );
   }
 }

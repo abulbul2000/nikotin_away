@@ -749,6 +749,8 @@ class _HomePageState extends State<HomePage> {
       unawaited(_scheduleCoachCommandNotificationsIfNeeded());
       unawaited(_scheduleDurationBarrierNotificationsIfNeeded());
       unawaited(_presentMandatoryTaskIfNeeded());
+      unawaited(_storageService.refreshWearableRiskSignal());
+      unawaited(_scheduleSedentaryReminderIfNeeded());
       await _ensureMentorMessageCadence();
       await _ensureFakeCallBarrierCadence();
     }
@@ -1671,6 +1673,15 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    // Persisted, not just in-memory: `_notifiedTaskTitles` alone forgot
+    // what had already been notified every time the process restarted
+    // (very common — OEM battery killers, normal app-switching), so every
+    // reopen re-scheduled a fresh notification for every task still 'new',
+    // stacking duplicates on top of whatever was already pending from
+    // earlier that day. See StorageService.loadNotifiedTaskTitlesToday.
+    final notifiedToday = await _storageService.loadNotifiedTaskTitlesToday();
+    _notifiedTaskTitles.addAll(notifiedToday);
+
     if (_adaptivePlanItems.isNotEmpty) {
       DateTime? nextAt;
       for (final item in _adaptivePlanItems) {
@@ -1693,6 +1704,7 @@ class _HomePageState extends State<HomePage> {
         );
 
         _notifiedTaskTitles.add(task);
+        await _storageService.markTaskTitleNotifiedToday(task);
         if (nextAt == null || item.scheduledAt.isBefore(nextAt)) {
           nextAt = item.scheduledAt;
         }
@@ -1726,14 +1738,67 @@ class _HomePageState extends State<HomePage> {
       );
 
       _notifiedTaskTitles.add(task);
+      await _storageService.markTaskTitleNotifiedToday(task);
       index += 1;
     }
 
     await _ensureMinimumFiveNotificationsUntilSleep();
   }
 
+  static const Duration _sedentaryReminderCooldown = Duration(hours: 3);
+
+  /// Phase 11: a gentle "you've been still for a while" nudge, reusing the
+  /// step data already collected for reports (no new sensor/permission).
+  /// Gated by waking hours (hour-granularity is enough for this — it's a
+  /// wellness suggestion, not a precise scheduler) and a cooldown so it
+  /// can fire more than once a day without turning into the same
+  /// duplicate-notification problem `_notifyNewTasks` had.
+  Future<void> _scheduleSedentaryReminderIfNeeded() async {
+    if (!_registrationCompleted) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final sleepRaw = await _storageService.loadSleepTime() ?? '23:00';
+    final wakeRaw = await _storageService.loadSetting('wake_time') ?? '07:00';
+    final sleepHour = int.tryParse(sleepRaw.split(':').first) ?? 23;
+    final wakeHour = int.tryParse(wakeRaw.split(':').first) ?? 7;
+    final withinWakingHours = wakeHour <= sleepHour
+        ? now.hour >= wakeHour && now.hour < sleepHour
+        : now.hour >= wakeHour || now.hour < sleepHour;
+    if (!withinWakingHours) {
+      return;
+    }
+
+    final lastRaw = await _storageService.loadSetting(
+      'last_sedentary_reminder_at',
+    );
+    final last = lastRaw != null ? DateTime.tryParse(lastRaw) : null;
+    if (last != null && now.difference(last) < _sedentaryReminderCooldown) {
+      return;
+    }
+
+    if (!await _storageService.isRecentlySedentary()) {
+      return;
+    }
+
+    await NotificationService.showSedentaryReminderNotification();
+    await _storageService.saveSetting(
+      'last_sedentary_reminder_at',
+      now.toIso8601String(),
+    );
+  }
+
   Future<void> _ensureMinimumFiveNotificationsUntilSleep() async {
     if (!_registrationCompleted) {
+      return;
+    }
+
+    // No persisted guard here previously meant this ran — and scheduled a
+    // fresh batch of >=5 more notifications — on *every* app open, not
+    // once per day, compounding the same duplicate-notification bug fixed
+    // in _notifyNewTasks above.
+    if (await _storageService.hasEnsuredMinimumTaskNotificationsToday()) {
       return;
     }
 
@@ -1770,6 +1835,7 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (schedule.isEmpty) {
+      await _storageService.markMinimumTaskNotificationsEnsuredToday();
       return;
     }
 
@@ -1783,6 +1849,7 @@ class _HomePageState extends State<HomePage> {
         delay: delay,
       );
     }
+    await _storageService.markMinimumTaskNotificationsEnsuredToday();
 
     if (!mounted) {
       return;

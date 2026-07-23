@@ -480,6 +480,9 @@ class AppTexts {
     'wearableIntelligenceLatestHeartRate': 'Son nabiz',
     'wearableIntelligenceLastSleep': 'Son uyku suresi',
     'wearableIntelligenceNoData': 'Henuz okunabilir veri yok.',
+    'sedentaryReminderTitle': 'Biraz hareket vakti',
+    'sedentaryReminderBody':
+      'Bir sure hareketsiz gorunuyorsun. Kisa bir yuruyus, hem bacaklarina hem de sigara isteklerine iyi gelir.',
     'menuReports': 'Raporlar',
     'reportsTitle': 'Raporlar',
     'reportsWeeklyTab': 'Haftalik',
@@ -1174,6 +1177,9 @@ class AppTexts {
     'wearableIntelligenceLatestHeartRate': 'Latest heart rate',
     'wearableIntelligenceLastSleep': 'Last sleep duration',
     'wearableIntelligenceNoData': 'No readable data yet.',
+    'sedentaryReminderTitle': 'Time to move a bit',
+    'sedentaryReminderBody':
+      'You\'ve been still for a while. A short walk is good for your legs and for cravings alike.',
     'menuReports': 'Reports',
     'reportsTitle': 'Reports',
     'reportsWeeklyTab': 'Weekly',

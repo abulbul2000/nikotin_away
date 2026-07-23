@@ -55,6 +55,8 @@ class NotificationService {
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
   static const String _fakeCallChannelId = 'fake_call_channel_v1';
   static const String _fakeCallCheckInChannelId = 'fake_call_checkin_channel_v1';
+  static const String _sedentaryReminderChannelId = 'sedentary_reminder_channel_v1';
+  static const int _sedentaryReminderNotificationId = 920001;
   static const int _fakeCallNotificationId = 810001;
   static const int _fakeCallCheckInBaseId = 810100;
   static const int _weeklySurveyNotificationId = 700001;
@@ -1187,6 +1189,33 @@ class NotificationService {
           _taskStartChannelId,
           'Duration barrier call',
           importance: Importance.max,
+          visibility: NotificationVisibility.private,
+          priority: Priority.high,
+          playSound: true,
+          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+          category: AndroidNotificationCategory.reminder,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: true),
+      ),
+    );
+  }
+
+  /// Phase 11: a gentle "get up and move" nudge — deliberately styled like
+  /// the breath-test reminder (normal ringtone, no insistent flag, no
+  /// full-screen takeover) rather than the alarm-style task notifications,
+  /// since this is a wellness suggestion the user can freely ignore, not
+  /// something the discipline protocol needs an answer to.
+  static Future<void> showSedentaryReminderNotification() async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    await _plugin.show(
+      _sedentaryReminderNotificationId,
+      _text(code, 'sedentaryReminderTitle'),
+      _text(code, 'sedentaryReminderBody'),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _sedentaryReminderChannelId,
+          'Hareket hatırlatıcı',
+          importance: Importance.high,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
 import '../models/significant_place.dart';
+import '../services/device_compatibility_service.dart';
 import '../services/location_intelligence_service.dart';
+import '../widgets/background_reliability_prompt.dart';
 
 class LocationIntelligencePage extends StatefulWidget {
   const LocationIntelligencePage({super.key});
@@ -14,6 +16,8 @@ class LocationIntelligencePage extends StatefulWidget {
 
 class _LocationIntelligencePageState extends State<LocationIntelligencePage> {
   final LocationIntelligenceService _service = LocationIntelligenceService();
+  final DeviceCompatibilityService _deviceCompatibilityService =
+      DeviceCompatibilityService();
 
   bool _loading = true;
   bool _busy = false;
@@ -27,19 +31,47 @@ class _LocationIntelligencePageState extends State<LocationIntelligencePage> {
     _load();
   }
 
+  // Defensive ceiling on every awaited call below — live-reproduced this
+  // session as a genuinely stuck loading spinner (traced to somewhere in
+  // this chain, likely the native geofence-registration round-trip
+  // triggered by updateNotificationText -> _syncGeofences, on a device
+  // where Play Services' geofence registration was already known to
+  // misbehave — see ARCHITECTURE_ROADMAP.md's Phase 6 notes). Whatever the
+  // exact cause, this screen must never hang forever regardless of it.
+  static const _loadStepTimeout = Duration(seconds: 10);
+
   Future<void> _load() async {
     setState(() => _loading = true);
 
-    if (mounted) {
-      await _service.updateNotificationText(
-        title: context.t('locationArrivalNotificationTitle'),
-        body: context.t('locationArrivalNotificationBody'),
-      );
-    }
+    // The very first `initState()` call into here must not touch anything
+    // depending on an InheritedWidget (Localizations, i.e. `context.t`)
+    // before this widget has actually finished mounting — Flutter throws
+    // (uncaught, since `_load` is fire-and-forget from initState) if it's
+    // reached synchronously as part of initState's own call stack. Live
+    // reproduced this session as a permanently stuck loading spinner: the
+    // exception fired before `_loading` was ever set back to false, and
+    // because nothing was awaited yet, it happened synchronously within
+    // initState itself. Awaiting these DB/permission calls *first* pushes
+    // everything after past the point where mounting has completed, which
+    // is what makes touching `context.t` safe afterward.
+    final enabled = await _service
+        .isEnabled()
+        .timeout(_loadStepTimeout, onTimeout: () => false);
+    final hasBackground = await _service
+        .hasBackgroundPermission()
+        .timeout(_loadStepTimeout, onTimeout: () => false);
+    final places = await _service
+        .loadPlaces()
+        .timeout(_loadStepTimeout, onTimeout: () => const <SignificantPlace>[]);
 
-    final enabled = await _service.isEnabled();
-    final hasBackground = await _service.hasBackgroundPermission();
-    final places = await _service.loadPlaces();
+    if (mounted) {
+      await _service
+          .updateNotificationText(
+            title: context.t('locationArrivalNotificationTitle'),
+            body: context.t('locationArrivalNotificationBody'),
+          )
+          .timeout(_loadStepTimeout, onTimeout: () {});
+    }
 
     if (!mounted) return;
     setState(() {
@@ -71,6 +103,12 @@ class _LocationIntelligencePageState extends State<LocationIntelligencePage> {
     );
     setState(() => _busy = false);
     await _load();
+    if (value && mounted) {
+      await maybePromptBackgroundReliability(
+        context: context,
+        deviceCompatibilityService: _deviceCompatibilityService,
+      );
+    }
   }
 
   @override

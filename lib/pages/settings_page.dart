@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
 import '../main.dart';
+import '../services/device_compatibility_service.dart';
 import '../services/language_service.dart';
 import '../services/notification_service.dart';
 import '../models/wearable_health_snapshot.dart';
@@ -11,6 +12,7 @@ import '../services/health_connect_service.dart';
 import '../services/sleep_intelligence_service.dart';
 import '../services/storage_service.dart';
 import '../services/wearable_intelligence_service.dart';
+import '../widgets/background_reliability_prompt.dart';
 import 'coach_mode_page.dart';
 import 'language_selection_page.dart';
 import 'location_intelligence_page.dart';
@@ -30,6 +32,8 @@ class _SettingsPageState extends State<SettingsPage> {
   final WearableIntelligenceService _wearableIntelligenceService =
       WearableIntelligenceService();
   final HealthConnectService _healthConnectService = HealthConnectService();
+  final DeviceCompatibilityService _deviceCompatibilityService =
+      DeviceCompatibilityService();
   bool _sleepIntelligenceEnabled = false;
   bool _wearableIntelligenceEnabled = false;
   WearableHealthSnapshot _wearableSnapshot = WearableHealthSnapshot.empty;
@@ -71,6 +75,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
+    if (value) {
+      await maybePromptBackgroundReliability(
+        context: context,
+        deviceCompatibilityService: _deviceCompatibilityService,
+      );
+    }
   }
 
   Future<void> _loadWearableIntelligenceState() async {

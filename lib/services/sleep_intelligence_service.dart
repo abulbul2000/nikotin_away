@@ -13,6 +13,12 @@ class SleepIntelligenceService {
   static const int _windowBufferMinutes = 60;
   static const int _minutesPerDay = 24 * 60;
 
+  /// Bump when `sleepIntelligenceDescription`/`sleepIntelligencePurpose`
+  /// (the disclosure text shown on the Settings card) changes materially,
+  /// so the KVKK consent trail records which version of the text the user
+  /// actually saw when they decided.
+  static const String consentTextVersion = 'v1';
+
   SleepIntelligenceService({StorageService? storageService})
     : _storageService = storageService ?? StorageService();
 
@@ -51,11 +57,21 @@ class SleepIntelligenceService {
       windowEndMinute: windowEnd,
       intervalMinutes: interval,
     );
+    await _storageService.recordConsentDecision(
+      featureKey: 'sleep_intelligence',
+      granted: true,
+      consentTextVersion: consentTextVersion,
+    );
   }
 
   Future<void> disable() async {
     await _storageService.saveSetting('sleep_intelligence_enabled', '0');
     await SleepProbeService.cancelNightlyProbing();
+    await _storageService.recordConsentDecision(
+      featureKey: 'sleep_intelligence',
+      granted: false,
+      consentTextVersion: consentTextVersion,
+    );
   }
 
   int? _parseMinuteOfDay(String value) {

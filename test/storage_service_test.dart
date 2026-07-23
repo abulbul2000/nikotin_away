@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/models/step_counter_sample.dart';
 import 'package:no_smoke/models/survey_record.dart';
 import 'package:no_smoke/services/storage_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -209,5 +210,95 @@ void main() {
       yesterday.toIso8601String(),
     );
     expect(await storage.hasWeeklySurveyBeenPromptedToday(), isFalse);
+  });
+
+  test('loadLatestConsentDecision: hiç karar verilmemişse null döner', () async {
+    final storage = StorageService();
+    expect(await storage.loadLatestConsentDecision('sleep_intelligence'), isNull);
+  });
+
+  test('recordConsentDecision: kaydedilen kararı doğru döner', () async {
+    final storage = StorageService();
+    await storage.recordConsentDecision(
+      featureKey: 'sleep_intelligence',
+      granted: true,
+      consentTextVersion: 'v1',
+    );
+    final decision = await storage.loadLatestConsentDecision('sleep_intelligence');
+    expect(decision, isNotNull);
+    expect(decision!['granted'], isTrue);
+    expect(decision['consentTextVersion'], 'v1');
+    expect(decision['createdAt'], isA<DateTime>());
+  });
+
+  test('recordConsentDecision: en son karar (geri çekme dahil) döner', () async {
+    final storage = StorageService();
+    await storage.recordConsentDecision(
+      featureKey: 'location_intelligence',
+      granted: true,
+      consentTextVersion: 'v1',
+    );
+    await storage.recordConsentDecision(
+      featureKey: 'location_intelligence',
+      granted: false,
+      consentTextVersion: 'v1',
+    );
+    final decision = await storage.loadLatestConsentDecision('location_intelligence');
+    expect(decision!['granted'], isFalse);
+  });
+
+  test('recordConsentDecision: farklı özellikler birbirini etkilemez', () async {
+    final storage = StorageService();
+    await storage.recordConsentDecision(
+      featureKey: 'wearable_intelligence',
+      granted: true,
+      consentTextVersion: 'v1',
+    );
+    expect(await storage.loadLatestConsentDecision('sleep_intelligence'), isNull);
+  });
+
+  test('isRecentlySedentary: yeterli örnek yoksa false döner', () async {
+    final storage = StorageService();
+    expect(await storage.isRecentlySedentary(), isFalse);
+  });
+
+  test('isRecentlySedentary: uzun aralıkta çok az adım varsa true döner', () async {
+    final storage = StorageService();
+    final now = DateTime.now();
+    await storage.saveStepCounterSample(
+      StepCounterSample(
+        id: 'a',
+        createdAt: now.subtract(const Duration(hours: 2)),
+        cumulativeSteps: 1000,
+      ),
+    );
+    await storage.saveStepCounterSample(
+      StepCounterSample(
+        id: 'b',
+        createdAt: now,
+        cumulativeSteps: 1050,
+      ),
+    );
+    expect(await storage.isRecentlySedentary(), isTrue);
+  });
+
+  test('isRecentlySedentary: gerçek adım artışında false döner', () async {
+    final storage = StorageService();
+    final now = DateTime.now();
+    await storage.saveStepCounterSample(
+      StepCounterSample(
+        id: 'a',
+        createdAt: now.subtract(const Duration(hours: 2)),
+        cumulativeSteps: 1000,
+      ),
+    );
+    await storage.saveStepCounterSample(
+      StepCounterSample(
+        id: 'b',
+        createdAt: now,
+        cumulativeSteps: 3500,
+      ),
+    );
+    expect(await storage.isRecentlySedentary(), isFalse);
   });
 }
