@@ -9,7 +9,17 @@ class SurveyStep {
   final String? subtitle;
   final Widget content;
 
-  const SurveyStep({required this.title, this.subtitle, required this.content});
+  /// Checked before leaving this step (Next or Finish). Return an error
+  /// message to block the move and surface it to the user, or null if the
+  /// step is complete. Omit for steps with nothing required.
+  final String? Function()? validate;
+
+  const SurveyStep({
+    required this.title,
+    this.subtitle,
+    required this.content,
+    this.validate,
+  });
 }
 
 /// Generic paged wizard used to break a long, "hepsi tek sayfada" survey
@@ -29,6 +39,11 @@ class SurveyWizard extends StatefulWidget {
   final String nextLabel;
   final String backLabel;
 
+  /// Called whenever the visible step changes (including via swipe-free
+  /// Back/Next navigation), so callers can persist a draft of the current
+  /// step's data as a safety net beyond just app-lifecycle pauses.
+  final ValueChanged<int>? onStepChanged;
+
   const SurveyWizard({
     super.key,
     required this.steps,
@@ -36,6 +51,7 @@ class SurveyWizard extends StatefulWidget {
     this.finishLabel = 'Tamamla',
     this.nextLabel = 'İleri',
     this.backLabel = 'Geri',
+    this.onStepChanged,
   });
 
   @override
@@ -50,6 +66,13 @@ class _SurveyWizardState extends State<SurveyWizard> {
   bool get _isLastStep => _index == widget.steps.length - 1;
 
   void _goNext() {
+    final error = widget.steps[_index].validate?.call();
+    if (error != null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
     if (_isLastStep) {
       _finish();
       return;
@@ -89,7 +112,6 @@ class _SurveyWizardState extends State<SurveyWizard> {
   @override
   Widget build(BuildContext context) {
     final total = widget.steps.length;
-    final current = widget.steps[_index];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -99,22 +121,13 @@ class _SurveyWizardState extends State<SurveyWizard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Text(
-                    '${_index + 1} / $total',
-                    style: const TextStyle(
-                      color: Colors.white54,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    current.title,
-                    style: const TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                ],
+              Text(
+                '${_index + 1} / $total',
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
               ClipRRect(
@@ -135,22 +148,17 @@ class _SurveyWizardState extends State<SurveyWizard> {
           child: PageView(
             controller: _controller,
             physics: const NeverScrollableScrollPhysics(),
-            onPageChanged: (i) => setState(() => _index = i),
+            onPageChanged: (i) {
+              setState(() => _index = i);
+              widget.onStepChanged?.call(i);
+            },
             children: widget.steps.map((step) {
               return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      step.title,
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                     if (step.subtitle != null) ...[
-                      const SizedBox(height: 6),
                       Text(
                         step.subtitle!,
                         style: const TextStyle(
@@ -158,8 +166,8 @@ class _SurveyWizardState extends State<SurveyWizard> {
                           fontSize: 13,
                         ),
                       ),
+                      const SizedBox(height: 16),
                     ],
-                    const SizedBox(height: 16),
                     step.content,
                   ],
                 ),
@@ -182,6 +190,7 @@ class _SurveyWizardState extends State<SurveyWizard> {
               Expanded(
                 flex: 2,
                 child: ElevatedButton(
+                  key: const ValueKey('survey_wizard_primary_button'),
                   onPressed: _submitting ? null : _goNext,
                   child: _submitting
                       ? const SizedBox(

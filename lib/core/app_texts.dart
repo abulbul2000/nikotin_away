@@ -36,7 +36,7 @@ class AppTexts {
     'male': 'Erkek',
     'female': 'Kadın',
     'selectOption': 'Seçiniz',
-    'breathTest': 'Nefes Testi',
+    'breathTest': 'Nefes Egzersizi',
     'riskLevel': 'Risk seviyesi',
     'riskScore': 'Risk skoru',
     'initialSurvey': 'Başlangıç Anketi',
@@ -54,6 +54,7 @@ class AppTexts {
     'maxSmokeFreeDuration': 'Sigarasiz kalabildigin maksimum sure',
     'smokeFree30to60': '30-60 dakika',
     'smokingYears': 'Kac yildir iciyorsun?',
+    'cigarettesPerPackLabel': 'Bir pakette kac sigara var?',
     'triggerCoffee': 'Kahve',
     'triggerMeal': 'Yemek sonrasi',
     'triggerDriving': 'Arac kullanirken',
@@ -75,6 +76,7 @@ class AppTexts {
     'weeklySavePrompt': 'Bu haftaki durumunuzu kaydedin.',
     'weeklySurveyPromptAsk': 'Haftalik anketi simdi doldurmak ister misiniz?',
     'saveErrorRetry': 'Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.',
+    'loadErrorRetry': 'Veriler yuklenirken bir hata olustu. Lutfen tekrar deneyin.',
     'smokeFreeStreak': 'Sigara İçmeme Serisi',
     'healthMetrics': 'Sağlık Metrikleri',
     'noBreathTestsYet': 'Henüz nefes testi kaydı yok.',
@@ -112,7 +114,42 @@ class AppTexts {
     'breathRestInstruction':
       'Kısa dinlenme: Normal nefes alın.\nSonraki denemeye hazırlanın.',
     'breathActiveInstruction':
-      'Dik oturun, burundan derin nefes alın,\n2 saniye tutun ve tek seferde kontrollü verin.\n\n3 deneme yapılacak, en iyi skor kaydedilir.',
+      '1. Dik oturun ve rahatlayın.\n2. Daireye dokunup burnunuzdan derin bir nefes alın, 2 saniye tutun.\n3. Nefesinizi tek seferde, kontrollü şekilde verin.\n4. Verme işlemi bitince daireye tekrar dokunun.\n\n3 deneme yapılacak, en iyi skor kaydedilir.',
+    'breathExerciseDisclaimer':
+      'Bu bir tibbi tani araci degildir; farkindalik ve rahatlama icin basit bir nefes egzersizidir.',
+    'restingLabel': 'Dinlenme',
+    'secondsLeftLabel': 'saniye kaldi',
+    'tapCircleToFinish': 'Bitirince daireye dokunun',
+    'breathListeningHint': 'Dinleniyor... nefesinizi verin, otomatik algılanacak',
+    'breathStepSitRelax': 'Dik oturun ve rahatlayın.',
+    'breathStepDeepBreath': 'Derin bir nefes alın.',
+    'breathStepHold': '5 saniye nefesinizi tutun ve başlata basın.',
+    'breathStepExhale':
+      'Nefesinizi mikrofona doğru güçlüce ve tamamen bitene kadar üfleyin.',
+    'breathStepExhaleFinishHint': 'Nefesiniz bitince tamama basın.',
+    'breathStepOkAction': 'Tamam',
+    'breathStepPressOkVoiceSuffix': 'Tamama basın.',
+    'breathAutoNextAttemptInstruction':
+      'Dik oturun ve rahatlayın. Derin bir nefes alın. Beş saniye tutun. Sonra nefesinizi mikrofona doğru güçlüce ve tamamen bitene kadar üfleyin. Nefesiniz bitince tamama basın.',
+    'disciplineDisclosureTitle': 'Nasil destek oluyoruz?',
+    'disciplineDisclosureMessage':
+      'No Smoke, seni sigarayi birakma surecinde desteklemek icin bazı arka plan mekanizmalari kullanir:\n\n'
+      '- Bir gorev hatırlatmasina zamaninda yanit vermezsen, bunu cihazinda bir uyum kaydi olarak not ederiz.\n'
+      '- Aktif bir gorev sirasinda, telefon hareketi ve kullanim oruntülerinden (hareket sensorleri ve mikrofon araciligiyla) olasi riskli anlari tahmin etmeye calisiriz. Ses kaydedilmez veya saklanmaz; yalnizca ortam ses seviyesi olculur.\n'
+      '- Bazi gorev hatirlatmalari dikkatini cekmek icin tam ekran uyari olarak gorunebilir.\n'
+      '- Sahte arama seni gercek bir telefon gorusmesi sirasinda rahatsiz etmesin diye, o an gorusme yapip yapmadigini kontrol ederiz; icerigi veya numarayi hicbir zaman okumayiz.\n\n'
+      'Bu veriler yalnizca cihazinda saklanir ve seni desteklemek disinda bir amacla kullanilmaz. Devam ederek bunu onaylamis olursun; mikrofon, hareket ve telefon durumu izinlerini bir sonraki adimda ayrica onaylayabilir ya da reddedebilirsin.',
+    'disciplineDisclosureAcknowledge': 'Anladim, devam et',
+    'cravingSosButton': 'Krizdeyim',
+    'surveyDraftFoundTitle': 'Kaldigin yerden devam et',
+    'surveyDraftFoundMessage':
+      'Daha once yarım bıraktıgın bir anket bulduk. Kaldıgın yerden devam etmek ister misin?',
+    'surveyDraftResume': 'Devam et',
+    'surveyDraftDiscard': 'Bastan basla',
+    'breathAttemptImplausible':
+      'Bu deneme gecerli gorunmuyor (cok kisa ya da cok uzun). Lutfen tekrar deneyin.',
+    'breathAttemptDiscardedBackgrounded':
+      'Uygulama arka plana alindigi icin bu deneme iptal edildi. Lutfen tekrar deneyin.',
     'completeRegistrationError':
       'Kaydı tamamlanırken bir hata oluştu. Lütfen tekrar deneyin.',
     'dayUnit': 'gün',
@@ -160,11 +197,12 @@ class AppTexts {
       'Gerekli izinler olmadan uygulama ozellikleri sinirli calisir.',
     'permissionsRetryTitle': 'Izinleri tekrar dene',
     'professionEngineer': 'Muhendis',
-    'professionFreelance': 'Serbest Calisiyor',
+    'professionFreelance': 'Serbest',
     'professionHealthcare': 'Saglik Calisani',
     'professionOfficer': 'Memur',
     'professionOther': 'Diger',
     'professionRetired': 'Emekli',
+    'professionSalaried': 'Ucretli',
     'professionStudent': 'Ogrenci',
     'professionTeacher': 'Ogretmen',
     'professionTradesman': 'Esnaf',
@@ -194,6 +232,8 @@ class AppTexts {
       'Lutfen ardisik icim adedini secin.',
     'validationChainHabitRequired':
       'Lutfen ardisik icim durumunu secin.',
+    'validationFixHighlightedFields':
+      'Lutfen isaretli alanlari duzeltin.',
     'validationSleepTimeRequired': 'Lutfen uyku saatini secin.',
     'validationSmokeYearsRange':
       'Sigara suresi 0 ile 90 yil arasinda olmalidir.',
@@ -313,10 +353,179 @@ class AppTexts {
     'categoryInsightLabel': 'Kategori basari icgorusu',
     'riskScoreExplanationTitle': 'Risk skoru aciklamasi',
     'quickMenuTitle': 'Hizli menu',
-    'menuBreathTest': 'Nefes Testi',
+    'menuBreathTest': 'Nefes Egzersizi',
     'menuWeeklySurvey': 'Haftalik Anket',
     'menuPersonalProgress': 'Kisisel Takip',
     'menuViolationReport': 'Ihlal Raporu',
+    'menuSurveyHistory': 'Anket Gecmisi',
+    'menuLogSmokingNow': 'Simdi ictim',
+    'menuDailyCheckIn': 'Gunluk Degerlendirme',
+    'mentorCardTitle': 'Mentorunden',
+    'mentorReplySentPrefix': 'Yanitin',
+    'fakeCallIncoming': 'Gelen arama',
+    'fakeCallAnswer': 'Cevapla',
+    'fakeCallDecline': 'Reddet',
+    'fakeCallNotNow': 'Simdi uygun degil',
+    'fakeCallerNameSettingTitle': 'Arayan Ismi',
+    'fakeCallerNameSettingDescription':
+      'Sigara icmeme molasi baslatan sahte arama ekraninda gorunecek isim. Sana inandirici gelecek bir isim sec (ornegin bir yakinin).',
+    'fakeCallCheckInTitle': 'Buradayim',
+    'fakeCallCheckInBody': 'Iyi gidiyorsun, devam et.',
+    'fakeCallOutcomeTitle': 'Nasil gecti?',
+    'fakeCallOutcomeQuestion': 'Az once gelen aramadan bu yana sigara icmedin mi?',
+    'miuiPermissionTitle': 'Bir izin daha gerekiyor',
+    'miuiPermissionMessage':
+      'Telefonun sahte arama ekranini kilitli ekranda da gosterebilmesi icin Xiaomi telefonlarda ek bir izin gerekiyor. Simdi ayar ekranini acalim mi?',
+    'miuiPermissionOpen': 'Ayarlari Ac',
+    'miuiPermissionSkip': 'Daha Sonra',
+    'settingsTitle': 'Ayarlar',
+    'settingsSectionGeneral': 'Genel',
+    'settingsSectionPrivacy': 'Gizlilik & Izinler',
+    'settingsSectionData': 'Veri',
+    'settingsLanguageRow': 'Dil',
+    'settingsCallerNameRow': 'Arayan Ismi',
+    'settingsPermissionsRow': 'Izin Merkezi',
+    'settingsPermissionsRowSubtitle': 'Hangi izinleri neden kullandigimizi gorun',
+    'settingsResetDataRow': 'Verilerimi Sifirla',
+    'settingsResetDataSubtitle': 'Tum kayitlarini kalici olarak siler',
+    'settingsResetDataConfirmTitle': 'Emin misin?',
+    'settingsResetDataConfirmMessage':
+      'Tum sigara kayitlarin, anket sonuclarin ve ilerlemen kalici olarak silinecek. Bu islem geri alinamaz.',
+    'settingsResetDataConfirmAction': 'Evet, Sil',
+    'settingsResetDataDone': 'Verilerin silindi.',
+    'permissionsCenterTitle': 'Izin Merkezi',
+    'permissionsCenterIntro':
+      'Bu izinleri neden istedigimizi ve nasil kullandigimizi asagida bulabilirsin. Hepsi opsiyoneldir, istedigin zaman kapatabilirsin.',
+    'permissionStatusGranted': 'Verildi',
+    'permissionStatusDenied': 'Verilmedi',
+    'permissionActionRequest': 'Izin Ver',
+    'permissionActionOpenSettings': 'Ayarlari Ac',
+    'permissionNotificationsTitle': 'Bildirimler',
+    'permissionNotificationsDescription':
+      'Hatirlatmalar, gunluk degerlendirme ve mentorundan gelen mesajlar icin kullanilir.',
+    'permissionNotificationsPurpose':
+      'Neden: Sana dogru zamanda destek olabilmemiz icin gerekli.',
+    'permissionMicrophoneTitle': 'Mikrofon',
+    'permissionMicrophoneDescription':
+      'Gunluk nefes testinde akcigerlerinin durumunu olcmek icin kullanilir.',
+    'permissionMicrophonePurpose':
+      'Neden: Ses sadece cihazinda islenir, kaydedilmez veya paylasilmaz.',
+    'permissionActivityTitle': 'Fiziksel Aktivite',
+    'permissionActivityDescription':
+      'Hareketlerini anlayarak sana daha uygun zamanlarda destek onerileri sunmak ve gunluk adim sayini takip etmek icin kullanilir.',
+    'permissionActivityPurpose':
+      'Neden: Aktivite ve adim verilerin cihazindan disari cikmaz.',
+    'permissionPhoneTitle': 'Telefon Durumu',
+    'permissionPhoneDescription':
+      'Sahte destek aramasinin gercek bir arama ile cakismamasi icin kullanilir.',
+    'permissionPhonePurpose':
+      'Neden: Arama numaralarini veya icerigini asla okumayiz.',
+    'permissionExactAlarmTitle': 'Kesin Zamanlama',
+    'permissionExactAlarmDescription':
+      'Hatirlatmalarin ve mentor mesajlarinin tam zamaninda gelmesini saglar.',
+    'permissionExactAlarmPurpose':
+      'Neden: Android bu izni sistem ayarlarindan yonetir.',
+    'permissionMiuiTitle': 'Xiaomi Ek Izni',
+    'permissionMiuiDescription':
+      'Sahte destek aramasinin kilitli ekranda da gorunebilmesi icin Xiaomi telefonlarda gereklidir.',
+    'permissionMiuiPurpose':
+      'Neden: MIUI, diger Android telefonlardan farkli bir izin sistemi kullanir.',
+    'permissionLocationTitle': 'Konum',
+    'permissionLocationDescription':
+      'Sik gittigin yerleri ogrenip vardiginda kisa bir hatirlatma gostermek icin kullanilir (Konum Zekasi ozelligi, varsayilan kapali).',
+    'permissionLocationPurpose':
+      'Neden: Ham konum gecmisi hicbir zaman kaydedilmez. Detaylar ve acma/kapama icin dokunun.',
+    'permissionBackgroundTitle': 'Arka Planda Calisma',
+    'permissionBackgroundDescription':
+      'Bazi telefon ureticileri pil tasarrufu icin arka plan uygulamalarini kisitlar. Bu, hatirlatmalarin, uyku/konum/adim takibinin ve destek aramalarinin zamaninda calismasini engelleyebilir.',
+    'permissionBackgroundPurpose':
+      'Neden: Uygulamanin pil optimizasyonundan muaf tutulmasi, arka plan ozelliklerinin guvenilir calismasini saglar.',
+    'permissionBackgroundOpenSettingsAction': 'Arka Plan Ayarlarini Ac',
+    'settingsCoachModeRow': 'Kocluk Modu',
+    'settingsCoachModeRowSubtitle': 'Sana ne kadar sik ve ne kadar zorlayici destek olsun',
+    'coachModeTitle': 'Kocluk Modu',
+    'coachModeIntro':
+      'Uygulamanin seni ne siklikta ve ne kadar zorlayici sekilde destekleyecegini sec. Istedigin zaman degistirebilirsin.',
+    'coachModeEasyTitle': 'Kolay',
+    'coachModeEasyDescription': 'Az sayida, yumusak hatirlatma. Kendi hizinda ilerlemek isteyenler icin.',
+    'coachModeNormalTitle': 'Normal',
+    'coachModeNormalDescription': 'Dengeli siklikta destek. Cogu kullanici icin onerilen mod.',
+    'coachModeHardTitle': 'Zor',
+    'coachModeHardDescription': 'Sik ve kararli hatirlatmalar. Daha fazla disiplin isteyenler icin.',
+    'coachModeCustomLabel': 'Ozel',
+    'coachModeCustomDescription': 'Gelismis ayarlardan kendin belirledigin bir kombinasyon.',
+    'coachModeAdvancedToggle': 'Gelismis Ayarlar',
+    'coachModeSavedConfirmation': 'Kocluk modu guncellendi.',
+    'settingsSleepIntelligenceRow': 'Uyku Zekasi',
+    'sleepIntelligenceTitle': 'Uyku Zekasi',
+    'sleepIntelligenceDescription':
+      'Acik oldugunda, telefonun ekran ve sarj durumunu gece boyunca birkac kez kontrol ederek uyku saatlerini tahmin etmeye calisir. Bu tahmin, risk degerlendirmeni daha dogru hale getirmek icin kullanilir.',
+    'sleepIntelligencePurpose':
+      'Neden: Sadece ekran acik/kapali ve sarjda olup olmadigin kontrol edilir, baska hicbir sey okunmaz. Yeterli veri yoksa anket sirasinda verdigin uyku saatlerine geri donulur.',
+    'sleepIntelligenceEnabledConfirmation': 'Uyku zekasi acildi.',
+    'sleepIntelligenceDisabledConfirmation': 'Uyku zekasi kapatildi.',
+    'settingsWearableIntelligenceRow': 'Bileklik Verisi (Deneysel)',
+    'wearableIntelligenceTitle': 'Bileklik Verisi (Deneysel)',
+    'wearableIntelligenceDescription':
+      'Acik oldugunda, Health Connect uzerinden -eger bir akilli saat/bileklik uygulaman varsa- nabiz ve uyku verini okumaya calisir. Uygulama saatinle dogrudan konusmaz, sadece Health Connect deposunda zaten var olan veriyi okur.',
+    'wearableIntelligencePurpose':
+      'Neden: Ani nabiz yukselmeleri, riskli anlari daha erken fark etmemize yardimci olabilir. Saatin/bilekligin yoksa veya senkronize veri yoksa bu kart bos gorunur, baska hicbir sey degismez.',
+    'wearableIntelligenceEnabledConfirmation': 'Bileklik verisi acildi.',
+    'wearableIntelligenceDisabledConfirmation': 'Bileklik verisi kapatildi.',
+    'wearableIntelligenceUnavailable':
+      'Health Connect bu cihazda bulunamadi. Yuklemek ister misin?',
+    'wearableIntelligencePermissionDenied':
+      'Health Connect izni verilmedi, ozellik acilamadi.',
+    'wearableIntelligenceInstallAction': 'Health Connect\'i Yukle',
+    'wearableIntelligenceLatestHeartRate': 'Son nabiz',
+    'wearableIntelligenceLastSleep': 'Son uyku suresi',
+    'wearableIntelligenceNoData': 'Henuz okunabilir veri yok.',
+    'menuReports': 'Raporlar',
+    'reportsTitle': 'Raporlar',
+    'reportsWeeklyTab': 'Haftalik',
+    'reportsMonthlyTab': 'Aylik',
+    'reportsPreviewButton': 'Onizle / Yazdir',
+    'reportsShareButton': 'PDF Olarak Paylas',
+    'reportsPdfTitle': 'No Smoke Raporu',
+    'reportsCigarettesLogged': 'Kaydedilen sigara sayisi',
+    'reportsAvgPerDay': 'Gunluk ortalama',
+    'reportsRiskScore': 'Risk skoru',
+    'reportsRiskTrend': 'Risk egilimi',
+    'reportsBreathTrend': 'Nefes egilimi',
+    'reportsSmokingTrend': 'Sigara egilimi',
+    'reportsTaskSuccess': 'Tamamlanan gorevler',
+    'reportsTaskCompletionRate': 'Gorev basari orani',
+    'reportsWeeklySurveys': 'Tamamlanan haftalik anketler',
+    'reportsBreathTests': 'Tamamlanan nefes testleri',
+    'reportsDaysSinceQuit': 'Sigarasiz gecen gun',
+    'reportsTotalSteps': 'Toplam adim',
+    'reportsAvgStepsPerDay': 'Gunluk ortalama adim',
+    'settingsLocationIntelligenceRow': 'Konum Zekasi',
+    'settingsLocationIntelligenceRowSubtitle': 'Sik gittigin yerleri ogrenerek destek ol',
+    'locationIntelligenceTitle': 'Konum Zekasi',
+    'locationIntelligenceIntro':
+      'Acik oldugunda, uygulama zamanla en fazla 8 sik gittigin yeri ogrenir (ornegin ev, is). Bu yerlerden birine vardiginda kisa bir hatirlatma gosterilir. Ham konum gecmisi hicbir zaman kaydedilmez, sadece bu az sayidaki yerin kabaca konumu tutulur.',
+    'locationIntelligencePurpose':
+      'Neden: Bildirim gostermek ve risk degerlendirmene katki saglamak icin. Ayarlar > Verilerimi Sifirla ile bu veriler de silinir.',
+    'locationIntelligenceBackgroundWarning':
+      'Ana izin verildi ama arka plan izni verilmedi. Uygulama kapaliyken vardigin yerler algilanamaz. Ayarlar > Uygulamalar > No Smoke > Izinler > Konum bolumunden "Her zaman izin ver" secebilirsin.',
+    'locationIntelligenceEnabledConfirmation': 'Konum zekasi acildi.',
+    'locationIntelligenceDisabledConfirmation': 'Konum zekasi kapatildi.',
+    'locationIntelligencePlacesTitle': 'Ogrenilen Yerler',
+    'locationIntelligenceNoPlacesYet': 'Henuz bir yer ogrenilmedi.',
+    'locationIntelligencePlaceRow': 'Yer',
+    'locationIntelligenceVisitCount': 'ziyaret',
+    'locationArrivalNotificationTitle': 'Buradasin',
+    'locationArrivalNotificationBody': 'Sik gittigin bir yerdesin. Kendine iyi bak.',
+    'smokingLoggedConfirmation': 'Kaydedildi. Bu, ne zaman zorlandigini daha iyi anlamamiza yardimci olur.',
+    'undo': 'Geri al',
+    'dailyCheckInTitle': 'Gunluk Degerlendirme',
+    'dailyCheckInIntro':
+      'Gunu kapatmadan once kisa bir degerlendirme yapalim. Bu, seni gereksiz yere gun boyu rahatsiz etmeden en dogru destegi vermemizi saglar.',
+    'breathExerciseCardTitle': 'Nefes Egzersizi',
+    'dailyCheckInHoursQuestion': 'Bugun yaklasik hangi saatlerde sigara ictin?',
+    'dailyCheckInDidNotSmoke': 'Bugun hic icmedim',
+    'dailyCheckInSaved': 'Tesekkurler, kaydedildi. Yarin gorusuruz.',
     'notificationContextReasonLabel': 'Bildirim baglam nedeni',
     'smokingYearsHintExample': 'orn: 5',
     'dataLoadFailed': 'Veri yuklenemedi.',
@@ -380,7 +589,7 @@ class AppTexts {
     'breathImprovementSummary': 'Nefes gelisim ozeti',
     'breathNoReferenceYet': 'Karsilastirma icin yeterli referans yok.',
     'breathPreviousComparison': 'Onceki test ile karsilastirma',
-    'breathTestRecordTitle': 'Nefes Testi Kaydi',
+    'breathTestRecordTitle': 'Nefes Egzersizi Kaydi',
     'breathTrend': 'Nefes trengi',
     'chainSmoking': 'Ardisik icim',
     'chainSmokingLatest': 'Son ardisik icim',
@@ -599,7 +808,7 @@ class AppTexts {
     'male': 'Male',
     'female': 'Female',
     'selectOption': 'Select',
-    'breathTest': 'Breath Test',
+    'breathTest': 'Breathing Exercise',
     'riskLevel': 'Risk level',
     'riskScore': 'Risk score',
     'initialSurvey': 'Initial Survey',
@@ -617,6 +826,7 @@ class AppTexts {
     'maxSmokeFreeDuration': 'Longest smoke-free duration',
     'smokeFree30to60': '30-60 minutes',
     'smokingYears': 'Smoking years',
+    'cigarettesPerPackLabel': 'How many cigarettes are in a pack?',
     'triggerCoffee': 'Coffee',
     'triggerMeal': 'After meals',
     'triggerDriving': 'While driving',
@@ -638,6 +848,7 @@ class AppTexts {
     'weeklySavePrompt': 'Save your status for this week.',
     'weeklySurveyPromptAsk': 'Would you like to complete the weekly survey now?',
     'saveErrorRetry': 'An error occurred while saving. Please try again.',
+    'loadErrorRetry': 'Something went wrong loading this data. Please try again.',
     'smokeFreeStreak': 'Smoke-Free Streak',
     'healthMetrics': 'Health Metrics',
     'noBreathTestsYet': 'No breath test records yet.',
@@ -675,7 +886,42 @@ class AppTexts {
     'breathRestInstruction':
       'Short rest: Breathe normally.\nPrepare for the next attempt.',
     'breathActiveInstruction':
-      'Sit upright, take a deep breath through your nose,\nhold for 2 seconds, then exhale in one controlled breath.\n\n3 attempts will be performed, best score is saved.',
+      '1. Sit upright and relax.\n2. Tap the circle, take a deep breath through your nose, and hold for 2 seconds.\n3. Exhale in one controlled breath.\n4. Tap the circle again when you\'re done.\n\n3 attempts will be performed, best score is saved.',
+    'breathExerciseDisclaimer':
+      'This is not a medical diagnostic tool; it is a simple breathing exercise for awareness and relaxation.',
+    'restingLabel': 'Resting',
+    'secondsLeftLabel': 'seconds left',
+    'tapCircleToFinish': 'Tap the circle when you\'re done',
+    'breathListeningHint': 'Listening... exhale, it will be detected automatically',
+    'breathStepSitRelax': 'Sit upright and relax.',
+    'breathStepDeepBreath': 'Take a deep breath.',
+    'breathStepHold': 'Hold your breath for 5 seconds and press Start.',
+    'breathStepExhale':
+      'Blow forcefully into the microphone until your breath is fully out.',
+    'breathStepExhaleFinishHint': 'Press OK when your breath is done.',
+    'breathStepOkAction': 'OK',
+    'breathStepPressOkVoiceSuffix': 'Press OK.',
+    'breathAutoNextAttemptInstruction':
+      'Sit upright and relax. Take a deep breath. Hold for five seconds. Then blow forcefully into the microphone until your breath is fully out. Press OK when your breath is done.',
+    'disciplineDisclosureTitle': 'How do we support you?',
+    'disciplineDisclosureMessage':
+      'No Smoke uses a few background mechanisms to support you through quitting:\n\n'
+      '- If you don\'t respond to a task reminder in time, we note it on your device as a compliance record.\n'
+      '- During an active task, we try to estimate possible risky moments from phone motion and usage patterns (via motion sensors and the microphone). Audio is never recorded or stored — only the ambient sound level is measured.\n'
+      '- Some task reminders may appear as full-screen alerts to get your attention.\n'
+      '- So the fake call doesn\'t interrupt a real phone call, we check whether you\'re currently on one; we never read call content or numbers.\n\n'
+      'This data stays on your device and is never used for anything other than supporting you. Continuing means you acknowledge this; you can still separately allow or deny the microphone, motion, and phone-state permissions in the next step.',
+    'disciplineDisclosureAcknowledge': 'I understand, continue',
+    'cravingSosButton': 'Craving now',
+    'surveyDraftFoundTitle': 'Continue where you left off',
+    'surveyDraftFoundMessage':
+      'We found a survey you didn\'t finish earlier. Would you like to continue from where you left off?',
+    'surveyDraftResume': 'Continue',
+    'surveyDraftDiscard': 'Start over',
+    'breathAttemptImplausible':
+      'That attempt doesn\'t look valid (too short or too long). Please try again.',
+    'breathAttemptDiscardedBackgrounded':
+      'This attempt was discarded because the app was backgrounded. Please try again.',
     'completeRegistrationError':
       'An error occurred while completing registration. Please try again.',
     'dayUnit': 'day',
@@ -801,10 +1047,179 @@ class AppTexts {
     'categoryInsightLabel': 'Category success insight',
     'riskScoreExplanationTitle': 'Risk score explanation',
     'quickMenuTitle': 'Quick menu',
-    'menuBreathTest': 'Breath Test',
+    'menuBreathTest': 'Breathing Exercise',
     'menuWeeklySurvey': 'Weekly Survey',
     'menuPersonalProgress': 'Personal Progress',
     'menuViolationReport': 'Violation Report',
+    'menuSurveyHistory': 'Survey History',
+    'menuLogSmokingNow': 'I smoked now',
+    'menuDailyCheckIn': 'Daily Check-in',
+    'mentorCardTitle': 'From your mentor',
+    'mentorReplySentPrefix': 'Your reply',
+    'fakeCallIncoming': 'Incoming call',
+    'fakeCallAnswer': 'Answer',
+    'fakeCallDecline': 'Decline',
+    'fakeCallNotNow': 'Not now',
+    'fakeCallerNameSettingTitle': 'Caller Name',
+    'fakeCallerNameSettingDescription':
+      'The name shown on the fake-call screen that starts a smoke-free break. Pick a name that would be believable to you (e.g. someone close to you).',
+    'fakeCallCheckInTitle': 'Still here',
+    'fakeCallCheckInBody': 'You\'re doing well, keep going.',
+    'fakeCallOutcomeTitle': 'How did it go?',
+    'fakeCallOutcomeQuestion': 'Have you stayed smoke-free since that call?',
+    'miuiPermissionTitle': 'One more permission needed',
+    'miuiPermissionMessage':
+      'Xiaomi phones need an extra permission for the fake-call screen to show up over a locked screen. Open the settings screen now?',
+    'miuiPermissionOpen': 'Open Settings',
+    'miuiPermissionSkip': 'Later',
+    'settingsTitle': 'Settings',
+    'settingsSectionGeneral': 'General',
+    'settingsSectionPrivacy': 'Privacy & Permissions',
+    'settingsSectionData': 'Data',
+    'settingsLanguageRow': 'Language',
+    'settingsCallerNameRow': 'Caller Name',
+    'settingsPermissionsRow': 'Permissions Center',
+    'settingsPermissionsRowSubtitle': 'See which permissions we use and why',
+    'settingsResetDataRow': 'Reset My Data',
+    'settingsResetDataSubtitle': 'Permanently deletes all your records',
+    'settingsResetDataConfirmTitle': 'Are you sure?',
+    'settingsResetDataConfirmMessage':
+      'All your smoking logs, survey results and progress will be permanently deleted. This cannot be undone.',
+    'settingsResetDataConfirmAction': 'Yes, Delete',
+    'settingsResetDataDone': 'Your data has been deleted.',
+    'permissionsCenterTitle': 'Permissions Center',
+    'permissionsCenterIntro':
+      'Here\'s why we ask for each permission and how we use it. All of them are optional and can be turned off anytime.',
+    'permissionStatusGranted': 'Granted',
+    'permissionStatusDenied': 'Not granted',
+    'permissionActionRequest': 'Grant',
+    'permissionActionOpenSettings': 'Open Settings',
+    'permissionNotificationsTitle': 'Notifications',
+    'permissionNotificationsDescription':
+      'Used for reminders, your daily check-in, and messages from your mentor.',
+    'permissionNotificationsPurpose':
+      'Why: needed so we can support you at the right moment.',
+    'permissionMicrophoneTitle': 'Microphone',
+    'permissionMicrophoneDescription':
+      'Used in the daily breath test to measure your lung condition.',
+    'permissionMicrophonePurpose':
+      'Why: audio is processed only on your device, never recorded or shared.',
+    'permissionActivityTitle': 'Physical Activity',
+    'permissionActivityDescription':
+      'Used to understand your movement so we can suggest support at better times, and to track your daily step count.',
+    'permissionActivityPurpose':
+      'Why: your activity and step data never leave your device.',
+    'permissionPhoneTitle': 'Phone State',
+    'permissionPhoneDescription':
+      'Used to keep the fake support call from colliding with a real call.',
+    'permissionPhonePurpose':
+      'Why: we never read call numbers or content.',
+    'permissionExactAlarmTitle': 'Exact Timing',
+    'permissionExactAlarmDescription':
+      'Makes sure reminders and mentor messages arrive exactly on time.',
+    'permissionExactAlarmPurpose':
+      'Why: Android manages this permission from system settings.',
+    'permissionMiuiTitle': 'Xiaomi Extra Permission',
+    'permissionMiuiDescription':
+      'Required on Xiaomi phones so the fake support call can show over the lock screen.',
+    'permissionMiuiPurpose':
+      'Why: MIUI uses a different permission system than other Android phones.',
+    'permissionLocationTitle': 'Location',
+    'permissionLocationDescription':
+      'Used to learn places you visit often and show a short reminder when you arrive (Location Intelligence feature, off by default).',
+    'permissionLocationPurpose':
+      'Why: your raw location history is never recorded. Tap for details and to turn it on/off.',
+    'permissionBackgroundTitle': 'Background Operation',
+    'permissionBackgroundDescription':
+      'Some phone manufacturers restrict background apps to save battery. This can stop reminders, sleep/location/step tracking, and support calls from working on time.',
+    'permissionBackgroundPurpose':
+      'Why: exempting the app from battery optimization keeps background features working reliably.',
+    'permissionBackgroundOpenSettingsAction': 'Open Background Settings',
+    'settingsCoachModeRow': 'Coach Mode',
+    'settingsCoachModeRowSubtitle': 'How often and how firmly the app should push you',
+    'coachModeTitle': 'Coach Mode',
+    'coachModeIntro':
+      'Choose how often and how firmly the app should support you. You can change this anytime.',
+    'coachModeEasyTitle': 'Easy',
+    'coachModeEasyDescription': 'Few, gentle reminders. For going at your own pace.',
+    'coachModeNormalTitle': 'Normal',
+    'coachModeNormalDescription': 'Balanced support frequency. Recommended for most users.',
+    'coachModeHardTitle': 'Hard',
+    'coachModeHardDescription': 'Frequent, firm reminders. For extra discipline.',
+    'coachModeCustomLabel': 'Custom',
+    'coachModeCustomDescription': 'A combination you set yourself in Advanced Settings.',
+    'coachModeAdvancedToggle': 'Advanced Settings',
+    'coachModeSavedConfirmation': 'Coach mode updated.',
+    'settingsSleepIntelligenceRow': 'Sleep Intelligence',
+    'sleepIntelligenceTitle': 'Sleep Intelligence',
+    'sleepIntelligenceDescription':
+      'When on, the app checks your phone\'s screen and charging state a few times overnight to estimate your sleep hours. This estimate is used to make your risk assessment more accurate.',
+    'sleepIntelligencePurpose':
+      'Why: only whether the screen is on/off and charging is checked, nothing else is read. If there isn\'t enough data, it falls back to the sleep time you gave in the survey.',
+    'sleepIntelligenceEnabledConfirmation': 'Sleep intelligence turned on.',
+    'sleepIntelligenceDisabledConfirmation': 'Sleep intelligence turned off.',
+    'settingsWearableIntelligenceRow': 'Wearable Data (Experimental)',
+    'wearableIntelligenceTitle': 'Wearable Data (Experimental)',
+    'wearableIntelligenceDescription':
+      'When on, the app tries to read heart-rate and sleep data through Health Connect — if you have a smartwatch/wearable app syncing to it. The app never talks to your watch directly, it only reads what\'s already in Health Connect.',
+    'wearableIntelligencePurpose':
+      'Why: a sudden heart-rate spike can help catch a risky moment earlier. If you have no wearable or no synced data, this card just stays empty — nothing else changes.',
+    'wearableIntelligenceEnabledConfirmation': 'Wearable data turned on.',
+    'wearableIntelligenceDisabledConfirmation': 'Wearable data turned off.',
+    'wearableIntelligenceUnavailable':
+      'Health Connect wasn\'t found on this device. Install it?',
+    'wearableIntelligencePermissionDenied':
+      'Health Connect permission was not granted, feature could not be turned on.',
+    'wearableIntelligenceInstallAction': 'Install Health Connect',
+    'wearableIntelligenceLatestHeartRate': 'Latest heart rate',
+    'wearableIntelligenceLastSleep': 'Last sleep duration',
+    'wearableIntelligenceNoData': 'No readable data yet.',
+    'menuReports': 'Reports',
+    'reportsTitle': 'Reports',
+    'reportsWeeklyTab': 'Weekly',
+    'reportsMonthlyTab': 'Monthly',
+    'reportsPreviewButton': 'Preview / Print',
+    'reportsShareButton': 'Share as PDF',
+    'reportsPdfTitle': 'No Smoke Report',
+    'reportsCigarettesLogged': 'Cigarettes logged',
+    'reportsAvgPerDay': 'Daily average',
+    'reportsRiskScore': 'Risk score',
+    'reportsRiskTrend': 'Risk trend',
+    'reportsBreathTrend': 'Breath trend',
+    'reportsSmokingTrend': 'Smoking trend',
+    'reportsTaskSuccess': 'Tasks completed',
+    'reportsTaskCompletionRate': 'Task success rate',
+    'reportsWeeklySurveys': 'Weekly surveys completed',
+    'reportsBreathTests': 'Breath tests completed',
+    'reportsDaysSinceQuit': 'Smoke-free days',
+    'reportsTotalSteps': 'Total steps',
+    'reportsAvgStepsPerDay': 'Daily average steps',
+    'settingsLocationIntelligenceRow': 'Location Intelligence',
+    'settingsLocationIntelligenceRowSubtitle': 'Learn your frequent places to support you better',
+    'locationIntelligenceTitle': 'Location Intelligence',
+    'locationIntelligenceIntro':
+      'When on, the app gradually learns up to 8 places you visit often (e.g. home, work). A short reminder is shown when you arrive at one of them. Your raw location history is never recorded — only the rough location of this small set of places is kept.',
+    'locationIntelligencePurpose':
+      'Why: to show the reminder and contribute to your risk assessment. Settings > Reset My Data also clears this data.',
+    'locationIntelligenceBackgroundWarning':
+      'The main permission was granted but background permission was not. Arrivals can\'t be detected while the app is closed. You can choose "Allow all the time" from Settings > Apps > No Smoke > Permissions > Location.',
+    'locationIntelligenceEnabledConfirmation': 'Location intelligence turned on.',
+    'locationIntelligenceDisabledConfirmation': 'Location intelligence turned off.',
+    'locationIntelligencePlacesTitle': 'Learned Places',
+    'locationIntelligenceNoPlacesYet': 'No place learned yet.',
+    'locationIntelligencePlaceRow': 'Place',
+    'locationIntelligenceVisitCount': 'visits',
+    'locationArrivalNotificationTitle': 'You\'re here',
+    'locationArrivalNotificationBody': 'You\'re at a place you visit often. Take care of yourself.',
+    'smokingLoggedConfirmation': 'Logged. This helps us understand when things are hardest for you.',
+    'undo': 'Undo',
+    'dailyCheckInTitle': 'Daily Check-in',
+    'dailyCheckInIntro':
+      'Before you wind down, let\'s do a quick check-in. This lets us support you well without interrupting your day.',
+    'breathExerciseCardTitle': 'Breathing Exercise',
+    'dailyCheckInHoursQuestion': 'Roughly when did you smoke today?',
+    'dailyCheckInDidNotSmoke': 'I didn\'t smoke today',
+    'dailyCheckInSaved': 'Thanks, saved. See you tomorrow.',
     'notificationContextReasonLabel': 'Notification context reason',
     'smokingYearsHintExample': 'e.g.: 5',
     'dataLoadFailed': 'Failed to load data.',
@@ -869,7 +1284,7 @@ class AppTexts {
     'breathImprovementSummary': 'Breath improvement summary',
     'breathNoReferenceYet': 'Not enough reference data yet.',
     'breathPreviousComparison': 'Previous test comparison',
-    'breathTestRecordTitle': 'Breath Test Record',
+    'breathTestRecordTitle': 'Breathing Exercise Record',
     'breathTrend': 'Breath trend',
     'chainSmoking': 'Chain smoking',
     'chainSmokingAsk': 'Do you smoke consecutively?',
@@ -950,6 +1365,7 @@ class AppTexts {
     'professionOfficer': 'Officer',
     'professionOther': 'Other',
     'professionRetired': 'Retired',
+    'professionSalaried': 'Employed',
     'professionStudent': 'Student',
     'professionTeacher': 'Teacher',
     'professionTradesman': 'Tradesman',
@@ -1063,6 +1479,8 @@ class AppTexts {
       'Please select consecutive smoking count.',
     'validationChainHabitRequired':
       'Please select consecutive smoking habit.',
+    'validationFixHighlightedFields':
+      'Please fix the highlighted fields.',
     'validationSleepTimeRequired': 'Please select sleep time.',
     'validationSmokeYearsRange':
       'Smoking duration must be between 0 and 90 years.',
@@ -1859,6 +2277,7 @@ class AppTexts {
         return textForCode(code, 'bad');
       case 'KRİTİK':
       case 'KRITIK':
+      case 'critical':
         return textForCode(code, 'riskCritical');
       case 'YÜKSEK':
       case 'YUKSEK':

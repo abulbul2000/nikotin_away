@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../models/achievement.dart';
 import '../services/achievement_service.dart';
+import '../widgets/load_error_view.dart';
 
 class AchievementsPage extends StatefulWidget {
   final int smokeFreeDays;
@@ -35,6 +36,11 @@ class _AchievementsPageState extends State<AchievementsPage> {
       body: FutureBuilder<List<Achievement>>(
         future: _future,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return LoadErrorView(
+              onRetry: () => setState(() => _future = _load()),
+            );
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -92,7 +98,10 @@ class _AchievementTile extends StatelessWidget {
           children: [
             Opacity(
               opacity: locked ? 0.3 : 1,
-              child: Text(achievement.icon, style: const TextStyle(fontSize: 36)),
+              child: Text(
+                achievement.icon,
+                style: const TextStyle(fontSize: 36),
+              ),
             ),
             const SizedBox(height: 10),
             Text(
@@ -107,7 +116,11 @@ class _AchievementTile extends StatelessWidget {
             if (locked)
               const Padding(
                 padding: EdgeInsets.only(top: 4),
-                child: Icon(Icons.lock_outline, size: 14, color: Colors.white24),
+                child: Icon(
+                  Icons.lock_outline,
+                  size: 14,
+                  color: Colors.white24,
+                ),
               ),
           ],
         ),

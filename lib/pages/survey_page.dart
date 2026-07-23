@@ -1,8 +1,12 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import '../core/app_texts.dart';
 import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import '../services/ambient_audio_service.dart';
+import '../services/device_permission_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/permission_service.dart';
@@ -19,7 +23,9 @@ class SurveyPage extends StatefulWidget {
   State<SurveyPage> createState() => _SurveyPageState();
 }
 
-class _SurveyPageState extends State<SurveyPage> {
+class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
+  static const _draftSettingKey = 'survey_draft_v1';
+
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final StorageService _storageService = StorageService();
   final TextEditingController nameController = TextEditingController();
@@ -28,6 +34,7 @@ class _SurveyPageState extends State<SurveyPage> {
   String? gender;
   String? profession;
   String? smokingYears;
+  String? cigarettesPerPack;
   String firstCigaretteRange = '10-30';
   String smokeFreeRange = '30-60';
   String workplaceSmokingRule = 'Hayır';
@@ -61,14 +68,8 @@ class _SurveyPageState extends State<SurveyPage> {
   final Set<String> triggerSet = <String>{};
 
   static const List<String> professionOptions = [
-    'Öğrenci',
-    'Memur',
-    'İşçi',
-    'Sağlık Çalışanı',
-    'Öğretmen',
-    'Mühendis',
+    'Ücretli',
     'Esnaf',
-    'Emekli',
     'Serbest Çalışıyor',
     'Diğer',
   ];
@@ -136,6 +137,12 @@ class _SurveyPageState extends State<SurveyPage> {
 
   String _professionLabel(String value, BuildContext context) {
     switch (value) {
+      case 'Ücretli':
+        return context.t('professionSalaried');
+      // Kept for older survey records saved before the profession list was
+      // trimmed down to Ücretli/Esnaf/Serbest/Diğer — never offered as a
+      // choice anymore, but still needs to render correctly if it comes
+      // back out of storage.
       case 'Öğrenci':
         return context.t('professionStudent');
       case 'Memur':
@@ -362,6 +369,9 @@ class _SurveyPageState extends State<SurveyPage> {
         workingDays: inferredWorkingDays,
         breakWindows: inferredBreakWindows,
         weekendSmokingPattern: inferredWeekendPattern,
+        age: int.tryParse(ageController.text.trim()),
+        smokingYears: int.tryParse(smokingYears ?? ''),
+        cigarettesPerPack: int.tryParse(cigarettesPerPack ?? ''),
       );
       debugPrint('[SurveyPage] saveSurveyDetail ok: $recordId');
     } catch (error, stackTrace) {
@@ -450,6 +460,33 @@ class _SurveyPageState extends State<SurveyPage> {
   }
 
   Future<void> _runBulkPermissionFlow(String recordId) async {
+    // Explain the discipline-protocol mechanism (compliance logging,
+    // sensor-based risk inference, full-screen task alerts) BEFORE asking
+    // for the microphone/activity-recognition permissions it depends on —
+    // those permissions must never be requested without the user first
+    // understanding what they're being used for.
+    if (mounted) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(context.t('disciplineDisclosureTitle')),
+          content: SingleChildScrollView(
+            child: Text(context.t('disciplineDisclosureMessage')),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(context.t('disciplineDisclosureAcknowledge')),
+            ),
+          ],
+        ),
+      );
+    }
+    if (!mounted) {
+      return;
+    }
+
     // Ask required permissions right after initial survey is created.
     var result = await PermissionService.requestOnboardingPermissions();
     if (!mounted) {
@@ -514,6 +551,41 @@ class _SurveyPageState extends State<SurveyPage> {
       _showValidationMessage(context.t('notificationPermissionRequired'));
     }
 
+    // MIUI/Xiaomi hides the permissions the fake-call barrier's full-screen
+    // notification needs (pop-up-while-in-background, show-on-lock-screen)
+    // behind its own permission editor rather than standard Android
+    // notification settings — granting notificationsGranted above does not
+    // cover them. Offer a direct one-tap deep link into that screen right
+    // here, once, while the user is already in the permissions flow.
+    if (result.notificationsGranted && mounted) {
+      final isMiui = await DevicePermissionService.isMiuiDevice();
+      if (isMiui && mounted) {
+        final openSettings = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(context.t('miuiPermissionTitle')),
+            content: Text(context.t('miuiPermissionMessage')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(context.t('miuiPermissionSkip')),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(context.t('miuiPermissionOpen')),
+              ),
+            ],
+          ),
+        );
+        if (openSettings == true) {
+          final opened = await DevicePermissionService.openPermissionEditor();
+          if (!opened && mounted) {
+            await PermissionService.openPermissionSettings();
+          }
+        }
+      }
+    }
+
     if (result.telemetryGranted) {
       await AmbientAudioService().startMonitoring();
     }
@@ -563,6 +635,45 @@ class _SurveyPageState extends State<SurveyPage> {
       return context.t('validationWakeTimeRequired');
     }
     // Work schedule and break windows are inferred in background when omitted.
+    return null;
+  }
+
+  // Per-step gates for SurveyWizard's Next button — same fields and the
+  // same messages as _missingRequiredFieldMessage above (which stays in
+  // place as a final safety net on submit), just split by which step each
+  // field actually lives on so the user is stopped and told what's missing
+  // right where they are, instead of only at the very end.
+  String? _validatePersonalInfoStep() {
+    if (nameController.text.trim().isEmpty) {
+      return context.t('validationNameRequired');
+    }
+    if (ageController.text.trim().isEmpty) {
+      return context.t('validationAgeRequired');
+    }
+    if (gender == null || gender!.isEmpty) {
+      return context.t('validationGenderRequired');
+    }
+    return null;
+  }
+
+  String? _validateSmokingInfoStep() {
+    if (consecutiveSmokingHabit == null || consecutiveSmokingHabit!.isEmpty) {
+      return context.t('validationChainHabitRequired');
+    }
+    if (consecutiveSmokingHabit == 'Evet' &&
+        (consecutiveSmokingCount == null || consecutiveSmokingCount!.isEmpty)) {
+      return context.t('validationChainCountRequired');
+    }
+    return null;
+  }
+
+  String? _validateLifeRoutineStep() {
+    if (sleepTime == null || sleepTime!.isEmpty) {
+      return context.t('validationSleepTimeRequired');
+    }
+    if (wakeTime == null || wakeTime!.isEmpty) {
+      return context.t('validationWakeTimeRequired');
+    }
     return null;
   }
 
@@ -649,7 +760,189 @@ class _SurveyPageState extends State<SurveyPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_restoreDraftIfAny());
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Persist whatever the user has entered so far whenever the app leaves
+    // the foreground — this is the single moment most likely to precede
+    // losing the in-progress survey (backgrounded, killed by the OS, etc).
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      unawaited(_saveDraft());
+    }
+  }
+
+  Map<String, dynamic> _buildDraftMap() {
+    return {
+      'name': nameController.text,
+      'age': ageController.text,
+      'gender': gender,
+      'profession': profession,
+      'smokingYears': smokingYears,
+      'cigarettesPerPack': cigarettesPerPack,
+      'firstCigaretteRange': firstCigaretteRange,
+      'smokeFreeRange': smokeFreeRange,
+      'workplaceSmokingRule': workplaceSmokingRule,
+      'stressLevel': stressLevel,
+      'quitReason': quitReason,
+      'sleepTime': sleepTime,
+      'wakeTime': wakeTime,
+      'workStartTime': workStartTime,
+      'workEndTime': workEndTime,
+      'workingDays': workingDays.toList(),
+      'hasSmokingBreaks': hasSmokingBreaks,
+      'breakStart1': breakStart1,
+      'breakEnd1': breakEnd1,
+      'hasSecondBreak': hasSecondBreak,
+      'breakStart2': breakStart2,
+      'breakEnd2': breakEnd2,
+      'weekendSmokingPattern': weekendSmokingPattern,
+      'packOption': packOption,
+      'highPackOption': highPackOption,
+      'consecutiveSmokingHabit': consecutiveSmokingHabit,
+      'consecutiveSmokingCount': consecutiveSmokingCount,
+      'durationBarrierPreference': durationBarrierPreference,
+      'durationBarrierFrequencyPreference': durationBarrierFrequencyPreference,
+      'hypertension': hypertension,
+      'asthma': asthma,
+      'diabetes': diabetes,
+      'copd': copd,
+      'heartDisease': heartDisease,
+      'triggers': triggerSet.toList(),
+    };
+  }
+
+  void _applyDraft(Map<String, dynamic> draft) {
+    setState(() {
+      nameController.text = draft['name']?.toString() ?? '';
+      ageController.text = draft['age']?.toString() ?? '';
+      gender = draft['gender'] as String?;
+      profession = draft['profession'] as String?;
+      smokingYears = draft['smokingYears'] as String?;
+      cigarettesPerPack = draft['cigarettesPerPack'] as String?;
+      firstCigaretteRange =
+          draft['firstCigaretteRange'] as String? ?? firstCigaretteRange;
+      smokeFreeRange = draft['smokeFreeRange'] as String? ?? smokeFreeRange;
+      workplaceSmokingRule =
+          draft['workplaceSmokingRule'] as String? ?? workplaceSmokingRule;
+      stressLevel = draft['stressLevel'] as String? ?? stressLevel;
+      quitReason = draft['quitReason'] as String? ?? quitReason;
+      sleepTime = draft['sleepTime'] as String?;
+      wakeTime = draft['wakeTime'] as String?;
+      workStartTime = draft['workStartTime'] as String?;
+      workEndTime = draft['workEndTime'] as String?;
+      final draftWorkingDays = draft['workingDays'] as List<dynamic>?;
+      if (draftWorkingDays != null) {
+        workingDays
+          ..clear()
+          ..addAll(draftWorkingDays.map((e) => e.toString()));
+      }
+      hasSmokingBreaks = draft['hasSmokingBreaks'] as bool? ?? hasSmokingBreaks;
+      breakStart1 = draft['breakStart1'] as String?;
+      breakEnd1 = draft['breakEnd1'] as String?;
+      hasSecondBreak = draft['hasSecondBreak'] as bool? ?? hasSecondBreak;
+      breakStart2 = draft['breakStart2'] as String?;
+      breakEnd2 = draft['breakEnd2'] as String?;
+      weekendSmokingPattern =
+          draft['weekendSmokingPattern'] as String? ?? weekendSmokingPattern;
+      packOption = draft['packOption'] as String? ?? packOption;
+      highPackOption = draft['highPackOption'] as String?;
+      consecutiveSmokingHabit = draft['consecutiveSmokingHabit'] as String?;
+      consecutiveSmokingCount = draft['consecutiveSmokingCount'] as String?;
+      durationBarrierPreference =
+          draft['durationBarrierPreference'] as String? ??
+          durationBarrierPreference;
+      durationBarrierFrequencyPreference =
+          draft['durationBarrierFrequencyPreference'] as String? ??
+          durationBarrierFrequencyPreference;
+      hypertension = draft['hypertension'] as bool? ?? false;
+      asthma = draft['asthma'] as bool? ?? false;
+      diabetes = draft['diabetes'] as bool? ?? false;
+      copd = draft['copd'] as bool? ?? false;
+      heartDisease = draft['heartDisease'] as bool? ?? false;
+      final draftTriggers = draft['triggers'] as List<dynamic>?;
+      if (draftTriggers != null) {
+        triggerSet
+          ..clear()
+          ..addAll(draftTriggers.map((e) => e.toString()));
+      }
+    });
+  }
+
+  Future<void> _saveDraft() async {
+    try {
+      await _storageService.saveSetting(
+        _draftSettingKey,
+        jsonEncode(_buildDraftMap()),
+      );
+    } catch (_) {
+      // Best-effort only — never let a draft-save failure interrupt the
+      // user's actual survey flow.
+    }
+  }
+
+  Future<void> _clearDraft() async {
+    try {
+      await _storageService.saveSetting(_draftSettingKey, '');
+    } catch (_) {
+      // Ignore — worst case a stale draft prompt reappears once.
+    }
+  }
+
+  Future<void> _restoreDraftIfAny() async {
+    final raw = await _storageService.loadSetting(_draftSettingKey);
+    if (raw == null || raw.isEmpty) {
+      return;
+    }
+    Map<String, dynamic>? draft;
+    try {
+      final decoded = jsonDecode(raw);
+      draft = decoded is Map<String, dynamic> ? decoded : null;
+    } catch (_) {
+      draft = null;
+    }
+    if (draft == null || draft.isEmpty || !mounted) {
+      return;
+    }
+
+    final shouldResume = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('surveyDraftFoundTitle')),
+        content: Text(context.t('surveyDraftFoundMessage')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('surveyDraftDiscard')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('surveyDraftResume')),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+    if (shouldResume == true) {
+      _applyDraft(draft);
+    } else {
+      await _clearDraft();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     nameController.dispose();
     ageController.dispose();
     super.dispose();
@@ -736,12 +1029,9 @@ class _SurveyPageState extends State<SurveyPage> {
               profession = value;
             });
           },
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return '';
-            }
-            return null;
-          },
+          // Profession is genuinely optional (see _missingRequiredFieldMessage),
+          // so this field must not render a "required" error — it never
+          // blocks submission and shouldn't visually claim otherwise.
         ),
       ],
     );
@@ -767,6 +1057,20 @@ class _SurveyPageState extends State<SurveyPage> {
           onHighPackOptionChanged: (value) {
             setState(() {
               highPackOption = value;
+            });
+          },
+        ),
+        const SizedBox(height: 10),
+        TextFormField(
+          initialValue: cigarettesPerPack,
+          decoration: InputDecoration(
+            labelText: context.t('cigarettesPerPackLabel'),
+            border: OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.number,
+          onChanged: (value) {
+            setState(() {
+              cigarettesPerPack = value;
             });
           },
         ),
@@ -849,7 +1153,6 @@ class _SurveyPageState extends State<SurveyPage> {
           initialValue: smokingYears,
           decoration: InputDecoration(
             labelText: context.t('smokingYears'),
-            hintText: context.t('smokingYearsHintExample'),
             border: OutlineInputBorder(),
           ),
           keyboardType: TextInputType.number,
@@ -858,9 +1161,13 @@ class _SurveyPageState extends State<SurveyPage> {
               smokingYears = value;
             });
           },
+          // Smoking-years is genuinely optional (see
+          // _missingRequiredFieldMessage) — empty is fine and must not
+          // error. If a value IS entered, it's still range-checked so
+          // obviously bad data (negative, >100) doesn't get saved.
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return '';
+              return null;
             }
             final intValue = int.tryParse(value);
             if (intValue == null || intValue < 0 || intValue > 100) {
@@ -1263,13 +1570,26 @@ class _SurveyPageState extends State<SurveyPage> {
   /// sequence the old single-page "Devam Et" button used to run, now
   /// triggered from the wizard's final "Tamamla" button.
   Future<bool> _submitSurvey() async {
-    _formKey.currentState?.validate();
+    // Both checks matter and neither alone is sufficient: field-level
+    // validators (e.g. the smoking-years 0-100 range check) catch bad data
+    // in fields that are otherwise optional, while _missingRequiredFieldMessage
+    // enforces the fields that are genuinely required. Previously the Form's
+    // validate() result was discarded, so a bad smoking-years value could be
+    // silently saved despite showing a red error on screen.
+    final isFieldDataValid = _formKey.currentState?.validate() ?? true;
     final missingMessage = _missingRequiredFieldMessage();
     final saveErrorMessage = context.t('saveErrorRetry');
+    final invalidFieldMessage = context.t('validationFixHighlightedFields');
 
     if (missingMessage != null) {
       if (!mounted) return false;
       _showValidationMessage(missingMessage);
+      return false;
+    }
+
+    if (!isFieldDataValid) {
+      if (!mounted) return false;
+      _showValidationMessage(invalidFieldMessage);
       return false;
     }
 
@@ -1283,6 +1603,10 @@ class _SurveyPageState extends State<SurveyPage> {
       _showValidationMessage(saveErrorMessage);
       return false;
     }
+
+    // The record is now durably saved — the in-progress draft is no
+    // longer needed.
+    unawaited(_clearDraft());
 
     await _runBulkPermissionFlow(recordId);
 
@@ -1314,14 +1638,17 @@ class _SurveyPageState extends State<SurveyPage> {
               SurveyStep(
                 title: context.t('initialSurvey'),
                 content: _stepPersonalInfo(),
+                validate: _validatePersonalInfoStep,
               ),
               SurveyStep(
                 title: context.t('smokingInfo'),
                 content: _stepSmokingInfo(),
+                validate: _validateSmokingInfoStep,
               ),
               SurveyStep(
                 title: context.t('lifeRoutine'),
                 content: _stepLifeRoutine(),
+                validate: _validateLifeRoutineStep,
               ),
               SurveyStep(
                 title: context.t('healthStatus'),
@@ -1338,6 +1665,7 @@ class _SurveyPageState extends State<SurveyPage> {
               ),
             ],
             onFinish: _submitSurvey,
+            onStepChanged: (_) => unawaited(_saveDraft()),
           ),
         ),
       ),

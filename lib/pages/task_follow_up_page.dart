@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../core/app_texts.dart';
 import '../models/adaptive_task_models.dart';
 import '../services/notification_service.dart';
+import '../services/protocol_violation_service.dart';
 import '../services/storage_service.dart';
+import 'craving_sos_page.dart';
 
 class TaskFollowUpPage extends StatefulWidget {
   const TaskFollowUpPage({super.key});
@@ -14,6 +16,8 @@ class TaskFollowUpPage extends StatefulWidget {
 
 class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
   final StorageService _storageService = StorageService();
+  final ProtocolViolationService _protocolViolationService =
+      ProtocolViolationService();
   bool _loading = true;
   List<Map<String, dynamic>> _pending = const [];
 
@@ -35,6 +39,7 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
   }
 
   Future<void> _saveOutcome({
+    required String id,
     required String taskTitle,
     required String outcome,
     DateTime? scheduledAt,
@@ -43,12 +48,8 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
     final smoked = outcome == AdaptiveTaskOutcome.smoked;
 
     if (smoked) {
-      await _storageService.saveProtocolViolation(
-        type: 'followup_failed',
-        severity: 'medium',
-        source: 'app_flow',
+      await _protocolViolationService.logFollowUpFailed(
         taskTitle: taskTitle,
-        details: 'Task follow-up marked as unsuccessful.',
       );
     }
 
@@ -66,11 +67,11 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
       taskResult: success ? 'willpower_success' : 'willpower_weakness',
       completedAt: DateTime.now(),
     );
-    await _storageService.resolveTaskFollowUpByTitle(taskTitle);
+    await _storageService.resolveTaskFollowUpById(id);
     await _loadPending();
   }
 
-  Future<void> _deferAgain(String taskTitle) async {
+  Future<void> _deferAgain(String id, String taskTitle) async {
     final delay = await _storageService.resolveAdaptivePostponeDelay();
     final nextTime = DateTime.now().add(delay);
 
@@ -83,13 +84,11 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
       respondedAt: DateTime.now(),
     );
 
-    await _storageService.saveProtocolViolation(
-      type: 'followup_deferred',
-      severity: 'low',
-      source: 'app_flow',
+    await _protocolViolationService.logFollowUpDeferred(
       taskTitle: taskTitle,
       details: 'User deferred follow-up from dedicated follow-up screen.',
     );
+    await _storageService.resolveTaskFollowUpById(id);
     await _storageService.saveTaskFollowUp(taskTitle: taskTitle, scheduledAt: nextTime);
     await NotificationService.scheduleTaskFollowUpReminder(
       taskTitle: taskTitle,
@@ -143,6 +142,18 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
       appBar: AppBar(
         title: Text(context.t('taskFollowUpTitle')),
       ),
+      // Reporting back on a "did you smoke" check-in is another moment a
+      // craving can be live — same reachable-SOS reasoning as the
+      // mandatory command screen.
+      floatingActionButton: FloatingActionButton.extended(
+        key: const ValueKey('task_follow_up_sos_button'),
+        backgroundColor: Colors.redAccent,
+        icon: const Icon(Icons.sos),
+        label: Text(context.t('cravingSosButton')),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const CravingSosPage()),
+        ),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _pending.isEmpty
@@ -150,11 +161,12 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
                   child: Text(context.t('taskFollowUpEmpty')),
                 )
               : ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                   itemCount: _pending.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final row = _pending[index];
+                    final id = row['id'] as String;
                     final taskTitle = row['taskTitle'] as String;
                     final scheduledAt = row['scheduledAt'] as DateTime;
                     return Card(
@@ -179,6 +191,7 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
                               children: [
                                 ElevatedButton(
                                   onPressed: () => _saveOutcome(
+                                    id: id,
                                     taskTitle: taskTitle,
                                     outcome: AdaptiveTaskOutcome.success,
                                     scheduledAt: scheduledAt,
@@ -187,6 +200,7 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
                                 ),
                                 OutlinedButton(
                                   onPressed: () => _saveOutcome(
+                                    id: id,
                                     taskTitle: taskTitle,
                                     outcome: AdaptiveTaskOutcome.smoked,
                                     scheduledAt: scheduledAt,
@@ -194,7 +208,7 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
                                   child: const Text('Sigara ictim'),
                                 ),
                                 TextButton(
-                                  onPressed: () => _deferAgain(taskTitle),
+                                  onPressed: () => _deferAgain(id, taskTitle),
                                   child: const Text('Ertele'),
                                 ),
                               ],

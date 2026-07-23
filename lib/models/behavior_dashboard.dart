@@ -7,6 +7,12 @@ class BehaviorDashboard {
   final DateTime? lastSurveyDate;
   final DateTime? lastBreathDate;
   final String breathTrend;
+  /// 'improving'/'worsening'/'stable' over the last 3 breath tests (see
+  /// [BreathTestEngine.analyzeTrend]) — a tighter, more responsive rolling
+  /// signal than [breathTrend] above, which only compares the very first
+  /// test ever taken against the latest one.
+  final String breathTrendLast3;
+  final int breathTrendRiskAdjustment;
   final String progressSummary;
   final List<String> todaysTasks;
   final List<String> coachCommands;
@@ -32,6 +38,8 @@ class BehaviorDashboard {
     this.lastSurveyDate,
     this.lastBreathDate,
     required this.breathTrend,
+    this.breathTrendLast3 = 'stable',
+    this.breathTrendRiskAdjustment = 0,
     required this.progressSummary,
     required this.todaysTasks,
     required this.coachCommands,

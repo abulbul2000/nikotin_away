@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../core/text_utils.dart';
 import '../models/adaptive_plan.dart';
 import '../models/behavior_dashboard.dart';
 import '../models/breath_test_record.dart';
@@ -1048,44 +1049,6 @@ class BehaviorEngine {
     return '1 gun sigarasiz kalma gorevi: bugun tum kriz anlarinda sigarayi erteleyin.';
   }
 
-  Map<String, dynamic> predictNextRisk({
-    required List<String> riskyHours,
-    required List<String> riskyTriggers,
-    required int riskScore,
-    required List<SensorUsageEvent> sensorEvents,
-  }) {
-    final nextRiskWindow = riskyHours.isNotEmpty
-        ? riskyHours.first
-        : '20:00-22:00';
-    var nextRiskTrigger = riskyTriggers.isNotEmpty
-        ? riskyTriggers.first
-        : 'Stres';
-
-    if (sensorEvents.isNotEmpty) {
-      final recent = sensorEvents.sublist(max(0, sensorEvents.length - 8));
-      final recentMealLikelihood =
-          recent.map((item) => item.mealSoundLikelihood).reduce((a, b) => a + b) /
-          recent.length;
-      if (recentMealLikelihood >= 0.65) {
-        nextRiskTrigger = 'Meal context';
-      }
-    }
-
-    var confidence = 45;
-    confidence += min(riskyHours.length, 3) * 8;
-    confidence += min(riskyTriggers.length, 3) * 7;
-    confidence += (riskScore / 10).round();
-    confidence += _sensorConfidenceBoost(sensorEvents);
-
-    return {
-      'nextRiskWindow': nextRiskWindow,
-      'nextRiskTrigger': nextRiskTrigger,
-      'dailyRiskScore': riskScore.clamp(0, 100),
-      'weeklyRiskScore': (riskScore * 0.95).round().clamp(0, 100),
-      'confidence': confidence.clamp(10, 99),
-    };
-  }
-
   BehaviorDashboard buildDashboard({
     required int riskScore,
     required List<SurveyRecord> records,
@@ -1105,6 +1068,8 @@ class BehaviorEngine {
     required Map<String, double> learnedWeights,
     required Map<String, dynamic> prediction,
     required AdaptivePlan plan,
+    String breathTrendLast3 = 'stable',
+    int breathTrendRiskAdjustment = 0,
   }) {
     DateTime? lastSurveyDate;
     DateTime? lastBreathDate;
@@ -1141,6 +1106,8 @@ class BehaviorEngine {
       lastSurveyDate: lastSurveyDate,
       lastBreathDate: lastBreathDate,
       breathTrend: breathTrend,
+      breathTrendLast3: breathTrendLast3,
+      breathTrendRiskAdjustment: breathTrendRiskAdjustment,
       progressSummary: progressSummary,
       todaysTasks: todaysTasks,
       coachCommands: coachCommands,
@@ -1293,23 +1260,7 @@ class BehaviorEngine {
     return trigger;
   }
 
-  String _normalizeText(String value) {
-    return value
-        .trim()
-        .replaceAll('ı', 'i')
-        .replaceAll('İ', 'I')
-        .replaceAll('ğ', 'g')
-        .replaceAll('Ğ', 'G')
-        .replaceAll('ş', 's')
-        .replaceAll('Ş', 'S')
-        .replaceAll('ö', 'o')
-        .replaceAll('Ö', 'O')
-        .replaceAll('ü', 'u')
-        .replaceAll('Ü', 'U')
-        .replaceAll('ç', 'c')
-          .replaceAll('Ç', 'C')
-          .toLowerCase();
-  }
+  String _normalizeText(String value) => normalizeTurkishText(value);
 
   String? _groupHour(String? hardestHour) {
     if (hardestHour == null || hardestHour.isEmpty) {
@@ -1434,29 +1385,7 @@ class BehaviorEngine {
     return (record.exhaleSeconds + record.inhaleSeconds) / 2;
   }
 
-  int _packLevel(String packsPerDay) {
-    switch (packsPerDay) {
-      case '1 paketten az':
-        return 0;
-      case '1 paket':
-        return 1;
-      case '2 paket':
-        return 2;
-      case '3 paket':
-        return 3;
-      case '3+ paket':
-      case '4 paket':
-        return 4;
-      case '5 paket':
-        return 5;
-      case '6 paket':
-        return 6;
-      case '7+ paket':
-        return 7;
-      default:
-        return 0;
-    }
-  }
+  int _packLevel(String packsPerDay) => SurveyRecord.packLevel(packsPerDay);
 
   int calculateChainSmokingRiskContribution(String chainSmokingLevel) {
     switch (chainSmokingLevel) {
@@ -1482,36 +1411,6 @@ class BehaviorEngine {
         calculatePackRiskContribution(survey.packsPerDay) +
         calculateChainSmokingRiskContribution(survey.chainSmokingLevel);
     return total.clamp(0, 100);
-  }
-
-  int _sensorConfidenceBoost(List<SensorUsageEvent> events) {
-    if (events.isEmpty) {
-      return 0;
-    }
-
-    final recent = events.length > 20
-        ? events.sublist(events.length - 20)
-        : events;
-    final activeCount = recent
-        .where((item) => item.activityState != 'idle')
-        .length;
-    final activityRatio = activeCount / recent.length;
-    var boost = (activityRatio * 12).round();
-
-    final avgMealLikelihood =
-        recent.map((item) => item.mealSoundLikelihood).reduce((a, b) => a + b) /
-        recent.length;
-    final avgAmbientMean =
-        recent.map((item) => item.ambientMeanDecibel).reduce((a, b) => a + b) /
-        recent.length;
-    if (avgMealLikelihood >= 0.55) {
-      boost += 3;
-    }
-    if (avgAmbientMean >= 50 && avgAmbientMean <= 80) {
-      boost += 2;
-    }
-
-    return boost;
   }
 
   int _breathRiskAdjustmentFromRecords(List<SurveyRecord> breathRecords) {

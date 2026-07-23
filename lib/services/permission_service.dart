@@ -49,6 +49,17 @@ class PermissionService {
       // Some platforms may deny or not expose this permission.
     }
 
+    try {
+      // Used only to keep the fake-call barrier from ringing over a real
+      // phone call (see DevicePermissionService.isInPhoneCall) — never to
+      // read numbers or call content. Not folded into `granted`: unlike the
+      // other telemetry permissions, denying this doesn't degrade a core
+      // feature, it just means the collision check silently no-ops.
+      await Permission.phone.request();
+    } catch (_) {
+      // Some platforms do not expose this permission.
+    }
+
     return granted;
   }
 }

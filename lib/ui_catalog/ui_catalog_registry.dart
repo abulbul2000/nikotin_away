@@ -212,9 +212,6 @@ class UiCatalogRegistry {
         ),
         sourceFiles: const [
           'lib/pages/home_page.dart',
-          'lib/widgets/risk_card.dart',
-          'lib/widgets/task_card.dart',
-          'lib/widgets/progress_widget.dart',
         ],
         uiComponents: const ['ListView', 'Card', 'SnackBar', 'AlertDialog'],
         translationKeys: const [

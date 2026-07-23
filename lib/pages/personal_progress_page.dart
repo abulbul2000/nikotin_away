@@ -4,6 +4,7 @@ import '../core/app_texts.dart';
 import '../models/behavior_dashboard.dart';
 import '../models/survey_record.dart';
 import '../services/storage_service.dart';
+import '../widgets/load_error_view.dart';
 
 class PersonalProgressPage extends StatefulWidget {
   const PersonalProgressPage({super.key});
@@ -52,8 +53,10 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (!snapshot.hasData) {
-            return Center(child: Text(context.t('dataLoadFailed')));
+          if (snapshot.hasError || !snapshot.hasData) {
+            return LoadErrorView(
+              onRetry: () => setState(() => _dataFuture = _loadData()),
+            );
           }
 
           final data = snapshot.data!;
@@ -117,7 +120,10 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                   title: context.t('progressSummaryTitle'),
                   children: [
                     _row(context.t('totalRecords'), '${data.history.length}'),
-                    _row(context.t('menuWeeklySurvey'), '${weeklyRecords.length}'),
+                    _row(
+                      context.t('menuWeeklySurvey'),
+                      '${weeklyRecords.length}',
+                    ),
                     _row(context.t('menuBreathTest'), '${breathTests.length}'),
                     _row(
                       context.t('latestRiskScore'),

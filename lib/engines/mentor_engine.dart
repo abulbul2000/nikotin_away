@@ -1,5 +1,8 @@
 import 'dart:math';
 
+import '../core/text_utils.dart';
+import '../models/survey_record.dart';
+
 class MentorEngine {
 	final Random _random = Random();
 
@@ -303,21 +306,24 @@ class MentorEngine {
 		return (0.6 * normalizedBarrier) + (0.4 * normalizedTask);
 	}
 
+	// Delegates level-parsing to the canonical SurveyRecord.packLevel() —
+	// this used to match pack option strings with .contains('1')/.contains('2')
+	// etc, which is fragile (e.g. '1 paketten az' contains '1') and, worse,
+	// never matched '6 paket'/'7+ paket' at all (no digit substring check
+	// for them), silently giving the heaviest smokers the LOWEST nicotine
+	// load score (3) instead of the highest.
 	int _nicotineLoadScore(String packsPerDay) {
-		final value = packsPerDay.toLowerCase();
-		if (value.contains('4') || value.contains('5') || value.contains('3+')) {
+		final level = SurveyRecord.packLevel(packsPerDay);
+		if (level >= 4) {
 			return 9;
 		}
-		if (value.contains('3')) {
+		if (level == 3) {
 			return 8;
 		}
-		if (value.contains('2')) {
+		if (level == 2) {
 			return 6;
 		}
-		if (value.contains('1')) {
-			return 4;
-		}
-		return 3;
+		return 4;
 	}
 
 	int _firstSmokeUrgencyScore(String? firstCigaretteRange) {
@@ -991,14 +997,5 @@ class MentorEngine {
 		return intersection / union;
 	}
 
-	String _normalize(String value) {
-		return value
-			.toLowerCase()
-			.replaceAll('ı', 'i')
-			.replaceAll('ğ', 'g')
-			.replaceAll('ş', 's')
-			.replaceAll('ö', 'o')
-			.replaceAll('ü', 'u')
-			.replaceAll('ç', 'c');
-	}
+	String _normalize(String value) => normalizeTurkishText(value);
 }

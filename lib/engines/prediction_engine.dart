@@ -10,7 +10,17 @@ class PredictionEngine {
 		required List<SensorUsageEvent> sensorEvents,
 	}) {
 		final nextRiskWindow = riskyHours.isNotEmpty ? riskyHours.first : '20:00-22:00';
-		final nextRiskTrigger = riskyTriggers.isNotEmpty ? riskyTriggers.first : 'Stres';
+		var nextRiskTrigger = riskyTriggers.isNotEmpty ? riskyTriggers.first : 'Stres';
+
+		if (sensorEvents.isNotEmpty) {
+			final recent = sensorEvents.sublist(max(0, sensorEvents.length - 8));
+			final recentMealLikelihood =
+					recent.map((item) => item.mealSoundLikelihood).reduce((a, b) => a + b) /
+					recent.length;
+			if (recentMealLikelihood >= 0.65) {
+				nextRiskTrigger = 'Meal context';
+			}
+		}
 
 		var confidence = 45;
 		confidence += min(riskyHours.length, 3) * 8;

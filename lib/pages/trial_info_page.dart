@@ -13,7 +13,9 @@ class TrialInfoPage extends StatelessWidget {
   Future<void> _continue(BuildContext context) async {
     final storage = StorageService();
     final records = await storage.loadSurveyHistory();
-    final hasInitialSetup = records.any((record) => record.type == 'initial');
+    final hasInitialSetup = await storage.hasCompletedInitialSurvey(
+      records: records,
+    );
 
     if (!context.mounted) {
       return;

@@ -9,7 +9,9 @@ import 'package:timezone/timezone.dart' as tz;
 
 import '../core/app_texts.dart';
 import '../pages/breath_test_page.dart';
+import '../pages/fake_call_page.dart';
 import 'android_watchdog_service.dart';
+import 'fake_call_barrier_service.dart';
 import 'language_service.dart';
 import 'phone_state_service.dart';
 import 'storage_service.dart';
@@ -30,6 +32,8 @@ class NotificationService {
   static const String _typeTaskStart = 'task_start';
   static const String _typeTaskFollowUp = 'task_followup';
   static const String _typeWeeklySurvey = 'weekly_survey';
+  static const String _typeFakeCall = 'fake_call';
+  static const String _typeFakeCallCheckIn = 'fake_call_checkin';
 
   static const String _actionTaskDone = 'task_done';
   static const String _actionTaskNotNow = 'task_not_now';
@@ -39,21 +43,48 @@ class NotificationService {
 
   static const String _categoryTaskStart = 'task_start_category';
   static const String _categoryTaskFollowUp = 'task_followup_category';
-  static const String _taskStartChannelId = 'task_start_channel_v4';
-  static const String _taskFollowUpChannelId = 'task_followup_channel_v5';
-  static const String _taskEscalationChannelId = 'task_escalation_channel_v1';
+  // Bumped (v4->v5, v5->v6, v1->v2): Android freezes a channel's
+  // sound/vibration settings the first time it's created and ignores code
+  // changes afterward unless the channel ID itself changes — this forces
+  // a fresh channel on devices that already had the app installed, so the
+  // new alarm sound/vibration pattern actually takes effect.
+  static const String _taskStartChannelId = 'task_start_channel_v5';
+  static const String _taskFollowUpChannelId = 'task_followup_channel_v6';
+  static const String _taskEscalationChannelId = 'task_escalation_channel_v2';
   static const String _breathReminderChannelId = 'breath_reminder_channel_v3';
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
+  static const String _fakeCallChannelId = 'fake_call_channel_v1';
+  static const String _fakeCallCheckInChannelId = 'fake_call_checkin_channel_v1';
+  static const int _fakeCallNotificationId = 810001;
+  static const int _fakeCallCheckInBaseId = 810100;
   static const int _weeklySurveyNotificationId = 700001;
   static const int _dailyBreathReminderBaseId = 420100;
   static const int _dailyBreathReminderMaxSlots = 6;
   static const int _notificationTimeoutMs = 15000;
   static const Duration _unansweredReminderDelay = Duration(minutes: 10);
   static final Int32List _insistentFlag = Int32List.fromList(<int>[4]);
+  // A rhythmic buzz-pause-buzz pattern (not one flat 15s vibration) so it
+  // actually reads as an alarm clock going off rather than a single long
+  // rumble — combined with FLAG_INSISTENT above, Android replays this
+  // (sound + vibration together) on a loop until the user responds.
   static final Int64List _taskVibrationPattern = Int64List.fromList(<int>[
     0,
-    15000,
+    700,
+    400,
+    700,
+    400,
+    700,
+    400,
+    700,
   ]);
+  // Device's own default alarm-clock sound (not the notification chime) —
+  // reachable without bundling an audio asset. Combined with
+  // AudioAttributesUsage.alarm (routes through the alarm volume stream,
+  // not the notification stream) and the insistent flag above, this is
+  // what actually makes these sound like a real alarm going off instead
+  // of a normal notification ping.
+  static const AndroidNotificationSound _taskAlarmSound =
+      UriAndroidNotificationSound('content://settings/system/alarm_alert');
 
   static Stream<Map<String, String>> get taskActionStream =>
       _taskActionController.stream;
@@ -150,6 +181,24 @@ class NotificationService {
     } catch (_) {
       // Keep notification flow resilient even if native watchdog sync fails.
     }
+  }
+
+  /// Status-only check (no system prompt) — for display in a settings/
+  /// permissions screen. Use [ensureNotificationPermission] to actually
+  /// request it.
+  static Future<bool> areNotificationsEnabled() async {
+    try {
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (androidPlugin != null) {
+        return await androidPlugin.areNotificationsEnabled() ?? true;
+      }
+    } catch (_) {
+      // Best-effort on unsupported platforms.
+    }
+    return true;
   }
 
   static Future<bool> ensureNotificationPermission() async {
@@ -252,19 +301,21 @@ class NotificationService {
   }
 
   static void _handleNotificationResponse(NotificationResponse response) {
-    _processNotificationResponse(response, allowNavigation: true);
+    unawaited(_processNotificationResponse(response, allowNavigation: true));
   }
 
   static void handleBackgroundNotificationResponse(
     NotificationResponse response,
   ) {
-    _processNotificationResponse(response, allowNavigation: false);
+    unawaited(
+      _processNotificationResponse(response, allowNavigation: false),
+    );
   }
 
-  static void _processNotificationResponse(
+  static Future<void> _processNotificationResponse(
     NotificationResponse response, {
     required bool allowNavigation,
-  }) {
+  }) async {
     final payload = _decodePayload(response.payload);
     if (payload == null) {
       return;
@@ -277,16 +328,58 @@ class NotificationService {
 
     final type = payload['type'];
     if (type == _typeBreath && allowNavigation) {
+      // Never deep-link into BreathTestPage before the user has finished
+      // the initial survey — a stale/queued daily reminder firing during
+      // onboarding (splash/language-select/mid-survey) used to be able to
+      // push BreathTestPage over whatever screen was active and, on
+      // completion, route straight to HomePage — skipping SurveyPage
+      // entirely and leaving the user stranded with no onboarding data.
+      final hasOnboarded = await StorageService().hasCompletedInitialSurvey();
+      if (!hasOnboarded) {
+        return;
+      }
+      // Freshly fetched from the global navigator key (not a captured
+      // widget BuildContext held across the gap above), so this is safe
+      // despite the preceding await.
       final context = _navigatorKey?.currentContext;
       if (context != null) {
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const BreathTestPage()));
+        // ignore: use_build_context_synchronously
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const BreathTestPage()));
       }
       return;
     }
 
     if (type == _typeWeeklySurvey) {
+      return;
+    }
+
+    if (type == _typeFakeCallCheckIn) {
+      return;
+    }
+
+    if (type == _typeFakeCall && allowNavigation) {
+      final hasOnboarded = await StorageService().hasCompletedInitialSurvey();
+      if (!hasOnboarded) {
+        return;
+      }
+      final callerName =
+          payload['callerName']?.trim().isNotEmpty == true
+          ? payload['callerName']!.trim()
+          : await StorageService().loadFakeCallerName();
+      final context = _navigatorKey?.currentContext;
+      if (context != null) {
+        // ignore: use_build_context_synchronously
+        final outcome = await Navigator.of(context).push<FakeCallOutcome>(
+          MaterialPageRoute(
+            builder: (_) => FakeCallPage(callerName: callerName),
+            fullscreenDialog: true,
+          ),
+        );
+        if (outcome != null) {
+          await FakeCallBarrierService().handleOutcome(outcome);
+        }
+      }
       return;
     }
 
@@ -429,10 +522,12 @@ class NotificationService {
           _taskEscalationChannelId,
           'Gorev guncelleme hatirlatici',
           importance: Importance.max,
+          visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
           enableVibration: true,
           vibrationPattern: _taskVibrationPattern,
+          sound: _taskAlarmSound,
           additionalFlags: _insistentFlag,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           timeoutAfter: _notificationTimeoutMs,
@@ -495,10 +590,12 @@ class NotificationService {
           _taskStartChannelId,
           'İlk görev tetikleme',
           importance: Importance.max,
+          visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
           enableVibration: true,
           vibrationPattern: _taskVibrationPattern,
+          sound: _taskAlarmSound,
           additionalFlags: _insistentFlag,
           autoCancel: false,
           ongoing: true,
@@ -588,10 +685,12 @@ class NotificationService {
           _taskStartChannelId,
           'İlk görev tetikleme',
           importance: Importance.max,
+          visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
           enableVibration: true,
           vibrationPattern: _taskVibrationPattern,
+          sound: _taskAlarmSound,
           additionalFlags: _insistentFlag,
           autoCancel: false,
           ongoing: true,
@@ -705,8 +804,15 @@ class NotificationService {
 
     final windowMinutes = sleepAt.difference(wakeAt).inMinutes;
     final count = safePreferred;
+    // For the common single-reminder case, land near bedtime rather than
+    // the middle of the day — the app's daily touchpoint is meant to be one
+    // consolidated evening moment, not a random daytime interruption. Only
+    // when the adaptive target has escalated above 1 (e.g. worsening
+    // respiratory burden calling for closer monitoring) do reminders spread
+    // across the day as before.
+    const preBedtimeBufferMinutes = 45;
     final intervalMinutes = count <= 1
-        ? (windowMinutes ~/ 2)
+        ? (windowMinutes - preBedtimeBufferMinutes).clamp(1, windowMinutes)
         : (windowMinutes ~/ (count + 1));
 
     for (var i = 0; i < _dailyBreathReminderMaxSlots; i++) {
@@ -751,6 +857,7 @@ class NotificationService {
             _breathReminderChannelId,
             'Nefes testi hatırlatıcı',
             importance: Importance.max,
+            visibility: NotificationVisibility.private,
             priority: Priority.high,
             playSound: true,
             audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
@@ -783,6 +890,7 @@ class NotificationService {
             _breathReminderChannelId,
             'Nefes testi hatırlatıcı',
             importance: Importance.max,
+            visibility: NotificationVisibility.private,
             priority: Priority.high,
             playSound: true,
             audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
@@ -843,10 +951,12 @@ class NotificationService {
           _taskFollowUpChannelId,
           'Görev takip hatırlatıcı',
           importance: Importance.max,
+          visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
           enableVibration: true,
           vibrationPattern: _taskVibrationPattern,
+          sound: _taskAlarmSound,
           additionalFlags: _insistentFlag,
           autoCancel: true,
           onlyAlertOnce: false,
@@ -918,6 +1028,7 @@ class NotificationService {
           _weeklySurveyChannelId,
           'Haftalik anket hatirlatici',
           importance: Importance.max,
+          visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
@@ -951,6 +1062,7 @@ class NotificationService {
           _taskStartChannelId,
           'Task timer start',
           importance: Importance.max,
+          visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
@@ -980,6 +1092,7 @@ class NotificationService {
           _taskStartChannelId,
           'Duration barrier call',
           importance: Importance.max,
+          visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
@@ -1006,6 +1119,116 @@ class NotificationService {
     return code == 'tr'
         ? '$totalMinutes dakika'
         : '$totalMinutes minute${totalMinutes == 1 ? '' : 's'}';
+  }
+
+  /// Schedules the fake-call duration-barrier notification. Full-screen +
+  /// call category + the notification's own ringtone sound so it presents
+  /// as close to a real incoming call as `flutter_local_notifications`
+  /// allows — tapping it (or the system auto-launching it full-screen over
+  /// a locked device) opens [FakeCallPage] via [_processNotificationResponse].
+  static Future<void> scheduleFakeCallBarrier({
+    required DateTime fireAt,
+    required String callerName,
+  }) async {
+    final scheduleMode = await _resolveAndroidScheduleMode();
+    final triggerAt = tz.TZDateTime.from(fireAt, tz.local);
+    await _plugin.zonedSchedule(
+      _fakeCallNotificationId,
+      callerName,
+      '',
+      triggerAt,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _fakeCallChannelId,
+          'Gelen arama',
+          importance: Importance.max,
+          visibility: NotificationVisibility.private,
+          priority: Priority.high,
+          playSound: true,
+          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+          category: AndroidNotificationCategory.call,
+          fullScreenIntent: true,
+          ongoing: true,
+          autoCancel: false,
+          timeoutAfter: _notificationTimeoutMs * 2,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: true),
+      ),
+      androidScheduleMode: scheduleMode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: jsonEncode({'type': _typeFakeCall, 'callerName': callerName}),
+    );
+  }
+
+  static Future<void> cancelFakeCallBarrier() async {
+    await _plugin.cancel(_fakeCallNotificationId);
+  }
+
+  /// Fired right after the user taps "Answer" on the fake call — the app
+  /// never shows a visible countdown (see [scheduleFakeCallSurpriseCheckIn]
+  /// docs), so without this the user would have no way to know the barrier
+  /// actually started or how long it runs for.
+  static Future<void> showFakeCallBarrierStartedNotification({
+    required Duration duration,
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
+    final durationText = _formatBarrierDuration(duration, code);
+    final instruction = code == 'tr'
+        ? 'Lütfen önümüzdeki $durationText boyunca sigara içmeyin.'
+        : 'Please do not smoke for the next $durationText.';
+    await _plugin.show(
+      id,
+      _text(code, 'barrierStartedTitle'),
+      '$instruction\n${_text(code, 'barrierStartedDuration')}: $durationText.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _taskStartChannelId,
+          'Duration barrier call',
+          importance: Importance.max,
+          visibility: NotificationVisibility.private,
+          priority: Priority.high,
+          playSound: true,
+          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+          category: AndroidNotificationCategory.reminder,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: true),
+      ),
+    );
+  }
+
+  /// A quiet, non-full-screen nudge shown at an unpredictable moment during
+  /// an active barrier — the "small surprise" that keeps the silent timer
+  /// from feeling like it's been forgotten, without revealing how much time
+  /// is left (see `DisciplineProtocolService.generateUnpredictableMoments`,
+  /// the same idea reused here).
+  static Future<void> scheduleFakeCallSurpriseCheckIn({
+    required DateTime fireAt,
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final scheduleMode = await _resolveAndroidScheduleMode();
+    final triggerAt = tz.TZDateTime.from(fireAt, tz.local);
+    final id = _fakeCallCheckInBaseId + (fireAt.millisecondsSinceEpoch % 90);
+    await _plugin.zonedSchedule(
+      id,
+      _text(code, 'fakeCallCheckInTitle'),
+      _text(code, 'fakeCallCheckInBody'),
+      triggerAt,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _fakeCallCheckInChannelId,
+          'Sessiz kontrol',
+          importance: Importance.defaultImportance,
+          visibility: NotificationVisibility.private,
+          priority: Priority.defaultPriority,
+        ),
+      ),
+      androidScheduleMode: scheduleMode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: jsonEncode({'type': _typeFakeCallCheckIn}),
+    );
   }
 
   static Future<void> scheduleCoachCommandNotifications({
@@ -1074,6 +1297,7 @@ class NotificationService {
             _taskStartChannelId,
             'Kisisel komut bildirimi',
             importance: Importance.max,
+            visibility: NotificationVisibility.private,
             priority: Priority.high,
             playSound: true,
             audioAttributesUsage: AudioAttributesUsage.alarm,

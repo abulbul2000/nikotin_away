@@ -1,7 +1,6 @@
 import '../engines/breath_test_engine.dart';
 import '../models/breath_test_result.dart';
 import '../models/survey_record.dart';
-import '../models/task_history.dart';
 import '../repositories/breath_test_repository.dart';
 import 'storage_service.dart';
 
@@ -52,21 +51,20 @@ class BreathTestService {
       blowStability: blowStability,
     );
 
+    // Persist the raw breath result FIRST, then derive the risk score from a
+    // single fresh dashboard computation (StorageService.loadBehaviorDashboard,
+    // which itself calls BreathTestEngine.calculateFinalRisk). This is the
+    // exact same formula/inputs the home dashboard uses, so the risk score
+    // shown immediately after a test can never disagree with the score shown
+    // later on the dashboard for the same data — previously this method kept
+    // a second, independent copy of that blend (including its own duplicate
+    // task-performance-risk calculation), which could diverge because
+    // `dashboard.riskScore` already includes prior breath history, so
+    // re-blending it here as "behaviorRisk" alongside a brand new breath
+    // score double-counted past breath influence.
+    await _repository.save(result);
     final dashboard = await _storageService.loadBehaviorDashboard();
-    final surveyRisk = dashboard.weeklySurveyRiskScore.toDouble();
-    final behaviorRisk = dashboard.riskScore.toDouble();
-    final taskPerformanceRisk = await _estimateTaskPerformanceRisk();
-
-    final historical = await _repository.loadRecent(limit: 50);
-    final trend = _engine.analyzeTrend([...historical, result]);
-
-    final finalRisk = _engine.calculateFinalRisk(
-      surveyRisk: surveyRisk,
-      behaviorRisk: behaviorRisk,
-      taskPerformanceRisk: taskPerformanceRisk,
-      breathScore: result.breathScore,
-      trendAdjustment: trend.riskAdjustment,
-    );
+    final finalRisk = dashboard.riskScore;
     final finalRiskLevel = _engine.resolveRiskLevel(finalRisk);
 
     final surveyRecord = SurveyRecord(
@@ -82,7 +80,6 @@ class BreathTestService {
       riskLevel: finalRiskLevel,
     );
 
-    await _repository.save(result);
     await _storageService.saveSurveyRecord(surveyRecord);
 
     return ProcessedBreathTest(
@@ -91,31 +88,5 @@ class BreathTestService {
       finalRiskScore: finalRisk,
       finalRiskLevel: finalRiskLevel,
     );
-  }
-
-  Future<double> _estimateTaskPerformanceRisk() async {
-    final tasks = await _storageService.loadTaskHistory();
-    return _estimateTaskPerformanceRiskFromTasks(tasks).toDouble();
-  }
-
-  int _estimateTaskPerformanceRiskFromTasks(List<TaskHistory> tasks) {
-    if (tasks.isEmpty) {
-      return 55;
-    }
-
-    final sorted = [...tasks]..sort((a, b) => a.date.compareTo(b.date));
-    final recent = sorted.length > 14 ? sorted.sublist(sorted.length - 14) : sorted;
-    final successCount = recent.where((item) => item.completed).length;
-    final successRate = successCount / recent.length;
-    var risk = ((1 - successRate) * 100).round();
-
-    final streakWindow = recent.length > 5 ? recent.sublist(recent.length - 5) : recent;
-    if (streakWindow.every((item) => item.completed)) {
-      risk -= 4;
-    } else if (streakWindow.every((item) => !item.completed)) {
-      risk += 6;
-    }
-
-    return risk.clamp(0, 100);
   }
 }

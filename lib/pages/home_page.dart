@@ -3,21 +3,30 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
-import '../main.dart';
+import '../core/app_theme.dart';
 import '../models/adaptive_task_models.dart';
+import '../models/mentor_message.dart';
 import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import '../pages/breath_test_page.dart';
+import '../pages/craving_sos_page.dart';
+import '../pages/daily_checkin_page.dart';
 import '../pages/health_metrics_page.dart';
-import '../pages/language_selection_page.dart';
 import '../pages/mandatory_task_page.dart';
 import '../pages/personal_progress_page.dart';
 import '../pages/protocol_violations_page.dart';
+import '../pages/reports_page.dart';
+import '../pages/settings_page.dart';
+import '../pages/survey_history_page.dart';
 import '../pages/task_follow_up_page.dart';
 import '../pages/weekly_survey_page.dart';
+import '../services/device_permission_service.dart';
 import '../services/discipline_protocol_service.dart';
-import '../services/language_service.dart';
+import '../services/fake_call_barrier_service.dart';
+import '../services/location_intelligence_service.dart';
+import '../services/step_tracking_service.dart';
 import '../services/notification_service.dart';
+import '../services/protocol_violation_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/no_smoke_logo.dart';
 
@@ -41,16 +50,23 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final StorageService _storageService = StorageService();
+  final StepTrackingService _stepTrackingService = StepTrackingService();
+  final ProtocolViolationService _protocolViolationService =
+      ProtocolViolationService();
   final DisciplineProtocolService _disciplineProtocolService =
       DisciplineProtocolService();
+  final FakeCallBarrierService _fakeCallBarrierService =
+      FakeCallBarrierService();
   final Map<String, String> _taskStates = {};
   final Map<String, Timer> _taskFollowUpTimers = {};
   final Map<String, Timer> _durationBarrierTimers = {};
   final Map<String, DateTime> _taskStartedAt = {};
   final Map<String, DateTime> _durationBarrierEndsAt = {};
   final Set<String> _notifiedTaskTitles = <String>{};
+  MentorMessage? _latestMentorMessage;
   StreamSubscription<Map<String, String>>? _taskActionSubscription;
   Timer? _durationBarrierTicker;
+  Timer? _mandatoryGateCallRetryTimer;
   List<Map<String, dynamic>> _pendingFollowUps = const [];
   bool _mandatoryTaskShown = false;
   bool _weeklySurveyMandatoryShown = false;
@@ -64,6 +80,10 @@ class _HomePageState extends State<HomePage> {
   int _latestExhaleSeconds = 0;
   int _latestInhaleSeconds = 0;
   String _breathTrendText = '...';
+  // 'improving'/'worsening'/'stable' — see BehaviorDashboard.breathTrendLast3.
+  // Drives the fake-call barrier's daily frequency/duration and the
+  // mentor's daily message, not shown to the user directly.
+  String _breathTrendRecent = 'stable';
   String _weeklyImprovementText = '...';
   String _monthlyImprovementText = '...';
   String _breathPreviousReportText = '...';
@@ -120,6 +140,9 @@ class _HomePageState extends State<HomePage> {
       _handleTaskNotificationAction,
     );
     _loadHomeMetrics();
+    unawaited(LocationIntelligenceService().sampleCurrentLocationIfDue());
+    unawaited(_stepTrackingService.sampleCurrentStepsIfDue());
+    unawaited(_stepTrackingService.ensureDailyProbeScheduled());
   }
 
   @override
@@ -132,6 +155,7 @@ class _HomePageState extends State<HomePage> {
       timer.cancel();
     }
     _durationBarrierTicker?.cancel();
+    _mandatoryGateCallRetryTimer?.cancel();
     super.dispose();
   }
 
@@ -173,50 +197,44 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    _durationBarrierTicker ??= Timer.periodic(
-      const Duration(seconds: 1),
-      (_) {
-        if (!mounted) {
-          return;
-        }
-        setState(() {});
-        final stillActive = _durationBarrierEndsAt.values.any(
-          (endAt) => endAt.isAfter(DateTime.now()),
-        );
-        if (!stillActive) {
-          _durationBarrierTicker?.cancel();
-          _durationBarrierTicker = null;
-        }
-      },
-    );
+    _durationBarrierTicker ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {});
+      final stillActive = _durationBarrierEndsAt.values.any(
+        (endAt) => endAt.isAfter(DateTime.now()),
+      );
+      if (!stillActive) {
+        _durationBarrierTicker?.cancel();
+        _durationBarrierTicker = null;
+      }
+    });
   }
 
   bool _isDurationBarrierTask(String taskTitle) {
     final normalized = taskTitle.toLowerCase();
     return normalized.contains('sure bariyeri') ||
-      normalized.contains('sigara içmeme süresi') ||
-      normalized.contains('sigara icmeme suresi') ||
-      taskTitle.contains('SURE-BARIYERI') ||
-      taskTitle.contains('Sigara içmeme süresi') ||
-      taskTitle.contains('SIGARA_ICMEME_SURESI');
+        normalized.contains('sigara içmeme süresi') ||
+        normalized.contains('sigara icmeme suresi') ||
+        taskTitle.contains('SURE-BARIYERI') ||
+        taskTitle.contains('Sigara içmeme süresi') ||
+        taskTitle.contains('SIGARA_ICMEME_SURESI');
   }
 
   List<Map<String, dynamic>> _activeDurationBarriers() {
     final now = DateTime.now();
-    return _pendingFollowUps
-        .where((row) {
-          final title = row['taskTitle']?.toString() ?? '';
-          final scheduledAt = row['scheduledAt'];
-          return _isDurationBarrierTask(title) &&
-              scheduledAt is DateTime &&
-              scheduledAt.isAfter(now);
-        })
-        .toList()
-      ..sort(
-        (a, b) => (a['scheduledAt'] as DateTime).compareTo(
-          b['scheduledAt'] as DateTime,
-        ),
-      );
+    return _pendingFollowUps.where((row) {
+      final title = row['taskTitle']?.toString() ?? '';
+      final scheduledAt = row['scheduledAt'];
+      return _isDurationBarrierTask(title) &&
+          scheduledAt is DateTime &&
+          scheduledAt.isAfter(now);
+    }).toList()..sort(
+      (a, b) => (a['scheduledAt'] as DateTime).compareTo(
+        b['scheduledAt'] as DateTime,
+      ),
+    );
   }
 
   String _formatRemainingDuration(Duration duration) {
@@ -319,13 +337,8 @@ class _HomePageState extends State<HomePage> {
 
     if (isSuspicious) {
       final taskStartTitle = context.t('taskStartTitle');
-      await _storageService.saveProtocolViolation(
-        type: 'suspicious_behavior',
-        severity: 'high',
-        source: 'app_flow',
+      await _protocolViolationService.logSuspiciousBehavior(
         taskTitle: taskTitle,
-        details:
-            'Suspicious movement/usage detected during active task timer. Timer reset.',
       );
       await _storageService.saveTaskResult(
         taskTitle: taskTitle,
@@ -380,12 +393,8 @@ class _HomePageState extends State<HomePage> {
       completedAt: DateTime.now(),
     );
     if (!result) {
-      await _storageService.saveProtocolViolation(
-        type: 'willpower_weakness',
-        severity: 'medium',
-        source: 'app_flow',
+      await _protocolViolationService.logWillpowerWeakness(
         taskTitle: taskTitle,
-        details: 'Task outcome marked as not completed by user.',
       );
     }
     await _storageService.resolveTaskFollowUpByTitle(taskTitle);
@@ -444,13 +453,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (actionId == 'task_not_now') {
-      await _storageService.saveProtocolViolation(
-        type: 'deferred_start',
-        severity: 'medium',
-        source: 'app_flow',
-        taskTitle: taskTitle,
-        details: 'User deferred task start for 10 minutes.',
-      );
+      await _protocolViolationService.logDeferredStart(taskTitle: taskTitle);
       final delay = await _storageService.resolveAdaptivePostponeDelay();
       final followUpAt = DateTime.now().add(delay);
       await _storageService.saveTaskFollowUp(
@@ -494,12 +497,8 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (actionId == 'followup_later' || actionId == 'smoked_no') {
-      await _storageService.saveProtocolViolation(
-        type: 'followup_deferred',
-        severity: 'low',
-        source: 'app_flow',
+      await _protocolViolationService.logFollowUpDeferred(
         taskTitle: taskTitle,
-        details: 'Follow-up response deferred for 10 minutes.',
       );
       final delay = await _storageService.resolveAdaptivePostponeDelay();
       final followUpAt = DateTime.now().add(delay);
@@ -511,6 +510,7 @@ class _HomePageState extends State<HomePage> {
         scheduledAt: DateTime.now(),
         respondedAt: DateTime.now(),
       );
+      await _storageService.resolveTaskFollowUpByTitle(taskTitle);
       await _storageService.saveTaskFollowUp(
         taskTitle: taskTitle,
         scheduledAt: followUpAt,
@@ -525,13 +525,16 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadHomeMetrics() async {
     // İlk anketin quit date'ini al ve smoke-free days hesapla
-    final initialRecord = await _storageService.loadSurveyHistory()
-        .then((records) => records.where((r) => r.type == 'initial').firstOrNull);
+    final initialRecord = await _storageService.loadSurveyHistory().then(
+      (records) => records.where((r) => r.type == 'initial').firstOrNull,
+    );
     int smokeFreeDays = 0;
     if (initialRecord?.quitDate != null) {
-      smokeFreeDays = DateTime.now().difference(initialRecord!.quitDate!).inDays;
+      smokeFreeDays = DateTime.now()
+          .difference(initialRecord!.quitDate!)
+          .inDays;
     }
-    
+
     final registrationCompleted = await _storageService
         .loadInitialRegistrationCompleted();
     final notificationContextReason = await _storageService.loadSetting(
@@ -586,6 +589,9 @@ class _HomePageState extends State<HomePage> {
       );
     }
     final pendingFollowUps = await _storageService.loadPendingTaskFollowUps();
+    final recentTaskEvents = await _storageService.loadRecentAdaptiveTaskEvents(
+      limit: 100,
+    );
     if (!mounted) return;
     setState(() {
       _smokeFreeDays = smokeFreeDays;
@@ -634,15 +640,15 @@ class _HomePageState extends State<HomePage> {
       _riskyTriggers = behavior?.riskyTriggers ?? const [];
       _riskyHours = behavior?.riskyHours ?? const [];
       _breathTrendText = behavior?.breathTrend ?? 'Stable';
+      _breathTrendRecent = behavior?.breathTrendLast3 ?? 'stable';
       _progressSummaryText = behavior?.progressSummary ?? 'Stable';
-        _adaptivePlanItems = adaptivePlan?.items ?? const [];
-        _todaysTasks = _adaptivePlanItems.isNotEmpty
+      _adaptivePlanItems = adaptivePlan?.items ?? const [];
+      _todaysTasks = _adaptivePlanItems.isNotEmpty
           ? _adaptivePlanItems.map((item) => item.taskTitle).toList()
           : behavior?.todaysTasks ?? const [];
       _coachCommands = behavior?.coachCommands ?? const [];
       _durationBarrierCommands = behavior?.durationBarrierCommands ?? const [];
-        _durationBarrierHistoryCount =
-          behavior?.durationBarrierHistoryCount ?? 0;
+      _durationBarrierHistoryCount = behavior?.durationBarrierHistoryCount ?? 0;
       _commandSuccessScores = behavior?.commandSuccessScores ?? const {};
       _commandCategoryScores = behavior?.commandCategoryScores ?? const {};
       _commandMixMode = behavior?.commandMixMode ?? 'balanced';
@@ -683,8 +689,41 @@ class _HomePageState extends State<HomePage> {
       _lastRespiratoryBurden =
           int.tryParse(lastRespiratoryBurdenRaw ?? '25')?.clamp(0, 100) ?? 25;
       _lastRespiratoryState = lastRespiratoryStateRaw ?? 'stable';
+      // Restore each task's real state from persisted history instead of
+      // defaulting everything to 'new' — otherwise a task the user already
+      // completed earlier today looks unfamiliar again after any process
+      // restart (the in-memory _taskStates map doesn't survive one), which
+      // was the direct cause of the mandatory-task screen re-triggering
+      // for work that was already done.
+      final deferredTitles = pendingFollowUps
+          .map((row) => row['taskTitle'] as String)
+          .toSet();
+      final resolvedToday = <String, String>{};
+      for (final event in recentTaskEvents) {
+        final respondedAt = event.respondedAt;
+        if (respondedAt.year == now.year &&
+            respondedAt.month == now.month &&
+            respondedAt.day == now.day) {
+          resolvedToday[event.taskTitle] = switch (event.outcome) {
+            AdaptiveTaskOutcome.success => 'completed',
+            AdaptiveTaskOutcome.smoked => 'failed',
+            _ => 'deferred',
+          };
+        }
+      }
       for (final task in _todaysTasks) {
-        _taskStates.putIfAbsent(task, () => 'new');
+        if (_taskStates.containsKey(task)) {
+          // Already has a live, in-session state (e.g. just completed) —
+          // don't overwrite it with older persisted history.
+          continue;
+        }
+        if (deferredTitles.contains(task)) {
+          _taskStates[task] = 'deferred';
+        } else if (resolvedToday.containsKey(task)) {
+          _taskStates[task] = resolvedToday[task]!;
+        } else {
+          _taskStates[task] = 'new';
+        }
       }
       _pendingFollowUps = pendingFollowUps;
     });
@@ -710,7 +749,183 @@ class _HomePageState extends State<HomePage> {
       unawaited(_scheduleCoachCommandNotificationsIfNeeded());
       unawaited(_scheduleDurationBarrierNotificationsIfNeeded());
       unawaited(_presentMandatoryTaskIfNeeded());
+      await _ensureMentorMessageCadence();
+      await _ensureFakeCallBarrierCadence();
     }
+  }
+
+  /// Turns [SmokingTimePredictionEngine]'s likely-smoking hours into the
+  /// hour-range strings [DisciplineProtocolService.generateUnpredictableMoments]
+  /// expects, so the fake-call barrier fires when the user is actually
+  /// likely to smoke rather than at a generic risky-hour signal. This is
+  /// purely an internal scheduling input — never shown to the user. Falls
+  /// back to [_riskyHours] when the prediction has nothing to say yet (e.g.
+  /// survey data too sparse), so behavior is unchanged until real signal
+  /// exists.
+  Future<List<String>> _predictedFakeCallRiskyHours(DateTime now) async {
+    final prediction = await _storageService.loadSmokingTimePrediction(
+      now: now,
+    );
+    if (prediction.topHours.isEmpty) {
+      return _riskyHours;
+    }
+    return prediction.topHours
+        .map((hour) => '$hour:00-${(hour + 1) % 24}:00')
+        .toList();
+  }
+
+  /// Handles the fake-call duration barrier's day-to-day lifecycle:
+  /// - if a barrier's window has already ended, ask whether the user
+  ///   stayed smoke-free and record the outcome;
+  /// - otherwise, if none is active/pending and the duration-barrier
+  ///   feature is enabled, schedule today's single unpredictable moment
+  ///   (same idea as DisciplineProtocolService's adaptive task timing).
+  Future<void> _ensureFakeCallBarrierCadence() async {
+    if (!_registrationCompleted) {
+      return;
+    }
+
+    final endsAt = await _storageService.loadFakeCallBarrierEndsAt();
+    if (endsAt != null) {
+      if (DateTime.now().isAfter(endsAt)) {
+        await _askFakeCallBarrierOutcome();
+      }
+      return;
+    }
+
+    final enabled = _durationBarrierEnabled;
+    if (!enabled) {
+      return;
+    }
+
+    final today = DateTime.now();
+    final todayKey = '${today.year}-${today.month}-${today.day}';
+    final scheduledDateRaw = await _storageService.loadSetting(
+      'fake_call_scheduled_date',
+    );
+    if (scheduledDateRaw == todayKey) {
+      return;
+    }
+
+    final sleepRaw = await _storageService.loadSleepTime() ?? '21:00';
+    final parts = sleepRaw.split(':');
+    final sleepHour = int.tryParse(parts.first) ?? 21;
+    final sleepMinute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+    var sleepAt = DateTime(
+      today.year,
+      today.month,
+      today.day,
+      sleepHour,
+      sleepMinute,
+    );
+    if (!sleepAt.isAfter(today)) {
+      sleepAt = sleepAt.add(const Duration(days: 1));
+    }
+
+    final totalOutcomes = _recentSuccessCount + _recentFailureCount;
+    final successRate = totalOutcomes == 0
+        ? 0.5
+        : _recentSuccessCount / totalOutcomes;
+
+    // Recorded once per day here so StorageService.loadFakeCallBarrierDurationMinutes
+    // can ease off the barrier duration on a worsening breath-test trend —
+    // see that method for why. A worsening trend also earns an extra
+    // barrier attempt today (more chances to catch a risky moment), while
+    // improving/stable trends leave the existing success-streak-driven
+    // cadence alone.
+    await _storageService.saveBreathTrendToday(_breathTrendRecent);
+    final moments = _disciplineProtocolService.generateUnpredictableMoments(
+      now: today,
+      sleepAt: sleepAt,
+      riskyHours: await _predictedFakeCallRiskyHours(today),
+      minCount: _breathTrendRecent == 'worsening' ? 2 : 1,
+      successRate: successRate,
+    );
+    if (moments.isEmpty) {
+      return;
+    }
+
+    final callerName = await _storageService.loadFakeCallerName();
+    var fireAt = moments.first;
+    if (await DevicePermissionService.isInPhoneCall()) {
+      final afterCall = DateTime.now().add(
+        FakeCallBarrierService.realCallCollisionDelay,
+      );
+      if (afterCall.isAfter(fireAt)) {
+        fireAt = afterCall;
+      }
+    }
+    await NotificationService.scheduleFakeCallBarrier(
+      fireAt: fireAt,
+      callerName: callerName,
+    );
+    await _storageService.saveSetting('fake_call_scheduled_date', todayKey);
+  }
+
+  Future<void> _askFakeCallBarrierOutcome() async {
+    if (!mounted) {
+      return;
+    }
+    final stayedSmokeFree = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('fakeCallOutcomeTitle')),
+        content: Text(context.t('fakeCallOutcomeQuestion')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('no')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('yes')),
+          ),
+        ],
+      ),
+    );
+    if (stayedSmokeFree == null) {
+      return;
+    }
+    await _fakeCallBarrierService.recordOutcome(succeeded: stayedSmokeFree);
+  }
+
+  /// Generates today's mentor message once per day (if not already done)
+  /// and loads the latest one for [_buildMentorCard] to display.
+  Future<void> _ensureMentorMessageCadence() async {
+    final latest = await _storageService.loadLatestMentorMessage();
+    final now = DateTime.now();
+    final needsToday =
+        latest == null ||
+        latest.type == 'reframed_violation' ||
+        latest.createdAt.year != now.year ||
+        latest.createdAt.month != now.month ||
+        latest.createdAt.day != now.day;
+
+    final message = needsToday
+        ? await _storageService.generateDailyMentorMessage(now: now)
+        : latest;
+
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _latestMentorMessage = message;
+    });
+  }
+
+  Future<void> _replyToMentorMessage(String reply) async {
+    final message = _latestMentorMessage;
+    if (message == null) {
+      return;
+    }
+    await _storageService.replyToMentorMessage(message.id, reply);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _latestMentorMessage = message.copyWith(read: true, userReply: reply);
+    });
   }
 
   Future<void> _ensureDailyBreathCadence() async {
@@ -813,15 +1028,22 @@ class _HomePageState extends State<HomePage> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(context.t('dailyBreathMandatoryTitle')),
-          content: Text(context.t('dailyBreathMandatoryContent')),
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(context.t('dailyBreathMandatoryStart')),
-            ),
-          ],
+        // barrierDismissible: false only blocks tap-outside — it does NOT
+        // block the Android system/gesture back button, which would
+        // otherwise pop this "mandatory" dialog for free. PopScope closes
+        // that gap so the only way off this dialog is the button below.
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            title: Text(context.t('dailyBreathMandatoryTitle')),
+            content: Text(context.t('dailyBreathMandatoryContent')),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(context.t('dailyBreathMandatoryStart')),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -835,14 +1057,15 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
+    // Routes through the consolidated daily check-in (breath exercise +
+    // short recall survey) rather than straight into the breath test alone
+    // — this is meant to be the day's one touchpoint, not just a breath
+    // reminder.
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => BreathTestPage(
-          name: widget.name,
-          packsPerDay: packsPerDay,
-          navigateToHomeOnComplete: true,
-        ),
+        builder: (_) =>
+            DailyCheckInPage(name: widget.name, packsPerDay: packsPerDay),
       ),
     );
 
@@ -906,6 +1129,13 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _openReports() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ReportsPage()),
+    );
+  }
+
   Future<void> _ensureWeeklySurveyCadence() async {
     if (!_registrationCompleted || !mounted) {
       return;
@@ -931,15 +1161,18 @@ class _HomePageState extends State<HomePage> {
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return AlertDialog(
-            title: Text(context.t('weeklyMandatoryTitle')),
-            content: Text(context.t('weeklyMandatoryContent')),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: Text(context.t('weeklyMandatoryGo')),
-              ),
-            ],
+          return PopScope(
+            canPop: false,
+            child: AlertDialog(
+              title: Text(context.t('weeklyMandatoryTitle')),
+              content: Text(context.t('weeklyMandatoryContent')),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(context.t('weeklyMandatoryGo')),
+                ),
+              ],
+            ),
           );
         },
       );
@@ -954,6 +1187,7 @@ class _HomePageState extends State<HomePage> {
           builder: (_) => WeeklySurveyPage(
             navigateToHomeAfterSave: true,
             nameSeed: widget.name,
+            isMandatory: true,
           ),
         ),
       );
@@ -964,7 +1198,8 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    final promptedToday = await _storageService.hasWeeklySurveyBeenPromptedToday();
+    final promptedToday = await _storageService
+        .hasWeeklySurveyBeenPromptedToday();
     if (promptedToday) {
       return;
     }
@@ -1011,8 +1246,34 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// Mirrors [_resolveDurationBarrierNotificationLimit]'s engagement-based
+  /// throttling for the separate "coach command" notification stream, which
+  /// previously always sent a fixed 3 pushes regardless of whether the user
+  /// had been ignoring them. Returns 0 to suppress the burst entirely when
+  /// the user has been consistently missing tasks and risk isn't elevated
+  /// enough to justify pushing anyway.
+  int _resolveCoachCommandNotificationLimit() {
+    if (_recentFailureCount >= _recentSuccessCount + 4 &&
+        _adaptiveRiskScore < 70) {
+      return 0;
+    }
+
+    var limit = 3;
+    if (_recentFailureCount > _recentSuccessCount + 2) {
+      limit -= 1;
+    } else if (_recentSuccessCount >= _recentFailureCount + 3) {
+      limit -= 1;
+    }
+    return limit.clamp(1, 3);
+  }
+
   Future<void> _scheduleCoachCommandNotificationsIfNeeded() async {
     if (!_registrationCompleted || _coachCommands.isEmpty) {
+      return;
+    }
+
+    final limit = _resolveCoachCommandNotificationLimit();
+    if (limit <= 0) {
       return;
     }
 
@@ -1029,6 +1290,7 @@ class _HomePageState extends State<HomePage> {
     await NotificationService.scheduleCoachCommandNotifications(
       commands: _coachCommands,
       predictedRiskWindow: _predictedRiskWindow,
+      maxNotifications: limit,
     );
     await _storageService.saveSetting(
       'last_coach_command_signature',
@@ -1080,9 +1342,9 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.t('commandSaved'))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.t('commandSaved'))));
     await _loadHomeMetrics();
   }
 
@@ -1129,12 +1391,8 @@ class _HomePageState extends State<HomePage> {
       completedAt: DateTime.now(),
     );
     if (!result) {
-      await _storageService.saveProtocolViolation(
-        type: 'duration_barrier_failure',
-        severity: 'medium',
-        source: 'app_flow',
-        taskTitle: command,
-        details: 'User marked smoke-free duration as failed after timer end.',
+      await _protocolViolationService.logDurationBarrierFailure(
+        command: command,
       );
     }
 
@@ -1189,7 +1447,9 @@ class _HomePageState extends State<HomePage> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${context.t('smokeFreeCounterTitle')}: ${_formatRemainingDuration(duration)}'),
+        content: Text(
+          '${context.t('smokeFreeCounterTitle')}: ${_formatRemainingDuration(duration)}',
+        ),
       ),
     );
   }
@@ -1226,9 +1486,9 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.t('barrierDeferred10'))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.t('barrierDeferred10'))));
     await _loadHomeMetrics();
   }
 
@@ -1300,8 +1560,35 @@ class _HomePageState extends State<HomePage> {
     return spacing;
   }
 
+  // Tasks are still meant to prompt the user several times across a day —
+  // this only guards against the screen firing again within a short window
+  // of its last appearance (e.g. a handful of app relaunches in a row),
+  // not against it appearing multiple times per day, which is intended.
+  static const Duration _mandatoryGateCooldown = Duration(minutes: 30);
+
   Future<void> _presentMandatoryTaskIfNeeded() async {
     if (!mounted || _mandatoryTaskShown || !_registrationCompleted) {
+      return;
+    }
+
+    final lastShownAt = await _storageService.loadLastMandatoryGateShownAt();
+    if (lastShownAt != null &&
+        DateTime.now().difference(lastShownAt) < _mandatoryGateCooldown) {
+      return;
+    }
+
+    // Don't interrupt a genuine phone call with the mandatory-command
+    // screen — same posture already used for the fake-call barrier (see
+    // FakeCallBarrierService.realCallCollisionDelay). This is a one-shot
+    // check at present-time, not a live listener, so it retries once
+    // after the same delay rather than trying to catch the exact moment
+    // the call ends.
+    if (await DevicePermissionService.isInPhoneCall()) {
+      _mandatoryGateCallRetryTimer?.cancel();
+      _mandatoryGateCallRetryTimer = Timer(
+        FakeCallBarrierService.realCallCollisionDelay,
+        () => unawaited(_presentMandatoryTaskIfNeeded()),
+      );
       return;
     }
 
@@ -1327,12 +1614,9 @@ class _HomePageState extends State<HomePage> {
     }
 
     _mandatoryTaskShown = true;
-    await _storageService.saveProtocolViolation(
-      type: 'mandatory_gate',
-      severity: 'medium',
-      source: 'app_flow',
-      taskTitle: taskTitle,
-      details: 'Mandatory task screen displayed on app open.',
+    // Guarded non-null by the empty-check above.
+    await _protocolViolationService.logMandatoryGateShown(
+      taskTitle: taskTitle!,
     );
 
     if (!mounted) {
@@ -1345,7 +1629,7 @@ class _HomePageState extends State<HomePage> {
     );
 
     if (result == true) {
-      await _startTaskFromMandatoryScreen(taskTitle!);
+      await _startTaskFromMandatoryScreen(taskTitle);
     }
   }
 
@@ -1774,44 +2058,11 @@ class _HomePageState extends State<HomePage> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _openLanguageSettings() async {
-    final initialCode = await LanguageService.loadSelectedLanguageCode();
-    if (!mounted) {
-      return;
-    }
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (modalContext) {
-        return LanguageSelectionModal(
-          selectedCode: initialCode,
-          onLanguageSelected: (code) async {
-            await LanguageService.saveSelectedLanguageCode(code);
-            await AppTexts.ensureLanguageLoaded(code);
-            await NotificationService.refreshLocalizedResources();
-            if (!mounted) {
-              return;
-            }
-            NoSmokeApp.setLocale(
-              context,
-              LanguageService.supportedLanguages[code] ?? const Locale('en'),
-            );
-            if (modalContext.mounted) {
-              Navigator.of(modalContext).pop();
-            }
-          },
-        );
-      },
-    );
-  }
-
   Future<bool> _validateRegistrationInputs() async {
     final records = await _storageService.loadSurveyHistory();
-    final hasInitialSurvey = records.any((record) => record.type == 'initial');
+    final hasInitialSurvey = await _storageService.hasCompletedInitialSurvey(
+      records: records,
+    );
     final hasBreathTest = records.any((record) => record.type == 'breath_test');
     return hasInitialSurvey && hasBreathTest;
   }
@@ -1996,9 +2247,7 @@ class _HomePageState extends State<HomePage> {
     } catch (error, stackTrace) {
       debugPrint('[CompleteRegistration] Failed: $error');
       debugPrintStack(stackTrace: stackTrace);
-      _showRegistrationError(
-        context.t('completeRegistrationError'),
-      );
+      _showRegistrationError(context.t('completeRegistrationError'));
     } finally {
       if (mounted) {
         setState(() {
@@ -2011,26 +2260,13 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const NoSmokeLogo(size: 28),
-            const SizedBox(width: 10),
-            Text(context.t('home')),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: _openLanguageSettings,
-            icon: const Icon(Icons.language),
-            tooltip: context.t('selectLanguage'),
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(context),
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          // Extra bottom clearance so the floating SOS button (fixed to
+          // the viewport, not the scroll position) never sits directly
+          // over the last few lines of content.
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 96),
           child: Column(
             children: [
               Text(
@@ -2041,90 +2277,15 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 24),
-              // Daily Streak Counter - Büyük ve göze çarpıcı
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.teal.withAlpha((255 * 0.2).toInt()),
-                  border: Border.all(color: Colors.teal, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      '🔥 ${context.t('smokeFreeStreak')}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.teal,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$_smokeFreeDays',
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.teal,
-                      ),
-                    ),
-                    Text(
-                      context.t('dayUnit'),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        color: Colors.teal,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              if (_latestMentorMessage != null) ...[
+                _buildMentorCard(context),
+                const SizedBox(height: 24),
+              ],
+              _buildStreakCounter(context),
               const SizedBox(height: 24),
-              // Health Metrics Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => HealthMetricsPage(name: widget.name),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.show_chart),
-                  label: Text(context.t('healthMetrics')),
-                ),
-              ),
+              _buildHealthMetricsButton(context),
               const SizedBox(height: 24),
-              Text(
-                '${context.t('riskLevel')}: ${_localizedRiskLabel()}',
-                style: const TextStyle(fontSize: 18),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${context.t('riskScore')}: ${_adaptiveRiskScore == 0 ? widget.riskScore : _adaptiveRiskScore} / 100',
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '${context.t('lastSurveyDate')}: ${_lastSurveyDateText == 'noRecordYet' ? context.t('noRecordYet') : _lastSurveyDateText}',
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '${context.t('lastBreathTest')}: ${_lastBreathText == 'noRecordYet' ? context.t('noRecordYet') : _lastBreathText}',
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${context.t('dailyBreathStatus')}: ${context.t(_dailyBreathStatus)}',
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${context.t('lastExhale')}: $_latestExhaleSeconds${context.t('secShort')} • ${context.t('lastInhale')}: $_latestInhaleSeconds${context.t('secShort')}',
-                style: const TextStyle(fontSize: 16),
-              ),
+              _buildSummaryStats(context),
               const SizedBox(height: 16),
               _buildMainMenuCard(),
               const SizedBox(height: 16),
@@ -2136,59 +2297,261 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               _buildTodayTaskCard(),
               const SizedBox(height: 12),
-              if (_pendingFollowUps.isNotEmpty)
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const TaskFollowUpPage(),
-                        ),
-                      );
-                      if (!mounted) {
-                        return;
-                      }
-                      await _loadHomeMetrics();
-                      await _restorePendingFollowUps();
-                    },
-                    child: Text(context.t('openTaskFollowUpScreen')),
-                  ),
-                ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ProtocolViolationsPage(),
-                      ),
-                    );
-                  },
-                  child: Text(context.t('openViolationReportScreen')),
-                ),
-              ),
+              _buildQuickLinkButtons(context),
               const SizedBox(height: 16),
               _buildConsecutiveSmokingCard(),
               const SizedBox(height: 24),
-              if (!_registrationCompleted)
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isCompletingRegistration
-                        ? null
-                        : _completeRegistration,
-                    child: Text(context.t('completeRegistration')),
-                  ),
-                ),
+              if (!_registrationCompleted) _buildCompleteRegistrationButton(context),
             ],
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        key: const ValueKey('craving_sos_button'),
+        onPressed: _openCravingSos,
+        backgroundColor: Colors.redAccent,
+        icon: const Icon(Icons.sos),
+        label: Text(context.t('cravingSosButton')),
+      ),
     );
+  }
+
+  AppBar _buildAppBar(BuildContext context) {
+    return AppBar(
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const NoSmokeLogo(size: 28),
+          const SizedBox(width: 10),
+          Text(context.t('home')),
+        ],
+      ),
+      actions: [
+        IconButton(
+          onPressed: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SettingsPage()),
+            );
+            if (!mounted) return;
+            await _loadHomeMetrics();
+          },
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: context.t('settingsTitle'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMentorCard(BuildContext context) {
+    final message = _latestMentorMessage!;
+    final toneColor = switch (message.tone) {
+      'coach' => AppTheme.noSmokeGreen,
+      'supportive' => Colors.amber,
+      _ => Colors.white70,
+    };
+    final answered = message.userReply != null;
+
+    return Card(
+      color: toneColor.withValues(alpha: 0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: toneColor.withValues(alpha: 0.4)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.favorite, color: toneColor, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  context.t('mentorCardTitle'),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: toneColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(message.text, style: const TextStyle(fontSize: 14, height: 1.5)),
+            if (message.quickReplies.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              if (answered)
+                Text(
+                  '${context.t('mentorReplySentPrefix')}: ${message.userReply}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.white54,
+                  ),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: message.quickReplies
+                      .map(
+                        (reply) => OutlinedButton(
+                          onPressed: () => _replyToMentorMessage(reply),
+                          child: Text(reply),
+                        ),
+                      )
+                      .toList(),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStreakCounter(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.teal.withAlpha((255 * 0.2).toInt()),
+        border: Border.all(color: Colors.teal, width: 2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Text(
+            '🔥 ${context.t('smokeFreeStreak')}',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.teal,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$_smokeFreeDays',
+            style: const TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+              color: Colors.teal,
+            ),
+          ),
+          Text(
+            context.t('dayUnit'),
+            style: const TextStyle(fontSize: 18, color: Colors.teal),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthMetricsButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => HealthMetricsPage(name: widget.name),
+            ),
+          );
+        },
+        icon: const Icon(Icons.show_chart),
+        label: Text(context.t('healthMetrics')),
+      ),
+    );
+  }
+
+  Widget _buildSummaryStats(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          '${context.t('riskLevel')}: ${_localizedRiskLabel()}',
+          style: const TextStyle(fontSize: 18),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${context.t('riskScore')}: ${_adaptiveRiskScore == 0 ? widget.riskScore : _adaptiveRiskScore} / 100',
+          style: const TextStyle(fontSize: 16),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '${context.t('lastSurveyDate')}: ${_lastSurveyDateText == 'noRecordYet' ? context.t('noRecordYet') : _lastSurveyDateText}',
+          style: const TextStyle(fontSize: 16),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          '${context.t('lastBreathTest')}: ${_lastBreathText == 'noRecordYet' ? context.t('noRecordYet') : _lastBreathText}',
+          style: const TextStyle(fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${context.t('dailyBreathStatus')}: ${context.t(_dailyBreathStatus)}',
+          style: const TextStyle(fontSize: 16),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${context.t('lastExhale')}: $_latestExhaleSeconds${context.t('secShort')} • ${context.t('lastInhale')}: $_latestInhaleSeconds${context.t('secShort')}',
+          style: const TextStyle(fontSize: 16),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickLinkButtons(BuildContext context) {
+    return Column(
+      children: [
+        if (_pendingFollowUps.isNotEmpty)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TaskFollowUpPage()),
+                );
+                if (!mounted) {
+                  return;
+                }
+                await _loadHomeMetrics();
+                await _restorePendingFollowUps();
+              },
+              child: Text(context.t('openTaskFollowUpScreen')),
+            ),
+          ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ProtocolViolationsPage(),
+                ),
+              );
+            },
+            child: Text(context.t('openViolationReportScreen')),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompleteRegistrationButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isCompletingRegistration ? null : _completeRegistration,
+        child: Text(context.t('completeRegistration')),
+      ),
+    );
+  }
+
+  void _openCravingSos() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const CravingSosPage()));
   }
 
   Widget _buildAdaptiveInsightsCard() {
@@ -2343,7 +2706,9 @@ class _HomePageState extends State<HomePage> {
                   decoration: BoxDecoration(
                     color: Colors.red.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.red.withValues(alpha: 0.35)),
+                    border: Border.all(
+                      color: Colors.red.withValues(alpha: 0.35),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2432,6 +2797,30 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _logSmokingNow() async {
+    // Optional, non-forcing real-time log: one tap, no follow-up questions,
+    // with a brief undo window for accidental taps. This is purely a
+    // ground-truth data point for SmokingTimePredictionEngine — it does not
+    // gate anything or trigger any other flow.
+    final eventId = await _storageService.logSmokingNow();
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(context.t('smokingLoggedConfirmation')),
+          action: SnackBarAction(
+            label: context.t('undo'),
+            onPressed: () {
+              unawaited(_storageService.deleteSmokingEvent(eventId));
+            },
+          ),
+        ),
+      );
+  }
+
   Widget _buildMainMenuCard() {
     return Card(
       child: Padding(
@@ -2475,6 +2864,14 @@ class _HomePageState extends State<HomePage> {
                 SizedBox(
                   width: 160,
                   child: OutlinedButton.icon(
+                    onPressed: _openReports,
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    label: Text(context.t('menuReports')),
+                  ),
+                ),
+                SizedBox(
+                  width: 160,
+                  child: OutlinedButton.icon(
                     onPressed: () async {
                       await Navigator.push(
                         context,
@@ -2485,6 +2882,49 @@ class _HomePageState extends State<HomePage> {
                     },
                     icon: const Icon(Icons.report_gmailerrorred),
                     label: Text(context.t('menuViolationReport')),
+                  ),
+                ),
+                SizedBox(
+                  width: 160,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SurveyHistoryPage(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.history),
+                    label: Text(context.t('menuSurveyHistory')),
+                  ),
+                ),
+                SizedBox(
+                  width: 160,
+                  child: OutlinedButton.icon(
+                    onPressed: _logSmokingNow,
+                    icon: const Icon(Icons.smoking_rooms_outlined),
+                    label: Text(context.t('menuLogSmokingNow')),
+                  ),
+                ),
+                SizedBox(
+                  width: 160,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final packsPerDay = await _resolveLatestPacksPerDay();
+                      if (!mounted) return;
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => DailyCheckInPage(
+                            name: widget.name,
+                            packsPerDay: packsPerDay,
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.nights_stay_outlined),
+                    label: Text(context.t('menuDailyCheckIn')),
                   ),
                 ),
               ],

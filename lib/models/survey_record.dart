@@ -41,7 +41,7 @@ class SurveyRecord {
       'title': title,
       'name': name,
       'packsPerDay': packsPerDay,
-      'dailyCigarettes': _packsToLegacyCigarettes(packsPerDay),
+      'dailyCigarettes': packsToLegacyCigarettes(packsPerDay),
       'exhaleTestSeconds': exhaleTestSeconds,
       'inhaleTestSeconds': inhaleTestSeconds,
       'riskScore': riskScore,
@@ -100,7 +100,15 @@ class SurveyRecord {
     }
   }
 
-  static int _packsToLegacyCigarettes(String packsPerDay) {
+  /// Canonical pack-option -> estimated cigarettes/day mapping. Covers every
+  /// value [PacksPerDaySection] actually offers (including '3+ paket' and
+  /// the '4'..'7+ paket' high-pack follow-up). Other call sites should reuse
+  /// this instead of re-deriving their own switch over the same strings —
+  /// a previous copy in weekly_survey_page.dart silently mis-scored heavy
+  /// smokers because it had dead cases for values the UI never produces
+  /// ('1.5 paket', '5+ paket') and was missing the real ones ('5'/'6'/'7+
+  /// paket').
+  static int packsToLegacyCigarettes(String packsPerDay) {
     switch (packsPerDay) {
       case '1 paketten az':
         return 10;
@@ -122,6 +130,35 @@ class SurveyRecord {
         return 80;
       default:
         return 10;
+    }
+  }
+
+  /// Same pack-option coverage as [packsToLegacyCigarettes], but as a plain
+  /// pack count (0.5 for "1 paketten az") rather than an assumed-20-per-pack
+  /// cigarette total — for callers that have the user's real
+  /// cigarettesPerPack and just need the multiplier.
+  static double packCountEstimate(String packsPerDay) {
+    switch (packsPerDay) {
+      case '1 paketten az':
+        return 0.5;
+      case '1 paket':
+        return 1;
+      case '2 paket':
+        return 2;
+      case '3 paket':
+        return 3;
+      case '4 paket':
+        return 4;
+      case '5 paket':
+        return 5;
+      case '6 paket':
+        return 6;
+      case '7+ paket':
+        return 7;
+      case '3+ paket':
+        return 4;
+      default:
+        return 0.5;
     }
   }
 

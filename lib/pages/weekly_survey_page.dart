@@ -5,6 +5,7 @@ import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import 'breath_test_page.dart';
 import 'home_page.dart';
+import '../services/behavior_engine.dart';
 import '../services/storage_service.dart';
 import '../widgets/consecutive_smoking_section.dart';
 import '../widgets/packs_per_day_section.dart';
@@ -14,10 +15,18 @@ class WeeklySurveyPage extends StatefulWidget {
   final bool navigateToHomeAfterSave;
   final String? nameSeed;
 
+  /// True when this page was opened because the weekly survey is overdue
+  /// and completing it is required, rather than a voluntary/optional visit
+  /// (menu button, post-breath-test prompt). When true, the system/gesture
+  /// back button is blocked so the requirement can't be skipped for free —
+  /// consistent with [MandatoryTaskPage]'s PopScope(canPop: false).
+  final bool isMandatory;
+
   const WeeklySurveyPage({
     super.key,
     this.navigateToHomeAfterSave = false,
     this.nameSeed,
+    this.isMandatory = false,
   });
 
   @override
@@ -26,6 +35,7 @@ class WeeklySurveyPage extends StatefulWidget {
 
 class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
   final StorageService _storageService = StorageService();
+  final BehaviorEngine _behaviorEngine = BehaviorEngine();
   final TextEditingController _noteController = TextEditingController();
   bool _detailedMode = false;
   bool _autoDetailedByRisk = false;
@@ -147,19 +157,33 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     }
   }
 
-  Future<void> _saveWeeklySurvey() async {
+  Future<SurveyRecord> _saveWeeklySurvey() async {
+    // Read everything from `context` before the first await below — this
+    // function has no `mounted`/`context.mounted` guard of its own (its
+    // callers do), so BuildContext must not be touched after an async gap.
+    final unnamedUserLabel = context.t('unnamedUser');
+    final weeklyRecordTitle = context.t('weeklyRecordTitle');
+
     final now = DateTime.now();
     final recordId = now.millisecondsSinceEpoch.toString();
     final weeklyPayload = _detailedMode
         ? _buildWeeklyPayload()
         : _buildQuickWeeklyPayload();
-    final weeklyRiskScore = _calculateWeeklyRiskScore(weeklyPayload);
-    final weeklyRiskLevel = _levelFromScore(weeklyRiskScore);
+    // Single source of truth for weekly risk scoring: the same formula the
+    // home dashboard uses (BehaviorEngine.evaluateWeeklySurveyRisk), so the
+    // score/level shown right after submitting can never disagree with the
+    // score/level shown later on the dashboard for the same data.
+    final profileContext = await _storageService.loadMergedProfileContext();
+    final weeklyEvaluation = _behaviorEngine.evaluateWeeklySurveyRisk(
+      weeklyPayload,
+      profileContext: profileContext,
+    );
+    final weeklyRiskScore = (weeklyEvaluation['weeklyRiskScore'] as num)
+        .toInt();
+    final weeklyRiskLevel = weeklyEvaluation['weeklyRiskLevel'].toString();
     final effectiveDailyBreathTarget = _resolveEffectiveDailyBreathTarget(
       weeklyPayload,
     );
-    final unnamedUserLabel = context.t('unnamedUser');
-    final weeklyRecordTitle = context.t('weeklyRecordTitle');
     final latestUserName = await _resolveLatestUserName(unnamedUserLabel);
     final record = SurveyRecord(
       id: recordId,
@@ -234,6 +258,8 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
         latestInhaleSeconds: 0,
       ),
     );
+
+    return record;
   }
 
   Map<String, dynamic> _buildWeeklyPayload() {
@@ -560,179 +586,13 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     return options;
   }
 
+  // Delegates to the canonical mapping in SurveyRecord so this can never
+  // drift out of sync with the pack options PacksPerDaySection actually
+  // offers (this used to be an independent switch with dead cases for
+  // values the UI never produces and missing cases for '5'/'6'/'7+ paket',
+  // silently under-scoring heavy smokers).
   int _estimatedDailyCigarettes(String packOption) {
-    switch (packOption) {
-      case '1 paketten az':
-        return 8;
-      case '1 paket':
-        return 20;
-      case '1.5 paket':
-        return 30;
-      case '2 paket':
-        return 40;
-      case '3 paket':
-        return 60;
-      case '4 paket':
-        return 80;
-      case '5+ paket':
-        return 100;
-      default:
-        return 12;
-    }
-  }
-
-  int _calculateWeeklyRiskScore(Map<String, dynamic> payload) {
-    final avgCigs = payload['avgCigarettesPerDay'] as int? ?? 0;
-    final delta = payload['deltaVsLastWeek']?.toString() ?? 'same';
-    final lapseCount = payload['lapseCount'] as int? ?? 0;
-    final cravingMax = payload['cravingMax'] as int? ?? 0;
-    final motivation = payload['motivation'] as int? ?? 0;
-    final selfEfficacy = payload['selfEfficacy'] as int? ?? 0;
-    final alcoholDays = payload['alcoholDays'] as int? ?? 0;
-    final socialDays = payload['socialSmokingContextDays'] as int? ?? 0;
-
-    final withdrawal =
-        payload['withdrawal'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final withdrawalSum =
-        (withdrawal['irritability'] as int? ?? 0) +
-        (withdrawal['anxiety'] as int? ?? 0) +
-        (withdrawal['sleepProblem'] as int? ?? 0) +
-        (withdrawal['concentrationProblem'] as int? ?? 0) +
-        (withdrawal['appetiteIncrease'] as int? ?? 0);
-
-    final trigger =
-        payload['triggerExposureDays'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final triggerSum =
-        (trigger['coffee'] as int? ?? 0) +
-        (trigger['meal'] as int? ?? 0) +
-        (trigger['driving'] as int? ?? 0) +
-        (trigger['stress'] as int? ?? 0) +
-        (trigger['phone'] as int? ?? 0) +
-        (trigger['social'] as int? ?? 0) +
-        (trigger['alcohol'] as int? ?? 0);
-
-    final task =
-        payload['task'] as Map<String, dynamic>? ?? const <String, dynamic>{};
-    final treatment =
-        payload['treatment'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final respiratory =
-        payload['respiratory'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final catLike =
-        respiratory['catLike'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final warningSigns =
-        respiratory['warningSigns'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final completion = task['weeklyCompletionRate'] as int? ?? 0;
-    final adherence = treatment['adherence'] as int? ?? 0;
-    final dailyTaskAdherenceLevel =
-        (task['dailyTaskAdherenceLevel']?.toString() ?? 'orta').toLowerCase();
-    final mmrcGrade = (respiratory['mmrcGrade'] as int? ?? 2).clamp(1, 5);
-
-    final catSum =
-        (catLike['cough'] as int? ?? 0) +
-        (catLike['phlegm'] as int? ?? 0) +
-        (catLike['chestTightness'] as int? ?? 0) +
-        (catLike['breathlessnessStairs'] as int? ?? 0) +
-        (catLike['activityLimitation'] as int? ?? 0) +
-        (catLike['confidenceLeavingHome'] as int? ?? 0) +
-        (catLike['sleepQualityResp'] as int? ?? 0) +
-        (catLike['energyLevelResp'] as int? ?? 0);
-    final warningNight =
-        (warningSigns['increasedNightBreathlessnessDays'] as int? ?? 0).clamp(
-          0,
-          7,
-        );
-    final warningSputumIncrease =
-        (warningSigns['sputumIncreaseDays'] as int? ?? 0).clamp(0, 7);
-    final warningSputumColor =
-        (warningSigns['sputumColorChangeDays'] as int? ?? 0).clamp(0, 7);
-    final warningWheeze = (warningSigns['wheezeDays'] as int? ?? 0).clamp(0, 7);
-
-    final mmrcComponent = ((mmrcGrade - 1) / 4) * 100;
-    final catComponent = (catSum / 40) * 100;
-    final warningComponent =
-        (((warningNight +
-                        warningSputumIncrease +
-                        warningSputumColor +
-                        warningWheeze) /
-                    28) *
-                100)
-            .clamp(0, 100)
-            .toDouble();
-    final respiratoryBurden =
-        ((0.35 * mmrcComponent) +
-                (0.45 * catComponent) +
-                (0.20 * warningComponent))
-            .clamp(0, 100)
-            .toDouble();
-
-    var c = avgCigs <= 0
-        ? 0
-        : avgCigs <= 5
-        ? 20
-        : avgCigs <= 10
-        ? 40
-        : avgCigs <= 20
-        ? 65
-        : 85;
-    if (delta == 'increased') {
-      c += 10;
-    } else if (delta == 'decreased') {
-      c -= 10;
-    }
-    c = c.clamp(0, 100);
-
-    final l = (lapseCount * 15).clamp(0, 100);
-    final w = ((withdrawalSum / 15) * 100).round().clamp(0, 100);
-    var t = ((triggerSum / 49) * 100).round();
-    if ((trigger['stress'] as int? ?? 0) >= 5) {
-      t += 10;
-    }
-    if ((trigger['alcohol'] as int? ?? 0) >= 3) {
-      t += 10;
-    }
-    t = t.clamp(0, 100);
-    final a = (alcoholDays * 8 + socialDays * 6).clamp(0, 100);
-    final m = ((10 - motivation).clamp(0, 10) * 10).clamp(0, 100);
-    final s = ((10 - selfEfficacy).clamp(0, 10) * 10).clamp(0, 100);
-    final p = (100 - ((0.6 * completion * 10) + (0.4 * adherence * 10)))
-        .round()
-        .clamp(0, 100);
-
-    var score =
-        (0.22 * c +
-                0.18 * l +
-                0.18 * w +
-                0.14 * t +
-                0.08 * a +
-                0.08 * m +
-                0.06 * s +
-                0.06 * p)
-            .round();
-    score = ((0.82 * score) + (0.18 * respiratoryBurden)).round().clamp(0, 100);
-    if (mmrcGrade >= 4 && warningComponent >= 50) {
-      score = (score + 8).clamp(0, 100);
-    }
-    if (warningSputumColor >= 3 && warningNight >= 3) {
-      score = (score + 6).clamp(0, 100);
-    }
-    if (dailyTaskAdherenceLevel == 'az') {
-      score = (score + 8).clamp(0, 100);
-    } else if (dailyTaskAdherenceLevel == 'cok') {
-      score = (score - 6).clamp(0, 100);
-    }
-    if (lapseCount >= 3 && cravingMax >= 8) {
-      score = (score + 12).clamp(0, 100);
-    }
-    if (lapseCount == 0 && selfEfficacy >= 8 && completion >= 8) {
-      score = (score - 8).clamp(0, 100);
-    }
-    return score;
+    return SurveyRecord.packsToLegacyCigarettes(packOption);
   }
 
   double _calculateRespiratoryBurdenFromPayload(Map<String, dynamic> payload) {
@@ -810,19 +670,6 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
       target = (target + 1).clamp(1, 4);
     }
     return target;
-  }
-
-  String _levelFromScore(int score) {
-    if (score >= 75) {
-      return 'KRİTİK';
-    }
-    if (score >= 50) {
-      return 'YÜKSEK';
-    }
-    if (score >= 25) {
-      return 'ORTA';
-    }
-    return 'DÜŞÜK';
   }
 
   Widget _intSlider({
@@ -975,564 +822,537 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(context.t('weeklySurvey'))),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSurveyModeCard(),
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade50,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Text(
-                'Bu bolum tani testi degildir. KOAH tanisi icin spirometri ve doktor degerlendirmesi gerekir. Sonuclar takip amaclidir.',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.orange.shade900,
-                  height: 1.35,
+    return PopScope(
+      canPop: !widget.isMandatory,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(context.t('weeklySurvey')),
+          automaticallyImplyLeading: !widget.isMandatory,
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildSurveyModeCard(),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.orange.shade200),
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const SurveySectionHeader(
-              title: 'Genel Durum',
-              icon: Icons.smoking_rooms,
-              withTopSpacing: false,
-            ),
-            PacksPerDaySection(
-              selectedPackOption: _packOption,
-              selectedHighPackOption: _highPackOption,
-              onPackOptionChanged: (value) {
-                setState(() {
-                  _packOption = value;
-                  if (value != '3+ paket') {
-                    _highPackOption = null;
-                  } else {
-                    _highPackOption ??=
-                        PacksPerDaySection.highPackOptions.first;
-                  }
-                });
-              },
-              onHighPackOptionChanged: (value) {
-                setState(() {
-                  _highPackOption = value;
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _mood,
-              decoration: InputDecoration(
-                labelText: context.t('weeklyMood'),
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                DropdownMenuItem(value: 'İyi', child: Text(context.t('good'))),
-                DropdownMenuItem(
-                  value: 'Orta',
-                  child: Text(context.t('stressMedium')),
+                child: Text(
+                  'Bu bolum tani testi degildir. KOAH tanisi icin spirometri ve doktor degerlendirmesi gerekir. Sonuclar takip amaclidir.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange.shade900,
+                    height: 1.35,
+                  ),
                 ),
-                DropdownMenuItem(value: 'Kötü', child: Text(context.t('bad'))),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _mood = value ?? 'Orta';
-                });
-              },
-            ),
-            if (_detailedMode) ...[
-              const SizedBox(height: 12),
-              _intSlider(
-                label: context.t('weeklyAvgDailyCigarettes'),
-                value: _avgCigarettesPerDay,
-                min: 0,
-                max: 40,
-                onChanged: (v) => setState(() => _avgCigarettesPerDay = v),
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: _deltaVsLastWeek,
-                decoration: InputDecoration(
-                  labelText: context.t('weeklyComparedLastWeek'),
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: 'decreased',
-                    child: Text(context.t('weeklyDecrease')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'same',
-                    child: Text(context.t('weeklySame')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'increased',
-                    child: Text(context.t('weeklyIncrease')),
-                  ),
-                ],
-                onChanged: (value) =>
-                    setState(() => _deltaVsLastWeek = value ?? 'same'),
               ),
               const SizedBox(height: 12),
-              _intSlider(
-                label: context.t('weeklyLapseCount'),
-                value: _lapseCount,
-                min: 0,
-                max: 10,
-                onChanged: (v) => setState(() => _lapseCount = v),
+              const SurveySectionHeader(
+                title: 'Genel Durum',
+                icon: Icons.smoking_rooms,
+                withTopSpacing: false,
               ),
-              _intSlider(
-                label: context.t('weeklyCravingAvg'),
-                value: _cravingAvg,
-                min: 0,
-                max: 10,
-                onChanged: (v) => setState(() => _cravingAvg = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyCravingMax'),
-                value: _cravingMax,
-                min: 0,
-                max: 10,
-                onChanged: (v) => setState(() => _cravingMax = v),
-              ),
-              SurveySectionHeader(
-                title: context.t('weeklyWithdrawalSymptoms'),
-                icon: Icons.mood_bad_outlined,
-              ),
-              _intSlider(
-                label: context.t('weeklyIrritability'),
-                value: _withdrawIrritability,
-                min: 0,
-                max: 3,
-                onChanged: (v) => setState(() => _withdrawIrritability = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyAnxiety'),
-                value: _withdrawAnxiety,
-                min: 0,
-                max: 3,
-                onChanged: (v) => setState(() => _withdrawAnxiety = v),
-              ),
-              _intSlider(
-                label: context.t('weeklySleepIssue'),
-                value: _withdrawSleep,
-                min: 0,
-                max: 3,
-                onChanged: (v) => setState(() => _withdrawSleep = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyConcentrationIssue'),
-                value: _withdrawConcentration,
-                min: 0,
-                max: 3,
-                onChanged: (v) => setState(() => _withdrawConcentration = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyAppetiteIncrease'),
-                value: _withdrawAppetite,
-                min: 0,
-                max: 3,
-                onChanged: (v) => setState(() => _withdrawAppetite = v),
-              ),
-              SurveySectionHeader(
-                title: context.t('weeklyTriggerExposure'),
-                icon: Icons.warning_amber_outlined,
-              ),
-              _intSlider(
-                label: context.t('triggerCoffee'),
-                value: _triggerCoffeeDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) => setState(() => _triggerCoffeeDays = v),
-              ),
-              _intSlider(
-                label: context.t('triggerMeal'),
-                value: _triggerMealDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) => setState(() => _triggerMealDays = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyVehicleUse'),
-                value: _triggerDrivingDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) => setState(() => _triggerDrivingDays = v),
-              ),
-              _intSlider(
-                label: context.t('triggerStress'),
-                value: _triggerStressDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) => setState(() => _triggerStressDays = v),
-              ),
-              _intSlider(
-                label: context.t('triggerPhone'),
-                value: _triggerPhoneDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) => setState(() => _triggerPhoneDays = v),
-              ),
-              _intSlider(
-                label: context.t('triggerSocial'),
-                value: _triggerSocialDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) => setState(() => _triggerSocialDays = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyAlcoholTrigger'),
-                value: _triggerAlcoholDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) => setState(() => _triggerAlcoholDays = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyAlcoholDays'),
-                value: _alcoholDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) => setState(() => _alcoholDays = v),
-              ),
-              _intSlider(
-                label: context.t('weeklySocialSmokingDays'),
-                value: _socialSmokingContextDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) => setState(() => _socialSmokingContextDays = v),
-              ),
-              SurveySectionHeader(
-                title: context.t('weeklyMedicationUse'),
-                icon: Icons.medication_outlined,
-              ),
-              DropdownButtonFormField<String>(
-                initialValue: _medicationUse,
-                decoration: InputDecoration(
-                  labelText: context.t('weeklyMedicationUse'),
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: 'none',
-                    child: Text(context.t('weeklyNone')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'irregular',
-                    child: Text(context.t('weeklyIrregular')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'regular',
-                    child: Text(context.t('weeklyRegular')),
-                  ),
-                ],
-                onChanged: (value) =>
-                    setState(() => _medicationUse = value ?? 'regular'),
-              ),
-              SwitchListTile(
-                title: Text(context.t('weeklySideEffectsExperienced')),
-                value: _sideEffects,
-                onChanged: (v) => setState(() => _sideEffects = v),
-              ),
-              SwitchListTile(
-                title: Text(context.t('weeklyUsedCounseling')),
-                value: _usedCounselingOrQuitline,
-                onChanged: (v) => setState(() => _usedCounselingOrQuitline = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyMedicationAdherence'),
-                value: _medicationAdherence,
-                min: 0,
-                max: 10,
-                onChanged: (v) => setState(() => _medicationAdherence = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyFamilySupport'),
-                value: _familySupport,
-                min: 0,
-                max: 10,
-                onChanged: (v) => setState(() => _familySupport = v),
-              ),
-              _intSlider(
-                label: context.t('weeklySelfEfficacy'),
-                value: _selfEfficacy,
-                min: 0,
-                max: 10,
-                onChanged: (v) => setState(() => _selfEfficacy = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyMotivation'),
-                value: _motivation,
-                min: 0,
-                max: 10,
-                onChanged: (v) => setState(() => _motivation = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyTaskCompletion'),
-                value: _weeklyCompletionRate,
-                min: 0,
-                max: 10,
-                onChanged: (v) => setState(() => _weeklyCompletionRate = v),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _dailyTaskAdherenceLevel,
-                decoration: InputDecoration(
-                  labelText: context.t('weeklyTaskAdherence'),
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(value: 'az', child: Text(context.t('few'))),
-                  DropdownMenuItem(
-                    value: 'orta',
-                    child: Text(context.t('stressMedium')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'cok',
-                    child: Text(context.t('veryHigh')),
-                  ),
-                ],
-                onChanged: (value) =>
-                    setState(() => _dailyTaskAdherenceLevel = value ?? 'orta'),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _commandBurdenLevel,
-                decoration: InputDecoration(
-                  labelText: context.t('weeklyCommandBurden'),
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(value: 'az', child: Text(context.t('few'))),
-                  DropdownMenuItem(
-                    value: 'orta',
-                    child: Text(context.t('stressMedium')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'cok',
-                    child: Text(context.t('veryHigh')),
-                  ),
-                ],
-                onChanged: (value) =>
-                    setState(() => _commandBurdenLevel = value ?? 'orta'),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                initialValue: _dailyBreathTestTarget,
-                decoration: InputDecoration(
-                  labelText: context.t('weeklyDailyBreathTarget'),
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: 1,
-                    child: Text(context.t('weeklyBreathOnceMandatory')),
-                  ),
-                  DropdownMenuItem(
-                    value: 2,
-                    child: Text(context.t('weeklyBreathTwice')),
-                  ),
-                  DropdownMenuItem(
-                    value: 3,
-                    child: Text(context.t('weeklyBreathThree')),
-                  ),
-                  DropdownMenuItem(
-                    value: 4,
-                    child: Text(context.t('weeklyBreathFour')),
-                  ),
-                ],
-                onChanged: (value) =>
-                    setState(() => _dailyBreathTestTarget = value ?? 1),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                initialValue: _mmrcGrade,
-                decoration: InputDecoration(
-                  labelText: context.t('weeklyMmrcGrade'),
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: 1,
-                    child: Text(context.t('weeklyMmrc1')),
-                  ),
-                  DropdownMenuItem(
-                    value: 2,
-                    child: Text(context.t('weeklyMmrc2')),
-                  ),
-                  DropdownMenuItem(
-                    value: 3,
-                    child: Text(context.t('weeklyMmrc3')),
-                  ),
-                  DropdownMenuItem(
-                    value: 4,
-                    child: Text(context.t('weeklyMmrc4')),
-                  ),
-                  DropdownMenuItem(
-                    value: 5,
-                    child: Text(context.t('weeklyMmrc5')),
-                  ),
-                ],
-                onChanged: (value) => setState(() => _mmrcGrade = value ?? 2),
-              ),
-              SurveySectionHeader(
-                title: context.t('weeklyRespiratoryBurden'),
-                icon: Icons.air_outlined,
-              ),
-              _intSlider(
-                label: context.t('weeklyCough'),
-                value: _catCough,
-                min: 0,
-                max: 5,
-                onChanged: (v) => setState(() => _catCough = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyPhlegm'),
-                value: _catPhlegm,
-                min: 0,
-                max: 5,
-                onChanged: (v) => setState(() => _catPhlegm = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyChestTightness'),
-                value: _catChestTightness,
-                min: 0,
-                max: 5,
-                onChanged: (v) => setState(() => _catChestTightness = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyBreathlessnessStairs'),
-                value: _catBreathlessnessStairs,
-                min: 0,
-                max: 5,
-                onChanged: (v) => setState(() => _catBreathlessnessStairs = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyActivityLimitation'),
-                value: _catActivityLimitation,
-                min: 0,
-                max: 5,
-                onChanged: (v) => setState(() => _catActivityLimitation = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyConfidenceLeavingHome'),
-                value: _catConfidenceLeavingHome,
-                min: 0,
-                max: 5,
-                onChanged: (v) => setState(() => _catConfidenceLeavingHome = v),
-              ),
-              _intSlider(
-                label: context.t('weeklySleepQualityResp'),
-                value: _catSleepQualityResp,
-                min: 0,
-                max: 5,
-                onChanged: (v) => setState(() => _catSleepQualityResp = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyEnergyLevelResp'),
-                value: _catEnergyLevelResp,
-                min: 0,
-                max: 5,
-                onChanged: (v) => setState(() => _catEnergyLevelResp = v),
-              ),
-              SurveySectionHeader(
-                title: context.t('weeklyWarningSigns'),
-                icon: Icons.report_problem_outlined,
-              ),
-              _intSlider(
-                label: context.t('weeklyNightBreathlessness'),
-                value: _warningNightBreathlessnessDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) =>
-                    setState(() => _warningNightBreathlessnessDays = v),
-              ),
-              _intSlider(
-                label: context.t('weeklySputumIncrease'),
-                value: _warningSputumIncreaseDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) =>
-                    setState(() => _warningSputumIncreaseDays = v),
-              ),
-              _intSlider(
-                label: context.t('weeklySputumColorChange'),
-                value: _warningSputumColorChangeDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) =>
-                    setState(() => _warningSputumColorChangeDays = v),
-              ),
-              _intSlider(
-                label: context.t('weeklyWheeze'),
-                value: _warningWheezeDays,
-                min: 0,
-                max: 7,
-                onChanged: (v) => setState(() => _warningWheezeDays = v),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _lunchTime,
-                decoration: InputDecoration(
-                  labelText: context.t('weeklyLunchTime'),
-                  border: OutlineInputBorder(),
-                ),
-                items: _timeOptions()
-                    .map(
-                      (time) => DropdownMenuItem<String>(
-                        value: time,
-                        child: Text(time),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => _lunchTime = value ?? '12:30'),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _dinnerTime,
-                decoration: InputDecoration(
-                  labelText: context.t('weeklyDinnerTime'),
-                  border: OutlineInputBorder(),
-                ),
-                items: _timeOptions()
-                    .map(
-                      (time) => DropdownMenuItem<String>(
-                        value: time,
-                        child: Text(time),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => _dinnerTime = value ?? '19:00'),
-              ),
-              const SizedBox(height: 12),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(context.t('weeklyProfileChanged')),
-                value: _profileContextChanged,
-                onChanged: (value) {
+              PacksPerDaySection(
+                selectedPackOption: _packOption,
+                selectedHighPackOption: _highPackOption,
+                onPackOptionChanged: (value) {
                   setState(() {
-                    _profileContextChanged = value;
+                    _packOption = value;
+                    if (value != '3+ paket') {
+                      _highPackOption = null;
+                    } else {
+                      _highPackOption ??=
+                          PacksPerDaySection.highPackOptions.first;
+                    }
+                  });
+                },
+                onHighPackOptionChanged: (value) {
+                  setState(() {
+                    _highPackOption = value;
                   });
                 },
               ),
-              if (_profileContextChanged) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _mood,
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyMood'),
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  DropdownMenuItem(
+                    value: 'İyi',
+                    child: Text(context.t('good')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Orta',
+                    child: Text(context.t('stressMedium')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Kötü',
+                    child: Text(context.t('bad')),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _mood = value ?? 'Orta';
+                  });
+                },
+              ),
+              if (_detailedMode) ...[
+                const SizedBox(height: 12),
+                _intSlider(
+                  label: context.t('weeklyAvgDailyCigarettes'),
+                  value: _avgCigarettesPerDay,
+                  min: 0,
+                  max: 40,
+                  onChanged: (v) => setState(() => _avgCigarettesPerDay = v),
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: _deltaVsLastWeek,
+                  decoration: InputDecoration(
+                    labelText: context.t('weeklyComparedLastWeek'),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'decreased',
+                      child: Text(context.t('weeklyDecrease')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'same',
+                      child: Text(context.t('weeklySame')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'increased',
+                      child: Text(context.t('weeklyIncrease')),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _deltaVsLastWeek = value ?? 'same'),
+                ),
+                const SizedBox(height: 12),
+                _intSlider(
+                  label: context.t('weeklyLapseCount'),
+                  value: _lapseCount,
+                  min: 0,
+                  max: 10,
+                  onChanged: (v) => setState(() => _lapseCount = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyCravingAvg'),
+                  value: _cravingAvg,
+                  min: 0,
+                  max: 10,
+                  onChanged: (v) => setState(() => _cravingAvg = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyCravingMax'),
+                  value: _cravingMax,
+                  min: 0,
+                  max: 10,
+                  onChanged: (v) => setState(() => _cravingMax = v),
+                ),
+                SurveySectionHeader(
+                  title: context.t('weeklyWithdrawalSymptoms'),
+                  icon: Icons.mood_bad_outlined,
+                ),
+                _intSlider(
+                  label: context.t('weeklyIrritability'),
+                  value: _withdrawIrritability,
+                  min: 0,
+                  max: 3,
+                  onChanged: (v) => setState(() => _withdrawIrritability = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyAnxiety'),
+                  value: _withdrawAnxiety,
+                  min: 0,
+                  max: 3,
+                  onChanged: (v) => setState(() => _withdrawAnxiety = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklySleepIssue'),
+                  value: _withdrawSleep,
+                  min: 0,
+                  max: 3,
+                  onChanged: (v) => setState(() => _withdrawSleep = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyConcentrationIssue'),
+                  value: _withdrawConcentration,
+                  min: 0,
+                  max: 3,
+                  onChanged: (v) => setState(() => _withdrawConcentration = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyAppetiteIncrease'),
+                  value: _withdrawAppetite,
+                  min: 0,
+                  max: 3,
+                  onChanged: (v) => setState(() => _withdrawAppetite = v),
+                ),
+                SurveySectionHeader(
+                  title: context.t('weeklyTriggerExposure'),
+                  icon: Icons.warning_amber_outlined,
+                ),
+                _intSlider(
+                  label: context.t('triggerCoffee'),
+                  value: _triggerCoffeeDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) => setState(() => _triggerCoffeeDays = v),
+                ),
+                _intSlider(
+                  label: context.t('triggerMeal'),
+                  value: _triggerMealDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) => setState(() => _triggerMealDays = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyVehicleUse'),
+                  value: _triggerDrivingDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) => setState(() => _triggerDrivingDays = v),
+                ),
+                _intSlider(
+                  label: context.t('triggerStress'),
+                  value: _triggerStressDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) => setState(() => _triggerStressDays = v),
+                ),
+                _intSlider(
+                  label: context.t('triggerPhone'),
+                  value: _triggerPhoneDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) => setState(() => _triggerPhoneDays = v),
+                ),
+                _intSlider(
+                  label: context.t('triggerSocial'),
+                  value: _triggerSocialDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) => setState(() => _triggerSocialDays = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyAlcoholTrigger'),
+                  value: _triggerAlcoholDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) => setState(() => _triggerAlcoholDays = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyAlcoholDays'),
+                  value: _alcoholDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) => setState(() => _alcoholDays = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklySocialSmokingDays'),
+                  value: _socialSmokingContextDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) =>
+                      setState(() => _socialSmokingContextDays = v),
+                ),
+                SurveySectionHeader(
+                  title: context.t('weeklyMedicationUse'),
+                  icon: Icons.medication_outlined,
+                ),
+                DropdownButtonFormField<String>(
+                  initialValue: _medicationUse,
+                  decoration: InputDecoration(
+                    labelText: context.t('weeklyMedicationUse'),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'none',
+                      child: Text(context.t('weeklyNone')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'irregular',
+                      child: Text(context.t('weeklyIrregular')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'regular',
+                      child: Text(context.t('weeklyRegular')),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _medicationUse = value ?? 'regular'),
+                ),
+                SwitchListTile(
+                  title: Text(context.t('weeklySideEffectsExperienced')),
+                  value: _sideEffects,
+                  onChanged: (v) => setState(() => _sideEffects = v),
+                ),
+                SwitchListTile(
+                  title: Text(context.t('weeklyUsedCounseling')),
+                  value: _usedCounselingOrQuitline,
+                  onChanged: (v) =>
+                      setState(() => _usedCounselingOrQuitline = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyMedicationAdherence'),
+                  value: _medicationAdherence,
+                  min: 0,
+                  max: 10,
+                  onChanged: (v) => setState(() => _medicationAdherence = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyFamilySupport'),
+                  value: _familySupport,
+                  min: 0,
+                  max: 10,
+                  onChanged: (v) => setState(() => _familySupport = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklySelfEfficacy'),
+                  value: _selfEfficacy,
+                  min: 0,
+                  max: 10,
+                  onChanged: (v) => setState(() => _selfEfficacy = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyMotivation'),
+                  value: _motivation,
+                  min: 0,
+                  max: 10,
+                  onChanged: (v) => setState(() => _motivation = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyTaskCompletion'),
+                  value: _weeklyCompletionRate,
+                  min: 0,
+                  max: 10,
+                  onChanged: (v) => setState(() => _weeklyCompletionRate = v),
+                ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  initialValue: _updatedWorkStart,
+                  initialValue: _dailyTaskAdherenceLevel,
                   decoration: InputDecoration(
-                    labelText: context.t('updatedWorkStart'),
-                    border: const OutlineInputBorder(),
+                    labelText: context.t('weeklyTaskAdherence'),
+                    border: OutlineInputBorder(),
                   ),
-                  hint: Text(context.t('selectOption')),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'az',
+                      child: Text(context.t('few')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'orta',
+                      child: Text(context.t('stressMedium')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'cok',
+                      child: Text(context.t('veryHigh')),
+                    ),
+                  ],
+                  onChanged: (value) => setState(
+                    () => _dailyTaskAdherenceLevel = value ?? 'orta',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: _commandBurdenLevel,
+                  decoration: InputDecoration(
+                    labelText: context.t('weeklyCommandBurden'),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'az',
+                      child: Text(context.t('few')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'orta',
+                      child: Text(context.t('stressMedium')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'cok',
+                      child: Text(context.t('veryHigh')),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _commandBurdenLevel = value ?? 'orta'),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  initialValue: _dailyBreathTestTarget,
+                  decoration: InputDecoration(
+                    labelText: context.t('weeklyDailyBreathTarget'),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 1,
+                      child: Text(context.t('weeklyBreathOnceMandatory')),
+                    ),
+                    DropdownMenuItem(
+                      value: 2,
+                      child: Text(context.t('weeklyBreathTwice')),
+                    ),
+                    DropdownMenuItem(
+                      value: 3,
+                      child: Text(context.t('weeklyBreathThree')),
+                    ),
+                    DropdownMenuItem(
+                      value: 4,
+                      child: Text(context.t('weeklyBreathFour')),
+                    ),
+                  ],
+                  onChanged: (value) =>
+                      setState(() => _dailyBreathTestTarget = value ?? 1),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<int>(
+                  initialValue: _mmrcGrade,
+                  decoration: InputDecoration(
+                    labelText: context.t('weeklyMmrcGrade'),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 1,
+                      child: Text(context.t('weeklyMmrc1')),
+                    ),
+                    DropdownMenuItem(
+                      value: 2,
+                      child: Text(context.t('weeklyMmrc2')),
+                    ),
+                    DropdownMenuItem(
+                      value: 3,
+                      child: Text(context.t('weeklyMmrc3')),
+                    ),
+                    DropdownMenuItem(
+                      value: 4,
+                      child: Text(context.t('weeklyMmrc4')),
+                    ),
+                    DropdownMenuItem(
+                      value: 5,
+                      child: Text(context.t('weeklyMmrc5')),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => _mmrcGrade = value ?? 2),
+                ),
+                SurveySectionHeader(
+                  title: context.t('weeklyRespiratoryBurden'),
+                  icon: Icons.air_outlined,
+                ),
+                _intSlider(
+                  label: context.t('weeklyCough'),
+                  value: _catCough,
+                  min: 0,
+                  max: 5,
+                  onChanged: (v) => setState(() => _catCough = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyPhlegm'),
+                  value: _catPhlegm,
+                  min: 0,
+                  max: 5,
+                  onChanged: (v) => setState(() => _catPhlegm = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyChestTightness'),
+                  value: _catChestTightness,
+                  min: 0,
+                  max: 5,
+                  onChanged: (v) => setState(() => _catChestTightness = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyBreathlessnessStairs'),
+                  value: _catBreathlessnessStairs,
+                  min: 0,
+                  max: 5,
+                  onChanged: (v) =>
+                      setState(() => _catBreathlessnessStairs = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyActivityLimitation'),
+                  value: _catActivityLimitation,
+                  min: 0,
+                  max: 5,
+                  onChanged: (v) => setState(() => _catActivityLimitation = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyConfidenceLeavingHome'),
+                  value: _catConfidenceLeavingHome,
+                  min: 0,
+                  max: 5,
+                  onChanged: (v) =>
+                      setState(() => _catConfidenceLeavingHome = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklySleepQualityResp'),
+                  value: _catSleepQualityResp,
+                  min: 0,
+                  max: 5,
+                  onChanged: (v) => setState(() => _catSleepQualityResp = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyEnergyLevelResp'),
+                  value: _catEnergyLevelResp,
+                  min: 0,
+                  max: 5,
+                  onChanged: (v) => setState(() => _catEnergyLevelResp = v),
+                ),
+                SurveySectionHeader(
+                  title: context.t('weeklyWarningSigns'),
+                  icon: Icons.report_problem_outlined,
+                ),
+                _intSlider(
+                  label: context.t('weeklyNightBreathlessness'),
+                  value: _warningNightBreathlessnessDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) =>
+                      setState(() => _warningNightBreathlessnessDays = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklySputumIncrease'),
+                  value: _warningSputumIncreaseDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) =>
+                      setState(() => _warningSputumIncreaseDays = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklySputumColorChange'),
+                  value: _warningSputumColorChangeDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) =>
+                      setState(() => _warningSputumColorChangeDays = v),
+                ),
+                _intSlider(
+                  label: context.t('weeklyWheeze'),
+                  value: _warningWheezeDays,
+                  min: 0,
+                  max: 7,
+                  onChanged: (v) => setState(() => _warningWheezeDays = v),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: _lunchTime,
+                  decoration: InputDecoration(
+                    labelText: context.t('weeklyLunchTime'),
+                    border: OutlineInputBorder(),
+                  ),
                   items: _timeOptions()
                       .map(
                         (time) => DropdownMenuItem<String>(
@@ -1542,16 +1362,15 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                       )
                       .toList(),
                   onChanged: (value) =>
-                      setState(() => _updatedWorkStart = value),
+                      setState(() => _lunchTime = value ?? '12:30'),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
-                  initialValue: _updatedWorkEnd,
+                  initialValue: _dinnerTime,
                   decoration: InputDecoration(
-                    labelText: context.t('updatedWorkEnd'),
-                    border: const OutlineInputBorder(),
+                    labelText: context.t('weeklyDinnerTime'),
+                    border: OutlineInputBorder(),
                   ),
-                  hint: Text(context.t('selectOption')),
                   items: _timeOptions()
                       .map(
                         (time) => DropdownMenuItem<String>(
@@ -1560,119 +1379,26 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                         ),
                       )
                       .toList(),
-                  onChanged: (value) => setState(() => _updatedWorkEnd = value),
+                  onChanged: (value) =>
+                      setState(() => _dinnerTime = value ?? '19:00'),
                 ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _updatedWorkplaceSmokingRule,
-                  decoration: InputDecoration(
-                    labelText: context.t('updatedWorkplaceRule'),
-                    border: const OutlineInputBorder(),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'Evet',
-                      child: Text(context.t('yes')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Hayır',
-                      child: Text(context.t('no')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Sadece molalarda',
-                      child: Text(context.t('onlyBreaks')),
-                    ),
-                  ],
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(context.t('weeklyProfileChanged')),
+                  value: _profileContextChanged,
                   onChanged: (value) {
                     setState(() {
-                      _updatedWorkplaceSmokingRule = value ?? 'Hayır';
-                      if (_updatedWorkplaceSmokingRule == 'Hayır') {
-                        _updatedHasSmokingBreaks = false;
-                      }
+                      _profileContextChanged = value;
                     });
                   },
                 ),
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    context.t('workDaysLabel'),
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _workDayOptions.map((day) {
-                    final key = day['key']!;
-                    return FilterChip(
-                      label: Text(context.t(day['labelKey']!)),
-                      selected: _updatedWorkingDays.contains(key),
-                      onSelected: (value) {
-                        setState(() {
-                          if (value) {
-                            _updatedWorkingDays.add(key);
-                          } else {
-                            _updatedWorkingDays.remove(key);
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _updatedWeekendSmokingPattern,
-                  decoration: InputDecoration(
-                    labelText: context.t('weekendPatternLabel'),
-                    border: const OutlineInputBorder(),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'Ayni',
-                      child: Text(context.t('weekendPatternSame')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'HaftaSonuDahaFazla',
-                      child: Text(context.t('weekendPatternMore')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'HaftaSonuDahaAz',
-                      child: Text(context.t('weekendPatternLess')),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _updatedWeekendSmokingPattern = value ?? 'Ayni';
-                    });
-                  },
-                ),
-                const SizedBox(height: 8),
-                if (_updatedWorkplaceSmokingRule != 'Hayır')
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(context.t('smokingBreakExists')),
-                    value: _updatedHasSmokingBreaks,
-                    onChanged: (value) {
-                      setState(() {
-                        _updatedHasSmokingBreaks = value;
-                        if (!value) {
-                          _updatedHasSecondBreak = false;
-                          _updatedBreakStart1 = null;
-                          _updatedBreakEnd1 = null;
-                          _updatedBreakStart2 = null;
-                          _updatedBreakEnd2 = null;
-                        }
-                      });
-                    },
-                  ),
-                if (_updatedWorkplaceSmokingRule != 'Hayır' &&
-                    _updatedHasSmokingBreaks) ...[
+                if (_profileContextChanged) ...[
+                  const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    initialValue: _updatedBreakStart1,
+                    initialValue: _updatedWorkStart,
                     decoration: InputDecoration(
-                      labelText: context.t('break1Start'),
+                      labelText: context.t('updatedWorkStart'),
                       border: const OutlineInputBorder(),
                     ),
                     hint: Text(context.t('selectOption')),
@@ -1685,13 +1411,13 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                         )
                         .toList(),
                     onChanged: (value) =>
-                        setState(() => _updatedBreakStart1 = value),
+                        setState(() => _updatedWorkStart = value),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    initialValue: _updatedBreakEnd1,
+                    initialValue: _updatedWorkEnd,
                     decoration: InputDecoration(
-                      labelText: context.t('break1End'),
+                      labelText: context.t('updatedWorkEnd'),
                       border: const OutlineInputBorder(),
                     ),
                     hint: Text(context.t('selectOption')),
@@ -1704,27 +1430,119 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                         )
                         .toList(),
                     onChanged: (value) =>
-                        setState(() => _updatedBreakEnd1 = value),
+                        setState(() => _updatedWorkEnd = value),
                   ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(context.t('break2Exists')),
-                    value: _updatedHasSecondBreak,
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: _updatedWorkplaceSmokingRule,
+                    decoration: InputDecoration(
+                      labelText: context.t('updatedWorkplaceRule'),
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'Evet',
+                        child: Text(context.t('yes')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Hayır',
+                        child: Text(context.t('no')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'Sadece molalarda',
+                        child: Text(context.t('onlyBreaks')),
+                      ),
+                    ],
                     onChanged: (value) {
                       setState(() {
-                        _updatedHasSecondBreak = value;
-                        if (!value) {
-                          _updatedBreakStart2 = null;
-                          _updatedBreakEnd2 = null;
+                        _updatedWorkplaceSmokingRule = value ?? 'Hayır';
+                        if (_updatedWorkplaceSmokingRule == 'Hayır') {
+                          _updatedHasSmokingBreaks = false;
                         }
                       });
                     },
                   ),
-                  if (_updatedHasSecondBreak) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      context.t('workDaysLabel'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _workDayOptions.map((day) {
+                      final key = day['key']!;
+                      return FilterChip(
+                        label: Text(context.t(day['labelKey']!)),
+                        selected: _updatedWorkingDays.contains(key),
+                        onSelected: (value) {
+                          setState(() {
+                            if (value) {
+                              _updatedWorkingDays.add(key);
+                            } else {
+                              _updatedWorkingDays.remove(key);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: _updatedWeekendSmokingPattern,
+                    decoration: InputDecoration(
+                      labelText: context.t('weekendPatternLabel'),
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'Ayni',
+                        child: Text(context.t('weekendPatternSame')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'HaftaSonuDahaFazla',
+                        child: Text(context.t('weekendPatternMore')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'HaftaSonuDahaAz',
+                        child: Text(context.t('weekendPatternLess')),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _updatedWeekendSmokingPattern = value ?? 'Ayni';
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  if (_updatedWorkplaceSmokingRule != 'Hayır')
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(context.t('smokingBreakExists')),
+                      value: _updatedHasSmokingBreaks,
+                      onChanged: (value) {
+                        setState(() {
+                          _updatedHasSmokingBreaks = value;
+                          if (!value) {
+                            _updatedHasSecondBreak = false;
+                            _updatedBreakStart1 = null;
+                            _updatedBreakEnd1 = null;
+                            _updatedBreakStart2 = null;
+                            _updatedBreakEnd2 = null;
+                          }
+                        });
+                      },
+                    ),
+                  if (_updatedWorkplaceSmokingRule != 'Hayır' &&
+                      _updatedHasSmokingBreaks) ...[
                     DropdownButtonFormField<String>(
-                      initialValue: _updatedBreakStart2,
+                      initialValue: _updatedBreakStart1,
                       decoration: InputDecoration(
-                        labelText: context.t('break2Start'),
+                        labelText: context.t('break1Start'),
                         border: const OutlineInputBorder(),
                       ),
                       hint: Text(context.t('selectOption')),
@@ -1737,13 +1555,13 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                           )
                           .toList(),
                       onChanged: (value) =>
-                          setState(() => _updatedBreakStart2 = value),
+                          setState(() => _updatedBreakStart1 = value),
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      initialValue: _updatedBreakEnd2,
+                      initialValue: _updatedBreakEnd1,
                       decoration: InputDecoration(
-                        labelText: context.t('break2End'),
+                        labelText: context.t('break1End'),
                         border: const OutlineInputBorder(),
                       ),
                       hint: Text(context.t('selectOption')),
@@ -1756,152 +1574,205 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                           )
                           .toList(),
                       onChanged: (value) =>
-                          setState(() => _updatedBreakEnd2 = value),
+                          setState(() => _updatedBreakEnd1 = value),
                     ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(context.t('break2Exists')),
+                      value: _updatedHasSecondBreak,
+                      onChanged: (value) {
+                        setState(() {
+                          _updatedHasSecondBreak = value;
+                          if (!value) {
+                            _updatedBreakStart2 = null;
+                            _updatedBreakEnd2 = null;
+                          }
+                        });
+                      },
+                    ),
+                    if (_updatedHasSecondBreak) ...[
+                      DropdownButtonFormField<String>(
+                        initialValue: _updatedBreakStart2,
+                        decoration: InputDecoration(
+                          labelText: context.t('break2Start'),
+                          border: const OutlineInputBorder(),
+                        ),
+                        hint: Text(context.t('selectOption')),
+                        items: _timeOptions()
+                            .map(
+                              (time) => DropdownMenuItem<String>(
+                                value: time,
+                                child: Text(time),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) =>
+                            setState(() => _updatedBreakStart2 = value),
+                      ),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: _updatedBreakEnd2,
+                        decoration: InputDecoration(
+                          labelText: context.t('break2End'),
+                          border: const OutlineInputBorder(),
+                        ),
+                        hint: Text(context.t('selectOption')),
+                        items: _timeOptions()
+                            .map(
+                              (time) => DropdownMenuItem<String>(
+                                value: time,
+                                child: Text(time),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) =>
+                            setState(() => _updatedBreakEnd2 = value),
+                      ),
+                    ],
                   ],
                 ],
+              ] else ...[
+                const SizedBox(height: 10),
+                Text(context.t('weeklyQuickModeInfo')),
+                const SizedBox(height: 10),
+                _buildQuickRespiratoryMiniCard(),
               ],
-            ] else ...[
-              const SizedBox(height: 10),
-              Text(context.t('weeklyQuickModeInfo')),
-              const SizedBox(height: 10),
-              _buildQuickRespiratoryMiniCard(),
-            ],
-            SurveySectionHeader(
-              title: context.t('durationBarrierTitle'),
-              icon: Icons.timer_outlined,
-            ),
-            DropdownButtonFormField<String>(
-              initialValue: _durationBarrierPreference,
-              decoration: InputDecoration(
-                labelText: context.t('durationBarrierHow'),
-                border: OutlineInputBorder(),
+              SurveySectionHeader(
+                title: context.t('durationBarrierTitle'),
+                icon: Icons.timer_outlined,
               ),
-              items: [
-                DropdownMenuItem(
-                  value: 'Begeniyorum',
-                  child: Text(context.t('durationBarrierLike')),
-                ),
-                DropdownMenuItem(
-                  value: 'Farketmez',
-                  child: Text(context.t('durationBarrierNeutral')),
-                ),
-                DropdownMenuItem(
-                  value: 'Begenmiyorum',
-                  child: Text(context.t('durationBarrierDislike')),
-                ),
-                DropdownMenuItem(
-                  value: 'Istemiyorum',
-                  child: Text(context.t('durationBarrierOff')),
-                ),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _durationBarrierPreference = value ?? 'Farketmez';
-                });
-              },
-            ),
-            const SizedBox(height: 12),
-            if (_durationBarrierPreference != 'Istemiyorum')
               DropdownButtonFormField<String>(
-                initialValue: _durationBarrierFrequencyPreference,
+                initialValue: _durationBarrierPreference,
                 decoration: InputDecoration(
-                  labelText: context.t('durationBarrierFrequencyHow'),
+                  labelText: context.t('durationBarrierHow'),
                   border: OutlineInputBorder(),
                 ),
                 items: [
-                  DropdownMenuItem(value: 'Az', child: Text(context.t('few'))),
                   DropdownMenuItem(
-                    value: 'Orta',
-                    child: Text(context.t('stressMedium')),
+                    value: 'Begeniyorum',
+                    child: Text(context.t('durationBarrierLike')),
                   ),
                   DropdownMenuItem(
-                    value: 'Cok',
-                    child: Text(context.t('veryHigh')),
+                    value: 'Farketmez',
+                    child: Text(context.t('durationBarrierNeutral')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Begenmiyorum',
+                    child: Text(context.t('durationBarrierDislike')),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Istemiyorum',
+                    child: Text(context.t('durationBarrierOff')),
                   ),
                 ],
                 onChanged: (value) {
                   setState(() {
-                    _durationBarrierFrequencyPreference = value ?? 'Orta';
+                    _durationBarrierPreference = value ?? 'Farketmez';
                   });
                 },
               ),
-            ConsecutiveSmokingSection(
-              consecutiveSmokingHabit: _consecutiveSmokingHabit,
-              consecutiveSmokingCount: _consecutiveSmokingCount,
-              onHabitChanged: (value) {
-                setState(() {
-                  _consecutiveSmokingHabit = value;
-                  if (value != 'Evet') {
-                    _consecutiveSmokingCount = null;
-                  }
-                });
-              },
-              onCountChanged: (value) {
-                setState(() {
-                  _consecutiveSmokingCount = value;
-                });
-              },
-            ),
-            const SurveySectionHeader(
-              title: 'Ek Notlar',
-              icon: Icons.edit_note_outlined,
-            ),
-            TextField(
-              controller: _noteController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                labelText: context.t('addNote'),
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              if (_durationBarrierPreference != 'Istemiyorum')
+                DropdownButtonFormField<String>(
+                  initialValue: _durationBarrierFrequencyPreference,
+                  decoration: InputDecoration(
+                    labelText: context.t('durationBarrierFrequencyHow'),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'Az',
+                      child: Text(context.t('few')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Orta',
+                      child: Text(context.t('stressMedium')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Cok',
+                      child: Text(context.t('veryHigh')),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _durationBarrierFrequencyPreference = value ?? 'Orta';
+                    });
+                  },
+                ),
+              ConsecutiveSmokingSection(
+                consecutiveSmokingHabit: _consecutiveSmokingHabit,
+                consecutiveSmokingCount: _consecutiveSmokingCount,
+                onHabitChanged: (value) {
+                  setState(() {
+                    _consecutiveSmokingHabit = value;
+                    if (value != 'Evet') {
+                      _consecutiveSmokingCount = null;
+                    }
+                  });
+                },
+                onCountChanged: (value) {
+                  setState(() {
+                    _consecutiveSmokingCount = value;
+                  });
+                },
               ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () async {
-                  final payload = _detailedMode
-                      ? _buildWeeklyPayload()
-                      : _buildQuickWeeklyPayload();
-                  final score = _calculateWeeklyRiskScore(payload);
-                  final level = _levelFromScore(score);
-                  final unnamedUserLabel = context.t('unnamedUser');
-                  await _saveWeeklySurvey();
-                  final latestUserName = await _resolveLatestUserName(
-                    unnamedUserLabel,
-                  );
-                  if (!mounted) return;
-                  if (!context.mounted) return;
+              const SurveySectionHeader(
+                title: 'Ek Notlar',
+                icon: Icons.edit_note_outlined,
+              ),
+              TextField(
+                controller: _noteController,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: context.t('addNote'),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    final unnamedUserLabel = context.t('unnamedUser');
+                    final savedRecord = await _saveWeeklySurvey();
+                    final score = savedRecord.riskScore;
+                    final level = savedRecord.riskLevel;
+                    final latestUserName = await _resolveLatestUserName(
+                      unnamedUserLabel,
+                    );
+                    if (!mounted) return;
+                    if (!context.mounted) return;
 
-                  if (widget.navigateToHomeAfterSave) {
+                    if (widget.navigateToHomeAfterSave) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => HomePage(
+                            name: widget.nameSeed ?? latestUserName,
+                            riskScore: score,
+                            riskLevel: level,
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => HomePage(
-                          name: widget.nameSeed ?? latestUserName,
-                          riskScore: score,
-                          riskLevel: level,
+                        builder: (_) => BreathTestPage(
+                          name: latestUserName,
+                          packsPerDay: _resolvedPacksPerDay,
                         ),
                       ),
                     );
-                    return;
-                  }
-
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BreathTestPage(
-                        name: latestUserName,
-                        packsPerDay: _resolvedPacksPerDay,
-                      ),
-                    ),
-                  );
-                },
-                child: Text(context.t('save')),
+                  },
+                  child: Text(context.t('save')),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

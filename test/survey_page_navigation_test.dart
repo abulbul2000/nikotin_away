@@ -140,9 +140,23 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    final continueButton = find.byKey(const ValueKey('survey_continue_button'));
-    await tester.ensureVisible(continueButton);
-    await tester.tap(continueButton);
+
+    // SurveyPage's onboarding form is a multi-step SurveyWizard; the
+    // primary button reads "İleri" (Next) on every step except the last,
+    // where it becomes "Tamamla" (Finish) and triggers the real
+    // validation/save flow. Drive through every step to reach it, leaving
+    // the (required) name field on step 1 empty the whole way.
+    final primaryButton = find.byKey(
+      const ValueKey('survey_wizard_primary_button'),
+    );
+    for (var step = 0; step < 5; step++) {
+      await tester.ensureVisible(primaryButton);
+      await tester.tap(primaryButton);
+      await tester.pumpAndSettle();
+    }
+
+    await tester.ensureVisible(primaryButton);
+    await tester.tap(primaryButton);
     await tester.pump();
 
     expect(find.text('Lütfen ad alanını doldurun.'), findsOneWidget);

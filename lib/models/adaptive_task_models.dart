@@ -232,6 +232,22 @@ class AdaptiveTaskPlanItem {
     required this.durationMinutes,
     required this.taskTitle,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'scheduledAt': scheduledAt.toIso8601String(),
+      'durationMinutes': durationMinutes,
+      'taskTitle': taskTitle,
+    };
+  }
+
+  factory AdaptiveTaskPlanItem.fromJson(Map<String, dynamic> json) {
+    return AdaptiveTaskPlanItem(
+      scheduledAt: DateTime.parse(json['scheduledAt'] as String),
+      durationMinutes: (json['durationMinutes'] as num).toInt(),
+      taskTitle: json['taskTitle'] as String,
+    );
+  }
 }
 
 class AdaptiveTaskPlan {
@@ -244,4 +260,22 @@ class AdaptiveTaskPlan {
     required this.baseDurationMinutes,
     required this.items,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'targetTaskCount': targetTaskCount,
+      'baseDurationMinutes': baseDurationMinutes,
+      'items': items.map((item) => item.toJson()).toList(),
+    };
+  }
+
+  factory AdaptiveTaskPlan.fromJson(Map<String, dynamic> json) {
+    return AdaptiveTaskPlan(
+      targetTaskCount: (json['targetTaskCount'] as num).toInt(),
+      baseDurationMinutes: (json['baseDurationMinutes'] as num).toInt(),
+      items: ((json['items'] as List?) ?? const [])
+          .map((raw) => AdaptiveTaskPlanItem.fromJson(raw as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 }

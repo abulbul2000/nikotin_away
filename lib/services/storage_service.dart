@@ -6,18 +6,28 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../engines/mentor_message_builder.dart';
 import '../models/adaptive_plan.dart';
 import '../models/adaptive_task_models.dart';
 import '../models/behavior_dashboard.dart';
 import '../models/breath_test_result.dart';
+import '../models/mentor_message.dart';
 import '../models/protocol_violation.dart';
+import '../models/location_visit_event.dart';
 import '../models/sensor_usage_event.dart';
+import '../models/significant_place.dart';
+import '../models/sleep_probe_event.dart';
+import '../models/smoking_event.dart';
+import '../models/step_counter_sample.dart';
+import '../models/smoking_time_prediction.dart';
 import '../models/survey_record.dart';
 import '../models/task_history.dart';
 import '../models/user_profile_snapshot.dart';
 import '../engines/breath_test_engine.dart';
 import '../engines/mentor_engine.dart';
 import '../engines/prediction_engine.dart';
+import '../engines/sleep_intelligence_engine.dart';
+import '../engines/smoking_time_prediction_engine.dart';
 import 'behavior_engine.dart';
 import 'discipline_protocol_service.dart';
 
@@ -28,6 +38,10 @@ class StorageService {
   static const _profileSnapshotTable = 'user_profile_snapshots';
   static const _languageHistoryTable = 'language_history';
   static const _sensorUsageTable = 'sensor_usage_events';
+  static const _sleepProbeTable = 'sleep_probe_events';
+  static const _significantPlacesTable = 'significant_places';
+  static const _locationVisitEventsTable = 'location_visit_events';
+  static const _stepCounterSamplesTable = 'step_counter_samples';
   static const _breathTestResultsTable = 'breath_test_results';
   static const _behaviorSnapshotTable = 'behavior_snapshots';
   static const _taskFollowUpTable = 'task_followups';
@@ -35,6 +49,8 @@ class StorageService {
   static const _adaptiveTaskStateTable = 'adaptive_task_state';
   static const _adaptiveTaskEventTable = 'adaptive_task_events';
   static const _adaptiveHourlyProfileTable = 'adaptive_hourly_profile';
+  static const _smokingEventsTable = 'smoking_events';
+  static const _mentorMessagesTable = 'mentor_messages';
   static const _behaviorDirtyKey = 'behavior_dirty';
   static const _registrationCompletedKey = 'registration_completed';
   static const _isProfileCompletedKey = 'isProfileCompleted';
@@ -42,6 +58,11 @@ class StorageService {
   final BehaviorEngine _behaviorEngine = BehaviorEngine();
   final BreathTestEngine _breathTestEngine = BreathTestEngine();
   final PredictionEngine _predictionEngine = PredictionEngine();
+  final SleepIntelligenceEngine _sleepIntelligenceEngine =
+      SleepIntelligenceEngine();
+  final SmokingTimePredictionEngine _smokingTimePredictionEngine =
+      SmokingTimePredictionEngine();
+  final MentorMessageBuilder _mentorMessageBuilder = MentorMessageBuilder();
   final MentorEngine _mentorEngine = MentorEngine();
   final DisciplineProtocolService _disciplineProtocolService =
       DisciplineProtocolService();
@@ -57,7 +78,7 @@ class StorageService {
     final path = p.join(documentsDirectory.path, 'no_smoke.db');
     return openDatabase(
       path,
-      version: 11,
+      version: 18,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -91,6 +112,11 @@ class StorageService {
         await _ensureAdaptiveTaskStateTable(db);
         await _ensureAdaptiveTaskEventTable(db);
         await _ensureAdaptiveHourlyProfileTable(db);
+        await _ensureSmokingEventsTable(db);
+        await _ensureMentorMessagesTable(db);
+        await _ensureSleepProbeTable(db);
+        await _ensureLocationIntelligenceTables(db);
+        await _ensureStepCounterTable(db);
         await _ensureIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -112,6 +138,11 @@ class StorageService {
         await _ensureAdaptiveTaskStateTable(db);
         await _ensureAdaptiveTaskEventTable(db);
         await _ensureAdaptiveHourlyProfileTable(db);
+        await _ensureSmokingEventsTable(db);
+        await _ensureMentorMessagesTable(db);
+        await _ensureSleepProbeTable(db);
+        await _ensureLocationIntelligenceTables(db);
+        await _ensureStepCounterTable(db);
         if (oldVersion < 9) {
           await _ensureIndexes(db);
         }
@@ -123,6 +154,32 @@ class StorageService {
         }
       },
     );
+  }
+
+  Future<void> _ensureSmokingEventsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_smokingEventsTable (
+        id TEXT PRIMARY KEY,
+        timestamp TEXT NOT NULL,
+        source TEXT NOT NULL,
+        approximate INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _ensureMentorMessagesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_mentorMessagesTable (
+        id TEXT PRIMARY KEY,
+        createdAt TEXT NOT NULL,
+        type TEXT NOT NULL,
+        text TEXT NOT NULL,
+        tone TEXT NOT NULL,
+        quickReplies TEXT,
+        read INTEGER NOT NULL DEFAULT 0,
+        userReply TEXT
+      )
+    ''');
   }
 
   Future<void> _ensureSettingsTable(Database db) async {
@@ -154,6 +211,9 @@ class StorageService {
         breakWindowsJson TEXT,
         weekendSmokingPattern TEXT,
         weeklyJson TEXT,
+        age INTEGER,
+        smokingYears INTEGER,
+        cigarettesPerPack INTEGER,
         createdAt TEXT NOT NULL
       )
     ''');
@@ -175,6 +235,19 @@ class StorageService {
       _surveyDetailsTable,
       'weekendSmokingPattern',
       'TEXT',
+    );
+    await _ensureTableColumn(db, _surveyDetailsTable, 'age', 'INTEGER');
+    await _ensureTableColumn(
+      db,
+      _surveyDetailsTable,
+      'smokingYears',
+      'INTEGER',
+    );
+    await _ensureTableColumn(
+      db,
+      _surveyDetailsTable,
+      'cigarettesPerPack',
+      'INTEGER',
     );
   }
 
@@ -245,6 +318,48 @@ class StorageService {
       'mealSoundLikelihood',
       'REAL NOT NULL DEFAULT 0',
     );
+  }
+
+  Future<void> _ensureSleepProbeTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_sleepProbeTable (
+        id TEXT PRIMARY KEY,
+        createdAt TEXT NOT NULL,
+        screenOff INTEGER NOT NULL,
+        charging INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _ensureLocationIntelligenceTables(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_significantPlacesTable (
+        id TEXT PRIMARY KEY,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        visitCount INTEGER NOT NULL,
+        firstSeenAt TEXT NOT NULL,
+        lastSeenAt TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_locationVisitEventsTable (
+        id TEXT PRIMARY KEY,
+        placeId TEXT NOT NULL,
+        transitionType TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _ensureStepCounterTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_stepCounterSamplesTable (
+        id TEXT PRIMARY KEY,
+        createdAt TEXT NOT NULL,
+        cumulativeSteps INTEGER NOT NULL
+      )
+    ''');
   }
 
   Future<void> _ensureBreathTestResultsTable(Database db) async {
@@ -495,6 +610,20 @@ class StorageService {
         .toList();
   }
 
+  /// Whether the user has ever completed the one-time initial survey.
+  /// This is the single source of truth for "has onboarding's survey step
+  /// been done" — used to decide whether Splash/TrialInfo should route to
+  /// SurveyPage or straight to the returning-user flow. It intentionally
+  /// does NOT require a breath test too; for the stricter "registration is
+  /// fully complete" question (survey + breath test), see
+  /// [loadInitialRegistrationCompleted] instead — the two are different
+  /// questions and must stay distinct rather than being approximated by
+  /// each other.
+  Future<bool> hasCompletedInitialSurvey({List<SurveyRecord>? records}) async {
+    final effectiveRecords = records ?? await loadSurveyHistory();
+    return effectiveRecords.any((record) => record.type == 'initial');
+  }
+
   Future<void> saveSurveyHistory(List<SurveyRecord> records) async {
     final db = await database;
     final batch = db.batch();
@@ -545,6 +674,9 @@ class StorageService {
     List<Map<String, String>>? breakWindows,
     String? weekendSmokingPattern,
     Map<String, dynamic>? weeklyPayload,
+    int? age,
+    int? smokingYears,
+    int? cigarettesPerPack,
   }) async {
     try {
       final db = await database;
@@ -568,6 +700,9 @@ class StorageService {
             : jsonEncode(breakWindows),
         'weekendSmokingPattern': weekendSmokingPattern,
         'weeklyJson': weeklyPayload == null ? null : jsonEncode(weeklyPayload),
+        'age': age,
+        'smokingYears': smokingYears,
+        'cigarettesPerPack': cigarettesPerPack,
         'createdAt': DateTime.now().toIso8601String(),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
       await markBehaviorDirty();
@@ -580,6 +715,38 @@ class StorageService {
     }
   }
 
+  /// Best-effort JSON-list decode: returns `null` (rather than throwing) on
+  /// missing/empty/malformed input, so a corrupted column can't crash a
+  /// dashboard/profile read — callers fall back to an empty collection.
+  List<dynamic>? _tryDecodeJsonList(String? raw, {required String field}) {
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is List<dynamic> ? decoded : null;
+    } catch (error, stackTrace) {
+      debugPrint('[StorageService] Failed to decode $field as JSON list: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return null;
+    }
+  }
+
+  /// Best-effort JSON-map decode counterpart to [_tryDecodeJsonList].
+  Map<String, dynamic>? _tryDecodeJsonMap(String? raw, {required String field}) {
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      return decoded is Map<String, dynamic> ? decoded : null;
+    } catch (error, stackTrace) {
+      debugPrint('[StorageService] Failed to decode $field as JSON map: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return null;
+    }
+  }
+
   Future<Map<String, List<String>>> loadTriggerMapByRecordId() async {
     final db = await database;
     final rows = await db.query(_surveyDetailsTable);
@@ -587,14 +754,10 @@ class StorageService {
     for (final row in rows) {
       final recordId = row['recordId'] as String;
       final raw = row['triggerJson'] as String?;
-      if (raw == null || raw.isEmpty) {
-        result[recordId] = const [];
-        continue;
-      }
-      final parsed = (jsonDecode(raw) as List<dynamic>)
-          .map((item) => item.toString())
-          .toList();
-      result[recordId] = parsed;
+      final decoded = _tryDecodeJsonList(raw, field: 'triggerJson');
+      result[recordId] = decoded == null
+          ? const []
+          : decoded.map((item) => item.toString()).toList();
     }
     return result;
   }
@@ -611,22 +774,27 @@ class StorageService {
       final weeklyRaw = row['weeklyJson'] as String?;
       final workingDaysRaw = row['workingDaysJson'] as String?;
       final breakWindowsRaw = row['breakWindowsJson'] as String?;
-      final healthConditions = healthRaw == null || healthRaw.isEmpty
+      final decodedHealth = _tryDecodeJsonList(healthRaw, field: 'healthJson');
+      final healthConditions = decodedHealth == null
           ? <String>[]
-          : (jsonDecode(healthRaw) as List<dynamic>)
-                .map((item) => item.toString())
-                .toList();
-      final weeklyPayload = weeklyRaw == null || weeklyRaw.isEmpty
-          ? <String, dynamic>{}
-          : (jsonDecode(weeklyRaw) as Map<String, dynamic>);
-      final workingDays = workingDaysRaw == null || workingDaysRaw.isEmpty
+          : decodedHealth.map((item) => item.toString()).toList();
+      final weeklyPayload =
+          _tryDecodeJsonMap(weeklyRaw, field: 'weeklyJson') ??
+          <String, dynamic>{};
+      final decodedWorkingDays = _tryDecodeJsonList(
+        workingDaysRaw,
+        field: 'workingDaysJson',
+      );
+      final workingDays = decodedWorkingDays == null
           ? <String>[]
-          : (jsonDecode(workingDaysRaw) as List<dynamic>)
-                .map((item) => item.toString())
-                .toList();
-      final breakWindows = breakWindowsRaw == null || breakWindowsRaw.isEmpty
+          : decodedWorkingDays.map((item) => item.toString()).toList();
+      final decodedBreakWindows = _tryDecodeJsonList(
+        breakWindowsRaw,
+        field: 'breakWindowsJson',
+      );
+      final breakWindows = decodedBreakWindows == null
           ? <Map<String, String>>[]
-          : (jsonDecode(breakWindowsRaw) as List<dynamic>)
+          : decodedBreakWindows
                 .whereType<Map<String, dynamic>>()
                 .map(
                   (item) => {
@@ -652,6 +820,9 @@ class StorageService {
         'quitReason': row['quitReason'] as String?,
         'healthConditions': healthConditions,
         'weeklyPayload': weeklyPayload,
+        'age': row['age'] as int?,
+        'smokingYears': row['smokingYears'] as int?,
+        'cigarettesPerPack': row['cigarettesPerPack'] as int?,
       };
     }
 
@@ -728,12 +899,17 @@ class StorageService {
 
   Future<List<BreathTestResult>> loadBreathTestResults({int limit = 50}) async {
     final db = await database;
+    // Fetch the most recent `limit` rows (DESC), then reverse back to
+    // chronological (ASC) order so callers relying on `.last` as "the
+    // newest result" keep working. Ordering ASC-then-LIMIT would instead
+    // return the oldest rows once the table exceeds `limit` entries.
     final rows = await db.query(
       _breathTestResultsTable,
-      orderBy: 'createdAt ASC',
+      orderBy: 'createdAt DESC',
       limit: limit,
     );
-    return rows.map((row) => BreathTestResult.fromJson(row)).toList();
+    final results = rows.map((row) => BreathTestResult.fromJson(row)).toList();
+    return results.reversed.toList();
   }
 
   Future<BreathTestResult?> loadLatestBreathTestResult() async {
@@ -744,8 +920,12 @@ class StorageService {
     return rows.last;
   }
 
-  Future<void> saveSetting(String key, String value) async {
-    final db = await database;
+  Future<void> saveSetting(
+    String key,
+    String value, {
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
     await db.insert(_settingsTable, {
       'key': key,
       'value': value,
@@ -844,6 +1024,170 @@ class StorageService {
         charging: ((row['charging'] as num?)?.toInt() ?? 0) == 1,
       );
     }).toList();
+  }
+
+  /// Filters in Dart rather than via a SQL `WHERE createdAt >= ?` clause
+  /// because probe rows are written natively as UTC ISO strings while
+  /// [startAt]/[endAt] are typically local wall-clock times — comparing the
+  /// two representations as raw strings would silently misfilter by the
+  /// timezone offset. `DateTime.parse` + `.toUtc()` normalizes both sides.
+  Future<List<SleepProbeEvent>> loadSleepProbeEventsBetween({
+    required DateTime startAt,
+    required DateTime endAt,
+  }) async {
+    final db = await database;
+    final rows = await db.query(_sleepProbeTable, orderBy: 'createdAt ASC');
+    final startUtc = startAt.toUtc();
+    final endUtc = endAt.toUtc();
+
+    return rows
+        .map((row) {
+          return SleepProbeEvent(
+            id: row['id'] as String,
+            createdAt: DateTime.parse(row['createdAt'] as String),
+            screenOff: ((row['screenOff'] as num?)?.toInt() ?? 0) == 1,
+            charging: ((row['charging'] as num?)?.toInt() ?? 0) == 1,
+          );
+        })
+        .where((event) {
+          final eventUtc = event.createdAt.toUtc();
+          return !eventUtc.isBefore(startUtc) && !eventUtc.isAfter(endUtc);
+        })
+        .toList();
+  }
+
+  /// Resolves the sleep window used for risk scoring: the passively
+  /// estimated window from overnight probes when Sleep Intelligence is on
+  /// and last night had enough coverage to trust, otherwise the user's
+  /// static survey [fallbackSleepTime]/[fallbackWakeTime] unchanged. Looks
+  /// back 20 hours (not a fixed calendar night) so it doesn't need to
+  /// reason about which side of midnight the configured window falls on —
+  /// SleepIntelligenceEngine finds the best matching rest period within
+  /// whatever probes exist in that span.
+  Future<({String? sleepTime, String? wakeTime})> _resolveEffectiveSleepWindow({
+    required String? fallbackSleepTime,
+    required String? fallbackWakeTime,
+  }) async {
+    final enabled = (await loadSetting('sleep_intelligence_enabled')) == '1';
+    if (!enabled) {
+      return (sleepTime: fallbackSleepTime, wakeTime: fallbackWakeTime);
+    }
+
+    final windowStart = int.tryParse(
+      (await loadSetting('sleep_probe_window_start_minute')) ?? '',
+    );
+    final windowEnd = int.tryParse(
+      (await loadSetting('sleep_probe_window_end_minute')) ?? '',
+    );
+    if (windowStart == null || windowEnd == null) {
+      return (sleepTime: fallbackSleepTime, wakeTime: fallbackWakeTime);
+    }
+    final interval =
+        int.tryParse((await loadSetting('sleep_probe_interval_minutes')) ?? '') ??
+        45;
+
+    final probes = await loadSleepProbeEventsBetween(
+      startAt: DateTime.now().subtract(const Duration(hours: 20)),
+      endAt: DateTime.now(),
+    );
+
+    final estimate = _sleepIntelligenceEngine.estimateSleepWindow(
+      probes: probes,
+      windowStartMinute: windowStart,
+      windowEndMinute: windowEnd,
+      intervalMinutes: interval,
+      fallbackSleepTime: fallbackSleepTime ?? '23:00',
+      fallbackWakeTime: fallbackWakeTime ?? '07:00',
+    );
+
+    return (sleepTime: estimate.sleepTime, wakeTime: estimate.wakeTime);
+  }
+
+  Future<List<SignificantPlace>> loadSignificantPlaces() async {
+    final db = await database;
+    final rows = await db.query(_significantPlacesTable, orderBy: 'visitCount DESC');
+    return rows.map((row) {
+      return SignificantPlace(
+        id: row['id'] as String,
+        latitude: (row['latitude'] as num).toDouble(),
+        longitude: (row['longitude'] as num).toDouble(),
+        visitCount: (row['visitCount'] as num).toInt(),
+        firstSeenAt: DateTime.parse(row['firstSeenAt'] as String),
+        lastSeenAt: DateTime.parse(row['lastSeenAt'] as String),
+      );
+    }).toList();
+  }
+
+  /// Replaces the entire place set in one transaction — [PlaceClusteringEngine]
+  /// always returns the full updated (<=8-row) list, so a delete+reinsert is
+  /// simpler and just as cheap as diffing at this size.
+  Future<void> saveSignificantPlaces(List<SignificantPlace> places) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      await txn.delete(_significantPlacesTable);
+      for (final place in places) {
+        await txn.insert(_significantPlacesTable, {
+          'id': place.id,
+          'latitude': place.latitude,
+          'longitude': place.longitude,
+          'visitCount': place.visitCount,
+          'firstSeenAt': place.firstSeenAt.toIso8601String(),
+          'lastSeenAt': place.lastSeenAt.toIso8601String(),
+        });
+      }
+    });
+  }
+
+  Future<List<LocationVisitEvent>> loadLocationVisitEvents({
+    int limit = 100,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      _locationVisitEventsTable,
+      orderBy: 'createdAt DESC',
+      limit: limit,
+    );
+    return rows.map((row) {
+      return LocationVisitEvent(
+        id: row['id'] as String,
+        placeId: row['placeId'] as String,
+        transitionType: row['transitionType'] as String,
+        createdAt: DateTime.parse(row['createdAt'] as String),
+      );
+    }).toList();
+  }
+
+  Future<void> saveStepCounterSample(StepCounterSample sample) async {
+    final db = await database;
+    await db.insert(_stepCounterSamplesTable, {
+      'id': sample.id,
+      'createdAt': sample.createdAt.toIso8601String(),
+      'cumulativeSteps': sample.cumulativeSteps,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<List<StepCounterSample>> loadStepCounterSamples({
+    DateTime? since,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      _stepCounterSamplesTable,
+      orderBy: 'createdAt ASC',
+    );
+    final samples = rows.map((row) {
+      return StepCounterSample(
+        id: row['id'] as String,
+        createdAt: DateTime.parse(row['createdAt'] as String),
+        cumulativeSteps: (row['cumulativeSteps'] as num).toInt(),
+      );
+    });
+    if (since == null) {
+      return samples.toList();
+    }
+    final sinceUtc = since.toUtc();
+    return samples
+        .where((sample) => !sample.createdAt.toUtc().isBefore(sinceUtc))
+        .toList();
   }
 
   Future<List<TaskHistory>> loadTaskHistory() async {
@@ -970,8 +1314,11 @@ class StorageService {
     return initial;
   }
 
-  Future<void> saveAdaptiveTaskState(AdaptiveTaskState state) async {
-    final db = await database;
+  Future<void> saveAdaptiveTaskState(
+    AdaptiveTaskState state, {
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
     await db.insert(
       _adaptiveTaskStateTable,
       state.toJson(),
@@ -1006,9 +1353,10 @@ class StorageService {
   }
 
   Future<void> saveAdaptiveHourlyProfileEntry(
-    AdaptiveHourlyProfileEntry entry,
-  ) async {
-    final db = await database;
+    AdaptiveHourlyProfileEntry entry, {
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
     await db.insert(
       _adaptiveHourlyProfileTable,
       entry.toJson(),
@@ -1016,8 +1364,11 @@ class StorageService {
     );
   }
 
-  Future<void> saveAdaptiveTaskEvent(AdaptiveTaskEvent event) async {
-    final db = await database;
+  Future<void> saveAdaptiveTaskEvent(
+    AdaptiveTaskEvent event, {
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
     await db.insert(
       _adaptiveTaskEventTable,
       event.toJson(),
@@ -1051,20 +1402,54 @@ class StorageService {
         .toList();
   }
 
+  static const _adaptivePlanDateKey = 'adaptive_plan_cache_date';
+  static const _adaptivePlanJsonKey = 'adaptive_plan_cache_json';
+
+  /// The daily task plan (how many tasks, when, how long) is generated from
+  /// the behavior engine's *current* learned state (success rate,
+  /// difficulty, hourly strain profile) — that connection is deliberate and
+  /// must stay live. What must NOT happen is regenerating a fresh *random*
+  /// plan on every app launch: `buildDailyAdaptivePlan` rolls randomness
+  /// into both the task count and each task's timing, so re-running it
+  /// mid-day (e.g. every time the process restarts) silently reshuffles
+  /// which tasks exist — the exact reason the mandatory-task screen kept
+  /// treating already-known tasks as unfamiliar. Caching the plan for the
+  /// current calendar day fixes that without breaking the adaptive
+  /// connection: a new plan is still generated once per day, from whatever
+  /// the behavior engine has learned as of that morning.
   Future<AdaptiveTaskPlan> buildAdaptiveNoSmokePlan({
     required DateTime now,
     required DateTime sleepAt,
     required List<String> riskyHours,
   }) async {
+    final todayKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final cachedDate = await loadSetting(_adaptivePlanDateKey);
+    if (cachedDate == todayKey) {
+      final cachedJson = await loadSetting(_adaptivePlanJsonKey);
+      if (cachedJson != null) {
+        try {
+          return AdaptiveTaskPlan.fromJson(
+            jsonDecode(cachedJson) as Map<String, dynamic>,
+          );
+        } catch (_) {
+          // Fall through and regenerate if the cached JSON is somehow
+          // unreadable (e.g. a future app version changed the shape).
+        }
+      }
+    }
+
     final state = await loadAdaptiveTaskState();
     final hourly = await loadAdaptiveHourlyProfile();
-    return _disciplineProtocolService.buildDailyAdaptivePlan(
+    final plan = _disciplineProtocolService.buildDailyAdaptivePlan(
       now: now,
       sleepAt: sleepAt,
       riskyHours: riskyHours,
       state: state,
       hourlyProfiles: hourly,
     );
+    await saveSetting(_adaptivePlanDateKey, todayKey);
+    await saveSetting(_adaptivePlanJsonKey, jsonEncode(plan.toJson()));
+    return plan;
   }
 
   Future<Duration> resolveAdaptivePostponeDelay({
@@ -1098,7 +1483,6 @@ class StorageService {
       outcome: outcome,
       responseDelayMinutes: responseDelay,
     );
-    await saveAdaptiveTaskState(nextState);
 
     final hourBucket = scheduled.hour.clamp(0, 23);
     final currentEntry = hourly.firstWhere(
@@ -1110,7 +1494,6 @@ class StorageService {
       outcome: outcome,
       responseDelayMinutes: responseDelay,
     );
-    await saveAdaptiveHourlyProfileEntry(nextEntry);
 
     final event = AdaptiveTaskEvent(
       id: 'adaptive_${responded.microsecondsSinceEpoch}',
@@ -1122,8 +1505,17 @@ class StorageService {
       responseDelayMinutes: responseDelay,
       hourBucket: hourBucket,
     );
-    await saveAdaptiveTaskEvent(event);
-    await markBehaviorDirty();
+
+    // All four writes describe one logical outcome — run them in a single
+    // transaction so a process kill mid-sequence can't leave the adaptive
+    // state, hourly profile, and event log out of sync with each other.
+    final db = await database;
+    await db.transaction((txn) async {
+      await saveAdaptiveTaskState(nextState, executor: txn);
+      await saveAdaptiveHourlyProfileEntry(nextEntry, executor: txn);
+      await saveAdaptiveTaskEvent(event, executor: txn);
+      await saveSetting(_behaviorDirtyKey, '1', executor: txn);
+    });
   }
 
   Future<void> saveProtocolViolation({
@@ -1175,6 +1567,28 @@ class StorageService {
         .toList();
   }
 
+  /// When the mandatory task screen was last actually shown to the user —
+  /// reuses the existing `mandatory_gate` violation log (already written
+  /// every time it's shown) instead of a separate, parallel timestamp, so
+  /// this stays backed by the same persisted history the behavior/protocol
+  /// engines already read. Used to gate against showing it again too soon
+  /// after a fresh app relaunch.
+  Future<DateTime?> loadLastMandatoryGateShownAt() async {
+    final db = await database;
+    final rows = await db.query(
+      _protocolViolationTable,
+      columns: ['createdAt'],
+      where: 'type = ?',
+      whereArgs: ['mandatory_gate'],
+      orderBy: 'createdAt DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(rows.first['createdAt'] as String);
+  }
+
   Future<List<Map<String, dynamic>>> loadPendingTaskFollowUps() async {
     final db = await database;
     final rows = await db.query(
@@ -1197,13 +1611,38 @@ class StorageService {
         .toList();
   }
 
+  /// Resolves only the single oldest pending row for [taskTitle]. Multiple
+  /// pending rows can share a title (the same recurring task scheduled more
+  /// than once), so resolving by title alone must never close more than the
+  /// one occurrence being answered.
   Future<void> resolveTaskFollowUpByTitle(String taskTitle) async {
+    final db = await database;
+    final rows = await db.query(
+      _taskFollowUpTable,
+      columns: ['id'],
+      where: 'taskTitle = ? AND status = ?',
+      whereArgs: [taskTitle, 'pending'],
+      orderBy: 'scheduledAt ASC',
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return;
+    }
+    await db.update(
+      _taskFollowUpTable,
+      {'status': 'resolved'},
+      where: 'id = ?',
+      whereArgs: [rows.first['id']],
+    );
+  }
+
+  Future<void> resolveTaskFollowUpById(String id) async {
     final db = await database;
     await db.update(
       _taskFollowUpTable,
       {'status': 'resolved'},
-      where: 'taskTitle = ? AND status = ?',
-      whereArgs: [taskTitle, 'pending'],
+      where: 'id = ? AND status = ?',
+      whereArgs: [id, 'pending'],
     );
   }
 
@@ -1322,6 +1761,103 @@ class StorageService {
     await saveSetting('sleep_time', sleepTime);
   }
 
+  /// The name shown on the fake-call duration-barrier screen — user
+  /// configurable so it can look like a believable contact for their own
+  /// social context. Defaults to a generic placeholder name so the feature
+  /// still works before the user has configured it.
+  Future<String> loadFakeCallerName() async {
+    final saved = await loadSetting('fake_caller_name');
+    return (saved == null || saved.trim().isEmpty) ? 'Ayşe' : saved;
+  }
+
+  Future<void> saveFakeCallerName(String name) async {
+    await saveSetting('fake_caller_name', name.trim());
+  }
+
+  // --- Fake-call duration barrier state ---------------------------------
+
+  static const _fakeCallBarrierEndsAtKey = 'fake_call_barrier_ends_at';
+  static const _fakeCallSuccessStreakKey = 'fake_call_success_streak';
+  static const _fakeCallAvoidanceStreakKey = 'fake_call_avoidance_streak';
+
+  /// Adaptive duration: grows by 10 minutes per consecutive success
+  /// (capped at 90), resets to the 20-minute base after a failure — the
+  /// same "get more demanding as the user succeeds" idea already used by
+  /// [DisciplineProtocolService]'s task-duration logic.
+  static const _breathTrendTodayKey = 'breath_trend_today';
+
+  Future<int> loadFakeCallBarrierDurationMinutes() async {
+    final streakRaw = await loadSetting(_fakeCallSuccessStreakKey);
+    final streak = int.tryParse(streakRaw ?? '0') ?? 0;
+    final base = (20 + (streak * 10)).clamp(20, 90);
+
+    // A worsening breath-test trend means today isn't the day to make the
+    // barrier harder — ease it back toward the 20-minute base so the user
+    // has a realistic shot at a win, rather than piling difficulty on top
+    // of an already-struggling stretch. Never lowers it below the base.
+    final breathTrendToday = await loadSetting(_breathTrendTodayKey);
+    if (breathTrendToday == 'worsening') {
+      return ((base - 10).clamp(20, base)).toInt();
+    }
+    return base;
+  }
+
+  Future<void> saveBreathTrendToday(String trend) async {
+    await saveSetting(_breathTrendTodayKey, trend);
+  }
+
+  Future<void> startFakeCallBarrier({DateTime? now}) async {
+    final start = now ?? DateTime.now();
+    final durationMinutes = await loadFakeCallBarrierDurationMinutes();
+    final endsAt = start.add(Duration(minutes: durationMinutes));
+    await saveSetting(_fakeCallBarrierEndsAtKey, endsAt.toIso8601String());
+    await resetFakeCallAvoidanceStreak();
+  }
+
+  Future<DateTime?> loadFakeCallBarrierEndsAt() async {
+    final raw = await loadSetting(_fakeCallBarrierEndsAtKey);
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(raw);
+  }
+
+  Future<void> clearFakeCallBarrier() async {
+    await saveSetting(_fakeCallBarrierEndsAtKey, '');
+  }
+
+  /// Records whether the user made it through the barrier without smoking
+  /// (pure state update only — see `FakeCallBarrierService` for the
+  /// orchestration that also logs a reframed violation on failure, kept
+  /// out of StorageService to avoid a StorageService <-> ProtocolViolationService
+  /// import cycle). Success grows the next barrier's duration; failure
+  /// resets it.
+  Future<void> recordFakeCallBarrierOutcome({required bool succeeded}) async {
+    await clearFakeCallBarrier();
+    if (succeeded) {
+      final streakRaw = await loadSetting(_fakeCallSuccessStreakKey);
+      final streak = int.tryParse(streakRaw ?? '0') ?? 0;
+      await saveSetting(_fakeCallSuccessStreakKey, '${streak + 1}');
+    } else {
+      await saveSetting(_fakeCallSuccessStreakKey, '0');
+    }
+  }
+
+  /// Increments the postpone/cancel streak and returns the new count —
+  /// per product decision, avoiding the barrier call repeatedly should
+  /// feed into the behavior engine (see `FakeCallBarrierService`), not
+  /// pass silently.
+  Future<int> incrementFakeCallAvoidanceStreak() async {
+    final raw = await loadSetting(_fakeCallAvoidanceStreakKey);
+    final streak = (int.tryParse(raw ?? '0') ?? 0) + 1;
+    await saveSetting(_fakeCallAvoidanceStreakKey, '$streak');
+    return streak;
+  }
+
+  Future<void> resetFakeCallAvoidanceStreak() async {
+    await saveSetting(_fakeCallAvoidanceStreakKey, '0');
+  }
+
   Future<void> saveInitialRegistrationCompleted(bool completed) async {
     await saveSetting(_registrationCompletedKey, completed ? '1' : '0');
     await saveSetting(_isProfileCompletedKey, completed ? '1' : '0');
@@ -1369,7 +1905,13 @@ class StorageService {
     }
 
     final raw = rows.first['snapshotJson'] as String;
-    final data = jsonDecode(raw) as Map<String, dynamic>;
+    final data = _tryDecodeJsonMap(raw, field: 'snapshotJson');
+    if (data == null) {
+      // Corrupted cache entry — treat as "no snapshot available" so the
+      // caller (loadBehaviorDashboard) falls through to a fresh
+      // recomputation instead of crashing on a bad cached blob.
+      return null;
+    }
     final planData =
         data['plan'] as Map<String, dynamic>? ?? <String, dynamic>{};
 
@@ -1382,6 +1924,9 @@ class StorageService {
           .map((item) => item.toString())
           .toList(),
       breathTrend: data['breathTrend']?.toString() ?? 'Stable',
+      breathTrendLast3: data['breathTrendLast3']?.toString() ?? 'stable',
+      breathTrendRiskAdjustment:
+          (data['breathTrendRiskAdjustment'] as num?)?.toInt() ?? 0,
       progressSummary: data['progressSummary']?.toString() ?? 'Stable',
       todaysTasks: (data['todaysTasks'] as List<dynamic>? ?? const [])
           .map((item) => item.toString())
@@ -1544,6 +2089,273 @@ class StorageService {
     };
   }
 
+  /// Merges profile context (work schedule, health data, latest weekly
+  /// payload, etc.) across all prior initial/weekly survey records into a
+  /// single map, the same way [loadBehaviorDashboard] does internally. Used
+  /// wherever a risk calculation needs the user's up-to-date profile context
+  /// without duplicating the merge logic (e.g. weekly survey risk scoring).
+  Future<Map<String, dynamic>> loadMergedProfileContext() async {
+    final relevantSurveyRecords = await _loadRelevantSurveyRecords();
+    final contextMap = await loadSurveyContextByRecordId();
+    return _buildMergedProfileContext(
+      surveyRecords: relevantSurveyRecords,
+      contextMap: contextMap,
+    );
+  }
+
+  /// Predicts the user's likely smoking hours for today from structural
+  /// survey data (+ weekly-survey trigger/meal data when available). See
+  /// [SmokingTimePredictionEngine] for the underlying model.
+  Future<SmokingTimePrediction> loadSmokingTimePrediction({
+    DateTime? now,
+  }) async {
+    final profileContext = await loadMergedProfileContext();
+    final records = await loadSurveyHistory();
+    final latestSurvey = records.reversed.firstWhere(
+      (record) => _surveyTypes.contains(record.type),
+      orElse: () => SurveyRecord(
+        id: 'fallback',
+        completedAt: DateTime.fromMillisecondsSinceEpoch(0),
+        type: 'initial',
+        title: 'Başlangıç',
+        name: '',
+        packsPerDay: '1 paketten az',
+        exhaleTestSeconds: 0,
+        inhaleTestSeconds: 0,
+        riskScore: 0,
+        riskLevel: 'BİLİNMEYEN',
+      ),
+    );
+    final today = now ?? DateTime.now();
+    final isWeekend =
+        today.weekday == DateTime.saturday || today.weekday == DateTime.sunday;
+
+    return _smokingTimePredictionEngine.predict(
+      profileContext: profileContext,
+      packsPerDay: latestSurvey.packsPerDay,
+      isWeekend: isWeekend,
+    );
+  }
+
+  Future<void> saveSmokingEvent(SmokingEvent event) async {
+    final db = await database;
+    await db.insert(
+      _smokingEventsTable,
+      event.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    await markBehaviorDirty();
+  }
+
+  /// Convenience wrapper for the optional real-time quick-log button.
+  /// Returns the created event's id so an accidental tap can be undone via
+  /// [deleteSmokingEvent].
+  Future<String> logSmokingNow() async {
+    final now = DateTime.now();
+    final id = 'smoke_${now.microsecondsSinceEpoch}';
+    await saveSmokingEvent(
+      SmokingEvent(
+        id: id,
+        timestamp: now,
+        source: 'quick_log',
+        approximate: false,
+      ),
+    );
+    return id;
+  }
+
+  Future<void> deleteSmokingEvent(String id) async {
+    final db = await database;
+    await db.delete(_smokingEventsTable, where: 'id = ?', whereArgs: [id]);
+    await markBehaviorDirty();
+  }
+
+  /// Convenience wrapper for the bedtime daily-recall check-in: logs one
+  /// recalled event per selected hour on the given day.
+  Future<void> logRecalledSmokingHours({
+    required DateTime day,
+    required List<int> hours,
+  }) async {
+    for (final hour in hours) {
+      final timestamp = DateTime(day.year, day.month, day.day, hour.clamp(0, 23));
+      await saveSmokingEvent(
+        SmokingEvent(
+          id: 'smoke_recall_${timestamp.millisecondsSinceEpoch}_$hour',
+          timestamp: timestamp,
+          source: 'daily_recall',
+          approximate: true,
+        ),
+      );
+    }
+  }
+
+  Future<List<SmokingEvent>> loadSmokingEvents({
+    DateTime? since,
+    int limit = 500,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      _smokingEventsTable,
+      where: since == null ? null : 'timestamp >= ?',
+      whereArgs: since == null ? null : [since.toIso8601String()],
+      orderBy: 'timestamp DESC',
+      limit: limit,
+    );
+    return rows.map((row) => SmokingEvent.fromJson(row)).toList().reversed.toList();
+  }
+
+  Future<List<SmokingEvent>> loadSmokingEventsForDay(DateTime day) {
+    final startOfDay = DateTime(day.year, day.month, day.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+    return database.then((db) async {
+      final rows = await db.query(
+        _smokingEventsTable,
+        where: 'timestamp >= ? AND timestamp < ?',
+        whereArgs: [
+          startOfDay.toIso8601String(),
+          endOfDay.toIso8601String(),
+        ],
+        orderBy: 'timestamp ASC',
+      );
+      return rows.map((row) => SmokingEvent.fromJson(row)).toList();
+    });
+  }
+
+  Future<void> saveMentorMessage(MentorMessage message) async {
+    final db = await database;
+    await db.insert(
+      _mentorMessagesTable,
+      message.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<MentorMessage>> loadMentorMessages({int limit = 50}) async {
+    final db = await database;
+    final rows = await db.query(
+      _mentorMessagesTable,
+      orderBy: 'createdAt DESC',
+      limit: limit,
+    );
+    return rows.map((row) => MentorMessage.fromJson(row)).toList();
+  }
+
+  Future<MentorMessage?> loadLatestMentorMessage() async {
+    final messages = await loadMentorMessages(limit: 1);
+    return messages.isEmpty ? null : messages.first;
+  }
+
+  Future<void> markMentorMessageRead(String id) async {
+    final db = await database;
+    await db.update(
+      _mentorMessagesTable,
+      {'read': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> replyToMentorMessage(String id, String reply) async {
+    final db = await database;
+    await db.update(
+      _mentorMessagesTable,
+      {'read': 1, 'userReply': reply},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Buckets recent [SmokingEvent]s into this-week / last-week day-part
+  /// counts (morning/afternoon/evening/night), for [MentorMessageBuilder]'s
+  /// week-over-week callback.
+  Future<Map<String, Map<String, int>>> _loadSmokingDayPartComparison({
+    DateTime? now,
+  }) async {
+    final today = now ?? DateTime.now();
+    final startOfThisWeek = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).subtract(Duration(days: today.weekday - 1));
+    final startOfLastWeek = startOfThisWeek.subtract(const Duration(days: 7));
+
+    final events = await loadSmokingEvents(since: startOfLastWeek);
+    final lastWeekCounts = <String, int>{};
+    final thisWeekCounts = <String, int>{};
+
+    for (final event in events) {
+      final dayPart = MentorMessageBuilder.dayPartForHour(event.timestamp.hour);
+      if (event.timestamp.isBefore(startOfThisWeek)) {
+        lastWeekCounts[dayPart] = (lastWeekCounts[dayPart] ?? 0) + 1;
+      } else {
+        thisWeekCounts[dayPart] = (thisWeekCounts[dayPart] ?? 0) + 1;
+      }
+    }
+
+    return {'lastWeek': lastWeekCounts, 'thisWeek': thisWeekCounts};
+  }
+
+  /// Generates and persists today's mentor message from the app's existing
+  /// coaching signals (behavior dashboard risk/hours, recent task success
+  /// rate, week-over-week smoking-event pattern). Safe to call repeatedly —
+  /// callers are expected to only surface this once per day (see
+  /// HomePage's daily cadence).
+  Future<MentorMessage> generateDailyMentorMessage({DateTime? now}) async {
+    final dashboard = await loadBehaviorDashboard();
+    final taskOutcomeSummary = await loadTaskOutcomeSummary();
+    final successCount = taskOutcomeSummary['recentSuccessCount'] ?? 0;
+    final failureCount = taskOutcomeSummary['recentFailureCount'] ?? 0;
+    final totalOutcomes = successCount + failureCount;
+    final recentSuccessRate = totalOutcomes == 0
+        ? 0.5
+        : successCount / totalOutcomes;
+
+    final dayPartComparison = await _loadSmokingDayPartComparison(now: now);
+    final historicalNote = _mentorMessageBuilder.buildHistoricalNote(
+      lastWeekDayPartCounts: dayPartComparison['lastWeek']!,
+      thisWeekDayPartCounts: dayPartComparison['thisWeek']!,
+    );
+
+    final message = _mentorMessageBuilder.buildDailyMessage(
+      riskScore: dashboard.riskScore,
+      recentSuccessRate: recentSuccessRate,
+      riskyHours: dashboard.riskyHours,
+      historicalNote: historicalNote,
+      breathTrend: dashboard.breathTrendLast3,
+      now: now,
+    );
+    await saveMentorMessage(message);
+    return message;
+  }
+
+  Future<MentorMessage> generateWeeklyMentorMessage({DateTime? now}) async {
+    final dashboard = await loadBehaviorDashboard();
+    final taskOutcomeSummary = await loadTaskOutcomeSummary();
+    final successCount = taskOutcomeSummary['recentSuccessCount'] ?? 0;
+    final failureCount = taskOutcomeSummary['recentFailureCount'] ?? 0;
+    final totalOutcomes = successCount + failureCount;
+    final recentSuccessRate = totalOutcomes == 0
+        ? 0.5
+        : successCount / totalOutcomes;
+
+    final dayPartComparison = await _loadSmokingDayPartComparison(now: now);
+    final historicalNote = _mentorMessageBuilder.buildHistoricalNote(
+      lastWeekDayPartCounts: dayPartComparison['lastWeek']!,
+      thisWeekDayPartCounts: dayPartComparison['thisWeek']!,
+    );
+
+    final message = _mentorMessageBuilder.buildWeeklyMessage(
+      weeklyRiskScore: dashboard.weeklySurveyRiskScore,
+      weeklyRiskLevel: dashboard.weeklySurveyRiskLevel,
+      recentSuccessRate: recentSuccessRate,
+      completedTasksThisWeek: successCount,
+      historicalNote: historicalNote,
+      now: now,
+    );
+    await saveMentorMessage(message);
+    return message;
+  }
+
   Future<Map<String, dynamic>> loadLatestTaskTimingContext() async {
     final relevantSurveyRecords = await _loadRelevantSurveyRecords();
     final contextMap = await loadSurveyContextByRecordId();
@@ -1662,57 +2474,6 @@ class StorageService {
         .firstOrNull;
   }
 
-  Future<int> calculateAdjustedRiskScore({
-    required int baseScore,
-    required int exhaleSeconds,
-    required int inhaleSeconds,
-  }) async {
-    final records = await loadSurveyHistory();
-    final breathRecords = records
-        .where((record) => record.type == 'breath_test')
-        .toList();
-    var adjustedScore = baseScore;
-
-    if (breathRecords.isNotEmpty) {
-      final previousAverage =
-          ((breathRecords.last.exhaleTestSeconds +
-                      breathRecords.last.inhaleTestSeconds) /
-                  2)
-              .round();
-      final currentAverage = ((exhaleSeconds + inhaleSeconds) / 2).round();
-      final difference = currentAverage - previousAverage;
-      adjustedScore += difference * 2;
-    }
-
-    final latestSurvey = records.reversed.firstWhere(
-      (record) => _surveyTypes.contains(record.type),
-      orElse: () => SurveyRecord(
-        id: 'fallback',
-        completedAt: DateTime.fromMillisecondsSinceEpoch(0),
-        type: 'initial',
-        title: 'Başlangıç',
-        name: '',
-        packsPerDay: '1 paketten az',
-        exhaleTestSeconds: 0,
-        inhaleTestSeconds: 0,
-        riskScore: 0,
-        riskLevel: 'BİLİNMEYEN',
-      ),
-    );
-
-    if (latestSurvey.id != 'fallback') {
-      adjustedScore += _behaviorEngine.calculatePackRiskContribution(
-        latestSurvey.packsPerDay,
-      );
-      adjustedScore += _behaviorEngine.calculateConsecutiveSmokingScore(
-        habit: latestSurvey.consecutiveSmokingHabit,
-        count: latestSurvey.consecutiveSmokingCount,
-      );
-    }
-
-    return adjustedScore.clamp(0, 100);
-  }
-
   Future<List<SurveyRecord>> _loadRelevantSurveyRecords() async {
     final records = await loadSurveyHistory();
     return records
@@ -1782,10 +2543,14 @@ class StorageService {
       contextMap: contextMap,
     );
     final latestContext = mergedProfileContext;
+    final effectiveSleepWindow = await _resolveEffectiveSleepWindow(
+      fallbackSleepTime: latestContext['sleepTime'] as String?,
+      fallbackWakeTime: latestContext['wakeTime'] as String?,
+    );
     final profileAdjustment = _behaviorEngine.calculateProfileRiskAdjustment(
       profession: latestContext['profession'] as String?,
-      sleepTime: latestContext['sleepTime'] as String?,
-      wakeTime: latestContext['wakeTime'] as String?,
+      sleepTime: effectiveSleepWindow.sleepTime,
+      wakeTime: effectiveSleepWindow.wakeTime,
       healthConditions:
           (latestContext['healthConditions'] as List<String>?) ??
           const <String>[],
@@ -2090,6 +2855,8 @@ class StorageService {
       learnedWeights: learnedWeights,
       prediction: prediction,
       plan: adaptivePlan,
+      breathTrendLast3: breathTrendAnalysis.trendLast3,
+      breathTrendRiskAdjustment: breathTrendAnalysis.riskAdjustment,
     );
 
     await saveBehaviorSnapshot({
@@ -2097,6 +2864,8 @@ class StorageService {
       'riskyTriggers': dashboard.riskyTriggers,
       'riskyHours': dashboard.riskyHours,
       'breathTrend': dashboard.breathTrend,
+      'breathTrendLast3': dashboard.breathTrendLast3,
+      'breathTrendRiskAdjustment': dashboard.breathTrendRiskAdjustment,
       'progressSummary': dashboard.progressSummary,
       'todaysTasks': dashboard.todaysTasks,
       'coachCommands': dashboard.coachCommands,
@@ -2386,6 +3155,7 @@ class StorageService {
       setIfPresent('stressLevel');
       setIfPresent('quitReason');
       setIfPresent('healthConditions');
+      setIfPresent('cigarettesPerPack');
 
       final weeklyPayload = context['weeklyPayload'] as Map<String, dynamic>?;
       if (weeklyPayload != null && weeklyPayload.isNotEmpty) {
@@ -2565,24 +3335,34 @@ class StorageService {
 
   Future<void> clearAllData() async {
     final db = await database;
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS $_settingsTable (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      )
-    ''');
-    await db.delete(_tableName);
-    await db.delete(_settingsTable);
-    await db.delete(_surveyDetailsTable);
-    await db.delete(_profileSnapshotTable);
-    await db.delete(_languageHistoryTable);
-    await db.delete(_sensorUsageTable);
-    await db.delete(_breathTestResultsTable);
-    await db.delete(_behaviorSnapshotTable);
-    await db.delete(_taskFollowUpTable);
-    await db.delete(_protocolViolationTable);
-    await db.delete(_adaptiveTaskStateTable);
-    await db.delete(_adaptiveTaskEventTable);
-    await db.delete(_adaptiveHourlyProfileTable);
+    // Wrapped in a transaction so an interruption mid-reset can't leave
+    // some tables cleared and others not.
+    await db.transaction((txn) async {
+      await txn.execute('''
+        CREATE TABLE IF NOT EXISTS $_settingsTable (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        )
+      ''');
+      await txn.delete(_tableName);
+      await txn.delete(_settingsTable);
+      await txn.delete(_surveyDetailsTable);
+      await txn.delete(_profileSnapshotTable);
+      await txn.delete(_languageHistoryTable);
+      await txn.delete(_sensorUsageTable);
+      await txn.delete(_breathTestResultsTable);
+      await txn.delete(_behaviorSnapshotTable);
+      await txn.delete(_taskFollowUpTable);
+      await txn.delete(_protocolViolationTable);
+      await txn.delete(_adaptiveTaskStateTable);
+      await txn.delete(_adaptiveTaskEventTable);
+      await txn.delete(_adaptiveHourlyProfileTable);
+      await txn.delete(_smokingEventsTable);
+      await txn.delete(_mentorMessagesTable);
+      await txn.delete(_sleepProbeTable);
+      await txn.delete(_significantPlacesTable);
+      await txn.delete(_locationVisitEventsTable);
+      await txn.delete(_stepCounterSamplesTable);
+    });
   }
 }

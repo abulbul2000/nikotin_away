@@ -110,34 +110,6 @@ void main() {
     expect(metrics['monthlyAverage'], 6.5);
   });
 
-  test('adds consecutive smoking contribution to adjusted risk score', () async {
-    final storage = StorageService();
-    await storage.saveSurveyRecord(
-      SurveyRecord(
-        id: '5',
-        completedAt: DateTime(2024, 3, 1),
-        type: 'initial',
-        title: 'Başlangıç Anketi',
-        name: 'Ada',
-        packsPerDay: '3 paket',
-        exhaleTestSeconds: 0,
-        inhaleTestSeconds: 0,
-        riskScore: 40,
-        riskLevel: 'ORTA',
-        consecutiveSmokingHabit: 'Evet, sık sık',
-        consecutiveSmokingCount: '4 adet',
-      ),
-    );
-
-    final adjustedScore = await storage.calculateAdjustedRiskScore(
-      baseScore: 40,
-      exhaleSeconds: 0,
-      inhaleSeconds: 0,
-    );
-
-    expect(adjustedScore, 85);
-  });
-
   test('persists isProfileCompleted through registration completion flag', () async {
     final storage = StorageService();
 

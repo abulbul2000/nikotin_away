@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/savings_snapshot.dart';
 import '../services/savings_service.dart';
+import '../widgets/load_error_view.dart';
 import '../widgets/statistic_card.dart';
 
 class SavingsPage extends StatefulWidget {
@@ -48,12 +49,23 @@ class _SavingsPageState extends State<SavingsPage> {
   }
 
   @override
+  void dispose() {
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Tasarruf')),
       body: FutureBuilder<SavingsSnapshot>(
         future: _future,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return LoadErrorView(
+              onRetry: () => setState(() => _future = _load()),
+            );
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
