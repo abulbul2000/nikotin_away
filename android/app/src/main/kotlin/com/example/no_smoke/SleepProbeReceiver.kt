@@ -227,3 +227,28 @@ object SleepProbeStore {
         return formatter.format(millis)
     }
 }
+
+/// Queues "user was awake during their sleep window" events for the Dart
+/// side to drain and act on (see NotificationService._syncSleepActivityFromNative
+/// -- decides full mandatory task vs. small advisory tip based on whether
+/// today's task quota is already met, business logic this native receiver
+/// deliberately doesn't duplicate). Same drain-on-next-run pattern as
+/// WatchdogStore/TaskOverlayOutcomeStore.
+object SleepActivityStore {
+    private const val PREFS = "no_smoke_sleep_activity"
+    private const val KEY_EVENTS = "queued_events"
+
+    fun enqueueActivity(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val current = prefs.getStringSet(KEY_EVENTS, emptySet())?.toMutableSet() ?: mutableSetOf()
+        current.add("${System.currentTimeMillis()}")
+        prefs.edit().putStringSet(KEY_EVENTS, current).apply()
+    }
+
+    fun drain(context: Context): List<String> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val items = prefs.getStringSet(KEY_EVENTS, emptySet())?.toList() ?: emptyList()
+        prefs.edit().remove(KEY_EVENTS).apply()
+        return items
+    }
+}

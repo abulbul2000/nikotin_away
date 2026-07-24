@@ -73,6 +73,11 @@ class MainActivity : FlutterActivity() {
 						result.success(true)
 					}
 
+					"consumeSleepActivityEvents" -> {
+						val events = SleepActivityStore.drain(this)
+						result.success(events)
+					}
+
 					else -> result.notImplemented()
 				}
 			}

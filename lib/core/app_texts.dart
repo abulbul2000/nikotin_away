@@ -853,6 +853,9 @@ class AppTexts {
     'postponeReminderPromptTitle': 'Ne zaman hatirlatayim?',
     'postponeReminderPromptMessage':
       'Gorevi erteliyorsunuz. Size ne zaman tekrar hatirlatmami istersiniz?',
+    'sleepActivityAdvisoryTitle': 'Hala ayakta misin?',
+    'sleepActivityAdvisoryBody':
+      'Uyku saatinde uyanik oldugunu fark ettik. Bugunku gorevlerini zaten tamamladin, sadece dinlenmeyi unutma.',
     'weeklySurveyReminderTitle': 'Haftalik anket zamani',
     'weeklySurveyReminderBody':
       'Risk skorunu guncellemek icin haftalik anketi doldurman gerekiyor.',
@@ -1681,6 +1684,9 @@ class AppTexts {
     'postponeReminderPromptTitle': 'When should I remind you?',
     'postponeReminderPromptMessage':
       'You are postponing the task. When would you like to be reminded again?',
+    'sleepActivityAdvisoryTitle': 'Still awake?',
+    'sleepActivityAdvisoryBody':
+      'We noticed you\'re awake during your sleep hours. You\'ve already completed today\'s tasks -- just remember to rest.',
     'barrierStartedTitle': 'Duration barrier started',
     'barrierStartedBody': 'Smoke-free timer is running.',
     'barrierStartedDuration': 'Timer duration',

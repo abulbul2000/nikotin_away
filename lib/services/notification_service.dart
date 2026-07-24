@@ -14,6 +14,7 @@ import '../pages/breath_test_page.dart';
 import 'android_watchdog_service.dart';
 import 'language_service.dart';
 import 'phone_state_service.dart';
+import 'sleep_probe_service.dart';
 import 'storage_service.dart';
 
 @pragma('vm:entry-point')
@@ -55,6 +56,7 @@ class NotificationService {
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
   static const String _sedentaryReminderChannelId = 'sedentary_reminder_channel_v1';
   static const int _sedentaryReminderNotificationId = 920001;
+  static const int _sleepActivityAdvisoryNotificationId = 930001;
   static const int _weeklySurveyNotificationId = 700001;
   static const int _dailyBreathReminderBaseId = 420100;
   static const int _dailyBreathReminderMaxSlots = 6;
@@ -167,6 +169,7 @@ class NotificationService {
 
     await _syncWatchdogViolationsFromNative();
     await _syncTaskOverlayOutcomesFromNative();
+    await _syncSleepActivityFromNative();
   }
 
   static Future<void> refreshLocalizedResources() async {
@@ -227,6 +230,83 @@ class NotificationService {
     } catch (_) {
       // Keep notification flow resilient even if native watchdog sync fails.
     }
+  }
+
+  static const Duration _sleepActivityNotificationCooldown = Duration(
+    minutes: 30,
+  );
+  static const String _lastSleepActivityNotificationKey =
+      'last_sleep_activity_notification_at';
+
+  /// Drains "user was awake during their sleep window" events queued by the
+  /// native sleep probe (see SleepProbeReceiver.kt / SleepActivityStore) and
+  /// decides how to respond: a full mandatory task if today's plan quota
+  /// isn't met yet (there's still real intervention work to do), or just a
+  /// small advisory tip if it already is (no need to escalate). A cooldown
+  /// collapses a run of closely-spaced events (the user staying awake
+  /// across several 5-minute probe cycles) into a single notification
+  /// rather than one per probe.
+  static Future<void> _syncSleepActivityFromNative() async {
+    try {
+      final events = await SleepProbeService.consumeSleepActivityEvents();
+      if (events.isEmpty) {
+        return;
+      }
+
+      final storage = StorageService();
+      final lastAtRaw = await storage.loadSetting(
+        _lastSleepActivityNotificationKey,
+      );
+      final lastAt = lastAtRaw == null
+          ? null
+          : DateTime.tryParse(lastAtRaw);
+      final now = DateTime.now();
+      if (lastAt != null &&
+          now.difference(lastAt) < _sleepActivityNotificationCooldown) {
+        return;
+      }
+
+      await storage.saveSetting(
+        _lastSleepActivityNotificationKey,
+        now.toIso8601String(),
+      );
+
+      final quotaMet = await storage.isDailyTaskQuotaMet(now: now);
+      if (quotaMet) {
+        await _showSleepActivityAdvisory();
+      } else {
+        await showFirstTaskTriggerNotification(
+          taskTitle: 'ADAPTIVE_NO_SMOKE:30',
+          taskDescription: 'ADAPTIVE_NO_SMOKE:30',
+        );
+      }
+    } catch (_) {
+      // Keep notification flow resilient even if sleep-activity sync fails.
+    }
+  }
+
+  static Future<void> _showSleepActivityAdvisory() async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    await _plugin.show(
+      _sleepActivityAdvisoryNotificationId,
+      _text(code, 'sleepActivityAdvisoryTitle'),
+      _text(code, 'sleepActivityAdvisoryBody'),
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _healthTipChannelId,
+          'Saglik tavsiyesi',
+          importance: Importance.defaultImportance,
+          visibility: NotificationVisibility.private,
+          priority: Priority.defaultPriority,
+          playSound: true,
+          enableVibration: true,
+          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+          category: AndroidNotificationCategory.reminder,
+        ),
+        iOS: const DarwinNotificationDetails(presentSound: true),
+      ),
+      payload: jsonEncode({'type': _typeHealthTip}),
+    );
   }
 
   static Future<void> _syncTaskOverlayOutcomesFromNative() async {

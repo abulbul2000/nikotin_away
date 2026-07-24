@@ -543,6 +543,8 @@
     'oneHourLabel': '1 Stunde',
     'postponeReminderPromptTitle': 'Wann soll ich Sie erinnern?',
     'postponeReminderPromptMessage': 'Sie verschieben die Aufgabe. Wann möchten Sie erneut erinnert werden?',
+    'sleepActivityAdvisoryTitle': 'Bist du noch wach?',
+    'sleepActivityAdvisoryBody': 'Wir haben bemerkt, dass du während deiner Schlafenszeit wach bist. Du hast die heutigen Aufgaben bereits erledigt -- denk einfach daran, dich auszuruhen.',
   },
   'ar': <String, String>{
     'appName': 'ممنوع التدخين',
@@ -1088,6 +1090,8 @@
     'oneHourLabel': 'ساعة واحدة',
     'postponeReminderPromptTitle': 'متى أذكرك؟',
     'postponeReminderPromptMessage': 'أنت تؤجل المهمة. متى تريد أن أذكرك مرة أخرى؟',
+    'sleepActivityAdvisoryTitle': 'هل ما زلت مستيقظاً؟',
+    'sleepActivityAdvisoryBody': 'لاحظنا أنك مستيقظ خلال ساعات نومك. لقد أكملت مهام اليوم بالفعل -- فقط تذكر أن ترتاح.',
   },
   'fr': <String, String>{
     'appName': 'PAS DE FUMÉE',
@@ -1633,6 +1637,8 @@
     'oneHourLabel': '1 heure',
     'postponeReminderPromptTitle': 'Quand dois-je vous le rappeler ?',
     'postponeReminderPromptMessage': 'Vous reportez la tâche. Quand souhaitez-vous être rappelé ?',
+    'sleepActivityAdvisoryTitle': 'Toujours réveillé ?',
+    'sleepActivityAdvisoryBody': 'Nous avons remarqué que vous êtes réveillé pendant vos heures de sommeil. Vous avez déjà terminé les tâches d\'aujourd\'hui -- pensez simplement à vous reposer.',
   },
   'es': <String, String>{
     'appName': 'NO FUMAR',
@@ -2178,6 +2184,8 @@
     'oneHourLabel': '1 hora',
     'postponeReminderPromptTitle': '¿Cuándo te lo recuerdo?',
     'postponeReminderPromptMessage': 'Estás posponiendo la tarea. ¿Cuándo quieres que te lo recuerde de nuevo?',
+    'sleepActivityAdvisoryTitle': '¿Sigues despierto?',
+    'sleepActivityAdvisoryBody': 'Notamos que estás despierto durante tu horario de sueño. Ya completaste las tareas de hoy -- solo recuerda descansar.',
   },
   'pt': <String, String>{
     'appName': 'NÃO FUMAR',
@@ -2723,6 +2731,8 @@
     'oneHourLabel': '1 hora',
     'postponeReminderPromptTitle': 'Quando devo lembrá-lo?',
     'postponeReminderPromptMessage': 'Você está adiando a tarefa. Quando gostaria de ser lembrado novamente?',
+    'sleepActivityAdvisoryTitle': 'Ainda acordado?',
+    'sleepActivityAdvisoryBody': 'Notamos que você está acordado durante seu horário de sono. Você já completou as tarefas de hoje -- apenas lembre-se de descansar.',
   },
   'it': <String, String>{
     'appName': 'NO FUMO',
@@ -3268,6 +3278,8 @@
     'oneHourLabel': '1 ora',
     'postponeReminderPromptTitle': 'Quando devo ricordartelo?',
     'postponeReminderPromptMessage': 'Stai rimandando l\'attività. Quando vuoi essere ricordato di nuovo?',
+    'sleepActivityAdvisoryTitle': 'Sei ancora sveglio?',
+    'sleepActivityAdvisoryBody': 'Abbiamo notato che sei sveglio durante le tue ore di sonno. Hai già completato le attività di oggi -- ricordati solo di riposare.',
   },
   'pl': <String, String>{
     'appName': 'BEZ DYM',
@@ -3813,6 +3825,8 @@
     'oneHourLabel': '1 godzina',
     'postponeReminderPromptTitle': 'Kiedy mam Ci przypomnieć?',
     'postponeReminderPromptMessage': 'Odkładasz zadanie. Kiedy chcesz otrzymać ponowne przypomnienie?',
+    'sleepActivityAdvisoryTitle': 'Nadal nie śpisz?',
+    'sleepActivityAdvisoryBody': 'Zauważyliśmy, że nie śpisz w porze snu. Zadania na dziś masz już wykonane -- pamiętaj tylko o odpoczynku.',
   },
   'ru': <String, String>{
     'appName': 'НЕ КУРИТЬ',
@@ -4358,6 +4372,8 @@
     'oneHourLabel': '1 час',
     'postponeReminderPromptTitle': 'Когда мне напомнить вам?',
     'postponeReminderPromptMessage': 'Вы откладываете задачу. Когда вам напомнить снова?',
+    'sleepActivityAdvisoryTitle': 'Всё ещё не спишь?',
+    'sleepActivityAdvisoryBody': 'Мы заметили, что вы не спите во время своего сна. Сегодняшние задачи уже выполнены -- просто не забудьте отдохнуть.',
   },
   'ja': <String, String>{
     'appName': '禁煙',
@@ -4903,6 +4919,8 @@
     'oneHourLabel': '1時間',
     'postponeReminderPromptTitle': 'いつリマインドしましょうか?',
     'postponeReminderPromptMessage': 'タスクを延期しています。いつ再度お知らせしますか?',
+    'sleepActivityAdvisoryTitle': 'まだ起きていますか?',
+    'sleepActivityAdvisoryBody': '睡眠時間中に起きていることに気づきました。今日のタスクはすでに完了しています -- 休むことを忘れないでください。',
   },
   'zh': <String, String>{
     'appName': '禁止吸烟',
@@ -5448,6 +5466,8 @@
     'oneHourLabel': '1小时',
     'postponeReminderPromptTitle': '我应该什么时候提醒您?',
     'postponeReminderPromptMessage': '您正在推迟任务。您希望什么时候再次收到提醒?',
+    'sleepActivityAdvisoryTitle': '你还醒着吗?',
+    'sleepActivityAdvisoryBody': '我们注意到您在睡眠时间醒着。您今天的任务已经完成 -- 别忘了休息。',
   },
   'ko': <String, String>{
     'appName': '금연',
@@ -5993,6 +6013,8 @@
     'oneHourLabel': '1시간',
     'postponeReminderPromptTitle': '언제 알려드릴까요?',
     'postponeReminderPromptMessage': '작업을 연기하고 있습니다. 언제 다시 알림을 받고 싶으신가요?',
+    'sleepActivityAdvisoryTitle': '아직 깨어 있나요?',
+    'sleepActivityAdvisoryBody': '수면 시간에 깨어 계신 것을 확인했습니다. 오늘의 과제는 이미 완료하셨습니다 -- 휴식을 잊지 마세요.',
   },
   'hi': <String, String>{
     'appName': 'धूम्रपान निषेध',
@@ -6538,6 +6560,8 @@
     'oneHourLabel': '1 घंटा',
     'postponeReminderPromptTitle': 'मैं आपको कब याद दिलाऊं?',
     'postponeReminderPromptMessage': 'आप कार्य स्थगित कर रहे हैं। आप दोबारा कब याद दिलाना चाहेंगे?',
+    'sleepActivityAdvisoryTitle': 'अभी भी जाग रहे हैं?',
+    'sleepActivityAdvisoryBody': 'हमने देखा कि आप अपने सोने के समय जाग रहे हैं। आपने आज के कार्य पहले ही पूरे कर लिए हैं -- बस आराम करना न भूलें।',
   },
   'bn': <String, String>{
     'appName': 'নো স্মোক',
@@ -7083,6 +7107,8 @@
     'oneHourLabel': '১ ঘণ্টা',
     'postponeReminderPromptTitle': 'আমি কখন আপনাকে মনে করিয়ে দেব?',
     'postponeReminderPromptMessage': 'আপনি কাজটি স্থগিত করছেন। আপনি কখন আবার মনে করিয়ে দিতে চান?',
+    'sleepActivityAdvisoryTitle': 'এখনও জেগে আছেন?',
+    'sleepActivityAdvisoryBody': 'আমরা লক্ষ্য করেছি আপনি আপনার ঘুমের সময় জেগে আছেন। আপনি আজকের কাজ ইতিমধ্যে সম্পন্ন করেছেন -- শুধু বিশ্রাম নিতে ভুলবেন না।',
   },
   'pa': <String, String>{
     'appName': 'ਕੋਈ ਧੂੰਆਂ ਨਹੀਂ',
@@ -7628,6 +7654,8 @@
     'oneHourLabel': '1 ਘੰਟਾ',
     'postponeReminderPromptTitle': 'ਮੈਂ ਤੁਹਾਨੂੰ ਕਦੋਂ ਯਾਦ ਕਰਾਵਾਂ?',
     'postponeReminderPromptMessage': 'ਤੁਸੀਂ ਕੰਮ ਮੁਲਤਵੀ ਕਰ ਰਹੇ ਹੋ। ਤੁਸੀਂ ਦੁਬਾਰਾ ਕਦੋਂ ਯਾਦ ਕਰਾਉਣਾ ਚਾਹੋਗੇ?',
+    'sleepActivityAdvisoryTitle': 'ਅਜੇ ਵੀ ਜਾਗ ਰਹੇ ਹੋ?',
+    'sleepActivityAdvisoryBody': 'ਅਸੀਂ ਦੇਖਿਆ ਕਿ ਤੁਸੀਂ ਆਪਣੇ ਸੌਣ ਦੇ ਸਮੇਂ ਦੌਰਾਨ ਜਾਗ ਰਹੇ ਹੋ। ਤੁਸੀਂ ਅੱਜ ਦੇ ਕੰਮ ਪਹਿਲਾਂ ਹੀ ਪੂਰੇ ਕਰ ਲਏ ਹਨ -- ਬੱਸ ਆਰਾਮ ਕਰਨਾ ਨਾ ਭੁੱਲੋ।',
   },
   'te': <String, String>{
     'appName': 'పొగ వద్దు',
@@ -8173,6 +8201,8 @@
     'oneHourLabel': '1 గంట',
     'postponeReminderPromptTitle': 'నేను మిమ్మల్ని ఎప్పుడు గుర్తు చేయాలి?',
     'postponeReminderPromptMessage': 'మీరు పనిని వాయిదా వేస్తున్నారు. మళ్లీ ఎప్పుడు గుర్తు చేయాలని కోరుకుంటున్నారు?',
+    'sleepActivityAdvisoryTitle': 'ఇంకా మేల్కొని ఉన్నారా?',
+    'sleepActivityAdvisoryBody': 'మీరు మీ నిద్ర సమయంలో మేల్కొని ఉన్నట్లు మేము గమనించాము. మీరు ఈ రోజు పనులను ఇప్పటికే పూర్తి చేశారు -- విశ్రాంతి తీసుకోవడం మర్చిపోవద్దు.',
   },
   'mr': <String, String>{
     'appName': 'धूर नाही',
@@ -8718,6 +8748,8 @@
     'oneHourLabel': '1 तास',
     'postponeReminderPromptTitle': 'मी तुम्हाला केव्हा आठवण करून देऊ?',
     'postponeReminderPromptMessage': 'तुम्ही कार्य पुढे ढकलत आहात. तुम्हाला पुन्हा केव्हा आठवण करून द्यावी?',
+    'sleepActivityAdvisoryTitle': 'अजूनही जागे आहात?',
+    'sleepActivityAdvisoryBody': 'तुम्ही तुमच्या झोपेच्या वेळेत जागे असल्याचे आम्ही लक्षात घेतले. तुम्ही आजची कामे आधीच पूर्ण केली आहेत -- फक्त विश्रांती घेण्यास विसरू नका.',
   },
   'ta': <String, String>{
     'appName': 'புகை வேண்டாம்',
@@ -9263,6 +9295,8 @@
     'oneHourLabel': '1 மணி நேரம்',
     'postponeReminderPromptTitle': 'நான் உங்களுக்கு எப்போது நினைவூட்ட வேண்டும்?',
     'postponeReminderPromptMessage': 'நீங்கள் பணியை ஒத்திவைக்கிறீர்கள். மீண்டும் எப்போது நினைவூட்ட வேண்டும்?',
+    'sleepActivityAdvisoryTitle': 'இன்னும் விழித்திருக்கிறீர்களா?',
+    'sleepActivityAdvisoryBody': 'உங்கள் தூக்க நேரத்தில் நீங்கள் விழித்திருப்பதை நாங்கள் கவனித்தோம். இன்றைய பணிகளை நீங்கள் ஏற்கனவே முடித்துவிட்டீர்கள் -- ஓய்வெடுக்க மறக்காதீர்கள்.',
   },
   'gu': <String, String>{
     'appName': 'સ્મોક નહીં',
@@ -9808,6 +9842,8 @@
     'oneHourLabel': '1 કલાક',
     'postponeReminderPromptTitle': 'મારે તમને ક્યારે યાદ કરાવવું?',
     'postponeReminderPromptMessage': 'તમે કાર્ય મુલતવી રાખી રહ્યા છો. તમે ફરીથી ક્યારે યાદ કરાવવા માંગો છો?',
+    'sleepActivityAdvisoryTitle': 'હજુ પણ જાગો છો?',
+    'sleepActivityAdvisoryBody': 'અમે નોંધ્યું કે તમે તમારા ઊંઘના સમય દરમિયાન જાગો છો. તમે આજના કાર્યો પહેલેથી જ પૂર્ણ કરી લીધા છે -- ફક્ત આરામ કરવાનું ભૂલશો નહીં.',
   },
   'kn': <String, String>{
     'appName': 'ಹೊಗೆ ಇಲ್ಲ',
@@ -10353,6 +10389,8 @@
     'oneHourLabel': '1 ಗಂಟೆ',
     'postponeReminderPromptTitle': 'ನಾನು ನಿಮಗೆ ಯಾವಾಗ ನೆನಪಿಸಬೇಕು?',
     'postponeReminderPromptMessage': 'ನೀವು ಕಾರ್ಯವನ್ನು ಮುಂದೂಡುತ್ತಿದ್ದೀರಿ. ಮತ್ತೆ ಯಾವಾಗ ನೆನಪಿಸಬೇಕು?',
+    'sleepActivityAdvisoryTitle': 'ಇನ್ನೂ ಎಚ್ಚರವಾಗಿದ್ದೀರಾ?',
+    'sleepActivityAdvisoryBody': 'ನಿಮ್ಮ ನಿದ್ರೆಯ ಸಮಯದಲ್ಲಿ ನೀವು ಎಚ್ಚರವಾಗಿರುವುದನ್ನು ನಾವು ಗಮನಿಸಿದ್ದೇವೆ. ನೀವು ಇಂದಿನ ಕಾರ್ಯಗಳನ್ನು ಈಗಾಗಲೇ ಪೂರ್ಣಗೊಳಿಸಿದ್ದೀರಿ -- ವಿಶ್ರಾಂತಿ ಪಡೆಯಲು ಮರೆಯಬೇಡಿ.',
   },
   'ml': <String, String>{
     'appName': 'പുകവലിക്കരുത്',
@@ -10898,6 +10936,8 @@
     'oneHourLabel': '1 മണിക്കൂർ',
     'postponeReminderPromptTitle': 'ഞാൻ എപ്പോൾ ഓർമ്മിപ്പിക്കണം?',
     'postponeReminderPromptMessage': 'നിങ്ങൾ ടാസ്ക് മാറ്റിവയ്ക്കുകയാണ്. വീണ്ടും എപ്പോൾ ഓർമ്മിപ്പിക്കണം?',
+    'sleepActivityAdvisoryTitle': 'ഇപ്പോഴും ഉണർന്നിരിക്കുകയാണോ?',
+    'sleepActivityAdvisoryBody': 'നിങ്ങളുടെ ഉറക്ക സമയത്ത് നിങ്ങൾ ഉണർന്നിരിക്കുന്നതായി ഞങ്ങൾ ശ്രദ്ധിച്ചു. ഇന്നത്തെ ജോലികൾ നിങ്ങൾ ഇതിനകം പൂർത്തിയാക്കി -- വിശ്രമിക്കാൻ മറക്കരുത്.',
   },
   'th': <String, String>{
     'appName': 'ห้ามสูบบุหรี่',
@@ -11443,6 +11483,8 @@
     'oneHourLabel': '1 ชั่วโมง',
     'postponeReminderPromptTitle': 'ให้ฉันเตือนคุณเมื่อไหร่?',
     'postponeReminderPromptMessage': 'คุณกำลังเลื่อนงานออกไป คุณต้องการให้เตือนอีกครั้งเมื่อไหร่?',
+    'sleepActivityAdvisoryTitle': 'ยังตื่นอยู่หรือเปล่า?',
+    'sleepActivityAdvisoryBody': 'เราสังเกตเห็นว่าคุณตื่นอยู่ในช่วงเวลานอนของคุณ คุณทำงานของวันนี้เสร็จแล้ว -- แค่อย่าลืมพักผ่อน',
   },
   'vi': <String, String>{
     'appName': 'KHÔNG HÚT THUỐC',
@@ -11988,6 +12030,8 @@
     'oneHourLabel': '1 giờ',
     'postponeReminderPromptTitle': 'Khi nào tôi nên nhắc bạn?',
     'postponeReminderPromptMessage': 'Bạn đang hoãn nhiệm vụ. Bạn muốn được nhắc lại khi nào?',
+    'sleepActivityAdvisoryTitle': 'Vẫn còn thức à?',
+    'sleepActivityAdvisoryBody': 'Chúng tôi nhận thấy bạn đang thức trong giờ ngủ của mình. Bạn đã hoàn thành nhiệm vụ hôm nay rồi -- chỉ cần nhớ nghỉ ngơi.',
   },
   'id': <String, String>{
     'appName': 'DILARANG ASAP',
@@ -12533,6 +12577,8 @@
     'oneHourLabel': '1 jam',
     'postponeReminderPromptTitle': 'Kapan saya harus mengingatkan Anda?',
     'postponeReminderPromptMessage': 'Anda menunda tugas ini. Kapan Anda ingin diingatkan lagi?',
+    'sleepActivityAdvisoryTitle': 'Masih terjaga?',
+    'sleepActivityAdvisoryBody': 'Kami melihat Anda terjaga selama jam tidur Anda. Anda sudah menyelesaikan tugas hari ini -- jangan lupa untuk beristirahat.',
   },
   'ms': <String, String>{
     'appName': 'TIADA WASAP',
@@ -13078,5 +13124,7 @@
     'oneHourLabel': '1 jam',
     'postponeReminderPromptTitle': 'Bila saya patut ingatkan anda?',
     'postponeReminderPromptMessage': 'Anda menangguhkan tugas ini. Bila anda mahu diingatkan semula?',
+    'sleepActivityAdvisoryTitle': 'Masih terjaga?',
+    'sleepActivityAdvisoryBody': 'Kami perasan anda terjaga semasa waktu tidur anda. Anda sudah selesaikan tugas hari ini -- jangan lupa untuk berehat.',
   },
 };
