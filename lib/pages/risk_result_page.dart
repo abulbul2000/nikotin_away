@@ -50,30 +50,6 @@ class RiskResultPage extends StatelessWidget {
     return context.t('riskLow');
   }
 
-  int getTaskCount() {
-    if (riskScore >= 80) return 5;
-    if (riskScore >= 60) return 4;
-    if (riskScore >= 40) return 3;
-    if (riskScore >= 20) return 2;
-    return 1;
-  }
-
-  String getRiskDescription() {
-    if (riskScore >= 80) {
-      return 'riskDescCritical';
-    }
-
-    if (riskScore >= 60) {
-      return 'riskDescHigh';
-    }
-
-    if (riskScore >= 40) {
-      return 'riskDescMedium';
-    }
-
-    return 'riskDescLow';
-  }
-
   String _formatDate(DateTime? date) {
     if (date == null) {
       return 'notSpecified';
@@ -172,34 +148,6 @@ class RiskResultPage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 25),
-            Text(
-              context.t(getRiskDescription()),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 25),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Text(
-                      context.t('taskCountToday'),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      '${getTaskCount()} ${context.t('taskUnit')}',
-                      style: const TextStyle(fontSize: 26),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 25),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -236,16 +184,6 @@ class RiskResultPage extends StatelessWidget {
                       context.t(_getPremiumStatus()),
                     ),
                   ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 25),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Text(
-                  context.t('weeklySavePrompt'),
-                  textAlign: TextAlign.center,
                 ),
               ),
             ),

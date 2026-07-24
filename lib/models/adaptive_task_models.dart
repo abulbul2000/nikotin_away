@@ -2,6 +2,13 @@ class AdaptiveTaskOutcome {
   static const String success = 'success';
   static const String deferred = 'deferred';
   static const String smoked = 'smoked';
+
+  /// All 3 retry attempts (5 minutes apart) went unanswered — distinct
+  /// from [smoked] (an explicit "I smoked" admission) since silence isn't
+  /// an admission of anything, but distinct from [deferred] too since a
+  /// mandatory full-screen alert going fully unanswered for 15 minutes is
+  /// a stronger failure signal than an active "not now" tap.
+  static const String missed = 'missed';
 }
 
 class AdaptiveTaskState {

@@ -8,10 +8,10 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../core/app_texts.dart';
+import '../models/adaptive_task_models.dart';
+import '../models/medication.dart';
 import '../pages/breath_test_page.dart';
-import '../pages/fake_call_page.dart';
 import 'android_watchdog_service.dart';
-import 'fake_call_barrier_service.dart';
 import 'language_service.dart';
 import 'phone_state_service.dart';
 import 'storage_service.dart';
@@ -32,8 +32,8 @@ class NotificationService {
   static const String _typeTaskStart = 'task_start';
   static const String _typeTaskFollowUp = 'task_followup';
   static const String _typeWeeklySurvey = 'weekly_survey';
-  static const String _typeFakeCall = 'fake_call';
-  static const String _typeFakeCallCheckIn = 'fake_call_checkin';
+  static const String _typeHealthTip = 'health_tip';
+  static const String _typeMedicationReminder = 'medication_reminder';
 
   static const String _actionTaskDone = 'task_done';
   static const String _actionTaskNotNow = 'task_not_now';
@@ -53,17 +53,34 @@ class NotificationService {
   static const String _taskEscalationChannelId = 'task_escalation_channel_v2';
   static const String _breathReminderChannelId = 'breath_reminder_channel_v3';
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
-  static const String _fakeCallChannelId = 'fake_call_channel_v1';
-  static const String _fakeCallCheckInChannelId = 'fake_call_checkin_channel_v1';
   static const String _sedentaryReminderChannelId = 'sedentary_reminder_channel_v1';
   static const int _sedentaryReminderNotificationId = 920001;
-  static const int _fakeCallNotificationId = 810001;
-  static const int _fakeCallCheckInBaseId = 810100;
   static const int _weeklySurveyNotificationId = 700001;
   static const int _dailyBreathReminderBaseId = 420100;
   static const int _dailyBreathReminderMaxSlots = 6;
+  static const String _healthTipChannelId = 'health_tip_channel_v2';
+  static const int _healthTipBaseId = 430100;
+  static const int _healthTipDailyCount = 3;
+  static const String _medicationReminderChannelId =
+      'medication_reminder_channel_v1';
+  static const int _medicationReminderBaseId = 440100;
+  static const int _medicationReminderMaxSlots = 30;
+  static const Map<String, List<String>> _healthTipKeysByCondition = {
+    'Hipertansiyon': ['healthTipHypertension1', 'healthTipHypertension2'],
+    'Astim': ['healthTipAsthma1', 'healthTipAsthma2'],
+    'Diyabet': ['healthTipDiabetes1', 'healthTipDiabetes2'],
+    'KOAH': ['healthTipCopd1', 'healthTipCopd2'],
+    'Kalp Hastaligi': ['healthTipHeartDisease1', 'healthTipHeartDisease2'],
+  };
   static const int _notificationTimeoutMs = 15000;
-  static const Duration _unansweredReminderDelay = Duration(minutes: 10);
+  static const String _reservedTimesSettingKey =
+      'reserved_notification_fire_times';
+  // Retry cadence for a mandatory task alert nobody has answered yet: fire
+  // again every 5 minutes, up to 3 attempts total, then give up (see
+  // _scheduleUnansweredTaskUpdateReminder) -- matches the discipline
+  // protocol's explicit retry contract, not an arbitrary escalation delay.
+  static const Duration _unansweredReminderDelay = Duration(minutes: 5);
+  static const int _maxTaskAttempts = 3;
   static final Int32List _insistentFlag = Int32List.fromList(<int>[4]);
   // A rhythmic buzz-pause-buzz pattern (not one flat 15s vibration) so it
   // actually reads as an alarm clock going off rather than a single long
@@ -149,6 +166,7 @@ class NotificationService {
     );
 
     await _syncWatchdogViolationsFromNative();
+    await _syncTaskOverlayOutcomesFromNative();
   }
 
   static Future<void> refreshLocalizedResources() async {
@@ -176,12 +194,58 @@ class NotificationService {
           severity: 'high',
           source: 'queued_import',
           taskTitle: taskTitle,
-          details: '10 minutes passed with no response to task notification.',
+          details:
+              'All $_maxTaskAttempts retry attempts passed with no response to task notification.',
           createdAt: createdAt,
         );
+
+        // Feeds the same "no response" event into the adaptive engine (see
+        // AdaptiveTaskOutcome.missed) so difficultyLevel/streak react to it
+        // exactly like any other failed task, not just the violation log.
+        // Only meaningful for the canonical adaptive-plan task format --
+        // other command types (coach commands, etc.) aren't tracked by the
+        // adaptive engine at all, so there's nothing to record for those.
+        final adaptiveMatch = taskTitle == null
+            ? null
+            : RegExp(
+                r'^ADAPTIVE_NO_SMOKE:(\d+)$',
+              ).firstMatch(taskTitle.trim());
+        if (adaptiveMatch != null) {
+          final plannedMinutes =
+              int.tryParse(adaptiveMatch.group(1) ?? '') ?? 30;
+          await storage.recordAdaptiveTaskOutcome(
+            taskTitle: taskTitle!,
+            outcome: AdaptiveTaskOutcome.missed,
+            plannedDurationMinutes: plannedMinutes,
+            scheduledAt: createdAt.subtract(
+              _unansweredReminderDelay * _maxTaskAttempts,
+            ),
+            respondedAt: createdAt,
+          );
+        }
       }
     } catch (_) {
       // Keep notification flow resilient even if native watchdog sync fails.
+    }
+  }
+
+  static Future<void> _syncTaskOverlayOutcomesFromNative() async {
+    try {
+      final rows = await AndroidWatchdogService.consumeTaskOverlayOutcomes();
+      for (final row in rows) {
+        final outcome = row['outcome']?.toString() ?? '';
+        final taskTitle = row['taskTitle']?.toString() ?? '';
+        if (taskTitle.isEmpty || outcome.isEmpty) {
+          continue;
+        }
+        _dispatchTaskAction({
+          'type': _typeTaskStart,
+          'taskTitle': taskTitle,
+          'actionId': outcome == 'done' ? _actionTaskDone : _actionTaskNotNow,
+        });
+      }
+    } catch (_) {
+      // Keep notification flow resilient even if overlay outcome sync fails.
     }
   }
 
@@ -356,35 +420,6 @@ class NotificationService {
       return;
     }
 
-    if (type == _typeFakeCallCheckIn) {
-      return;
-    }
-
-    if (type == _typeFakeCall && allowNavigation) {
-      final hasOnboarded = await StorageService().hasCompletedInitialSurvey();
-      if (!hasOnboarded) {
-        return;
-      }
-      final callerName =
-          payload['callerName']?.trim().isNotEmpty == true
-          ? payload['callerName']!.trim()
-          : await StorageService().loadFakeCallerName();
-      final context = _navigatorKey?.currentContext;
-      if (context != null) {
-        // ignore: use_build_context_synchronously
-        final outcome = await Navigator.of(context).push<FakeCallOutcome>(
-          MaterialPageRoute(
-            builder: (_) => FakeCallPage(callerName: callerName),
-            fullscreenDialog: true,
-          ),
-        );
-        if (outcome != null) {
-          await FakeCallBarrierService().handleOutcome(outcome);
-        }
-      }
-      return;
-    }
-
     if (type == _typeTaskStart || type == _typeTaskFollowUp) {
       final watchdogId = payload['watchdogId']?.trim() ?? '';
       if (watchdogId.isNotEmpty) {
@@ -398,11 +433,15 @@ class NotificationService {
         'actionId': actionId ?? '',
       };
 
-      if (_taskActionController.hasListener) {
-        _taskActionController.add(event);
-      } else {
-        unawaited(_handleActionWithoutUi(event));
-      }
+      _dispatchTaskAction(event);
+    }
+  }
+
+  static void _dispatchTaskAction(Map<String, String> event) {
+    if (_taskActionController.hasListener) {
+      _taskActionController.add(event);
+    } else {
+      unawaited(_handleActionWithoutUi(event));
     }
   }
 
@@ -494,11 +533,23 @@ class NotificationService {
     return const Duration(minutes: 30);
   }
 
+  /// Schedules attempt [attempt] (2 or 3) of the unanswered-task retry
+  /// chain. Each attempt embeds the *next* attempt's reminderId in its own
+  /// payload -- exactly the same "tapping this cancels reminderId" path
+  /// _processNotificationResponse already uses for every other notification
+  /// type, so responding to any attempt automatically cancels whichever
+  /// attempt would have come after it. Recurses to schedule attempt 3 right
+  /// after scheduling attempt 2; stops after attempt 3 (no attempt 4) --
+  /// if that also goes unanswered, the native NoResponseWatchdogService's
+  /// own timeout (armed for the full 3-attempt window, see
+  /// scheduleFirstTaskTriggerNotification) is what ultimately marks the
+  /// task missed.
   static Future<void> _scheduleUnansweredTaskUpdateReminder({
     required String taskTitle,
     required String type,
     required int reminderId,
     required tz.TZDateTime triggerAt,
+    int attempt = 2,
   }) async {
     final code = await LanguageService.loadSelectedLanguageCode();
     final scheduleMode = await _resolveAndroidScheduleMode();
@@ -513,6 +564,14 @@ class NotificationService {
         ? AndroidNotificationCategory.call
         : AndroidNotificationCategory.reminder;
     final iosCategory = isFollowUp ? _categoryTaskFollowUp : _categoryTaskStart;
+
+    final hasNextAttempt = attempt < _maxTaskAttempts;
+    final nextReminderId = hasNextAttempt
+        ? _deriveReminderId(reminderId)
+        : null;
+    final nextTriggerAt = hasNextAttempt
+        ? triggerAt.add(_unansweredReminderDelay)
+        : null;
 
     await _plugin.zonedSchedule(
       reminderId,
@@ -557,8 +616,22 @@ class NotificationService {
       androidScheduleMode: scheduleMode,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      payload: jsonEncode({'type': type, 'taskTitle': taskTitle}),
+      payload: jsonEncode({
+        'type': type,
+        'taskTitle': taskTitle,
+        if (nextReminderId != null) 'reminderId': '$nextReminderId',
+      }),
     );
+
+    if (hasNextAttempt && nextReminderId != null && nextTriggerAt != null) {
+      await _scheduleUnansweredTaskUpdateReminder(
+        taskTitle: taskTitle,
+        type: type,
+        reminderId: nextReminderId,
+        triggerAt: nextTriggerAt,
+        attempt: attempt + 1,
+      );
+    }
   }
 
   static Future<void> showFirstTaskTriggerNotification({
@@ -582,7 +655,12 @@ class NotificationService {
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
     final reminderId = _deriveReminderId(id);
     final watchdogId = 'wdg_$id';
-    final dueAt = DateTime.now().add(_unansweredReminderDelay);
+    // Spans the full retry chain (all _maxTaskAttempts, 5 min apart), not
+    // just the first interval -- the watchdog should only fire its "truly
+    // no response" violation once every attempt has had its turn.
+    final dueAt = DateTime.now().add(
+      _unansweredReminderDelay * _maxTaskAttempts,
+    );
     await _plugin.show(
       id,
       _text(code, 'disciplineCommand'),
@@ -638,6 +716,14 @@ class NotificationService {
       watchdogId: watchdogId,
       dueAt: dueAt,
     );
+    await AndroidWatchdogService.showTaskOverlay(
+      title: _text(code, 'disciplineCommand'),
+      body: adjustedDescription,
+      doneLabel: _text(code, 'taskActionDoneLabel'),
+      declineLabel: _text(code, 'taskActionNotNowLabel'),
+      watchdogId: watchdogId,
+      taskTitle: taskTitle,
+    );
 
     final reminderAt = tz.TZDateTime.now(
       tz.local,
@@ -676,7 +762,9 @@ class NotificationService {
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
     final reminderId = _deriveReminderId(id);
     final watchdogId = 'wdg_$id';
-    final dueAt = fireAt.add(_unansweredReminderDelay);
+    // See showFirstTaskTriggerNotification's dueAt for why this spans the
+    // full retry chain rather than a single interval.
+    final dueAt = fireAt.add(_unansweredReminderDelay * _maxTaskAttempts);
     await _plugin.zonedSchedule(
       id,
       _text(code, 'disciplineCommand'),
@@ -840,6 +928,7 @@ class NotificationService {
         confidence: confidence,
       );
       fireAt = fireAt.add(Duration(minutes: extraDelay));
+      fireAt = await _reserveNonConflictingTime(fireAt);
 
       final body = contextLabel == 'driving'
           ? _text(code, 'breathReminderDriving')
@@ -854,7 +943,7 @@ class NotificationService {
         _text(code, 'breathReminderTitle'),
         body,
         fireAt,
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
             _breathReminderChannelId,
             'Nefes testi hatırlatıcı',
@@ -862,10 +951,12 @@ class NotificationService {
             visibility: NotificationVisibility.private,
             priority: Priority.high,
             playSound: true,
+            enableVibration: true,
+            vibrationPattern: _taskVibrationPattern,
             audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
             category: AndroidNotificationCategory.reminder,
           ),
-          iOS: DarwinNotificationDetails(presentSound: true),
+          iOS: const DarwinNotificationDetails(presentSound: true),
         ),
         androidScheduleMode: scheduleMode,
         matchDateTimeComponents: DateTimeComponents.time,
@@ -881,13 +972,15 @@ class NotificationService {
 
     // Safety net: if preferred count somehow falls below minimum.
     for (var i = count; i < safeMinimum; i++) {
-      final fallbackAt = now.add(Duration(minutes: 60 + (i * 45)));
+      final fallbackAt = await _reserveNonConflictingTime(
+        now.add(Duration(minutes: 60 + (i * 45))),
+      );
       await _plugin.zonedSchedule(
         _dailyBreathReminderBaseId + i,
         _text(code, 'breathReminderTitle'),
         _text(code, 'breathReminderBody'),
         fallbackAt,
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
             _breathReminderChannelId,
             'Nefes testi hatırlatıcı',
@@ -895,10 +988,12 @@ class NotificationService {
             visibility: NotificationVisibility.private,
             priority: Priority.high,
             playSound: true,
+            enableVibration: true,
+            vibrationPattern: _taskVibrationPattern,
             audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
             category: AndroidNotificationCategory.reminder,
           ),
-          iOS: DarwinNotificationDetails(presentSound: true),
+          iOS: const DarwinNotificationDetails(presentSound: true),
         ),
         androidScheduleMode: scheduleMode,
         matchDateTimeComponents: DateTimeComponents.time,
@@ -906,6 +1001,182 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: jsonEncode({'type': _typeBreath}),
       );
+    }
+  }
+
+  /// A few short, condition-specific tips spread across the user's waking
+  /// hours — cycles through whichever conditions the user picked in the
+  /// initial survey (see SurveyPage._selectedHealthConditions), rotating
+  /// which condition's tip lands in each daily slot rather than always
+  /// leading with the same one. No-ops (after clearing any previously
+  /// scheduled slots) when the user selected no conditions.
+  static Future<void> scheduleHealthConditionAdviceNotifications({
+    required List<String> healthConditions,
+    required String wakeTime,
+    required String sleepTime,
+  }) async {
+    for (var i = 0; i < _healthTipDailyCount; i++) {
+      await _plugin.cancel(_healthTipBaseId + i);
+    }
+    if (healthConditions.isEmpty) {
+      return;
+    }
+
+    final scheduleMode = await _resolveAndroidScheduleMode();
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final now = tz.TZDateTime.now(tz.local);
+
+    final wakeParts = wakeTime.split(':');
+    final wakeHour = int.tryParse(wakeParts[0]) ?? 7;
+    final wakeMinute = int.tryParse(wakeParts.length > 1 ? wakeParts[1] : '0') ?? 0;
+
+    final sleepParts = sleepTime.split(':');
+    final sleepHour = int.tryParse(sleepParts[0]) ?? 21;
+    final sleepMinute = int.tryParse(sleepParts.length > 1 ? sleepParts[1] : '0') ?? 0;
+
+    var wakeAt = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      wakeHour,
+      wakeMinute,
+    );
+    var sleepAt = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      sleepHour,
+      sleepMinute,
+    );
+    if (!sleepAt.isAfter(wakeAt)) {
+      sleepAt = sleepAt.add(const Duration(days: 1));
+    }
+
+    final windowMinutes = sleepAt.difference(wakeAt).inMinutes;
+    final intervalMinutes = windowMinutes ~/ (_healthTipDailyCount + 1);
+
+    var conditionCursor = 0;
+    var variantCursor = 0;
+    for (var i = 0; i < _healthTipDailyCount; i++) {
+      var fireAt = wakeAt.add(Duration(minutes: intervalMinutes * (i + 1)));
+      if (!fireAt.isAfter(now)) {
+        fireAt = fireAt.add(const Duration(days: 1));
+      }
+      fireAt = await _reserveNonConflictingTime(fireAt);
+
+      final condition = healthConditions[conditionCursor % healthConditions.length];
+      final tipKeys = _healthTipKeysByCondition[condition];
+      conditionCursor++;
+      if (tipKeys == null || tipKeys.isEmpty) {
+        continue;
+      }
+      final tipKey = tipKeys[variantCursor % tipKeys.length];
+      variantCursor++;
+
+      await _plugin.zonedSchedule(
+        _healthTipBaseId + i,
+        _text(code, 'healthTipTitle'),
+        _text(code, tipKey),
+        fireAt,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _healthTipChannelId,
+            'Saglik tavsiyesi',
+            importance: Importance.max,
+            visibility: NotificationVisibility.private,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+            vibrationPattern: _taskVibrationPattern,
+            fullScreenIntent: true,
+            audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+            category: AndroidNotificationCategory.reminder,
+          ),
+          iOS: const DarwinNotificationDetails(presentSound: true),
+        ),
+        androidScheduleMode: scheduleMode,
+        matchDateTimeComponents: DateTimeComponents.time,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: jsonEncode({'type': _typeHealthTip}),
+      );
+    }
+  }
+
+  static Future<void> scheduleMedicationReminders(
+    List<Medication> medications,
+  ) async {
+    for (var i = 0; i < _medicationReminderMaxSlots; i++) {
+      await _plugin.cancel(_medicationReminderBaseId + i);
+    }
+    if (medications.isEmpty) {
+      return;
+    }
+
+    final scheduleMode = await _resolveAndroidScheduleMode();
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final now = tz.TZDateTime.now(tz.local);
+
+    var slot = 0;
+    for (final medication in medications) {
+      for (final time in medication.times) {
+        if (slot >= _medicationReminderMaxSlots) {
+          return;
+        }
+        final parts = time.split(':');
+        final hour = int.tryParse(parts[0]) ?? 8;
+        final minute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+        var fireAt = tz.TZDateTime(
+          tz.local,
+          now.year,
+          now.month,
+          now.day,
+          hour,
+          minute,
+        );
+        if (!fireAt.isAfter(now)) {
+          fireAt = fireAt.add(const Duration(days: 1));
+        }
+
+        final body = _text(
+          code,
+          'medicationReminderBody',
+        ).replaceAll('{name}', medication.name);
+
+        await _plugin.zonedSchedule(
+          _medicationReminderBaseId + slot,
+          _text(code, 'medicationReminderTitle'),
+          body,
+          fireAt,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              _medicationReminderChannelId,
+              'Ilac hatirlatmasi',
+              importance: Importance.max,
+              visibility: NotificationVisibility.private,
+              priority: Priority.high,
+              playSound: true,
+              enableVibration: true,
+              vibrationPattern: _taskVibrationPattern,
+              fullScreenIntent: true,
+              audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+              category: AndroidNotificationCategory.reminder,
+            ),
+            iOS: const DarwinNotificationDetails(presentSound: true),
+          ),
+          androidScheduleMode: scheduleMode,
+          matchDateTimeComponents: DateTimeComponents.time,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          payload: jsonEncode({
+            'type': _typeMedicationReminder,
+            'medicationId': medication.id,
+          }),
+        );
+        slot++;
+      }
     }
   }
 
@@ -1025,7 +1296,7 @@ class NotificationService {
       _text(code, 'weeklySurveyReminderTitle'),
       _text(code, 'weeklySurveyReminderBody'),
       fireAt,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           _weeklySurveyChannelId,
           'Haftalik anket hatirlatici',
@@ -1033,10 +1304,12 @@ class NotificationService {
           visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
+          enableVibration: true,
+          vibrationPattern: _taskVibrationPattern,
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
           category: AndroidNotificationCategory.reminder,
         ),
-        iOS: DarwinNotificationDetails(presentSound: true),
+        iOS: const DarwinNotificationDetails(presentSound: true),
       ),
       androidScheduleMode: scheduleMode,
       uiLocalNotificationDateInterpretation:
@@ -1059,7 +1332,7 @@ class NotificationService {
       id,
       _text(code, 'taskTimerStartedTitle'),
       '${_text(code, 'taskTimerStartedBody')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}\n${_text(code, 'taskTimerDuration')}: ${duration.inMinutes} ${_text(code, 'minutesShort')}.',
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           _taskStartChannelId,
           'Task timer start',
@@ -1067,10 +1340,18 @@ class NotificationService {
           visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
+          enableVibration: true,
+          vibrationPattern: _taskVibrationPattern,
+          // fullScreenIntent (not the alarm sound/insistent-loop combo the
+          // actual task-trigger alert uses) is enough to make this land as
+          // a large, hard-to-miss banner — this fires right after the user
+          // already said yes to a task, so it should be clearly visible,
+          // not urgently repeating.
+          fullScreenIntent: true,
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
           category: AndroidNotificationCategory.reminder,
         ),
-        iOS: DarwinNotificationDetails(presentSound: true),
+        iOS: const DarwinNotificationDetails(presentSound: true),
       ),
     );
   }
@@ -1081,15 +1362,18 @@ class NotificationService {
   }) async {
     final code = await LanguageService.loadSelectedLanguageCode();
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
-    final durationText = _formatBarrierDuration(duration, code);
+    final durationText = AppTexts.formatAdaptiveDurationPhrase(
+      code,
+      duration.inMinutes,
+    );
     final instruction = code == 'tr'
-        ? 'Lütfen önümüzdeki $durationText boyunca sigara içmeyin.'
-        : 'Please do not smoke for the next $durationText.';
+        ? 'Lütfen önümüzdeki $durationText boyunca sigara içmeyin. Elinizde sigara varsa hemen söndürün.'
+        : 'Please do not smoke for the next $durationText. If you have a cigarette in your hand, put it out now.';
     await _plugin.show(
       id,
       _text(code, 'barrierStartedTitle'),
       '$instruction\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}\n${_text(code, 'barrierStartedDuration')}: $durationText.',
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           _taskStartChannelId,
           'Duration barrier call',
@@ -1097,108 +1381,17 @@ class NotificationService {
           visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
+          enableVibration: true,
+          vibrationPattern: _taskVibrationPattern,
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
           category: AndroidNotificationCategory.call,
           fullScreenIntent: true,
         ),
-        iOS: DarwinNotificationDetails(presentSound: true),
+        iOS: const DarwinNotificationDetails(presentSound: true),
       ),
     );
   }
 
-  static String _formatBarrierDuration(Duration duration, String code) {
-    final totalMinutes = duration.inMinutes;
-    if (totalMinutes >= 60) {
-      final hours = totalMinutes ~/ 60;
-      final remainingMinutes = totalMinutes % 60;
-      if (remainingMinutes == 0) {
-        return code == 'tr' ? '$hours saat' : '$hours hour${hours == 1 ? '' : 's'}';
-      }
-      return code == 'tr'
-          ? '$hours saat $remainingMinutes dakika'
-          : '$hours hour${hours == 1 ? '' : 's'} $remainingMinutes minute${remainingMinutes == 1 ? '' : 's'}';
-    }
-    return code == 'tr'
-        ? '$totalMinutes dakika'
-        : '$totalMinutes minute${totalMinutes == 1 ? '' : 's'}';
-  }
-
-  /// Schedules the fake-call duration-barrier notification. Full-screen +
-  /// call category + the notification's own ringtone sound so it presents
-  /// as close to a real incoming call as `flutter_local_notifications`
-  /// allows — tapping it (or the system auto-launching it full-screen over
-  /// a locked device) opens [FakeCallPage] via [_processNotificationResponse].
-  static Future<void> scheduleFakeCallBarrier({
-    required DateTime fireAt,
-    required String callerName,
-  }) async {
-    final scheduleMode = await _resolveAndroidScheduleMode();
-    final triggerAt = tz.TZDateTime.from(fireAt, tz.local);
-    await _plugin.zonedSchedule(
-      _fakeCallNotificationId,
-      callerName,
-      '',
-      triggerAt,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _fakeCallChannelId,
-          'Gelen arama',
-          importance: Importance.max,
-          visibility: NotificationVisibility.private,
-          priority: Priority.high,
-          playSound: true,
-          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
-          category: AndroidNotificationCategory.call,
-          fullScreenIntent: true,
-          ongoing: true,
-          autoCancel: false,
-          timeoutAfter: _notificationTimeoutMs * 2,
-        ),
-        iOS: DarwinNotificationDetails(presentSound: true),
-      ),
-      androidScheduleMode: scheduleMode,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      payload: jsonEncode({'type': _typeFakeCall, 'callerName': callerName}),
-    );
-  }
-
-  static Future<void> cancelFakeCallBarrier() async {
-    await _plugin.cancel(_fakeCallNotificationId);
-  }
-
-  /// Fired right after the user taps "Answer" on the fake call — the app
-  /// never shows a visible countdown (see [scheduleFakeCallSurpriseCheckIn]
-  /// docs), so without this the user would have no way to know the barrier
-  /// actually started or how long it runs for.
-  static Future<void> showFakeCallBarrierStartedNotification({
-    required Duration duration,
-  }) async {
-    final code = await LanguageService.loadSelectedLanguageCode();
-    final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
-    final durationText = _formatBarrierDuration(duration, code);
-    final instruction = code == 'tr'
-        ? 'Lütfen önümüzdeki $durationText boyunca sigara içmeyin.'
-        : 'Please do not smoke for the next $durationText.';
-    await _plugin.show(
-      id,
-      _text(code, 'barrierStartedTitle'),
-      '$instruction\n${_text(code, 'barrierStartedDuration')}: $durationText.',
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _taskStartChannelId,
-          'Duration barrier call',
-          importance: Importance.max,
-          visibility: NotificationVisibility.private,
-          priority: Priority.high,
-          playSound: true,
-          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
-          category: AndroidNotificationCategory.reminder,
-        ),
-        iOS: DarwinNotificationDetails(presentSound: true),
-      ),
-    );
-  }
 
   /// Phase 11: a gentle "get up and move" nudge — deliberately styled like
   /// the breath-test reminder (normal ringtone, no insistent flag, no
@@ -1219,44 +1412,15 @@ class NotificationService {
           visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
+          // Default vibration only (no custom pattern) -- keeps this a
+          // gentle nudge rather than the insistent pattern the discipline
+          // protocol's task alerts use, while still not being silent.
+          enableVibration: true,
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
           category: AndroidNotificationCategory.reminder,
         ),
         iOS: DarwinNotificationDetails(presentSound: true),
       ),
-    );
-  }
-
-  /// A quiet, non-full-screen nudge shown at an unpredictable moment during
-  /// an active barrier — the "small surprise" that keeps the silent timer
-  /// from feeling like it's been forgotten, without revealing how much time
-  /// is left (see `DisciplineProtocolService.generateUnpredictableMoments`,
-  /// the same idea reused here).
-  static Future<void> scheduleFakeCallSurpriseCheckIn({
-    required DateTime fireAt,
-  }) async {
-    final code = await LanguageService.loadSelectedLanguageCode();
-    final scheduleMode = await _resolveAndroidScheduleMode();
-    final triggerAt = tz.TZDateTime.from(fireAt, tz.local);
-    final id = _fakeCallCheckInBaseId + (fireAt.millisecondsSinceEpoch % 90);
-    await _plugin.zonedSchedule(
-      id,
-      _text(code, 'fakeCallCheckInTitle'),
-      _text(code, 'fakeCallCheckInBody'),
-      triggerAt,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          _fakeCallCheckInChannelId,
-          'Sessiz kontrol',
-          importance: Importance.defaultImportance,
-          visibility: NotificationVisibility.private,
-          priority: Priority.defaultPriority,
-        ),
-      ),
-      androidScheduleMode: scheduleMode,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      payload: jsonEncode({'type': _typeFakeCallCheckIn}),
     );
   }
 
@@ -1308,9 +1472,11 @@ class NotificationService {
     final configuredMax = (maxNotifications ?? 3).clamp(1, 6);
     final maxCount = commands.length < configuredMax ? commands.length : configuredMax;
     for (var i = 0; i < maxCount; i++) {
-      final fireAt = normalizedFirstAt
-          .add(Duration(minutes: i * safeSpacing))
-          .add(Duration(minutes: extraDelay));
+      final fireAt = await _reserveNonConflictingTime(
+        normalizedFirstAt
+            .add(Duration(minutes: i * safeSpacing))
+            .add(Duration(minutes: extraDelay)),
+      );
       final id =
           (DateTime.now().millisecondsSinceEpoch + 700000 + i).remainder(
             2147483647,
@@ -1329,6 +1495,8 @@ class NotificationService {
             visibility: NotificationVisibility.private,
             priority: Priority.high,
             playSound: true,
+            enableVibration: true,
+            vibrationPattern: _taskVibrationPattern,
             audioAttributesUsage: AudioAttributesUsage.alarm,
             category: AndroidNotificationCategory.call,
             fullScreenIntent: true,
@@ -1360,6 +1528,61 @@ class NotificationService {
           'taskTitle': commands[i],
         }),
       );
+    }
+  }
+
+  /// Shared cross-scheduler collision avoidance. Health tips, breath
+  /// reminders, coach commands, the weekly-survey-due reminder, and
+  /// deferred ("not now") task triggers are each scheduled by independent
+  /// code paths with no visibility into what the others already scheduled
+  /// -- each one already spaces its *own* notifications apart internally,
+  /// but nothing previously stopped e.g. a health tip and a breath reminder
+  /// from landing in the same minute, which is exactly the "notifications
+  /// arrive back to back" complaint a single scheduler's internal spacing
+  /// can't fix on its own. This nudges [proposed] forward in [minGap] steps
+  /// until it's at least [minGap] from every other still-pending
+  /// reservation, then records it so later calls (including from other
+  /// scheduler functions) see it too. Deliberately NOT used for medication
+  /// reminders (the user chose those exact times for a reason) or the
+  /// immediate/urgent task-trigger alerts (those must fire on their own
+  /// timing, never pushed later to dodge a reminder).
+  static Future<tz.TZDateTime> _reserveNonConflictingTime(
+    tz.TZDateTime proposed, {
+    Duration minGap = const Duration(minutes: 25),
+  }) async {
+    try {
+      final storage = StorageService();
+      final now = DateTime.now().millisecondsSinceEpoch;
+      final raw = await storage.loadSetting(_reservedTimesSettingKey);
+      var reserved = <int>[];
+      if (raw != null && raw.isNotEmpty) {
+        reserved = (jsonDecode(raw) as List)
+            .whereType<num>()
+            .map((n) => n.toInt())
+            .where((millis) => millis > now)
+            .toList();
+      }
+
+      var candidate = proposed;
+      var guard = 0;
+      while (guard < 48 &&
+          reserved.any(
+            (millis) =>
+                (candidate.millisecondsSinceEpoch - millis).abs() <
+                minGap.inMilliseconds,
+          )) {
+        candidate = candidate.add(minGap);
+        guard++;
+      }
+
+      reserved.add(candidate.millisecondsSinceEpoch);
+      await storage.saveSetting(
+        _reservedTimesSettingKey,
+        jsonEncode(reserved),
+      );
+      return candidate;
+    } catch (_) {
+      return proposed;
     }
   }
 

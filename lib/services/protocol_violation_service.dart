@@ -108,20 +108,6 @@ class ProtocolViolationService {
     );
   }
 
-  /// The user has repeatedly postponed/cancelled the fake-call duration
-  /// barrier without ever answering it (3+ in a row) — an avoidance
-  /// pattern worth surfacing rather than passing silently.
-  Future<void> logFakeCallAvoided() async {
-    await _storageService.saveProtocolViolation(
-      type: 'fake_call_avoided',
-      severity: 'medium',
-      source: 'app_flow',
-      taskTitle: null,
-      details: 'User postponed/cancelled the fake-call barrier 3+ times in a row.',
-    );
-    await _reframe('fake_call_avoided', null);
-  }
-
   /// A dedicated follow-up screen was answered as "smoked" / unsuccessful.
   Future<void> logFollowUpFailed({required String taskTitle}) async {
     await _storageService.saveProtocolViolation(

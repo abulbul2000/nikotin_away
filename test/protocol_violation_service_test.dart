@@ -124,20 +124,6 @@ void main() {
     expect(latest.tone, 'supportive');
   });
 
-  test('logFakeCallAvoided records type=fake_call_avoided and a reframed mentor message', () async {
-    final storage = StorageService();
-    final service = ProtocolViolationService(storageService: storage);
-
-    await service.logFakeCallAvoided();
-
-    final violations = await storage.loadProtocolViolations();
-    expect(violations.first.type, 'fake_call_avoided');
-    expect(violations.first.severity, 'medium');
-
-    final latest = await storage.loadLatestMentorMessage();
-    expect(latest?.type, 'reframed_violation');
-  });
-
   test('logMandatoryGateShown does NOT create a reframed mentor message (purely informational)', () async {
     final storage = StorageService();
     final service = ProtocolViolationService(storageService: storage);

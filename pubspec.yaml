@@ -52,6 +52,12 @@ dependencies:
   geolocator: ^14.0.3
   record: ^7.1.1
   flutter_tts: ^4.2.5
+  share_plus: ^13.2.1
+  firebase_core: ^4.12.1
+  home_widget: ^0.9.3
+  firebase_crashlytics: ^5.2.6
+  firebase_storage: ^13.4.5
+  cryptography: ^2.9.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -72,9 +78,9 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: assets/images/no_smoke_launcher_icon.png
-  adaptive_icon_background: "#D9D9D9"
+  adaptive_icon_background: "#0D1B2A"
   adaptive_icon_foreground: assets/images/no_smoke_launcher_foreground.png
-  adaptive_icon_foreground_inset: 18
+  adaptive_icon_foreground_inset: 0
   remove_alpha_ios: true
 
 flutter_native_splash:

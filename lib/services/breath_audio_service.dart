@@ -45,6 +45,20 @@ class BreathAudioService {
           encoder: AudioEncoder.pcm16bits,
           sampleRate: 16000,
           numChannels: 1,
+          // The default Android audio source runs automatic gain control
+          // (and often noise suppression) in the OS itself, which actively
+          // works against energy-envelope exhale detection: AGC normalizes
+          // quiet-vs-loud swings in real time, flattening exactly the
+          // baseline-to-exhale energy jump BreathAcousticEngine looks for.
+          // This shows up as "the mic doesn't reliably detect the exhale" —
+          // worse on manufacturers (e.g. MIUI) that run more aggressive
+          // audio processing by default. voiceRecognition is Android's own
+          // documented "no AGC / no echo cancellation" source (broader
+          // hardware support than the newer `unprocessed` source, which
+          // isn't guaranteed to exist on every device).
+          androidConfig: AndroidRecordConfig(
+            audioSource: AndroidAudioSource.voiceRecognition,
+          ),
         ),
       );
       _startedAt = DateTime.now();

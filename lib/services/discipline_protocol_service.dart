@@ -8,6 +8,38 @@ class DisciplineProtocolService {
 
   DisciplineProtocolService({Random? random}) : _random = random ?? Random();
 
+  static const int _minDurationBarrierMinutes = 30;
+  static const int _multiDayTierFloorMinutes = 2 * 24 * 60;
+
+  /// Duration-barrier escalation tiers, in minutes. Each tier requires more
+  /// earned trust (difficultyLevel only rises with sustained real task
+  /// success — see [evolveStateFromOutcome] — and successStreak resets to 0
+  /// on any deferred/smoked outcome) than the last, so a user can't reach
+  /// "don't smoke for a week" without weeks of consistent success behind
+  /// them; a single relapse drops the streak-gated top tiers immediately.
+  /// Returns (minMinutes, maxMinutes) — equal values mean a fixed duration
+  /// (no jitter), used for the top "this month" tier.
+  (int, int) resolveDurationTierRange(AdaptiveTaskState state) {
+    final level = state.difficultyLevel;
+    final streak = state.successStreak;
+    if (level >= 9.5 && streak >= 21) {
+      return (30 * 24 * 60, 30 * 24 * 60); // "Bu ay sigara içme"
+    }
+    if (level >= 9 && streak >= 10) {
+      return (_multiDayTierFloorMinutes, 7 * 24 * 60); // 2-7 gün
+    }
+    if (level >= 7.5) {
+      return (12 * 60, 24 * 60); // 12-24 saat
+    }
+    if (level >= 6) {
+      return (4 * 60, 8 * 60); // 4-8 saat
+    }
+    if (level >= 3.5) {
+      return (60, 3 * 60); // 1-3 saat
+    }
+    return (_minDurationBarrierMinutes, 60); // Baslangic: 30-60 dk
+  }
+
   double computeSuccessRate({
     required int successCount,
     required int failureCount,
@@ -66,6 +98,12 @@ class DisciplineProtocolService {
     return Duration(minutes: finalMinutes);
   }
 
+  // Without a floor here, two independently-sampled candidates could land
+  // minutes (or even seconds) apart — "unpredictable" was never meant to
+  // include "back-to-back", just not on a fixed schedule the user could
+  // learn to anticipate.
+  static const int _minMomentGapMinutes = 45;
+
   List<DateTime> generateUnpredictableMoments({
     required DateTime now,
     required DateTime sleepAt,
@@ -111,6 +149,15 @@ class DisciplineProtocolService {
       final minuteOffset = _random.nextInt(maxMinutes);
       final candidate = start.add(Duration(minutes: minuteOffset));
       if (!candidate.isAfter(now) || !candidate.isBefore(sleepAt)) {
+        continue;
+      }
+
+      final tooCloseToExisting = results.any(
+        (existing) =>
+            candidate.difference(existing).abs().inMinutes <
+            _minMomentGapMinutes,
+      );
+      if (tooCloseToExisting) {
         continue;
       }
 
@@ -292,11 +339,19 @@ class DisciplineProtocolService {
     targetTaskCount += _random.nextInt(3) - 1;
     targetTaskCount = targetTaskCount.clamp(3, 9);
 
-    var baseDurationMinutes =
-        10 + ((state.difficultyLevel - 1) * 4).round() +
-        (state.selfControlScore / 30).round();
-    baseDurationMinutes += _random.nextInt(4) - 1;
-    baseDurationMinutes = baseDurationMinutes.clamp(10, 180);
+    final tierRange = resolveDurationTierRange(state);
+    var baseDurationMinutes = tierRange.$1 == tierRange.$2
+        ? tierRange.$1
+        : tierRange.$1 + _random.nextInt(tierRange.$2 - tierRange.$1 + 1);
+
+    // The top two tiers (multi-day / "this month") are a single standing
+    // commitment, not several same-day reminders — generating a handful of
+    // independent multi-day barriers in one day's plan wouldn't mean
+    // anything. Once a user has earned one of those tiers, today's plan
+    // collapses to exactly that one commitment instead of the usual spread.
+    if (tierRange.$1 >= _multiDayTierFloorMinutes) {
+      targetTaskCount = 1;
+    }
 
     final moments = generateUnpredictableMoments(
       now: now,
@@ -316,22 +371,31 @@ class DisciplineProtocolService {
         hourlyProfiles: hourlyProfiles,
       );
 
-      final strainOffset = hourEntry == null
-          ? 0
-          : (hourEntry.strainScore >= 70
-                ? -2
-                : hourEntry.strainScore <= 35
-                ? 2
-                : 0);
-      final progressiveStep = i == 0
-          ? 0
-          : (2 + (state.difficultyLevel / 3).floor());
-      final duration = (baseDurationMinutes +
-              (progressiveStep * i) +
-              strainOffset +
-              (_random.nextInt(5) - 2))
-          .clamp(8, 180)
-          .toInt();
+      int duration;
+      if (tierRange.$1 >= _multiDayTierFloorMinutes) {
+        // A single standing commitment (multi-day / "this month") — no
+        // per-task jitter or within-day escalation, those only make sense
+        // for the same-day minute/hour-scale tiers below.
+        duration = baseDurationMinutes;
+      } else {
+        final strainOffset = hourEntry == null
+            ? 0
+            : (hourEntry.strainScore >= 70
+                  ? -2
+                  : hourEntry.strainScore <= 35
+                  ? 2
+                  : 0);
+        final progressiveStep = i == 0
+            ? 0
+            : (2 + (state.difficultyLevel / 3).floor());
+        duration =
+            (baseDurationMinutes +
+                    (progressiveStep * i) +
+                    strainOffset +
+                    (_random.nextInt(5) - 2))
+                .clamp(_minDurationBarrierMinutes, tierRange.$2)
+                .toInt();
+      }
 
       items.add(
         AdaptiveTaskPlanItem(
@@ -379,6 +443,7 @@ class DisciplineProtocolService {
     final isSuccess = outcome == AdaptiveTaskOutcome.success;
     final isDeferred = outcome == AdaptiveTaskOutcome.deferred;
     final isSmoked = outcome == AdaptiveTaskOutcome.smoked;
+    final isMissed = outcome == AdaptiveTaskOutcome.missed;
 
     var selfControl = current.selfControlScore;
     var difficulty = current.difficultyLevel;
@@ -396,6 +461,15 @@ class DisciplineProtocolService {
       selfControl -= 0.6;
       difficulty -= 0.03;
       capacity -= 0.02;
+      successStreak = 0;
+    } else if (isMissed) {
+      // Between deferred (an active "not now") and smoked (an explicit
+      // admission) -- 3 unanswered attempts over 15 minutes on a mandatory
+      // alert is a real failure signal, but not proof the user smoked.
+      selfControl -= 1.5;
+      difficulty -= 0.15;
+      capacity -= 0.06;
+      failureStreak += 1;
       successStreak = 0;
     } else if (isSmoked) {
       selfControl -= 2.3;
@@ -421,7 +495,7 @@ class DisciplineProtocolService {
       ).clamp(0, 1),
       movingFailureRate: _ewma(
         previous: current.movingFailureRate,
-        incoming: isSmoked ? 1 : 0,
+        incoming: (isSmoked || isMissed) ? 1 : 0,
         alpha: 0.18,
       ).clamp(0, 1),
       avgResponseMinutes: _ewma(
@@ -445,11 +519,14 @@ class DisciplineProtocolService {
     final isSuccess = outcome == AdaptiveTaskOutcome.success;
     final isDeferred = outcome == AdaptiveTaskOutcome.deferred;
     final isSmoked = outcome == AdaptiveTaskOutcome.smoked;
+    final isMissed = outcome == AdaptiveTaskOutcome.missed;
 
     final strainDelta = isSuccess
         ? -0.45
         : isDeferred
         ? 0.30
+        : isMissed
+        ? 0.6
         : isSmoked
         ? 0.85
         : 0.0;
@@ -457,7 +534,7 @@ class DisciplineProtocolService {
     return current.copyWith(
       strainScore: (current.strainScore + strainDelta).clamp(0, 100),
       successCount: current.successCount + (isSuccess ? 1 : 0),
-      failureCount: current.failureCount + (isSmoked ? 1 : 0),
+      failureCount: current.failureCount + ((isSmoked || isMissed) ? 1 : 0),
       deferCount: current.deferCount + (isDeferred ? 1 : 0),
       avgResponseMinutes: _ewma(
         previous: current.avgResponseMinutes,

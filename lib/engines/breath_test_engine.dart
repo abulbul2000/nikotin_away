@@ -69,12 +69,16 @@ class BreathTestEngine {
     required double taskPerformanceRisk,
     required double breathScore,
     int trendAdjustment = 0,
+    double surveyWeight = 0.40,
+    double behaviorWeight = 0.25,
+    double taskWeight = 0.15,
+    double breathWeight = 0.20,
   }) {
     final weighted =
-        (surveyRisk * 0.40) +
-        (behaviorRisk * 0.25) +
-        (taskPerformanceRisk * 0.15) +
-        (breathScore * 0.20);
+        (surveyRisk * surveyWeight) +
+        (behaviorRisk * behaviorWeight) +
+        (taskPerformanceRisk * taskWeight) +
+        (breathScore * breathWeight);
     return (weighted + trendAdjustment).round().clamp(0, 100);
   }
 

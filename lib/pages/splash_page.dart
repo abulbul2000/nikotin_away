@@ -10,7 +10,7 @@ import '../services/language_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/no_smoke_logo.dart';
-import 'breath_test_page.dart';
+import 'home_page.dart';
 import 'language_selection_page.dart';
 import 'trial_info_page.dart';
 
@@ -105,7 +105,14 @@ class _SplashPageState extends State<SplashPage> {
       return;
     }
 
-    // Setup yapılmışsa BreathTestPage'e git
+    // Setup already done → go straight to HomePage, not straight into a
+    // forced breath test. HomePage's own daily-breath-cadence check
+    // (_ensureDailyBreathCadence/_presentDailyBreathMandatoryIfNeeded)
+    // already asks "would you like to do it now?" and only makes it
+    // mandatory when today's breath test genuinely hasn't been done yet —
+    // routing through BreathTestPage unconditionally here duplicated (and
+    // fought with) that system, forcing a fresh test on every single app
+    // open regardless of whether one had already been done today.
     final seed = HomeSeedResolver.fromRecords(records);
 
     await AmbientAudioService().startMonitoring();
@@ -114,11 +121,10 @@ class _SplashPageState extends State<SplashPage> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => BreathTestPage(
+        builder: (_) => HomePage(
           name: seed.name,
-          packsPerDay: seed.packsPerDay,
-          navigateToHomeOnComplete: true,
-          askWeeklySurveyOnComplete: true,
+          riskScore: seed.riskScore,
+          riskLevel: seed.riskLevel,
         ),
       ),
     );
@@ -135,11 +141,7 @@ class _SplashPageState extends State<SplashPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: const [
-                NoSmokeLogo(
-                  size: 180,
-                  showLabel: true,
-                  iconColor: Color(0xFFE3425A),
-                ),
+                NoSmokeLogo(size: 180, showLabel: true),
               ],
             ),
           ),

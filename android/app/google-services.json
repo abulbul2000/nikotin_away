@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "269922488535",
+    "project_id": "no-smoke-7dd2e",
+    "storage_bucket": "no-smoke-7dd2e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:269922488535:android:14ba91f65a04f912422092",
+        "android_client_info": {
+          "package_name": "com.example.no_smoke"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-22688NMly2DeumJH8mEDdJFfNmQ_DlM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

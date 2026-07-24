@@ -1,3 +1,8 @@
+import 'dart:async';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -11,6 +16,23 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Crash reporting is opt-out-able by the user later (settings), but must
+  // be wired up before anything else can crash — best-effort: a Firebase
+  // init failure (e.g. no network on first launch) must never block the
+  // app from starting.
+  try {
+    await Firebase.initializeApp();
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  } catch (error, stackTrace) {
+    debugPrint('[main] Firebase/Crashlytics init failed (non-blocking): $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
+
   await NotificationService.initialize(navigatorKey: navigatorKey);
   final locale = await LanguageService.loadSelectedLocale();
   await AppTexts.ensureLanguageLoaded(locale.languageCode);

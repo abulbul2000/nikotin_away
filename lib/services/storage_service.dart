@@ -14,6 +14,7 @@ import '../models/breath_test_result.dart';
 import '../models/mentor_message.dart';
 import '../models/protocol_violation.dart';
 import '../models/location_visit_event.dart';
+import '../models/medication.dart';
 import '../models/sensor_usage_event.dart';
 import '../models/significant_place.dart';
 import '../models/sleep_probe_event.dart';
@@ -80,12 +81,28 @@ class StorageService {
     return _database!;
   }
 
+  static const String _dbFileName = 'no_smoke.db';
+
+  Future<String> databaseFilePath() async {
+    final documentsDirectory = await getApplicationDocumentsDirectory();
+    return p.join(documentsDirectory.path, _dbFileName);
+  }
+
+  /// Closes the live sqflite connection so the underlying file can be
+  /// safely overwritten (see CloudBackupService.restore) — the next call
+  /// to [database] transparently reopens it from whatever is on disk at
+  /// that point.
+  Future<void> closeDatabaseConnection() async {
+    await _database?.close();
+    _database = null;
+  }
+
   Future<Database> _initDatabase() async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
-    final path = p.join(documentsDirectory.path, 'no_smoke.db');
+    final path = p.join(documentsDirectory.path, _dbFileName);
     return openDatabase(
       path,
-      version: 19,
+      version: 20,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -125,6 +142,7 @@ class StorageService {
         await _ensureLocationIntelligenceTables(db);
         await _ensureStepCounterTable(db);
         await _ensureConsentEventsTable(db);
+        await _ensureMedicationsTable(db);
         await _ensureIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -152,6 +170,7 @@ class StorageService {
         await _ensureLocationIntelligenceTables(db);
         await _ensureStepCounterTable(db);
         await _ensureConsentEventsTable(db);
+        await _ensureMedicationsTable(db);
         if (oldVersion < 9) {
           await _ensureIndexes(db);
         }
@@ -226,6 +245,52 @@ class StorageService {
       'consentTextVersion': row['consentTextVersion'],
       'createdAt': DateTime.parse(row['createdAt'] as String),
     };
+  }
+
+  static const _medicationsTable = 'medications';
+
+  Future<void> _ensureMedicationsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_medicationsTable (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        timesJson TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Medication _medicationFromRow(Map<String, Object?> row) {
+    final timesRaw = jsonDecode(row['timesJson'] as String) as List<dynamic>;
+    return Medication(
+      id: row['id'] as String,
+      name: row['name'] as String,
+      times: timesRaw.map((t) => t.toString()).toList(),
+      createdAt: DateTime.parse(row['createdAt'] as String),
+    );
+  }
+
+  Future<List<Medication>> loadMedications() async {
+    final db = await database;
+    final rows = await db.query(_medicationsTable, orderBy: 'createdAt ASC');
+    return rows.map(_medicationFromRow).toList();
+  }
+
+  /// Upserts by id — callers pass an existing id to edit a medication's
+  /// name/times in place, or a freshly generated one to add a new one.
+  Future<void> saveMedication(Medication medication) async {
+    final db = await database;
+    await db.insert(_medicationsTable, {
+      'id': medication.id,
+      'name': medication.name,
+      'timesJson': jsonEncode(medication.times),
+      'createdAt': medication.createdAt.toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> deleteMedication(String id) async {
+    final db = await database;
+    await db.delete(_medicationsTable, where: 'id = ?', whereArgs: [id]);
   }
 
   static const _wearableRiskAdjustmentKey = 'wearable_risk_adjustment';
@@ -1566,6 +1631,42 @@ class StorageService {
   /// current calendar day fixes that without breaking the adaptive
   /// connection: a new plan is still generated once per day, from whatever
   /// the behavior engine has learned as of that morning.
+  static const _interventionIntensityKey = 'intervention_intensity';
+
+  /// 'gentle' / 'balanced' (default) / 'strict' — chosen once during
+  /// onboarding, how aggressively the discipline protocol should interrupt
+  /// the user during the day. Kept as a plain string setting (like the
+  /// duration-barrier preferences) rather than an enum so old saved values
+  /// never fail to parse across app versions.
+  Future<String> loadInterventionIntensity() async {
+    final raw = await loadSetting(_interventionIntensityKey);
+    if (raw == 'gentle' || raw == 'strict') {
+      return raw!;
+    }
+    return 'balanced';
+  }
+
+  Future<void> saveInterventionIntensity(String value) async {
+    await saveSetting(_interventionIntensityKey, value);
+  }
+
+  /// Translates the chosen intensity into the adaptive plan's starting
+  /// daily task count — the single biggest lever over how often the user
+  /// gets interrupted. [DisciplineProtocolService.buildDailyAdaptivePlan]
+  /// still adapts this up/down from success/failure rate on top of
+  /// whichever baseline this returns.
+  Future<int> loadInterventionBaselineTaskCount() async {
+    final intensity = await loadInterventionIntensity();
+    switch (intensity) {
+      case 'gentle':
+        return 3;
+      case 'strict':
+        return 7;
+      default:
+        return 5;
+    }
+  }
+
   Future<AdaptiveTaskPlan> buildAdaptiveNoSmokePlan({
     required DateTime now,
     required DateTime sleepAt,
@@ -1595,10 +1696,52 @@ class StorageService {
       riskyHours: riskyHours,
       state: state,
       hourlyProfiles: hourly,
+      baselineTaskCount: await loadInterventionBaselineTaskCount(),
     );
     await saveSetting(_adaptivePlanDateKey, todayKey);
     await saveSetting(_adaptivePlanJsonKey, jsonEncode(plan.toJson()));
     return plan;
+  }
+
+  /// Whether today's adaptive plan target has already been met by
+  /// successfully-completed tasks. Used to decide, when phone activity is
+  /// detected during the user's sleep window, whether to fire a full
+  /// mandatory task (quota not yet met -- there's still real work to do
+  /// today) or just a small advisory tip (quota already met -- no need to
+  /// escalate). Falls back to "not met" if no plan has been cached yet for
+  /// today, since there's nothing to have completed.
+  Future<bool> isDailyTaskQuotaMet({DateTime? now}) async {
+    final today = now ?? DateTime.now();
+    final todayKey =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final cachedDate = await loadSetting(_adaptivePlanDateKey);
+    if (cachedDate != todayKey) {
+      return false;
+    }
+    final cachedJson = await loadSetting(_adaptivePlanJsonKey);
+    if (cachedJson == null) {
+      return false;
+    }
+
+    int targetTaskCount;
+    try {
+      final plan = AdaptiveTaskPlan.fromJson(
+        jsonDecode(cachedJson) as Map<String, dynamic>,
+      );
+      targetTaskCount = plan.targetTaskCount;
+    } catch (_) {
+      return false;
+    }
+
+    final events = await loadRecentAdaptiveTaskEvents(limit: 200);
+    final successfulToday = events.where(
+      (event) =>
+          event.outcome == AdaptiveTaskOutcome.success &&
+          event.respondedAt.year == today.year &&
+          event.respondedAt.month == today.month &&
+          event.respondedAt.day == today.day,
+    );
+    return successfulToday.length >= targetTaskCount;
   }
 
   static const _notifiedTaskTitlesDateKey = 'notified_task_titles_date';
@@ -1979,103 +2122,6 @@ class StorageService {
 
   Future<void> saveSleepTime(String sleepTime) async {
     await saveSetting('sleep_time', sleepTime);
-  }
-
-  /// The name shown on the fake-call duration-barrier screen — user
-  /// configurable so it can look like a believable contact for their own
-  /// social context. Defaults to a generic placeholder name so the feature
-  /// still works before the user has configured it.
-  Future<String> loadFakeCallerName() async {
-    final saved = await loadSetting('fake_caller_name');
-    return (saved == null || saved.trim().isEmpty) ? 'Ayşe' : saved;
-  }
-
-  Future<void> saveFakeCallerName(String name) async {
-    await saveSetting('fake_caller_name', name.trim());
-  }
-
-  // --- Fake-call duration barrier state ---------------------------------
-
-  static const _fakeCallBarrierEndsAtKey = 'fake_call_barrier_ends_at';
-  static const _fakeCallSuccessStreakKey = 'fake_call_success_streak';
-  static const _fakeCallAvoidanceStreakKey = 'fake_call_avoidance_streak';
-
-  /// Adaptive duration: grows by 10 minutes per consecutive success
-  /// (capped at 90), resets to the 20-minute base after a failure — the
-  /// same "get more demanding as the user succeeds" idea already used by
-  /// [DisciplineProtocolService]'s task-duration logic.
-  static const _breathTrendTodayKey = 'breath_trend_today';
-
-  Future<int> loadFakeCallBarrierDurationMinutes() async {
-    final streakRaw = await loadSetting(_fakeCallSuccessStreakKey);
-    final streak = int.tryParse(streakRaw ?? '0') ?? 0;
-    final base = (20 + (streak * 10)).clamp(20, 90);
-
-    // A worsening breath-test trend means today isn't the day to make the
-    // barrier harder — ease it back toward the 20-minute base so the user
-    // has a realistic shot at a win, rather than piling difficulty on top
-    // of an already-struggling stretch. Never lowers it below the base.
-    final breathTrendToday = await loadSetting(_breathTrendTodayKey);
-    if (breathTrendToday == 'worsening') {
-      return ((base - 10).clamp(20, base)).toInt();
-    }
-    return base;
-  }
-
-  Future<void> saveBreathTrendToday(String trend) async {
-    await saveSetting(_breathTrendTodayKey, trend);
-  }
-
-  Future<void> startFakeCallBarrier({DateTime? now}) async {
-    final start = now ?? DateTime.now();
-    final durationMinutes = await loadFakeCallBarrierDurationMinutes();
-    final endsAt = start.add(Duration(minutes: durationMinutes));
-    await saveSetting(_fakeCallBarrierEndsAtKey, endsAt.toIso8601String());
-    await resetFakeCallAvoidanceStreak();
-  }
-
-  Future<DateTime?> loadFakeCallBarrierEndsAt() async {
-    final raw = await loadSetting(_fakeCallBarrierEndsAtKey);
-    if (raw == null || raw.isEmpty) {
-      return null;
-    }
-    return DateTime.tryParse(raw);
-  }
-
-  Future<void> clearFakeCallBarrier() async {
-    await saveSetting(_fakeCallBarrierEndsAtKey, '');
-  }
-
-  /// Records whether the user made it through the barrier without smoking
-  /// (pure state update only — see `FakeCallBarrierService` for the
-  /// orchestration that also logs a reframed violation on failure, kept
-  /// out of StorageService to avoid a StorageService <-> ProtocolViolationService
-  /// import cycle). Success grows the next barrier's duration; failure
-  /// resets it.
-  Future<void> recordFakeCallBarrierOutcome({required bool succeeded}) async {
-    await clearFakeCallBarrier();
-    if (succeeded) {
-      final streakRaw = await loadSetting(_fakeCallSuccessStreakKey);
-      final streak = int.tryParse(streakRaw ?? '0') ?? 0;
-      await saveSetting(_fakeCallSuccessStreakKey, '${streak + 1}');
-    } else {
-      await saveSetting(_fakeCallSuccessStreakKey, '0');
-    }
-  }
-
-  /// Increments the postpone/cancel streak and returns the new count —
-  /// per product decision, avoiding the barrier call repeatedly should
-  /// feed into the behavior engine (see `FakeCallBarrierService`), not
-  /// pass silently.
-  Future<int> incrementFakeCallAvoidanceStreak() async {
-    final raw = await loadSetting(_fakeCallAvoidanceStreakKey);
-    final streak = (int.tryParse(raw ?? '0') ?? 0) + 1;
-    await saveSetting(_fakeCallAvoidanceStreakKey, '$streak');
-    return streak;
-  }
-
-  Future<void> resetFakeCallAvoidanceStreak() async {
-    await saveSetting(_fakeCallAvoidanceStreakKey, '0');
   }
 
   Future<void> saveInitialRegistrationCompleted(bool completed) async {
@@ -2823,7 +2869,11 @@ class StorageService {
         const <String, dynamic>{};
     final weeklyEvaluation = _behaviorEngine.evaluateWeeklySurveyRisk(
       weeklyPayload,
-      profileContext: latestContext,
+      profileContext: {
+        ...latestContext,
+        'packsPerDay': latestSurvey?.packsPerDay,
+        'riskyTriggers': riskyTriggers,
+      },
     );
     final weeklyRiskScore =
         (weeklyEvaluation['weeklyRiskScore'] as num?)?.toInt() ?? 40;
@@ -2838,12 +2888,26 @@ class StorageService {
             .map((item) => item.toString())
             .toList();
 
+    // With no task history yet, the 15% task-performance slot has nothing
+    // real to measure — it was falling back to a flat 55 "guess". Rather
+    // than let that guess distort the score, its weight is folded into
+    // survey/behavior (evenly) instead. Breath weight is deliberately left
+    // untouched either way — it always has a real reading by this point
+    // (see BreathTestService.processBreathTest).
+    final hasTaskHistory = taskHistory.isNotEmpty;
+    final surveyWeight = hasTaskHistory ? 0.40 : 0.475;
+    final behaviorWeight = hasTaskHistory ? 0.25 : 0.325;
+    final taskWeight = hasTaskHistory ? 0.15 : 0.0;
+
     var dynamicRisk = _breathTestEngine.calculateFinalRisk(
       surveyRisk: weeklyRiskScore.toDouble(),
       behaviorRisk: behaviorRisk,
       taskPerformanceRisk: taskPerformanceRisk.toDouble(),
       breathScore: latestBreathScore,
       trendAdjustment: breathTrendAnalysis.riskAdjustment,
+      surveyWeight: surveyWeight,
+      behaviorWeight: behaviorWeight,
+      taskWeight: taskWeight,
     );
 
     // Weekly self-report extremes still add bounded safety adjustments.
@@ -3053,7 +3117,7 @@ class StorageService {
       finalRisk: dynamicRisk,
     );
     riskExplanation.add(
-      'Yeni risk formulu: survey ${weeklyRiskScore.toStringAsFixed(0)} *0.40 + behavior ${behaviorRisk.toStringAsFixed(0)} *0.25 + task ${taskPerformanceRisk.toString()} *0.15 + breath ${latestBreathScore.toStringAsFixed(1)} *0.20',
+      'Yeni risk formulu: survey ${weeklyRiskScore.toStringAsFixed(0)} *${surveyWeight.toStringAsFixed(3)} + behavior ${behaviorRisk.toStringAsFixed(0)} *${behaviorWeight.toStringAsFixed(3)} + task ${taskPerformanceRisk.toString()} *${taskWeight.toStringAsFixed(3)} + breath ${latestBreathScore.toStringAsFixed(1)} *0.20',
     );
     riskExplanation.add(
       'Nefes trendi: ortalama ${breathTrendAnalysis.averageBreathScore.toStringAsFixed(1)}, son3 ${breathTrendAnalysis.trendLast3}, son7 ${breathTrendAnalysis.trendLast7}, trend duzeltme ${breathTrendAnalysis.riskAdjustment >= 0 ? '+' : ''}${breathTrendAnalysis.riskAdjustment}',
@@ -3612,6 +3676,7 @@ class StorageService {
       await txn.delete(_locationVisitEventsTable);
       await txn.delete(_stepCounterSamplesTable);
       await txn.delete(_consentEventsTable);
+      await txn.delete(_medicationsTable);
     });
   }
 }

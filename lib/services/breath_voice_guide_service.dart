@@ -2,6 +2,9 @@ import 'dart:async';
 
 import 'package:flutter_tts/flutter_tts.dart';
 
+import 'tts_locale.dart';
+import 'tts_voice_selector.dart';
+
 /// Speaks the breath test's phase cues (hold / exhale) aloud via the
 /// device's on-device TTS engine, using the app's existing TR/EN
 /// instruction strings — no bundled audio assets needed. Best-effort: any
@@ -37,12 +40,29 @@ class BreathVoiceGuideService {
     _tts.setErrorHandler((_) => onSpeakingStateChanged?.call(false));
   }
 
-  Future<void> setLanguage(String languageCode) async {
-    final locale = languageCode == 'tr' ? 'tr-TR' : 'en-US';
+  Future<void> setLanguage(String languageCode, {String? preferredGender}) async {
+    // Previously this only special-cased 'tr' and sent every other language
+    // code (including all 24 non-English UI languages) to en-US, so a user
+    // running the app in e.g. German or Hindi still heard English voice
+    // cues. ttsLocaleForLanguageCode covers every UI language; if a device's
+    // TTS engine doesn't actually have the mapped voice installed, the
+    // try/catch below already degrades gracefully (voice cues just stay
+    // silent — on-screen text still covers the same guidance).
+    final locale = ttsLocaleForLanguageCode(languageCode);
     try {
       await _preferHighQualityEngine();
       await _tts.setLanguage(locale);
-      await _preferHighQualityVoice(locale);
+      await configureBestVoice(
+        _tts,
+        locale: locale,
+        // Local (not network/cloud) voices only, here specifically: the
+        // breath test's live acoustic calibration needs the spoken cue and
+        // the on-screen step change to land together, and a network
+        // voice's round-trip lag would both misalign that and get picked
+        // up as noise in the wrong mic-listening window.
+        preferLocalVoice: true,
+        preferredGender: preferredGender,
+      );
       // Natural conversational pace rather than a deliberately slow
       // "instructional" cadence — a slower rate reads as more halting/
       // robotic, not clearer, on most modern TTS voices.
@@ -70,43 +90,6 @@ class BreathVoiceGuideService {
       }
     } catch (_) {
       // Fall back to whatever the device's default engine already is.
-    }
-  }
-
-  /// Best-effort voice pick, deliberately favoring *local* voices over
-  /// "network"/cloud ones. Network voices often sound a bit more natural,
-  /// but they synthesize by round-tripping to a server first — on real
-  /// devices that shows up as exactly the 1-2s "text appears, then it
-  /// speaks a beat later" lag this was built to avoid. Since the on-screen
-  /// text and the voice cue are meant to land together, a slightly more
-  /// robotic but near-instant local voice is the right trade here.
-  Future<void> _preferHighQualityVoice(String locale) async {
-    try {
-      final voices = await _tts.getVoices;
-      if (voices is! List) {
-        return;
-      }
-      final matches = voices
-          .whereType<Map>()
-          .where(
-            (v) =>
-                '${v['locale']}'.toLowerCase().replaceAll('_', '-') ==
-                locale.toLowerCase(),
-          )
-          .toList();
-      if (matches.isEmpty) {
-        return;
-      }
-      final localVoice = matches.firstWhere(
-        (v) => !'${v['name']}'.toLowerCase().contains('network'),
-        orElse: () => matches.first,
-      );
-      await _tts.setVoice({
-        'name': '${localVoice['name']}',
-        'locale': '${localVoice['locale']}',
-      });
-    } catch (_) {
-      // Fall back to whatever setLanguage() already selected.
     }
   }
 

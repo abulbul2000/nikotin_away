@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
 import '../main.dart';
+import '../services/cloud_backup_service.dart';
 import '../services/device_compatibility_service.dart';
 import '../services/language_service.dart';
 import '../services/notification_service.dart';
@@ -16,6 +17,7 @@ import '../widgets/background_reliability_prompt.dart';
 import 'coach_mode_page.dart';
 import 'language_selection_page.dart';
 import 'location_intelligence_page.dart';
+import 'medications_page.dart';
 import 'permissions_center_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -196,41 +198,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Future<void> _openFakeCallerNameSettings() async {
-    final current = await _storageService.loadFakeCallerName();
-    if (!mounted) return;
-    final controller = TextEditingController(text: current);
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.t('fakeCallerNameSettingTitle')),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(context.t('fakeCallerNameSettingDescription')),
-            const SizedBox(height: 12),
-            TextField(controller: controller, autofocus: true),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(context.t('no')),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: Text(context.t('save')),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (newName == null || newName.isEmpty) return;
-    await _storageService.saveFakeCallerName(newName);
-  }
-
   void _openPermissionsCenter() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const PermissionsCenterPage()),
@@ -247,6 +214,12 @@ class _SettingsPageState extends State<SettingsPage> {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const LocationIntelligencePage()),
     );
+  }
+
+  void _openMedications() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const MedicationsPage()));
   }
 
   Future<void> _confirmResetData() async {
@@ -276,6 +249,149 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// The passphrase is the only key to a user's backup — never stored,
+  /// never shown again, and there is deliberately no "forgot passphrase"
+  /// recovery (see CloudBackupService docs: that's what makes it
+  /// zero-knowledge). This dialog exists once and is reused for both
+  /// backup and restore so the warning is seen every time either runs.
+  Future<String?> _promptPassphrase({required bool isRestore}) async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          isRestore
+              ? context.t('cloudRestoreRow')
+              : context.t('cloudBackupRow'),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.t('cloudBackupPassphraseHint')),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: context.t('cloudBackupPassphraseLabel'),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.t('no')),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogContext).pop(controller.text),
+            child: Text(
+              isRestore
+                  ? context.t('cloudRestoreRow')
+                  : context.t('cloudBackupRow'),
+            ),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    final trimmed = result?.trim();
+    return (trimmed == null || trimmed.length < 6) ? null : trimmed;
+  }
+
+  Future<void> _confirmCloudBackup() async {
+    final passphrase = await _promptPassphrase(isRestore: false);
+    if (passphrase == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('cloudBackupPassphraseTooShort'))),
+      );
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.t('cloudBackupInProgress'))));
+    try {
+      await CloudBackupService(
+        storageService: _storageService,
+      ).backup(passphrase: passphrase);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('cloudBackupSuccess'))),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('[SettingsPage] Cloud backup failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('cloudBackupFailed'))),
+      );
+    }
+  }
+
+  Future<void> _confirmCloudRestore() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('cloudRestoreRow')),
+        content: Text(context.t('cloudRestoreConfirmMessage')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('no')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('cloudRestoreRow')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    final passphrase = await _promptPassphrase(isRestore: true);
+    if (passphrase == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('cloudBackupPassphraseTooShort'))),
+      );
+      return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.t('cloudBackupInProgress'))));
+    try {
+      final found = await CloudBackupService(
+        storageService: _storageService,
+      ).restore(passphrase: passphrase);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            found
+                ? context.t('cloudRestoreSuccess')
+                : context.t('cloudRestoreNotFound'),
+          ),
+        ),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('[SettingsPage] Cloud restore failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('cloudRestoreFailed'))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -295,18 +411,21 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.person_outline),
-                  title: Text(context.t('settingsCallerNameRow')),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _openFakeCallerNameSettings,
-                ),
-                const Divider(height: 1),
-                ListTile(
                   leading: const Icon(Icons.tune_outlined),
                   title: Text(context.t('settingsCoachModeRow')),
                   subtitle: Text(context.t('settingsCoachModeRowSubtitle')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: _openCoachMode,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.medication_outlined),
+                  title: Text(context.t('medicationsSettingsRow')),
+                  subtitle: Text(
+                    context.t('medicationsSettingsRowSubtitle'),
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _openMedications,
                 ),
               ],
             ),
@@ -463,6 +582,26 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 20),
           _SectionLabel(context.t('settingsSectionData')),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.cloud_upload_outlined),
+                  title: Text(context.t('cloudBackupRow')),
+                  subtitle: Text(context.t('cloudBackupRowSubtitle')),
+                  onTap: _confirmCloudBackup,
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.cloud_download_outlined),
+                  title: Text(context.t('cloudRestoreRow')),
+                  subtitle: Text(context.t('cloudRestoreRowSubtitle')),
+                  onTap: _confirmCloudRestore,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           Card(
             child: ListTile(
               leading: const Icon(Icons.delete_outline, color: Colors.redAccent),

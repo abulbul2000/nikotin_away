@@ -4,7 +4,7 @@ import '../core/app_texts.dart';
 import '../core/home_seed_resolver.dart';
 import '../services/storage_service.dart';
 import '../widgets/no_smoke_logo.dart';
-import 'breath_test_page.dart';
+import 'home_page.dart';
 import 'survey_page.dart';
 
 class TrialInfoPage extends StatelessWidget {
@@ -33,11 +33,10 @@ class TrialInfoPage extends StatelessWidget {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => BreathTestPage(
+        builder: (_) => HomePage(
           name: seed.name,
-          packsPerDay: seed.packsPerDay,
-          navigateToHomeOnComplete: true,
-          askWeeklySurveyOnComplete: true,
+          riskScore: seed.riskScore,
+          riskLevel: seed.riskLevel,
         ),
       ),
     );
@@ -57,11 +56,7 @@ class TrialInfoPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const NoSmokeLogo(
-                    size: 150,
-                    showLabel: true,
-                    iconColor: Color(0xFFE3425A),
-                  ),
+                  const NoSmokeLogo(size: 150, showLabel: true),
                   const SizedBox(height: 24),
                   Text(
                     context.t('trialInfoTitle'),

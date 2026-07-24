@@ -475,9 +475,46 @@ class BehaviorEngine {
     Map<String, dynamic>? profileContext,
   }) {
     if (weeklyPayload == null || weeklyPayload.isEmpty) {
+      // No weekly survey exists yet — before the flat 40 default, this
+      // ignored the user's real initial-survey answers entirely even
+      // though this component carries 40% of the first risk score. Base
+      // it on what the initial survey actually captured instead: cigarette
+      // volume and health risk (breath-test data is deliberately not
+      // folded in here — it already has its own, correctly-weighted slot
+      // in the final formula via BreathTestEngine.calculateFinalRisk).
+      final packsPerDay = profileContext?['packsPerDay']?.toString();
+      if (packsPerDay == null || packsPerDay.isEmpty) {
+        return {
+          'weeklyRiskScore': 40,
+          'weeklyRiskLevel': 'medium',
+          'recommendedMode': 'balanced',
+          'respiratoryBurden': 25,
+          'respiratoryState': 'stable',
+          'topRiskDrivers': <String>[],
+        };
+      }
+
+      final healthConditionCount =
+          (profileContext?['healthConditions'] as List<dynamic>? ?? const [])
+              .length;
+      final riskyTriggerCount =
+          (profileContext?['riskyTriggers'] as List<dynamic>? ?? const [])
+              .length;
+
+      final initialScore =
+          (calculatePackRiskContribution(packsPerDay) +
+                  (min(healthConditionCount, 4) * 6) +
+                  (min(riskyTriggerCount, 3) * 4))
+              .clamp(0, 100);
+      final initialLevel = initialScore >= 50
+          ? 'high'
+          : initialScore >= 25
+          ? 'medium'
+          : 'low';
+
       return {
-        'weeklyRiskScore': 40,
-        'weeklyRiskLevel': 'medium',
+        'weeklyRiskScore': initialScore,
+        'weeklyRiskLevel': initialLevel,
         'recommendedMode': 'balanced',
         'respiratoryBurden': 25,
         'respiratoryState': 'stable',

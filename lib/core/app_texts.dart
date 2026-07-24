@@ -37,7 +37,9 @@ class AppTexts {
     'female': 'Kadın',
     'selectOption': 'Seçiniz',
     'breathTest': 'Nefes Egzersizi',
+    'breathTestPageTitle': 'Nefes Testi',
     'riskLevel': 'Risk seviyesi',
+    'smokeFreeDaysWidgetLabel': 'gun sigarasiz',
     'riskScore': 'Risk skoru',
     'initialSurvey': 'Başlangıç Anketi',
     'smokingInfo': 'Sigara Bilgileri',
@@ -48,8 +50,25 @@ class AppTexts {
     'stressTitle': 'Stres Seviyesi',
     'quitReasonTitle': 'Bırakma Sebebi',
     'heartDisease': 'Kalp Hastaligi',
-    'packsPerDayQuestion': 'Gunde kac paket?',
-    'firstCigaretteWhen': 'Ilk sigara ne zaman?',
+    'otherHealthCondition': 'Diger',
+    'otherHealthConditionHint': 'Hastaliginizi yazin',
+    'usesMedicationQuestion': 'Duzenli ilac kullaniyorum',
+    'addMedicationButton': 'Ilac ekle',
+    'medicationNameHint': 'Ilac adi',
+    'addMedicationTimeButton': 'Saat ekle',
+    'medicationsSettingsRow': 'Ilaclarim',
+    'medicationsSettingsRowSubtitle': 'Ilac ekle, duzenle veya sil',
+    'medicationsPageTitle': 'Ilaclarim',
+    'medicationsEmptyState': 'Henuz ilac eklemediniz.',
+    'medicationDeleteConfirmTitle': 'Ilaci sil',
+    'medicationDeleteConfirmMessage': 'Bu ilaci ve hatirlatmalarini silmek istediginize emin misiniz?',
+    'medicationSavedConfirmation': 'Ilac kaydedildi',
+    'medicationReminderTitle': 'Ilac hatirlatmasi',
+    'medicationReminderBody': '{name} ilacinizi alma vakti geldi.',
+    'overlayPermissionTitle': 'Gorev ekranini goster',
+    'overlayPermissionMessage': 'Gorev ekraninin, telefon kilitli olmasa bile diger uygulamalarin ustunde acilabilmesi icin "diger uygulamalarin ustunde goster" iznine ihtiyacimiz var. Simdi ayar ekranini acalim mi?',
+    'packsPerDayQuestion': 'Gunde kac paket sigara iciyorsunuz?',
+    'firstCigaretteWhen': 'Ilk sigarayi uyandiktan ne kadar sure sonra iciyorsunuz?',
     'firstCigarette10to30': 'Uyandiktan 10-30 dk sonra',
     'maxSmokeFreeDuration': 'Sigarasiz kalabildigin maksimum sure',
     'smokeFree30to60': '30-60 dakika',
@@ -75,6 +94,13 @@ class AppTexts {
     'hello': 'Merhaba',
     'weeklySavePrompt': 'Bu haftaki durumunuzu kaydedin.',
     'weeklySurveyPromptAsk': 'Haftalik anketi simdi doldurmak ister misiniz?',
+    'shareProgressTitle': 'Ilerlemeni paylas',
+    'shareProgressMessage':
+      'Haftalik degerlendirmeni tamamladin. Ilerlemeni arkadaslarinla paylasmak ister misin?',
+    'shareProgressSkip': 'Gec',
+    'shareProgressAction': 'Paylas',
+    'shareProgressText':
+      'No Smoke ile sigarayi birakma surecimi takip ediyorum. Guncel risk skorum: {score}/100 ({level}).',
     'saveErrorRetry': 'Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.',
     'loadErrorRetry': 'Veriler yuklenirken bir hata olustu. Lutfen tekrar deneyin.',
     'smokeFreeStreak': 'Sigara İçmeme Serisi',
@@ -117,6 +143,9 @@ class AppTexts {
       '1. Dik oturun ve rahatlayın.\n2. Daireye dokunup burnunuzdan derin bir nefes alın, 2 saniye tutun.\n3. Nefesinizi tek seferde, kontrollü şekilde verin.\n4. Verme işlemi bitince daireye tekrar dokunun.\n\n3 deneme yapılacak, en iyi skor kaydedilir.',
     'breathExerciseDisclaimer':
       'Bu bir tibbi tani araci degildir; farkindalik ve rahatlama icin basit bir nefes egzersizidir.',
+    'micRationaleTitle': 'Mikrofon izni',
+    'micRationaleMessage':
+      'Nefes verme suresini otomatik olcmek icin mikrofonu kullanabiliriz. Ses hicbir zaman kaydedilmez veya saklanmaz; yalnizca anlik ses seviyesi olculur. Izin vermezsen testi elle (dokunarak) bitirebilirsin.',
     'restingLabel': 'Dinlenme',
     'secondsLeftLabel': 'saniye kaldi',
     'tapCircleToFinish': 'Bitirince daireye dokunun',
@@ -137,8 +166,8 @@ class AppTexts {
       '- Bir gorev hatırlatmasina zamaninda yanit vermezsen, bunu cihazinda bir uyum kaydi olarak not ederiz.\n'
       '- Aktif bir gorev sirasinda, telefon hareketi ve kullanim oruntülerinden (hareket sensorleri ve mikrofon araciligiyla) olasi riskli anlari tahmin etmeye calisiriz. Ses kaydedilmez veya saklanmaz; yalnizca ortam ses seviyesi olculur.\n'
       '- Bazi gorev hatirlatmalari dikkatini cekmek icin tam ekran uyari olarak gorunebilir.\n'
-      '- Sahte arama seni gercek bir telefon gorusmesi sirasinda rahatsiz etmesin diye, o an gorusme yapip yapmadigini kontrol ederiz; icerigi veya numarayi hicbir zaman okumayiz.\n\n'
-      'Bu veriler yalnizca cihazinda saklanir ve seni desteklemek disinda bir amacla kullanilmaz. Devam ederek bunu onaylamis olursun; mikrofon, hareket ve telefon durumu izinlerini bir sonraki adimda ayrica onaylayabilir ya da reddedebilirsin.',
+      '- Gorevlendirme bildirimleri seni gercek bir telefon gorusmesi sirasinda rahatsiz etmesin diye, o an gorusme yapip yapmadigini kontrol ederiz; icerigi veya numarayi hicbir zaman okumayiz.\n\n'
+      'Bu veriler varsayilan olarak yalnizca cihazinda saklanir ve seni desteklemek disinda bir amacla kullanilmaz. Ayarlar > Bulut Yedekleme uzerinden kendi belirledigin bir sifreyle istege bagli, sifreli bir yedekleme acabilirsin; bu sifreyi biz de goremeyiz, sadece sen bilirsin. Devam ederek bunu onaylamis olursun; mikrofon, hareket ve telefon durumu izinlerini bir sonraki adimda ayrica onaylayabilir ya da reddedebilirsin.',
     'disciplineDisclosureAcknowledge': 'Anladim, devam et',
     'cravingSosButton': 'Krizdeyim',
     'surveyDraftFoundTitle': 'Kaldigin yerden devam et',
@@ -222,6 +251,12 @@ class AppTexts {
     'smokeFree120to240': '120-240 dakika',
     'smokeFree240plus': '240+ dakika',
     'stressHigh': 'Yuksek',
+    'interventionIntensityTitle': 'Mudahale siddeti',
+    'interventionIntensityHint':
+      'Uygulamanin seni gun icinde ne siklikla uyarip gorevlendirecegini secer.',
+    'interventionIntensityGentle': 'Nazik',
+    'interventionIntensityBalanced': 'Dengeli',
+    'interventionIntensityStrict': 'Siki',
     'stressLow': 'Dusuk',
     'threeCig': '3 adet',
     'threePack': '3 paket',
@@ -232,6 +267,8 @@ class AppTexts {
       'Lutfen ardisik icim adedini secin.',
     'validationChainHabitRequired':
       'Lutfen ardisik icim durumunu secin.',
+    'validationFirstCigaretteRequired':
+      'Lutfen ilk sigarayi ne zaman ictiginizi secin.',
     'validationFixHighlightedFields':
       'Lutfen isaretli alanlari duzeltin.',
     'validationSleepTimeRequired': 'Lutfen uyku saatini secin.',
@@ -240,7 +277,7 @@ class AppTexts {
     'validationWakeTimeRequired': 'Lutfen uyanis saatini secin.',
     'wakeTime': 'Uyanis saati',
     'workEnd': 'Mesai bitis',
-    'workplaceSmoking': 'Is yerinde sigara kurali',
+    'workplaceSmoking': 'Is yerinde sigara iciliyor mu?',
     'workStart': 'Mesai baslangic',
     'weeklyComparedLastWeek': 'Geçen haftaya göre',
     'weeklyDecrease': 'Azaldı',
@@ -344,6 +381,7 @@ class AppTexts {
     'respiratoryStatusLine': 'Respiratuar durum',
     'weeklyTopDriversLine': 'Haftalik ust risk etkenleri',
     'commandModeLabel': 'Komut modu',
+    'advancedSectionTitle': 'Gelismis',
     'learnedWeightsLabel': 'Ogrenilen agirliklar',
     'personalCommandsTitle': 'Kisisel komutlar',
     'durationBarriersTitle': 'Sigara içmeme süreleri (ayrı çalışır)',
@@ -362,20 +400,9 @@ class AppTexts {
     'menuDailyCheckIn': 'Gunluk Degerlendirme',
     'mentorCardTitle': 'Mentorunden',
     'mentorReplySentPrefix': 'Yanitin',
-    'fakeCallIncoming': 'Gelen arama',
-    'fakeCallAnswer': 'Cevapla',
-    'fakeCallDecline': 'Reddet',
-    'fakeCallNotNow': 'Simdi uygun degil',
-    'fakeCallerNameSettingTitle': 'Arayan Ismi',
-    'fakeCallerNameSettingDescription':
-      'Sigara icmeme molasi baslatan sahte arama ekraninda gorunecek isim. Sana inandirici gelecek bir isim sec (ornegin bir yakinin).',
-    'fakeCallCheckInTitle': 'Buradayim',
-    'fakeCallCheckInBody': 'Iyi gidiyorsun, devam et.',
-    'fakeCallOutcomeTitle': 'Nasil gecti?',
-    'fakeCallOutcomeQuestion': 'Az once gelen aramadan bu yana sigara icmedin mi?',
     'miuiPermissionTitle': 'Bir izin daha gerekiyor',
     'miuiPermissionMessage':
-      'Telefonun sahte arama ekranini kilitli ekranda da gosterebilmesi icin Xiaomi telefonlarda ek bir izin gerekiyor. Simdi ayar ekranini acalim mi?',
+      'Telefonun görevlendirme ekranini kilitli ekranda da gosterebilmesi icin {brand} telefonlarda ek bir izin gerekiyor. Simdi ayar ekranini acalim mi?',
     'miuiPermissionOpen': 'Ayarlari Ac',
     'miuiPermissionSkip': 'Daha Sonra',
     'settingsTitle': 'Ayarlar',
@@ -383,7 +410,22 @@ class AppTexts {
     'settingsSectionPrivacy': 'Gizlilik & Izinler',
     'settingsSectionData': 'Veri',
     'settingsLanguageRow': 'Dil',
-    'settingsCallerNameRow': 'Arayan Ismi',
+    'cloudBackupRow': 'Bulut Yedekleme',
+    'cloudBackupRowSubtitle': 'Verilerini sifreli olarak buluta yedekle',
+    'cloudRestoreRow': 'Bulut Yedeginden Geri Yukle',
+    'cloudRestoreRowSubtitle': 'Daha once yedeklediginiz verileri bu cihaza geri getir',
+    'cloudBackupPassphraseHint':
+      'Bu sifre yaln izca sende saklanir, biz hicbir zaman goremeyiz. Sifreyi unutursan yedegini geri getiremeyiz, guvenli bir yere not al.',
+    'cloudBackupPassphraseLabel': 'Sifre (en az 6 karakter)',
+    'cloudBackupPassphraseTooShort': 'Sifre en az 6 karakter olmali.',
+    'cloudBackupInProgress': 'Isleniyor, lutfen bekleyin...',
+    'cloudBackupSuccess': 'Yedekleme tamamlandi.',
+    'cloudBackupFailed': 'Yedekleme basarisiz oldu. Lutfen tekrar deneyin.',
+    'cloudRestoreConfirmMessage':
+      'Bu cihazdaki mevcut verilerin yerine yedekteki veriler yazilacak. Devam etmek istiyor musun?',
+    'cloudRestoreSuccess': 'Geri yukleme tamamlandi. Uygulamayi yeniden baslat.',
+    'cloudRestoreNotFound': 'Bu sifreyle eslesen bir yedek bulunamadi.',
+    'cloudRestoreFailed': 'Geri yukleme basarisiz oldu. Sifreni kontrol et.',
     'settingsPermissionsRow': 'Izin Merkezi',
     'settingsPermissionsRowSubtitle': 'Hangi izinleri neden kullandigimizi gorun',
     'settingsResetDataRow': 'Verilerimi Sifirla',
@@ -483,6 +525,27 @@ class AppTexts {
     'sedentaryReminderTitle': 'Biraz hareket vakti',
     'sedentaryReminderBody':
       'Bir sure hareketsiz gorunuyorsun. Kisa bir yuruyus, hem bacaklarina hem de sigara isteklerine iyi gelir.',
+    'healthTipTitle': 'Saglik Tavsiyesi',
+    'healthTipHypertension1':
+      'Sigara, kan basincini aninda yukseltir. Su an biraz derin nefes almak tansiyonuna iyi gelir.',
+    'healthTipHypertension2':
+      'Tuzu azaltmak ve sigarasiz kalmak, tansiyonun icin birlikte calisir. Bugun bir sigarayi daha erteleyebilirsin.',
+    'healthTipAsthma1':
+      'Sigara dumani, hava yollarini daraltarak astim ataklarini tetikleyebilir. Temiz hava alabilecegin bir yere cik.',
+    'healthTipAsthma2':
+      'Nefesin daraldiginda sigaraya degil, yavas ve derin nefes egzersizine yonel.',
+    'healthTipDiabetes1':
+      'Sigara, kan sekerini dengelemeyi zorlastirir. Bir bardak su icip birkaç dakika beklemeyi dene.',
+    'healthTipDiabetes2':
+      'Sigarasiz gecen her saat, dolasimindaki kan sekeri kontrolune küçük bir katki.',
+    'healthTipCopd1':
+      'KOAH ile sigara bir arada gitmez. Şu anki istegin, birkaç dakika icinde azalacak.',
+    'healthTipCopd2':
+      'Kisa bir nefes egzersizi, akcigerlerine sigaradan cok daha fazla iyilik yapar.',
+    'healthTipHeartDisease1':
+      'Sigara, kalbini gereksiz yere hizlandirir. Sakin bir nefes molasi kalbin icin daha iyi bir secim.',
+    'healthTipHeartDisease2':
+      'Kalp sagligin icin attigin en degerli adim, şu anki sigarayi icmemek.',
     'menuReports': 'Raporlar',
     'reportsTitle': 'Raporlar',
     'reportsWeeklyTab': 'Haftalik',
@@ -593,7 +656,7 @@ class AppTexts {
     'breathNoReferenceYet': 'Karsilastirma icin yeterli referans yok.',
     'breathPreviousComparison': 'Onceki test ile karsilastirma',
     'breathTestRecordTitle': 'Nefes Egzersizi Kaydi',
-    'breathTrend': 'Nefes trengi',
+    'breathTrend': 'Nefes trendi',
     'chainSmoking': 'Ardisik icim',
     'chainSmokingLatest': 'Son ardisik icim',
     'chainSmokingTrend': 'Ardisik icim trengi',
@@ -624,7 +687,8 @@ class AppTexts {
     'lastSurveyDate': 'Son anket tarihi',
     'mandatoryTaskCommand': 'Zorunlu gorev komutu',
     'mandatoryTaskHint': 'Bugun zorunlu gorevi tamamla.',
-    'mandatoryTaskStartButton': 'Gorevi baslat',
+    'mandatoryTaskStartButton': 'Kabul Et',
+    'mandatoryTaskDeclineButton': 'Ertele',
     'mandatoryTaskTitle': 'Zorunlu gorev',
     'monthly': 'Aylik',
     'monthlyImprovement': 'Aylik iyilesme',
@@ -656,6 +720,11 @@ class AppTexts {
     'subscriptionInfo': 'Abonelik bilgisi',
     'subscriptionStart': 'Abonelik baslangic',
     'subscriptionType': 'Abonelik tipi',
+    'free': 'Ucretsiz',
+    'premium': 'Premium',
+    'active': 'Aktif',
+    'passive': 'Pasif',
+    'taskTimerStartedTitle': 'Gorev basladi',
     'successfulTaskCount': 'Basarili gorev',
     'surveyHistory': 'Anket gecmisi',
     'taskBreathExercise2': '2 dakikalik nefes egzersizi yap',
@@ -668,6 +737,7 @@ class AppTexts {
     'taskFollowUpPendingCount': 'Bekleyen takip sayisi',
     'taskFollowUpScheduledAt': 'Planlanan takip saati',
     'taskFollowUpTitle': 'Gorev takipleri',
+    'taskOutcomeConfirmQuestion': 'Gorev basarildi mi?',
     'taskNoSmoke10': '10 dakika sigarasiz kal',
     'taskNoSmoke120': '120 dakika sigarasiz kal',
     'taskNoSmoke30': '30 dakika sigarasiz kal',
@@ -675,7 +745,7 @@ class AppTexts {
     'taskNoSmoke60': '60 dakika sigarasiz kal',
     'taskNoSmoke90': '90 dakika sigarasiz kal',
     'adaptiveNoSmokeTaskTemplate':
-      'Onumuzdeki {minutes} dakika boyunca sigara icmeyin.',
+      'Onumuzdeki {duration} boyunca sigara icmeyin. Elinizde sigara varsa hemen sondurun.',
     'taskNoteCraving': 'Kriz anini not et',
     'taskNotNowButton': 'Simdi degil',
     'taskOutcomeNo': 'Hayir',
@@ -779,6 +849,10 @@ class AppTexts {
     'taskTimerStartedBody': 'Gorev basladi:',
     'taskTimerDuration': 'Sayac',
     'minutesShort': 'dakika',
+    'oneHourLabel': '1 saat',
+    'postponeReminderPromptTitle': 'Ne zaman hatirlatayim?',
+    'postponeReminderPromptMessage':
+      'Gorevi erteliyorsunuz. Size ne zaman tekrar hatirlatmami istersiniz?',
     'weeklySurveyReminderTitle': 'Haftalik anket zamani',
     'weeklySurveyReminderBody':
       'Risk skorunu guncellemek icin haftalik anketi doldurman gerekiyor.',
@@ -812,7 +886,9 @@ class AppTexts {
     'female': 'Female',
     'selectOption': 'Select',
     'breathTest': 'Breathing Exercise',
+    'breathTestPageTitle': 'Breath Test',
     'riskLevel': 'Risk level',
+    'smokeFreeDaysWidgetLabel': 'smoke-free days',
     'riskScore': 'Risk score',
     'initialSurvey': 'Initial Survey',
     'smokingInfo': 'Smoking Information',
@@ -823,8 +899,25 @@ class AppTexts {
     'stressTitle': 'Stress Level',
     'quitReasonTitle': 'Quit Reason',
     'heartDisease': 'Heart Disease',
-    'packsPerDayQuestion': 'How many packs per day?',
-    'firstCigaretteWhen': 'When is your first cigarette?',
+    'otherHealthCondition': 'Other',
+    'otherHealthConditionHint': 'Enter your condition',
+    'usesMedicationQuestion': 'I take medication regularly',
+    'addMedicationButton': 'Add medication',
+    'medicationNameHint': 'Medication name',
+    'addMedicationTimeButton': 'Add time',
+    'medicationsSettingsRow': 'My Medications',
+    'medicationsSettingsRowSubtitle': 'Add, edit, or remove medications',
+    'medicationsPageTitle': 'My Medications',
+    'medicationsEmptyState': 'You haven\'t added any medications yet.',
+    'medicationDeleteConfirmTitle': 'Delete medication',
+    'medicationDeleteConfirmMessage': 'Are you sure you want to delete this medication and its reminders?',
+    'medicationSavedConfirmation': 'Medication saved',
+    'medicationReminderTitle': 'Medication reminder',
+    'medicationReminderBody': 'It\'s time to take your {name}.',
+    'overlayPermissionTitle': 'Show the task screen',
+    'overlayPermissionMessage': 'For the task screen to open over other apps even when the phone isn\'t locked, we need the "display over other apps" permission. Open the settings screen now?',
+    'packsPerDayQuestion': 'How many packs of cigarettes do you smoke per day?',
+    'firstCigaretteWhen': 'How long after waking up do you smoke your first cigarette?',
     'firstCigarette10to30': '10-30 minutes after waking',
     'maxSmokeFreeDuration': 'Longest smoke-free duration',
     'smokeFree30to60': '30-60 minutes',
@@ -850,6 +943,13 @@ class AppTexts {
     'hello': 'Hello',
     'weeklySavePrompt': 'Save your status for this week.',
     'weeklySurveyPromptAsk': 'Would you like to complete the weekly survey now?',
+    'shareProgressTitle': 'Share your progress',
+    'shareProgressMessage':
+      'You just completed your weekly check-in. Want to share your progress with friends?',
+    'shareProgressSkip': 'Skip',
+    'shareProgressAction': 'Share',
+    'shareProgressText':
+      'I\'m tracking my quit-smoking journey with No Smoke. My current risk score: {score}/100 ({level}).',
     'saveErrorRetry': 'An error occurred while saving. Please try again.',
     'loadErrorRetry': 'Something went wrong loading this data. Please try again.',
     'smokeFreeStreak': 'Smoke-Free Streak',
@@ -892,6 +992,9 @@ class AppTexts {
       '1. Sit upright and relax.\n2. Tap the circle, take a deep breath through your nose, and hold for 2 seconds.\n3. Exhale in one controlled breath.\n4. Tap the circle again when you\'re done.\n\n3 attempts will be performed, best score is saved.',
     'breathExerciseDisclaimer':
       'This is not a medical diagnostic tool; it is a simple breathing exercise for awareness and relaxation.',
+    'micRationaleTitle': 'Microphone permission',
+    'micRationaleMessage':
+      'We can use the microphone to automatically time your exhale. Audio is never recorded or stored — only the momentary sound level is measured. If you decline, you can still finish the test manually by tapping.',
     'restingLabel': 'Resting',
     'secondsLeftLabel': 'seconds left',
     'tapCircleToFinish': 'Tap the circle when you\'re done',
@@ -912,8 +1015,8 @@ class AppTexts {
       '- If you don\'t respond to a task reminder in time, we note it on your device as a compliance record.\n'
       '- During an active task, we try to estimate possible risky moments from phone motion and usage patterns (via motion sensors and the microphone). Audio is never recorded or stored — only the ambient sound level is measured.\n'
       '- Some task reminders may appear as full-screen alerts to get your attention.\n'
-      '- So the fake call doesn\'t interrupt a real phone call, we check whether you\'re currently on one; we never read call content or numbers.\n\n'
-      'This data stays on your device and is never used for anything other than supporting you. Continuing means you acknowledge this; you can still separately allow or deny the microphone, motion, and phone-state permissions in the next step.',
+      '- So task notifications don\'t interrupt a real phone call, we check whether you\'re currently on one; we never read call content or numbers.\n\n'
+      'By default, this data stays only on your device and is never used for anything other than supporting you. In Settings > Cloud Backup you can optionally turn on an encrypted backup protected by a passphrase you choose — we can never read that passphrase either, only you know it. Continuing means you acknowledge this; you can still separately allow or deny the microphone, motion, and phone-state permissions in the next step.',
     'disciplineDisclosureAcknowledge': 'I understand, continue',
     'cravingSosButton': 'Craving now',
     'surveyDraftFoundTitle': 'Continue where you left off',
@@ -1041,6 +1144,7 @@ class AppTexts {
     'respiratoryStatusLine': 'Respiratory status',
     'weeklyTopDriversLine': 'Top weekly risk drivers',
     'commandModeLabel': 'Command mode',
+    'advancedSectionTitle': 'Advanced',
     'learnedWeightsLabel': 'Learned weights',
     'personalCommandsTitle': 'Personal commands',
     'durationBarriersTitle': 'Smoke-free durations (separate flow)',
@@ -1059,20 +1163,9 @@ class AppTexts {
     'menuDailyCheckIn': 'Daily Check-in',
     'mentorCardTitle': 'From your mentor',
     'mentorReplySentPrefix': 'Your reply',
-    'fakeCallIncoming': 'Incoming call',
-    'fakeCallAnswer': 'Answer',
-    'fakeCallDecline': 'Decline',
-    'fakeCallNotNow': 'Not now',
-    'fakeCallerNameSettingTitle': 'Caller Name',
-    'fakeCallerNameSettingDescription':
-      'The name shown on the fake-call screen that starts a smoke-free break. Pick a name that would be believable to you (e.g. someone close to you).',
-    'fakeCallCheckInTitle': 'Still here',
-    'fakeCallCheckInBody': 'You\'re doing well, keep going.',
-    'fakeCallOutcomeTitle': 'How did it go?',
-    'fakeCallOutcomeQuestion': 'Have you stayed smoke-free since that call?',
     'miuiPermissionTitle': 'One more permission needed',
     'miuiPermissionMessage':
-      'Xiaomi phones need an extra permission for the fake-call screen to show up over a locked screen. Open the settings screen now?',
+      '{brand} phones need an extra permission for the task screen to show up over a locked screen. Open the settings screen now?',
     'miuiPermissionOpen': 'Open Settings',
     'miuiPermissionSkip': 'Later',
     'settingsTitle': 'Settings',
@@ -1080,7 +1173,6 @@ class AppTexts {
     'settingsSectionPrivacy': 'Privacy & Permissions',
     'settingsSectionData': 'Data',
     'settingsLanguageRow': 'Language',
-    'settingsCallerNameRow': 'Caller Name',
     'settingsPermissionsRow': 'Permissions Center',
     'settingsPermissionsRowSubtitle': 'See which permissions we use and why',
     'settingsResetDataRow': 'Reset My Data',
@@ -1180,6 +1272,27 @@ class AppTexts {
     'sedentaryReminderTitle': 'Time to move a bit',
     'sedentaryReminderBody':
       'You\'ve been still for a while. A short walk is good for your legs and for cravings alike.',
+    'healthTipTitle': 'Health Tip',
+    'healthTipHypertension1':
+      'Smoking raises your blood pressure instantly. A few deep breaths right now will help it more.',
+    'healthTipHypertension2':
+      'Less salt and no cigarette work together for your blood pressure. You can put off one more today.',
+    'healthTipAsthma1':
+      'Cigarette smoke narrows your airways and can trigger an asthma attack. Step somewhere with fresh air.',
+    'healthTipAsthma2':
+      'When your breathing feels tight, reach for a slow deep-breathing exercise instead of a cigarette.',
+    'healthTipDiabetes1':
+      'Smoking makes blood sugar harder to keep steady. Try a glass of water and a few minutes\' wait instead.',
+    'healthTipDiabetes2':
+      'Every smoke-free hour is a small win for your blood sugar control.',
+    'healthTipCopd1':
+      'COPD and smoking don\'t mix. This urge will fade on its own within a few minutes.',
+    'healthTipCopd2':
+      'A short breathing exercise does your lungs far more good than a cigarette ever could.',
+    'healthTipHeartDisease1':
+      'Smoking speeds up your heart for no reason. A calm breathing break is the better choice for it.',
+    'healthTipHeartDisease2':
+      'The most valuable thing you can do for your heart right now is skip this cigarette.',
     'menuReports': 'Reports',
     'reportsTitle': 'Reports',
     'reportsWeeklyTab': 'Weekly',
@@ -1339,7 +1452,8 @@ class AppTexts {
     'lessThanOnePack': 'Less than 1 pack',
     'mandatoryTaskCommand': 'Mandatory task command',
     'mandatoryTaskHint': 'Complete the mandatory task today.',
-    'mandatoryTaskStartButton': 'Start task',
+    'mandatoryTaskStartButton': 'Accept',
+    'mandatoryTaskDeclineButton': 'Postpone',
     'mandatoryTaskTitle': 'Mandatory task',
     'monthly': 'Monthly',
     'monthlyImprovement': 'Monthly improvement',
@@ -1403,11 +1517,22 @@ class AppTexts {
     'smokeFree60to120': '60-120 minutes',
     'status': 'Status',
     'stressHigh': 'High',
+    'interventionIntensityTitle': 'Intervention intensity',
+    'interventionIntensityHint':
+      'Chooses how often the app interrupts and assigns you tasks during the day.',
+    'interventionIntensityGentle': 'Gentle',
+    'interventionIntensityBalanced': 'Balanced',
+    'interventionIntensityStrict': 'Strict',
     'stressLow': 'Low',
     'subscriptionEnd': 'Subscription end',
     'subscriptionInfo': 'Subscription info',
     'subscriptionStart': 'Subscription start',
     'subscriptionType': 'Subscription type',
+    'free': 'Free',
+    'premium': 'Premium',
+    'active': 'Active',
+    'passive': 'Passive',
+    'taskTimerStartedTitle': 'Task started',
     'successfulTaskCount': 'Successful tasks',
     'surveyHistory': 'Survey history',
     'taskBreathExercise2': 'Do a 2-minute breathing exercise',
@@ -1420,6 +1545,7 @@ class AppTexts {
     'taskFollowUpPendingCount': 'Pending follow-up count',
     'taskFollowUpScheduledAt': 'Scheduled follow-up time',
     'taskFollowUpTitle': 'Task follow-ups',
+    'taskOutcomeConfirmQuestion': 'Was the task completed?',
     'taskNoSmoke10': 'Stay smoke-free for 10 minutes',
     'taskNoSmoke120': 'Stay smoke-free for 120 minutes',
     'taskNoSmoke30': 'Stay smoke-free for 30 minutes',
@@ -1427,7 +1553,7 @@ class AppTexts {
     'taskNoSmoke60': 'Stay smoke-free for 60 minutes',
     'taskNoSmoke90': 'Stay smoke-free for 90 minutes',
     'adaptiveNoSmokeTaskTemplate':
-      'Do not smoke for the next {minutes} minutes.',
+      'Do not smoke for the next {duration}. If you have a cigarette in your hand, put it out now.',
     'taskNoteCraving': 'Take a note of the craving moment',
     'taskNotNowButton': 'Not now',
     'taskOutcomeNo': 'No',
@@ -1485,6 +1611,8 @@ class AppTexts {
       'Please select consecutive smoking count.',
     'validationChainHabitRequired':
       'Please select consecutive smoking habit.',
+    'validationFirstCigaretteRequired':
+      'Please select how soon after waking you smoke your first cigarette.',
     'validationFixHighlightedFields':
       'Please fix the highlighted fields.',
     'validationSleepTimeRequired': 'Please select sleep time.',
@@ -1508,7 +1636,7 @@ class AppTexts {
     'weeklyRiskTarget': 'Weekly risk target',
     'welcome': 'Welcome',
     'workEnd': 'Work end',
-    'workplaceSmoking': 'Workplace smoking rule',
+    'workplaceSmoking': 'Is smoking allowed at your workplace?',
     'workStart': 'Work start',
     'taskActionDone': 'Start Task',
     'taskActionNotNow': 'Not now',
@@ -1549,6 +1677,10 @@ class AppTexts {
     'taskTimerStartedBody': 'Task started:',
     'taskTimerDuration': 'Timer',
     'minutesShort': 'minutes',
+    'oneHourLabel': '1 hour',
+    'postponeReminderPromptTitle': 'When should I remind you?',
+    'postponeReminderPromptMessage':
+      'You are postponing the task. When would you like to be reminded again?',
     'barrierStartedTitle': 'Duration barrier started',
     'barrierStartedBody': 'Smoke-free timer is running.',
     'barrierStartedDuration': 'Timer duration',
@@ -2194,6 +2326,39 @@ class AppTexts {
     return textForCode(code, key);
   }
 
+  /// Turns a duration-barrier task's raw minute count into a natural
+  /// phrase in whatever unit actually reads naturally at that scale — the
+  /// tier system in DisciplineProtocolService can now produce anything
+  /// from 30 minutes up to a fixed "this month" commitment (43200
+  /// minutes), and showing the user "43200 dakika" instead of "bu ay" would
+  /// defeat the point of the escalation. Only TR/EN are hand-formatted here
+  /// (matching the existing precedent in NotificationService's
+  /// _formatBarrierDuration, which is TR/EN-only too) — every other
+  /// language falls back to the English phrasing.
+  static String formatAdaptiveDurationPhrase(String code, int minutes) {
+    final isTr = code == 'tr';
+    if (minutes >= 28 * 24 * 60) {
+      return isTr ? 'bu ay' : 'this month';
+    }
+    if (minutes >= 24 * 60) {
+      final days = (minutes / (24 * 60)).round();
+      return isTr
+          ? '$days gün'
+          : '$days day${days == 1 ? '' : 's'}';
+    }
+    if (minutes >= 60) {
+      final hours = minutes ~/ 60;
+      final remaining = minutes % 60;
+      if (remaining == 0) {
+        return isTr ? '$hours saat' : '$hours hour${hours == 1 ? '' : 's'}';
+      }
+      return isTr
+          ? '$hours saat $remaining dakika'
+          : '$hours hour${hours == 1 ? '' : 's'} $remaining minute${remaining == 1 ? '' : 's'}';
+    }
+    return isTr ? '$minutes dakika' : '$minutes minute${minutes == 1 ? '' : 's'}';
+  }
+
   static String localizeCanonicalTextForCode(String code, String value) {
     final normalized = value.trim();
 
@@ -2202,9 +2367,12 @@ class AppTexts {
       caseSensitive: false,
     ).firstMatch(normalized);
     if (adaptiveCanonical != null) {
-      final minutes = adaptiveCanonical.group(1) ?? '15';
+      final minutes = int.tryParse(adaptiveCanonical.group(1) ?? '15') ?? 15;
       final template = textForCode(code, 'adaptiveNoSmokeTaskTemplate');
-      return template.replaceAll('{minutes}', minutes);
+      return template.replaceAll(
+        '{duration}',
+        formatAdaptiveDurationPhrase(code, minutes),
+      );
     }
 
     final adaptiveLegacyTr = RegExp(
@@ -2212,9 +2380,12 @@ class AppTexts {
       caseSensitive: false,
     ).firstMatch(normalized);
     if (adaptiveLegacyTr != null) {
-      final minutes = adaptiveLegacyTr.group(1) ?? '15';
+      final minutes = int.tryParse(adaptiveLegacyTr.group(1) ?? '15') ?? 15;
       final template = textForCode(code, 'adaptiveNoSmokeTaskTemplate');
-      return template.replaceAll('{minutes}', minutes);
+      return template.replaceAll(
+        '{duration}',
+        formatAdaptiveDurationPhrase(code, minutes),
+      );
     }
 
     switch (normalized) {

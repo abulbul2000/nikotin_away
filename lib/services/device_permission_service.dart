@@ -6,10 +6,10 @@ import 'package:permission_handler/permission_handler.dart' show openAppSettings
 /// Bridges to MIUI-specific permission screens that have no standard
 /// Android/permission_handler equivalent. Xiaomi/MIUI/HyperOS gate
 /// "display pop-up windows while running in the background" and "show on
-/// Lock screen" — required for the fake-call barrier to actually take over
-/// a locked screen — behind their own permission editor, which
-/// [openPermissionEditor] deep-links into directly. No-ops (returns false)
-/// on non-Android or non-MIUI devices.
+/// Lock screen" — required for the mandatory task screen's full-screen
+/// alert to actually take over a locked screen — behind their own
+/// permission editor, which [openPermissionEditor] deep-links into
+/// directly. No-ops (returns false) on non-Android or non-MIUI devices.
 class DevicePermissionService {
   static const MethodChannel _channel = MethodChannel(
     'no_smoke/device_permissions',
@@ -41,10 +41,10 @@ class DevicePermissionService {
   }
 
   /// Coarse in-call/not-in-call state only (READ_PHONE_STATE) — used to keep
-  /// the fake-call barrier from ringing over a genuine phone call. Missing
-  /// permission or a non-Android platform are both treated as "not in a
-  /// call" rather than surfacing an error, matching how the app treats its
-  /// other optional sensor permissions.
+  /// task notifications and the mandatory task gate from interrupting a
+  /// genuine phone call. Missing permission or a non-Android platform are
+  /// both treated as "not in a call" rather than surfacing an error,
+  /// matching how the app treats its other optional sensor permissions.
   static Future<bool> isInPhoneCall() async {
     if (!_isAndroid) {
       return false;
@@ -92,6 +92,34 @@ class DevicePermissionService {
     }
     try {
       return await openAppSettings();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// "Display over other apps" -- lets the mandatory task screen cover
+  /// whatever app is in the foreground, not just the lock screen. There is
+  /// no runtime dialog for this permission; [requestOverlayPermission] sends
+  /// the user straight to the dedicated Settings screen.
+  static Future<bool> hasOverlayPermission() async {
+    if (!_isAndroid) {
+      return false;
+    }
+    try {
+      return await _channel.invokeMethod<bool>('hasOverlayPermission') ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> requestOverlayPermission() async {
+    if (!_isAndroid) {
+      return false;
+    }
+    try {
+      return await _channel.invokeMethod<bool>('requestOverlayPermission') ??
+          false;
     } catch (_) {
       return false;
     }

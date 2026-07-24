@@ -38,7 +38,21 @@ class SleepProbeReceiver : BroadcastReceiver() {
             return
         }
 
-        SleepProbeStore.insertProbe(context, isScreenOff = !isInteractive(context), isCharging = isCharging(context))
+        val isAwake = isInteractive(context)
+        SleepProbeStore.insertProbe(context, isScreenOff = !isAwake, isCharging = isCharging(context))
+
+        // The user is awake (screen on) during what should be their sleep
+        // window -- queue this so the Dart side can decide, next time it
+        // runs, whether to fire a full mandatory task or just a small
+        // advisory tip (see StorageService.isDailyTaskQuotaMet). Detection
+        // granularity is however often this probe fires (intervalMinutes,
+        // tightened specifically during the sleep window -- see
+        // SleepIntelligenceService) rather than truly instant, since acting
+        // on it needs Dart-side business logic this native receiver
+        // deliberately doesn't duplicate.
+        if (isAwake && isWithinWindow(currentMinuteOfDay(), windowStartMinute, windowEndMinute)) {
+            SleepActivityStore.enqueueActivity(context)
+        }
 
         if (!isWithinWindow(currentMinuteOfDay(), windowStartMinute, windowEndMinute)) {
             return
@@ -67,7 +81,12 @@ class SleepProbeReceiver : BroadcastReceiver() {
         const val EXTRA_WINDOW_START_MINUTE = "extra_window_start_minute"
         const val EXTRA_WINDOW_END_MINUTE = "extra_window_end_minute"
         const val EXTRA_INTERVAL_MINUTES = "extra_interval_minutes"
-        const val DEFAULT_INTERVAL_MINUTES = 45
+        // Was 45 -- tightened so a user waking up and using their phone
+        // mid-sleep-window gets noticed within a few minutes instead of
+        // up to 45. Each wake only reads two already-cached OS properties
+        // (see onReceive), so the extra wake frequency costs negligible
+        // battery despite firing ~15x more often overnight.
+        const val DEFAULT_INTERVAL_MINUTES = 5
 
         fun isWithinWindow(nowMinute: Int, startMinute: Int, endMinute: Int): Boolean {
             return if (startMinute <= endMinute) {

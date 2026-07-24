@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/app_texts.dart';
 import '../models/survey_record.dart';
@@ -41,7 +44,6 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
   bool _autoDetailedByRisk = false;
   String _mood = 'Orta';
   String _packOption = '1 paketten az';
-  String? _highPackOption;
   String? _consecutiveSmokingHabit;
   String? _consecutiveSmokingCount;
   String _deltaVsLastWeek = 'same';
@@ -124,12 +126,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     {'key': 'Sun', 'labelKey': 'daySunShort'},
   ];
 
-  String get _resolvedPacksPerDay {
-    if (_packOption == '3+ paket') {
-      return _highPackOption ?? '4 paket';
-    }
-    return _packOption;
-  }
+  String get _resolvedPacksPerDay => _packOption;
 
   @override
   void initState() {
@@ -814,6 +811,42 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     return fallbackName;
   }
 
+  /// A skippable "share your progress" moment right after completing the
+  /// weekly survey — the point in the flow where the user has just seen
+  /// their updated risk score, so motivation to share is highest. Never
+  /// blocks the normal save/navigate flow: dismissing (or the platform
+  /// share sheet being cancelled) just continues on exactly as before.
+  Future<void> _offerShareProgress({
+    required int score,
+    required String level,
+  }) async {
+    final wantsToShare = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('shareProgressTitle')),
+        content: Text(context.t('shareProgressMessage')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('shareProgressSkip')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('shareProgressAction')),
+          ),
+        ],
+      ),
+    );
+    if (wantsToShare != true || !mounted || !context.mounted) {
+      return;
+    }
+    final text = context
+        .t('shareProgressText')
+        .replaceAll('{score}', '$score')
+        .replaceAll('{level}', level);
+    unawaited(SharePlus.instance.share(ShareParams(text: text)));
+  }
+
   @override
   void dispose() {
     _noteController.dispose();
@@ -862,21 +895,9 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               ),
               PacksPerDaySection(
                 selectedPackOption: _packOption,
-                selectedHighPackOption: _highPackOption,
                 onPackOptionChanged: (value) {
                   setState(() {
                     _packOption = value;
-                    if (value != '3+ paket') {
-                      _highPackOption = null;
-                    } else {
-                      _highPackOption ??=
-                          PacksPerDaySection.highPackOptions.first;
-                    }
-                  });
-                },
-                onHighPackOptionChanged: (value) {
-                  setState(() {
-                    _highPackOption = value;
                   });
                 },
               ),
@@ -1741,6 +1762,10 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                     final latestUserName = await _resolveLatestUserName(
                       unnamedUserLabel,
                     );
+                    if (!mounted) return;
+                    if (!context.mounted) return;
+
+                    await _offerShareProgress(score: score, level: level);
                     if (!mounted) return;
                     if (!context.mounted) return;
 

@@ -8,10 +8,12 @@ Bu belge, Google Play Console'un "Data Safety" (Veri Güvenliği) formunu doldur
 
 ## 1) Genel Bakış
 
-- Uygulama **tamamen cihaz-yerel** çalışır: kendi backend'i / bulut senkronizasyonu / kullanıcı hesabı sistemi yok.
+- Uygulama **varsayılan olarak cihaz-yerel** çalışır: kendi backend'i yok, kullanıcı hesabı sistemi yok.
 - Tüm kalıcı veri SQLite (`no_smoke.db`) ve `SharedPreferences` içinde, cihazın kendi uygulama sanal alanında (`android:allowBackup="false"` — Android'in otomatik bulut yedeklemesine bile dahil edilmiyor).
-- **Tek istisna:** nadir görülen bir cihaz dili seçildiğinde (uygulamanın önceden hazırladığı 39 dilin dışında bir dil), arayüz metinlerini çevirmek için `translate.googleapis.com`'a tek seferlik bir HTTP isteği gidiyor — bkz. Bölüm 4.
-- Reklam SDK'sı, analitik SDK'sı (Firebase/Crashlytics/Sentry vb.), üçüncü parti çökme raporlama **yok**.
+- **Google Translate:** nadir görülen bir cihaz dili seçildiğinde (uygulamanın önceden hazırladığı 39 dilin dışında bir dil), arayüz metinlerini çevirmek için `translate.googleapis.com`'a tek seferlik bir HTTP isteği gidiyor — bkz. Bölüm 4.
+- **Firebase Crashlytics:** uygulama çöktüğünde, kişisel veri içermeyen teknik hata raporu (hata türü, stack trace, cihaz modeli) otomatik olarak gönderiliyor — bkz. Bölüm 4.
+- **Firebase Storage (isteğe bağlı bulut yedekleme):** kullanıcı Ayarlar → Bulut Yedekleme'yi kendi belirlediği bir şifreyle açarsa, tüm yerel veritabanı cihaz üzerinde şifrelenip (AES-256-GCM) Firebase Storage'a yükleniyor. Şifre sunucuya hiç gönderilmiyor — bkz. Bölüm 4.
+- Reklam SDK'sı veya kullanıcı davranışı izleyen bir analitik SDK'sı **yok**.
 
 ---
 
@@ -27,25 +29,27 @@ Bu belge, Google Play Console'un "Data Safety" (Veri Güvenliği) formunu doldur
 | **Sağlık ve fitness — Fitness bilgileri** | Evet | Adım sayısı (donanım sensörü). |
 | **Ses dosyaları — Ses kaydı** | **Hayır (işlenip atılıyor)** | Nefes testi mikrofonu kullanır ama ham ses **hiçbir zaman diske/veritabanına yazılmaz** — her ses parçası anlık enerji (RMS) değerine indirgenip bellekte hemen atılır. Play Console'da "toplanıyor ama saklanmıyor, anlık işleniyor" olarak işaretlenmeli. |
 | **Uygulama etkinliği — Uygulama içi etkileşimler** | Evet | Görev tamamlama/erteleme, bildirim yanıtları — kişiselleştirme için. |
-| **Uygulama bilgisi ve performansı** | Hayır | Çökme/tanılama verisi toplayan bir SDK yok. |
-| **Cihaz veya diğer kimlikler** | Hayır | Reklam kimliği, cihaz kimliği okunmuyor/toplanmıyor. |
+| **Uygulama bilgisi ve performansı — Çökme günlükleri** | Evet | Firebase Crashlytics ile otomatik gönderiliyor. Kullanıcı adı, anket cevabı veya sağlık verisi içermez — yalnızca teknik hata bilgisi. |
+| **Cihaz veya diğer kimlikler** | Evet (sınırlı) | Firebase Crashlytics, çökme raporlarını cihazlar arasında ayırt edebilmek için anonim bir Firebase yükleme kimliği (installation ID) kullanır — reklam kimliği veya kişiyi tanımlayan bir kimlik değildir. |
 | **Finansal bilgiler, Mesajlar, Fotoğraf/Video, Kişiler, Takvim, Web geçmişi** | Hayır | Hiçbiri toplanmıyor. |
 
 ---
 
 ## 3) Veri Paylaşılıyor mu?
 
-**Hayır** — hiçbir veri üçüncü bir şirkete satılmıyor veya reklam/analitik amacıyla paylaşılmıyor. Tek ağ çağrısı (Bölüm 4) kişisel veri içermez, sadece statik arayüz metni gönderir.
+Kullanıcı verisi **hiçbir zaman satılmıyor veya reklam amacıyla paylaşılmıyor.** Google/Firebase ile paylaşılan tek iki şey:
+1. **Çökme raporları** (Firebase Crashlytics) — kişisel veri içermez, yalnızca teknik hata bilgisi. Google'ın [Firebase hizmet şartları](https://firebase.google.com/terms) kapsamında bir "hizmet sağlayıcı" paylaşımıdır, reklam/pazarlama amaçlı değildir.
+2. **Şifreli yedek dosyası** (Firebase Storage) — yalnızca kullanıcı bulut yedeklemeyi kendi isteğiyle açarsa. Yüklenen dosya cihaz üzerinde şifrelenmiştir; Google (ya da biz) şifreyi bilmediği için içeriği okuyamaz.
+
+Çeviri isteği (Bölüm 4) kişisel veri içermez, sadece statik arayüz metni gönderir.
 
 ---
 
 ## 4) Ağ Kullanımı Detayı (Play Console "veri aktarımı şifreli mi" sorusu için)
 
-- **Ne:** `lib/core/app_texts.dart` → `_translateBatch` → `https://translate.googleapis.com/translate_a/single` (HTTPS).
-- **Ne zaman:** Sadece kullanıcının cihaz dili, önceden hazırlanmış 39 dilin **hiçbirine** denk gelmediğinde, o dilde İLK açılışta.
-- **Ne gönderiliyor:** Uygulamanın kendi İngilizce arayüz metinleri (buton/etiket yazıları) — kullanıcıya ait hiçbir kişisel veri, anket cevabı veya sağlık verisi gönderilmiyor.
-- **Sonuç nerede saklanıyor:** Çeviri sonucu cihazda `SharedPreferences`'a önbelleğe alınıyor, bir daha o dil için ağ çağrısı yapılmıyor.
-- **Play Console'da işaretlenecek:** "Veri şifreli aktarılıyor mu" → Evet (HTTPS). "Bu veri paylaşımı" → Hayır (bu üçüncü-parti bir çeviri servisine tek seferlik bir istektir, kullanıcı verisi değil, kalıcı bir "veri paylaşımı ortaklığı" değil) — ama şeffaflık için gizlilik politikasında bu davranış açıkça belirtilmeli (şu an belirtilmiyor, bkz. Bölüm 6).
+- **Çeviri:** `lib/core/app_texts.dart` → `_translateBatch` → `https://translate.googleapis.com/translate_a/single` (HTTPS). Sadece kullanıcının cihaz dili, önceden hazırlanmış 39 dilin **hiçbirine** denk gelmediğinde, o dilde İLK açılışta. Uygulamanın kendi İngilizce arayüz metinleri dışında hiçbir şey gönderilmiyor. Sonuç cihazda `SharedPreferences`'a önbelleğe alınıyor. Play Console: "Veri şifreli aktarılıyor mu" → Evet (HTTPS); "veri paylaşımı" değil, kullanıcı verisi içermiyor.
+- **Crashlytics:** `lib/main.dart` → `FirebaseCrashlytics` — uygulama çöktüğünde otomatik, HTTPS üzerinden. Kişisel veri göndermez.
+- **Bulut yedekleme:** `lib/services/cloud_backup_service.dart` → Firebase Storage — yalnızca kullanıcı Ayarlar'dan açıp bir yedekleme/geri yükleme başlattığında, HTTPS üzerinden. Gönderilen içerik AES-256-GCM ile cihaz üzerinde önceden şifrelenmiştir; şifreleme anahtarı kullanıcının girdiği şifreden türetilir ve sunucuya hiçbir zaman gönderilmez.
 
 ---
 
@@ -59,8 +63,7 @@ Bu belge, Google Play Console'un "Data Safety" (Veri Güvenliği) formunu doldur
 
 ## 6) Bulunan Eksik (Play Console gönderiminden önce tamamlanmalı)
 
-- Uygulamanın ayrı bir **Gizlilik Politikası** (privacy policy) URL'si Play Console'a girilmesi zorunlu — bu proje deposunda böyle bir belge/URL bulunamadı. Bu belge (PLAY_STORE_DATA_SAFETY.md) o politikanın teknik kaynağı olarak kullanılabilir ama Play Console halka açık bir URL istiyor; bu ayrı bir iş kalemi (hosting + hukuki dil).
-- Google Translate yedek mekanizması gizlilik politikasında açıkça belirtilmemiş (yukarıda not edildi).
+- Uygulamanın ayrı bir **Gizlilik Politikası** (privacy policy) URL'si Play Console'a girilmesi zorunlu — `docs/PRIVACY_POLICY.md` bu politikanın metnini içeriyor ama Play Console halka açık bir URL istiyor; bu ayrı bir iş kalemi (hosting + `[GELİŞTİRİCİ ADI]`/`[İLETİŞİM E-POSTASI]` gibi hâlâ doldurulmamış alanlar + hukuki gözden geçirme).
 
 ---
 

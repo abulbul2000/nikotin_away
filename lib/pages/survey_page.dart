@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import '../core/app_texts.dart';
+import '../models/medication.dart';
 import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import '../services/ambient_audio_service.dart';
@@ -35,16 +36,17 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
   String? profession;
   String? smokingYears;
   String? cigarettesPerPack;
-  String firstCigaretteRange = '10-30';
+  String? firstCigaretteRange;
   String smokeFreeRange = '30-60';
   String workplaceSmokingRule = 'Hayır';
   String stressLevel = 'Orta';
+  String interventionIntensity = 'balanced';
   String quitReason = 'Sağlık';
   String? sleepTime;
   String? wakeTime;
   String? workStartTime;
   String? workEndTime;
-  final Set<String> workingDays = <String>{'Mon', 'Tue', 'Wed', 'Thu', 'Fri'};
+  final Set<String> workingDays = <String>{};
   bool hasSmokingBreaks = false;
   String? breakStart1;
   String? breakEnd1;
@@ -53,7 +55,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
   String? breakEnd2;
   String weekendSmokingPattern = 'Ayni';
   String packOption = '1 paketten az';
-  String? highPackOption;
   String? consecutiveSmokingHabit;
   String? consecutiveSmokingCount;
   String durationBarrierPreference = 'Farketmez';
@@ -64,6 +65,10 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
   bool diabetes = false;
   bool copd = false;
   bool heartDisease = false;
+  bool otherHealthCondition = false;
+  final otherHealthConditionController = TextEditingController();
+  bool usesMedication = false;
+  final List<_MedicationDraft> medicationDrafts = [];
 
   final Set<String> triggerSet = <String>{};
 
@@ -128,12 +133,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
     {'key': 'Sun', 'labelKey': 'daySunShort'},
   ];
 
-  String get _resolvedPacksPerDay {
-    if (packOption == '3+ paket') {
-      return highPackOption ?? '4 paket';
-    }
-    return packOption;
-  }
+  String get _resolvedPacksPerDay => packOption;
 
   String _professionLabel(String value, BuildContext context) {
     switch (value) {
@@ -183,15 +183,18 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
     return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
   }
 
-  // Build time picker with separate hour and minute dropdowns
+  // Tap-to-open native time picker. Shows a neutral "Seçiniz" placeholder
+  // until the user actually picks a time — previously this rendered two
+  // inline hour/minute dropdowns that always displayed a hardcoded 07:00
+  // even when nothing had been chosen yet, which looked like a real
+  // (unintentional) selection.
   Widget _buildTimePickerRow({
     required String label,
     required String? currentValue,
-    required List<int> minuteOptions,
     required Function(String) onChanged,
   }) {
+    final hasValue = currentValue != null && currentValue.isNotEmpty;
     final (currentHour, currentMinute) = _parseTimeString(currentValue);
-    final hourList = List.generate(24, (i) => i);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -203,59 +206,37 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              // Hours dropdown
-              Expanded(
-                child: DropdownButton<int>(
-                  isExpanded: true,
-                  value: currentHour,
-                  items: hourList.map((h) {
-                    return DropdownMenuItem(
-                      value: h,
-                      child: Text(
-                        h.toString().padLeft(2, '0'),
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (newHour) {
-                    if (newHour != null) {
-                      onChanged(_formatTime(newHour, currentMinute));
-                    }
-                  },
+          InkWell(
+            onTap: () async {
+              final picked = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay(
+                  hour: hasValue ? currentHour : TimeOfDay.now().hour,
+                  minute: hasValue ? currentMinute : 0,
+                ),
+              );
+              if (picked != null) {
+                onChanged(_formatTime(picked.hour, picked.minute));
+              }
+            },
+            child: InputDecorator(
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
                 ),
               ),
-              const SizedBox(width: 12),
-              const Text(
-                ':',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(width: 12),
-              // Minutes dropdown
-              Expanded(
-                child: DropdownButton<int>(
-                  isExpanded: true,
-                  value: minuteOptions.contains(currentMinute)
-                      ? currentMinute
-                      : minuteOptions.first,
-                  items: minuteOptions.map((m) {
-                    return DropdownMenuItem(
-                      value: m,
-                      child: Text(
-                        m.toString().padLeft(2, '0'),
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (newMinute) {
-                    if (newMinute != null) {
-                      onChanged(_formatTime(currentHour, newMinute));
-                    }
-                  },
+              child: Text(
+                hasValue
+                    ? _formatTime(currentHour, currentMinute)
+                    : context.t('selectOption'),
+                style: TextStyle(
+                  fontSize: 18,
+                  color: hasValue ? null : Theme.of(context).hintColor,
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -282,6 +263,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
     if (diabetes) health.add('Diyabet');
     if (copd) health.add('KOAH');
     if (heartDisease) health.add('Kalp Hastaligi');
+    if (otherHealthCondition && otherHealthConditionController.text.trim().isNotEmpty) {
+      health.add(otherHealthConditionController.text.trim());
+    }
     return health;
   }
 
@@ -384,6 +368,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       await _storageService.saveSleepTime(sleepTime!);
       await _storageService.saveSetting('wake_time', wakeTime!);
       await _storageService.saveSetting('daily_breath_test_target', '1');
+      if (gender != null && gender!.isNotEmpty) {
+        await _storageService.saveSetting('gender', gender!);
+      }
       debugPrint('[SurveyPage] saveSleepTime ok: $sleepTime');
     } catch (error, stackTrace) {
       debugPrint('[SurveyPage] saveSleepTime failed (non-blocking): $error');
@@ -422,7 +409,41 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       debugPrintStack(stackTrace: stackTrace);
     }
 
+    try {
+      final medications = _collectValidMedications();
+      for (final medication in medications) {
+        await _storageService.saveMedication(medication);
+      }
+      await NotificationService.scheduleMedicationReminders(medications);
+      debugPrint(
+        '[SurveyPage] save medications ok: count=${medications.length}',
+      );
+    } catch (error, stackTrace) {
+      debugPrint('[SurveyPage] save medications failed (non-blocking): $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+
     return recordId;
+  }
+
+  List<Medication> _collectValidMedications() {
+    if (!usesMedication) return [];
+    final now = DateTime.now();
+    final medications = <Medication>[];
+    for (var i = 0; i < medicationDrafts.length; i++) {
+      final draft = medicationDrafts[i];
+      final name = draft.nameController.text.trim();
+      if (name.isEmpty || draft.times.isEmpty) continue;
+      medications.add(
+        Medication(
+          id: '${now.millisecondsSinceEpoch}_$i',
+          name: name,
+          times: List<String>.from(draft.times),
+          createdAt: now,
+        ),
+      );
+    }
+    return medications;
   }
 
   Future<void> _saveInitialProfileSnapshot(String recordId) async {
@@ -437,7 +458,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           createdAt: DateTime.now(),
           riskScore: 0,
           packsPerDay: _resolvedPacksPerDay,
-          firstCigaretteRange: firstCigaretteRange,
+          firstCigaretteRange: firstCigaretteRange!,
           smokeFreeRange: smokeFreeRange,
           consecutiveSmokingHabit: consecutiveSmokingHabit ?? 'Hayır',
           consecutiveSmokingCount: consecutiveSmokingCount,
@@ -551,8 +572,8 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       _showValidationMessage(context.t('notificationPermissionRequired'));
     }
 
-    // MIUI/Xiaomi hides the permissions the fake-call barrier's full-screen
-    // notification needs (pop-up-while-in-background, show-on-lock-screen)
+    // MIUI/Xiaomi hides the permissions the mandatory task screen's
+    // full-screen notification needs (pop-up-while-in-background, show-on-lock-screen)
     // behind its own permission editor rather than standard Android
     // notification settings — granting notificationsGranted above does not
     // cover them. Offer a direct one-tap deep link into that screen right
@@ -560,11 +581,20 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
     if (result.notificationsGranted && mounted) {
       final isMiui = await DevicePermissionService.isMiuiDevice();
       if (isMiui && mounted) {
+        final brand = await DevicePermissionService.getManufacturer();
+        final brandLabel = (brand == null || brand.trim().isEmpty)
+            ? 'Xiaomi'
+            : brand.trim();
+        if (!mounted) return;
         final openSettings = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
             title: Text(context.t('miuiPermissionTitle')),
-            content: Text(context.t('miuiPermissionMessage')),
+            content: Text(
+              context
+                  .t('miuiPermissionMessage')
+                  .replaceAll('{brand}', brandLabel),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -586,11 +616,43 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       }
     }
 
+    // "Display over other apps" -- lets the mandatory task screen cover
+    // whatever app is in the foreground instead of only showing as a
+    // notification when the phone is unlocked. Optional (declining just
+    // means the task falls back to the notification-only behavior), so
+    // this is offered once here rather than blocking the flow.
+    if (result.notificationsGranted && mounted) {
+      final hasOverlay = await DevicePermissionService.hasOverlayPermission();
+      if (!hasOverlay && mounted) {
+        final openOverlaySettings = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: Text(context.t('overlayPermissionTitle')),
+            content: Text(context.t('overlayPermissionMessage')),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(context.t('miuiPermissionSkip')),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: Text(context.t('miuiPermissionOpen')),
+              ),
+            ],
+          ),
+        );
+        if (openOverlaySettings == true) {
+          await DevicePermissionService.requestOverlayPermission();
+        }
+      }
+    }
+
     if (result.telemetryGranted) {
       await AmbientAudioService().startMonitoring();
     }
 
     await _saveInitialProfileSnapshot(recordId);
+    await _storageService.saveInterventionIntensity(interventionIntensity);
 
     if (result.notificationsGranted) {
       try {
@@ -604,6 +666,20 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       } catch (error, stackTrace) {
         debugPrint(
           '[SurveyPage] scheduleDailyBreathReminder failed (non-blocking): $error',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
+
+      try {
+        await NotificationService.scheduleHealthConditionAdviceNotifications(
+          healthConditions: _selectedHealthConditions(),
+          sleepTime: sleepTime!,
+          wakeTime: wakeTime!,
+        );
+        debugPrint('[SurveyPage] scheduleHealthConditionAdviceNotifications ok');
+      } catch (error, stackTrace) {
+        debugPrint(
+          '[SurveyPage] scheduleHealthConditionAdviceNotifications failed (non-blocking): $error',
         );
         debugPrintStack(stackTrace: stackTrace);
       }
@@ -627,6 +703,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
     if (consecutiveSmokingHabit == 'Evet' &&
         (consecutiveSmokingCount == null || consecutiveSmokingCount!.isEmpty)) {
       return context.t('validationChainCountRequired');
+    }
+    if (firstCigaretteRange == null || firstCigaretteRange!.isEmpty) {
+      return context.t('validationFirstCigaretteRequired');
     }
     if (sleepTime == null || sleepTime!.isEmpty) {
       return context.t('validationSleepTimeRequired');
@@ -663,6 +742,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
     if (consecutiveSmokingHabit == 'Evet' &&
         (consecutiveSmokingCount == null || consecutiveSmokingCount!.isEmpty)) {
       return context.t('validationChainCountRequired');
+    }
+    if (firstCigaretteRange == null || firstCigaretteRange!.isEmpty) {
+      return context.t('validationFirstCigaretteRequired');
     }
     return null;
   }
@@ -806,7 +888,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       'breakEnd2': breakEnd2,
       'weekendSmokingPattern': weekendSmokingPattern,
       'packOption': packOption,
-      'highPackOption': highPackOption,
       'consecutiveSmokingHabit': consecutiveSmokingHabit,
       'consecutiveSmokingCount': consecutiveSmokingCount,
       'durationBarrierPreference': durationBarrierPreference,
@@ -816,6 +897,8 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       'diabetes': diabetes,
       'copd': copd,
       'heartDisease': heartDisease,
+      'otherHealthCondition': otherHealthCondition,
+      'otherHealthConditionText': otherHealthConditionController.text,
       'triggers': triggerSet.toList(),
     };
   }
@@ -854,7 +937,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       weekendSmokingPattern =
           draft['weekendSmokingPattern'] as String? ?? weekendSmokingPattern;
       packOption = draft['packOption'] as String? ?? packOption;
-      highPackOption = draft['highPackOption'] as String?;
       consecutiveSmokingHabit = draft['consecutiveSmokingHabit'] as String?;
       consecutiveSmokingCount = draft['consecutiveSmokingCount'] as String?;
       durationBarrierPreference =
@@ -868,6 +950,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       diabetes = draft['diabetes'] as bool? ?? false;
       copd = draft['copd'] as bool? ?? false;
       heartDisease = draft['heartDisease'] as bool? ?? false;
+      otherHealthCondition = draft['otherHealthCondition'] as bool? ?? false;
+      otherHealthConditionController.text =
+          draft['otherHealthConditionText']?.toString() ?? '';
       final draftTriggers = draft['triggers'] as List<dynamic>?;
       if (draftTriggers != null) {
         triggerSet
@@ -945,6 +1030,10 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     nameController.dispose();
     ageController.dispose();
+    otherHealthConditionController.dispose();
+    for (final draft in medicationDrafts) {
+      draft.dispose();
+    }
     super.dispose();
   }
 
@@ -957,7 +1046,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         TextFormField(
           controller: nameController,
           decoration: InputDecoration(
-            labelText: context.t('name'),
+            hintText: context.t('name'),
             border: OutlineInputBorder(),
           ),
           validator: (value) {
@@ -972,7 +1061,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           controller: ageController,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            labelText: context.t('age'),
+            hintText: context.t('age'),
             border: OutlineInputBorder(),
           ),
           validator: (value) {
@@ -987,10 +1076,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           key: const ValueKey('gender_dropdown'),
           initialValue: gender,
           decoration: InputDecoration(
-            labelText: context.t('gender'),
             border: OutlineInputBorder(),
           ),
-          hint: Text(context.t('selectOption')),
+          hint: Text(context.t('gender')),
           items: [
             DropdownMenuItem(value: 'Erkek', child: Text(context.t('male'))),
             DropdownMenuItem(value: 'Kadın', child: Text(context.t('female'))),
@@ -1012,10 +1100,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           key: const ValueKey('profession_dropdown'),
           initialValue: profession,
           decoration: InputDecoration(
-            labelText: context.t('professionLabel'),
             border: OutlineInputBorder(),
           ),
-          hint: Text(context.t('selectOption')),
+          hint: Text(context.t('professionLabel')),
           items: professionOptions
               .map(
                 (value) => DropdownMenuItem<String>(
@@ -1043,20 +1130,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       children: [
         PacksPerDaySection(
           selectedPackOption: packOption,
-          selectedHighPackOption: highPackOption,
           onPackOptionChanged: (value) {
             setState(() {
               packOption = value;
-              if (value != '3+ paket') {
-                highPackOption = null;
-              } else {
-                highPackOption ??= PacksPerDaySection.highPackOptions.first;
-              }
-            });
-          },
-          onHighPackOptionChanged: (value) {
-            setState(() {
-              highPackOption = value;
             });
           },
         ),
@@ -1064,7 +1140,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         TextFormField(
           initialValue: cigarettesPerPack,
           decoration: InputDecoration(
-            labelText: context.t('cigarettesPerPackLabel'),
+            hintText: context.t('cigarettesPerPackLabel'),
             border: OutlineInputBorder(),
           ),
           keyboardType: TextInputType.number,
@@ -1077,8 +1153,8 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
           initialValue: firstCigaretteRange,
+          hint: Text(context.t('firstCigaretteWhen')),
           decoration: InputDecoration(
-            labelText: context.t('firstCigaretteWhen'),
             border: OutlineInputBorder(),
           ),
           items: [
@@ -1113,7 +1189,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         DropdownButtonFormField<String>(
           initialValue: smokeFreeRange,
           decoration: InputDecoration(
-            labelText: context.t('maxSmokeFreeDuration'),
+            hintText: context.t('maxSmokeFreeDuration'),
             border: OutlineInputBorder(),
           ),
           items: [
@@ -1152,7 +1228,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         TextFormField(
           initialValue: smokingYears,
           decoration: InputDecoration(
-            labelText: context.t('smokingYears'),
+            hintText: context.t('smokingYears'),
             border: OutlineInputBorder(),
           ),
           keyboardType: TextInputType.number,
@@ -1205,7 +1281,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         _buildTimePickerRow(
           label: context.t('sleepTime'),
           currentValue: sleepTime,
-          minuteOptions: [0, 15, 30, 45],
           onChanged: (value) {
             setState(() {
               sleepTime = value;
@@ -1215,7 +1290,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         _buildTimePickerRow(
           label: context.t('wakeTime'),
           currentValue: wakeTime,
-          minuteOptions: [0, 15, 30, 45],
           onChanged: (value) {
             setState(() {
               wakeTime = value;
@@ -1225,7 +1299,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         _buildTimePickerRow(
           label: context.t('workStart'),
           currentValue: workStartTime,
-          minuteOptions: [0, 30],
           onChanged: (value) {
             setState(() {
               workStartTime = value;
@@ -1235,7 +1308,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         _buildTimePickerRow(
           label: context.t('workEnd'),
           currentValue: workEndTime,
-          minuteOptions: [0, 30],
           onChanged: (value) {
             setState(() {
               workEndTime = value;
@@ -1246,7 +1318,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         DropdownButtonFormField<String>(
           initialValue: workplaceSmokingRule,
           decoration: InputDecoration(
-            labelText: context.t('workplaceSmoking'),
+            hintText: context.t('workplaceSmoking'),
             border: OutlineInputBorder(),
           ),
           items: [
@@ -1300,7 +1372,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         DropdownButtonFormField<String>(
           initialValue: weekendSmokingPattern,
           decoration: InputDecoration(
-            labelText: context.t('weekendPatternLabel'),
+            hintText: context.t('weekendPatternLabel'),
             border: const OutlineInputBorder(),
           ),
           items: [
@@ -1347,10 +1419,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           DropdownButtonFormField<String>(
             initialValue: breakStart1,
             decoration: InputDecoration(
-              labelText: context.t('break1Start'),
               border: const OutlineInputBorder(),
             ),
-            hint: Text(context.t('selectOption')),
+            hint: Text(context.t('break1Start')),
             items: workTimeOptions
                 .map(
                   (time) =>
@@ -1367,10 +1438,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           DropdownButtonFormField<String>(
             initialValue: breakEnd1,
             decoration: InputDecoration(
-              labelText: context.t('break1End'),
               border: const OutlineInputBorder(),
             ),
-            hint: Text(context.t('selectOption')),
+            hint: Text(context.t('break1End')),
             items: workTimeOptions
                 .map(
                   (time) =>
@@ -1402,10 +1472,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             DropdownButtonFormField<String>(
               initialValue: breakStart2,
               decoration: InputDecoration(
-                labelText: context.t('break2Start'),
                 border: const OutlineInputBorder(),
               ),
-              hint: Text(context.t('selectOption')),
+              hint: Text(context.t('break2Start')),
               items: workTimeOptions
                   .map(
                     (time) => DropdownMenuItem<String>(
@@ -1424,10 +1493,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             DropdownButtonFormField<String>(
               initialValue: breakEnd2,
               decoration: InputDecoration(
-                labelText: context.t('break2End'),
                 border: const OutlineInputBorder(),
               ),
-              hint: Text(context.t('selectOption')),
+              hint: Text(context.t('break2End')),
               items: workTimeOptions
                   .map(
                     (time) => DropdownMenuItem<String>(
@@ -1477,8 +1545,122 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           title: Text(context.t('heartDisease')),
           onChanged: (value) => setState(() => heartDisease = value ?? false),
         ),
+        CheckboxListTile(
+          value: otherHealthCondition,
+          title: Text(context.t('otherHealthCondition')),
+          onChanged: (value) =>
+              setState(() => otherHealthCondition = value ?? false),
+        ),
+        if (otherHealthCondition)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            child: TextField(
+              controller: otherHealthConditionController,
+              decoration: InputDecoration(
+                hintText: context.t('otherHealthConditionHint'),
+              ),
+            ),
+          ),
+        const SizedBox(height: 8),
+        CheckboxListTile(
+          value: usesMedication,
+          title: Text(context.t('usesMedicationQuestion')),
+          onChanged: (value) => setState(() {
+            usesMedication = value ?? false;
+            if (usesMedication && medicationDrafts.isEmpty) {
+              medicationDrafts.add(_MedicationDraft());
+            }
+          }),
+        ),
+        if (usesMedication) ..._buildMedicationDraftRows(),
+        if (usesMedication)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () =>
+                    setState(() => medicationDrafts.add(_MedicationDraft())),
+                icon: const Icon(Icons.add),
+                label: Text(context.t('addMedicationButton')),
+              ),
+            ),
+          ),
       ],
     );
+  }
+
+  List<Widget> _buildMedicationDraftRows() {
+    return medicationDrafts.asMap().entries.map((entry) {
+      final index = entry.key;
+      final draft = entry.value;
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: draft.nameController,
+                        decoration: InputDecoration(
+                          hintText: context.t('medicationNameHint'),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline),
+                      onPressed: medicationDrafts.length > 1
+                          ? () => setState(() {
+                              medicationDrafts.removeAt(index).dispose();
+                            })
+                          : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    for (final time in draft.times)
+                      Chip(
+                        label: Text(time),
+                        onDeleted: () =>
+                            setState(() => draft.times.remove(time)),
+                      ),
+                    ActionChip(
+                      avatar: const Icon(Icons.add_alarm, size: 18),
+                      label: Text(context.t('addMedicationTimeButton')),
+                      onPressed: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (picked == null) return;
+                        final formatted =
+                            '${picked.hour.toString().padLeft(2, '0')}:'
+                            '${picked.minute.toString().padLeft(2, '0')}';
+                        setState(() {
+                          if (!draft.times.contains(formatted)) {
+                            draft.times.add(formatted);
+                            draft.times.sort();
+                          }
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }).toList();
   }
 
   Widget _stepTriggersAndStress() {
@@ -1497,7 +1679,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         DropdownButtonFormField<String>(
           initialValue: stressLevel,
           decoration: InputDecoration(
-            labelText: context.t('stressTitle'),
+            hintText: context.t('stressTitle'),
             border: OutlineInputBorder(),
           ),
           items: [
@@ -1520,45 +1702,36 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             });
           },
         ),
-      ],
-    );
-  }
-
-  Widget _stepQuitReason() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+        const SizedBox(height: 20),
+        sectionTitle(context.t('interventionIntensityTitle')),
+        Text(
+          context.t('interventionIntensityHint'),
+          style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor),
+        ),
+        const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          initialValue: quitReason,
+          initialValue: interventionIntensity,
           decoration: InputDecoration(
-            labelText: context.t('quitReason'),
+            hintText: context.t('interventionIntensityTitle'),
             border: OutlineInputBorder(),
           ),
           items: [
             DropdownMenuItem(
-              value: 'Sağlık',
-              child: Text(context.t('quitHealth')),
+              value: 'gentle',
+              child: Text(context.t('interventionIntensityGentle')),
             ),
             DropdownMenuItem(
-              value: 'Aile',
-              child: Text(context.t('quitFamily')),
+              value: 'balanced',
+              child: Text(context.t('interventionIntensityBalanced')),
             ),
             DropdownMenuItem(
-              value: 'Maddi sebepler',
-              child: Text(context.t('quitMoney')),
-            ),
-            DropdownMenuItem(
-              value: 'Çocuklar',
-              child: Text(context.t('quitChildren')),
-            ),
-            DropdownMenuItem(
-              value: 'Performans',
-              child: Text(context.t('quitPerformance')),
+              value: 'strict',
+              child: Text(context.t('interventionIntensityStrict')),
             ),
           ],
           onChanged: (value) {
             setState(() {
-              quitReason = value!;
+              interventionIntensity = value!;
             });
           },
         ),
@@ -1659,10 +1832,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
                 subtitle: context.t('stressTitle'),
                 content: _stepTriggersAndStress(),
               ),
-              SurveyStep(
-                title: context.t('quitReasonTitle'),
-                content: _stepQuitReason(),
-              ),
             ],
             onFinish: _submitSurvey,
             onStepChanged: (_) => unawaited(_saveDraft()),
@@ -1670,5 +1839,17 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         ),
       ),
     );
+  }
+}
+
+class _MedicationDraft {
+  _MedicationDraft({String? name})
+    : nameController = TextEditingController(text: name ?? '');
+
+  final TextEditingController nameController;
+  final List<String> times = [];
+
+  void dispose() {
+    nameController.dispose();
   }
 }

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import android.telecom.TelecomManager
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.PermissionController
@@ -130,6 +131,8 @@ class MainActivity : FlutterActivity() {
 					"isInPhoneCall" -> result.success(isInPhoneCall())
 					"getManufacturer" -> result.success(Build.MANUFACTURER)
 					"openAutostartSettings" -> result.success(openAutostartSettings())
+					"hasOverlayPermission" -> result.success(hasOverlayPermission())
+					"requestOverlayPermission" -> result.success(requestOverlayPermission())
 					else -> result.notImplemented()
 				}
 			}
@@ -305,6 +308,43 @@ class MainActivity : FlutterActivity() {
 						result.success(mapped)
 					}
 
+					"showTaskOverlay" -> {
+						val title = call.argument<String>("title").orEmpty()
+						val body = call.argument<String>("body").orEmpty()
+						val doneLabel = call.argument<String>("doneLabel").orEmpty()
+						val declineLabel = call.argument<String>("declineLabel").orEmpty()
+						val watchdogId = call.argument<String>("watchdogId").orEmpty()
+						val taskTitle = call.argument<String>("taskTitle").orEmpty()
+						if (hasOverlayPermission() && title.isNotBlank() && watchdogId.isNotBlank()) {
+							TaskOverlayService.show(this, title, body, doneLabel, declineLabel, watchdogId, taskTitle)
+							result.success(true)
+						} else {
+							result.success(false)
+						}
+					}
+
+					"dismissTaskOverlay" -> {
+						TaskOverlayService.dismiss(this)
+						result.success(true)
+					}
+
+					"consumeTaskOverlayOutcomes" -> {
+						val rows = TaskOverlayOutcomeStore.drain(this)
+						val mapped = rows.mapNotNull { row ->
+							val parts = row.split("|")
+							if (parts.size < 4) {
+								return@mapNotNull null
+							}
+							mapOf(
+								"watchdogId" to parts[0],
+								"taskTitle" to parts[1],
+								"outcome" to parts[2],
+								"createdAtMillis" to (parts[3].toLongOrNull() ?: System.currentTimeMillis()),
+							)
+						}
+						result.success(mapped)
+					}
+
 					else -> result.notImplemented()
 				}
 			}
@@ -445,6 +485,31 @@ class MainActivity : FlutterActivity() {
 			}
 		}
 		return false
+	}
+
+	// "Display over other apps" -- required for TaskOverlayService to draw the
+	// mandatory task screen over whatever app is currently in the foreground
+	// (fullScreenIntent notifications only auto-launch on a locked screen, not
+	// over another running app). Android has no runtime-dialog path for this
+	// permission; the only way to grant it is this dedicated Settings screen.
+	private fun hasOverlayPermission(): Boolean {
+		return Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(this)
+	}
+
+	private fun requestOverlayPermission(): Boolean {
+		if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+			return true
+		}
+		return try {
+			val intent = Intent(
+				Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+				Uri.parse("package:$packageName"),
+			).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+			startActivity(intent)
+			true
+		} catch (e: ActivityNotFoundException) {
+			false
+		}
 	}
 
 	// Used to keep the fake-call barrier from ringing over a genuine phone

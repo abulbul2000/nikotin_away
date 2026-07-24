@@ -32,34 +32,54 @@ class PermissionService {
     await NotificationService.openExactAlarmSettingsOptional();
   }
 
+  /// Only the low-friction, foundational permission requested in bulk
+  /// during onboarding. Microphone and activity-recognition used to be
+  /// bundled in here too, but asking for them before the user has even
+  /// reached a screen that explains why (breath test, step tracking) hurt
+  /// onboarding conversion and gave no context for the prompt — see
+  /// [ensureMicrophonePermission] and [ensureActivityRecognitionPermission],
+  /// requested contextually instead, right where each is actually used.
   static Future<bool> ensureTelemetryPermissions() async {
-    var granted = true;
-
     try {
-      final activity = await Permission.activityRecognition.request();
-      granted = granted && activity.isGranted;
-    } catch (_) {
-      // Some platforms do not expose this permission.
-    }
-
-    try {
-      final microphone = await Permission.microphone.request();
-      granted = granted && microphone.isGranted;
-    } catch (_) {
-      // Some platforms may deny or not expose this permission.
-    }
-
-    try {
-      // Used only to keep the fake-call barrier from ringing over a real
-      // phone call (see DevicePermissionService.isInPhoneCall) — never to
-      // read numbers or call content. Not folded into `granted`: unlike the
-      // other telemetry permissions, denying this doesn't degrade a core
-      // feature, it just means the collision check silently no-ops.
+      // Used only to keep task notifications and the mandatory task gate
+      // from interrupting a real phone call (see
+      // DevicePermissionService.isInPhoneCall) — never to read numbers or
+      // call content. Not surfaced as a failure: denying this doesn't
+      // degrade a core feature, it just means the collision check silently
+      // no-ops.
       await Permission.phone.request();
     } catch (_) {
       // Some platforms do not expose this permission.
     }
 
-    return granted;
+    return true;
+  }
+
+  /// Requested right before the first breath-test attempt starts (see
+  /// BreathTestPage), not during onboarding — that's the first moment the
+  /// user has actually seen why the app wants the microphone. A denial
+  /// just means acoustic exhale detection stays off; the manual tap-to-
+  /// finish flow still works exactly as before.
+  static Future<bool> ensureMicrophonePermission() async {
+    try {
+      final status = await Permission.microphone.request();
+      return status.isGranted;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Requested the first time step-based tracking actually needs it (see
+  /// StepTrackingService), not during onboarding — activity recognition is
+  /// a body-sensor-adjacent permission that reads as invasive out of
+  /// context. A denial just means step-based signals stay unavailable;
+  /// nothing else in the app depends on it.
+  static Future<bool> ensureActivityRecognitionPermission() async {
+    try {
+      final status = await Permission.activityRecognition.request();
+      return status.isGranted;
+    } catch (_) {
+      return false;
+    }
   }
 }

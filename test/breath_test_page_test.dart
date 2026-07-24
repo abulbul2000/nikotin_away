@@ -100,32 +100,32 @@ void main() {
     await tester.pumpAndSettle();
 
     final circleFinder = find.byKey(const ValueKey('breath_timer_circle'));
-    final okButtonFinder = find.byKey(const ValueKey('breath_step_ok_button'));
-    final holdStartButtonFinder = find.byKey(
-      const ValueKey('breath_hold_start_button'),
-    );
 
     // Attempt 1: the only one requiring any taps to begin — every
     // attempt after this one auto-starts at the end of its preceding
     // rest interval (see the "auto-starts attempt 2/3" test below), since
     // by then the voice guide has already explained everything.
 
-    // Tap 1: start the attempt (-> "sit and relax" step).
+    // Tap 1: start the attempt (-> "sit and relax" step). No
+    // pumpAndSettle from here through the deep-breath step: the breathing
+    // circle animation now repeats indefinitely on both of these steps, so
+    // settling would never terminate.
     await tester.ensureVisible(circleFinder);
     await tester.tap(circleFinder);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
 
-    // Tap 2: OK on "sit and relax" (-> "take a deep breath" step).
-    await tester.ensureVisible(okButtonFinder);
-    await tester.tap(okButtonFinder);
-    await tester.pumpAndSettle();
+    // Tap 2: same circle, now on "sit and relax" (-> "take a deep breath"
+    // step).
+    await tester.ensureVisible(circleFinder);
+    await tester.tap(circleFinder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
 
-    // Tap 3: OK on "take a deep breath" (-> "holding" step; this is when
-    // the stopwatch and mic listening actually start). Can't
-    // pumpAndSettle here: the pulse animation now repeats indefinitely
-    // until the attempt finishes, so settling would never terminate.
-    await tester.ensureVisible(okButtonFinder);
-    await tester.tap(okButtonFinder);
+    // Tap 3: same circle, now on "take a deep breath" (-> "holding" step;
+    // this is when the stopwatch and mic listening actually start).
+    await tester.ensureVisible(circleFinder);
+    await tester.tap(circleFinder);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
@@ -139,9 +139,11 @@ void main() {
     // Tap 4: confirm the hold (-> "exhale" active step directly; this is
     // when the visible counting and the give-up clock actually start).
     // No pumpAndSettle: the pulse animation has been repeating since the
-    // hold began and won't stop until the attempt finishes.
-    await tester.ensureVisible(holdStartButtonFinder);
-    await tester.tap(holdStartButtonFinder);
+    // hold began and won't stop until the attempt finishes. The "Başlat"
+    // prompt is the same tappable circle as the seconds counter now, not a
+    // separate button.
+    await tester.ensureVisible(circleFinder);
+    await tester.tap(circleFinder);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
@@ -194,21 +196,24 @@ void main() {
       await tester.pumpAndSettle();
 
       final circleFinder = find.byKey(const ValueKey('breath_timer_circle'));
-      final okButtonFinder = find.byKey(const ValueKey('breath_step_ok_button'));
       final holdStartButtonFinder = find.byKey(
         const ValueKey('breath_hold_start_button'),
       );
 
+      // No pumpAndSettle through sit-relax/deep-breath: the breathing
+      // circle animation repeats indefinitely on both steps.
       await tester.ensureVisible(circleFinder);
       await tester.tap(circleFinder);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
 
-      await tester.ensureVisible(okButtonFinder);
-      await tester.tap(okButtonFinder);
-      await tester.pumpAndSettle();
+      await tester.ensureVisible(circleFinder);
+      await tester.tap(circleFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
 
-      await tester.ensureVisible(okButtonFinder);
-      await tester.tap(okButtonFinder);
+      await tester.ensureVisible(circleFinder);
+      await tester.tap(circleFinder);
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
 

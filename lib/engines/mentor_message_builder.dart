@@ -235,12 +235,6 @@ class MentorMessageBuilder {
         tone = 'supportive';
         quickReplies = const ['Tamam'];
         break;
-      case 'fake_call_avoided':
-        text =
-            'Son zamanlarda molaları hep erteliyorsun gibi görünüyor. Şu an uygun olmadığını biliyorum — istersen bir dahaki seferde süreyi birlikte kısaltalım.';
-        tone = 'supportive';
-        quickReplies = const ['Konuşalım', 'İyiyim'];
-        break;
       default:
         return null;
     }

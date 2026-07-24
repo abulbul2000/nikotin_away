@@ -11,6 +11,9 @@ import '../models/breath_acoustic_sample.dart';
 import '../services/breath_audio_service.dart';
 import '../services/breath_test_service.dart';
 import '../services/breath_voice_guide_service.dart';
+import '../services/permission_service.dart';
+import '../services/storage_service.dart';
+import '../services/tts_voice_selector.dart';
 import 'home_page.dart';
 import 'risk_result_page.dart';
 import 'weekly_survey_page.dart';
@@ -140,6 +143,28 @@ class _BreathTestPageState extends State<BreathTestPage>
     duration: const Duration(seconds: 10),
   );
 
+  // Drives the sit-relax/deep-breath steps' breathing circle — a slow
+  // grow/shrink loop the user can visually follow along with, since those
+  // two steps otherwise had no animation at all (just a static icon and a
+  // button). Same controller for both steps; deepBreath just reads a wider
+  // scale range off it to read as a bigger, more deliberate breath. Only
+  // ever running while one of those two steps is actually active (started
+  // in _startCurrentTest, stopped in _advanceFromDeepBreath) — an
+  // always-on repeat here would never let widget tests' pumpAndSettle()
+  // settle.
+  late final AnimationController _stepBreathController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 3600),
+  );
+
+  // Repeating outward "wind" rings during the exhale step, layered with
+  // the existing one-shot shrinking disc — a visual echo of air actually
+  // moving out toward the microphone, not just a countdown.
+  late final AnimationController _exhaleWaveController = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1000),
+  );
+
   @override
   void initState() {
     super.initState();
@@ -170,12 +195,17 @@ class _BreathTestPageState extends State<BreathTestPage>
     super.didChangeDependencies();
     if (!_voiceLanguageReady) {
       _voiceLanguageReady = true;
-      unawaited(
-        _breathVoiceGuideService.setLanguage(
-          Localizations.localeOf(context).languageCode,
-        ),
-      );
+      final languageCode = Localizations.localeOf(context).languageCode;
+      unawaited(_setUpVoiceLanguage(languageCode));
     }
+  }
+
+  Future<void> _setUpVoiceLanguage(String languageCode) async {
+    final storedGender = await StorageService().loadSetting('gender');
+    await _breathVoiceGuideService.setLanguage(
+      languageCode,
+      preferredGender: ttsGenderHintFor(storedGender),
+    );
   }
 
   @override
@@ -187,6 +217,8 @@ class _BreathTestPageState extends State<BreathTestPage>
     _ttsGraceTimer?.cancel();
     _pulseController.dispose();
     _exhaleShrinkController.dispose();
+    _stepBreathController.dispose();
+    _exhaleWaveController.dispose();
     _breathAudioService.dispose();
     _breathVoiceGuideService.dispose();
     super.dispose();
@@ -219,6 +251,8 @@ class _BreathTestPageState extends State<BreathTestPage>
     _holdRetryTimer?.cancel();
     _pulseController.stop();
     _exhaleShrinkController.reset();
+    _exhaleWaveController.stop();
+    _stepBreathController.stop();
     unawaited(_breathAudioService.stopListening());
     unawaited(_breathVoiceGuideService.stop());
     _currentAttemptSamples.clear();
@@ -251,6 +285,13 @@ class _BreathTestPageState extends State<BreathTestPage>
   /// Step 1 of 4: begins an attempt. Just shows/speaks the "sit and relax"
   /// cue — nothing is measured yet, the user advances with the OK button
   /// once they're ready.
+  ///
+  /// The microphone permission is requested right here — the first moment
+  /// the user is actually looking at the breath-test screen and can see
+  /// why it's needed — rather than in a bulk onboarding prompt with no
+  /// context. Declining doesn't block the test: it just means acoustic
+  /// exhale detection stays off and the manual tap-to-finish flow is used
+  /// instead, same as it always could be.
   void _startCurrentTest() {
     if (_isResting) {
       return;
@@ -261,7 +302,62 @@ class _BreathTestPageState extends State<BreathTestPage>
       _isRunning = true;
       _step = _AttemptStep.sitRelax;
     });
+    _stepBreathController.repeat(reverse: true);
     unawaited(_speakStep('breathStepSitRelax', appendPressOk: true));
+    unawaited(_prepareMicrophoneForAttempt());
+  }
+
+  /// Sequenced (not fired in parallel with the rationale dialog): starting
+  /// the recorder only after permission is actually settled avoids racing
+  /// a just-granted permission against the recorder's own startup latency.
+  /// Kicking this off from sit-relax — the very first, user-paced step —
+  /// rather than only at the start of the hold countdown gives the very
+  /// first attempt of a session the same generous calibration window later
+  /// attempts get for free from the rest interval; a cold recorder that's
+  /// only had 5 quiet seconds (the hold step alone) was the likely reason
+  /// attempt 1 specifically struggled to auto-detect while attempts 2/3
+  /// didn't.
+  Future<void> _prepareMicrophoneForAttempt() async {
+    await _ensureMicrophonePermissionWithRationale();
+    if (!mounted || _step == _AttemptStep.notStarted) {
+      return;
+    }
+    await _startAcousticListeningForAttempt();
+  }
+
+  bool _micPermissionRequested = false;
+
+  Future<void> _ensureMicrophonePermissionWithRationale() async {
+    if (_micPermissionRequested) {
+      return;
+    }
+    _micPermissionRequested = true;
+    if (await _breathAudioService.hasPermission()) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    final wantsToGrant = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('micRationaleTitle')),
+        content: Text(context.t('micRationaleMessage')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('no')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('yes')),
+          ),
+        ],
+      ),
+    );
+    if (wantsToGrant == true) {
+      await PermissionService.ensureMicrophonePermission();
+    }
   }
 
   /// Step 1 -> Step 2: still nothing measured yet — just moves from "sit
@@ -277,12 +373,13 @@ class _BreathTestPageState extends State<BreathTestPage>
     unawaited(_speakStep('breathStepDeepBreath', appendPressOk: true));
   }
 
-  /// Step 2 -> Step 3: this is the real start of the measurement — the
-  /// user has just taken their breath and is now holding it, so the
-  /// stopwatch and the mic both start right here. The mic starting now
-  /// (rather than only once the exhale step begins) is deliberate: the
-  /// 5-second hold is genuinely quiet, so it doubles as an excellent
-  /// calibration window before the exhale cue is even spoken.
+  /// Step 2 -> Step 3: this is the real start of the timed measurement —
+  /// the user has just taken their breath and is now holding it. The mic
+  /// itself has already been listening since sit-relax (see
+  /// _prepareMicrophoneForAttempt) and deliberately isn't restarted here:
+  /// restarting would wipe the calibration samples collected during
+  /// sit-relax/deep-breath, throwing away the exact head start this was
+  /// meant to give attempt 1.
   void _advanceFromDeepBreath() {
     if (_step != _AttemptStep.deepBreath) {
       return;
@@ -291,13 +388,13 @@ class _BreathTestPageState extends State<BreathTestPage>
     _stopwatch.reset();
     _stopwatch.start();
     _pulseController.repeat(reverse: true);
+    _stepBreathController.stop();
     setState(() {
       _step = _AttemptStep.holding;
       _holdWaitingForStartTap = false;
       _holdCountdownSecondsLeft = _holdCountdownSeconds;
     });
     unawaited(_speakStep('breathStepHold'));
-    unawaited(_startAcousticListeningForAttempt());
     _startHoldCountdown();
   }
 
@@ -388,6 +485,7 @@ class _BreathTestPageState extends State<BreathTestPage>
     _exhaleShrinkController
       ..stop()
       ..forward(from: 0);
+    _exhaleWaveController.repeat();
     unawaited(
       _breathVoiceGuideService.speak(
         '${context.t('breathStepExhale')} ${context.t('breathStepExhaleFinishHint')}',
@@ -412,6 +510,10 @@ class _BreathTestPageState extends State<BreathTestPage>
   /// every attempt behaves exactly like the manual-tap flow always has.
   Future<void> _startAcousticListeningForAttempt() async {
     _currentAttemptSamples.clear();
+    // Guards against back-to-back calls (finishing one attempt's listening
+    // session and starting the next one's, e.g. into the rest countdown)
+    // racing the recorder plugin's own stop/start handling.
+    await _breathAudioService.stopListening();
     final started = await _breathAudioService.startListening(
       _handleAcousticSample,
     );
@@ -447,20 +549,52 @@ class _BreathTestPageState extends State<BreathTestPage>
   }
 
   /// Runs on every live energy reading while an attempt is in progress.
-  /// Samples are collected from the start of the hold step onward (that
-  /// quiet 5 seconds is the best calibration data available), but an
-  /// exhale is only ever *acted on* once the exhale step has actually
-  /// begun — otherwise a stray noise during the hold could end the
-  /// attempt before the user was even told to exhale.
+  /// Samples are collected starting from sit-relax (the mic is listening
+  /// that early — see _prepareMicrophoneForAttempt) all the way through,
+  /// but an exhale is only ever *acted on* once the exhale step has
+  /// actually begun — otherwise a stray noise during an earlier step could
+  /// end the attempt before the user was even told to exhale.
   void _handleAcousticSample(BreathAcousticSample sample) {
-    final inMeasuredStep =
-        _step == _AttemptStep.holding || _step == _AttemptStep.exhale;
-    if (!inMeasuredStep || _autoFinishing || _ttsSpeaking) {
+    // Attempts 2 and 3 skip straight to exhale (see
+    // _beginAutoMeasuredAttempt), so the preceding rest countdown is their
+    // only quiet window to calibrate a baseline from — samples need to
+    // keep accumulating through it or the first real exhale samples end up
+    // mistaken for the baseline itself.
+    final isCollectingStep =
+        _step == _AttemptStep.sitRelax ||
+        _step == _AttemptStep.deepBreath ||
+        _step == _AttemptStep.holding ||
+        _step == _AttemptStep.exhale ||
+        _isResting;
+    if (!isCollectingStep || _autoFinishing || _ttsSpeaking) {
       return;
     }
     _currentAttemptSamples.add(sample);
+
+    // Once the hold countdown has finished and the "Başlat" button is
+    // showing, the user is free to exhale whenever they're ready — if they
+    // just start blowing instead of tapping first, that's a real exhale
+    // onset the mic can already see, so treat it as an implicit tap rather
+    // than waiting for one that isn't coming. The button stays available
+    // for anyone who prefers to tap; this only adds a second way in.
+    if (_step == _AttemptStep.holding && _holdWaitingForStartTap) {
+      final earlyOnsetMs = _breathAcousticEngine.findExhaleOnsetMs(
+        _currentAttemptSamples,
+      );
+      if (earlyOnsetMs != null) {
+        _handleHoldStartTap();
+      }
+      return;
+    }
+
+    if (_step != _AttemptStep.exhale) {
+      // Still just building the calibration baseline (hold countdown or
+      // inter-attempt rest) — only the real exhale step should ever be
+      // allowed to finish the attempt, same as before.
+      return;
+    }
     final analysis = _breathAcousticEngine.analyze(_currentAttemptSamples);
-    if (_step == _AttemptStep.exhale && analysis.exhaleDetected) {
+    if (analysis.exhaleDetected) {
       _autoFinishing = true;
       final totalMs =
           (analysis.holdDurationMs ?? 0) + (analysis.blowDurationMs ?? 0);
@@ -495,6 +629,8 @@ class _BreathTestPageState extends State<BreathTestPage>
     _holdRetryTimer?.cancel();
     _pulseController.stop();
     _exhaleShrinkController.reset();
+    _exhaleWaveController.stop();
+    _stepBreathController.stop();
     unawaited(_breathAudioService.stopListening());
     unawaited(_breathVoiceGuideService.stop());
     _acousticListeningActive = false;
@@ -613,6 +749,7 @@ class _BreathTestPageState extends State<BreathTestPage>
     _exhaleShrinkController
       ..stop()
       ..forward(from: 0);
+    _exhaleWaveController.repeat();
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -728,7 +865,19 @@ class _BreathTestPageState extends State<BreathTestPage>
       return;
     }
 
-    if (widget.askWeeklySurveyOnComplete) {
+    // Not just "the caller asked for this" — the weekly survey should only
+    // ever be offered here once it's actually due (7+ days since the last
+    // weekly-or-initial survey). Without this check it was firing on every
+    // single daily/re-entry breath test, including the very first one
+    // right after onboarding, when a week obviously hasn't passed yet.
+    final weeklySurveyDue =
+        widget.askWeeklySurveyOnComplete &&
+        await StorageService().isWeeklySurveyOverdue();
+    if (!mounted) {
+      return;
+    }
+
+    if (weeklySurveyDue) {
       final wantsWeeklySurvey = await showDialog<bool>(
         context: context,
         builder: (dialogContext) {
@@ -824,11 +973,12 @@ class _BreathTestPageState extends State<BreathTestPage>
         : (_step == _AttemptStep.holding
               ? _holdCountdownSecondsLeft
               : _stopwatch.elapsed.inSeconds - _exhaleStartElapsedSeconds);
-    final showOkButton =
-        _step == _AttemptStep.sitRelax || _step == _AttemptStep.deepBreath;
 
     return Scaffold(
-      appBar: AppBar(elevation: 0),
+      appBar: AppBar(
+        elevation: 0,
+        title: Text(context.t('breathTestPageTitle')),
+      ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -863,30 +1013,9 @@ class _BreathTestPageState extends State<BreathTestPage>
               ),
               const SizedBox(height: 32),
 
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 320),
-                transitionBuilder: (child, animation) =>
-                    FadeTransition(opacity: animation, child: child),
-                child: showOkButton
-                    ? _buildStepOkButton(key: ValueKey(_step))
-                    : Padding(
-                        key: const ValueKey('breath_timer'),
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Column(
-                          children: [
-                            _buildTimerDisplay(currentSeconds),
-                            if (_step == _AttemptStep.exhale) ...[
-                              const SizedBox(height: 24),
-                              _buildFinishOkButton(),
-                            ],
-                            if (_step == _AttemptStep.holding &&
-                                _holdWaitingForStartTap) ...[
-                              const SizedBox(height: 24),
-                              _buildHoldStartButton(),
-                            ],
-                          ],
-                        ),
-                      ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _buildTimerDisplay(currentSeconds),
               ),
               const SizedBox(height: 20),
             ],
@@ -896,82 +1025,6 @@ class _BreathTestPageState extends State<BreathTestPage>
     );
   }
 
-  Widget _buildStepOkButton({required Key key}) {
-    return SizedBox(
-      key: key,
-      width: double.infinity,
-      child: ElevatedButton(
-        key: const ValueKey('breath_step_ok_button'),
-        onPressed: switch (_step) {
-          _AttemptStep.sitRelax => _advanceFromSitRelax,
-          _AttemptStep.deepBreath => _advanceFromDeepBreath,
-          _ => null,
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.noSmokeGreen,
-          foregroundColor: Colors.black,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        child: Text(
-          context.t('breathStepOkAction').toUpperCase(),
-          style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1),
-        ),
-      ),
-    );
-  }
-
-  /// Explicit manual-finish control for the exhale step, alongside the
-  /// timer circle (which stays tappable too — this just gives the same
-  /// action an unambiguous "I'm done" button, for whenever the mic doesn't
-  /// catch the exhale itself).
-  Widget _buildFinishOkButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton(
-        key: const ValueKey('breath_finish_ok_button'),
-        onPressed: _handleBreathPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppTheme.noSmokeGreen,
-          side: const BorderSide(color: AppTheme.noSmokeGreen),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        child: Text(
-          context.t('breathStepOkAction').toUpperCase(),
-          style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1),
-        ),
-      ),
-    );
-  }
-
-  /// Confirms the hold and moves on to the exhale step — see
-  /// [_promptHoldStartTap].
-  Widget _buildHoldStartButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        key: const ValueKey('breath_hold_start_button'),
-        onPressed: _handleHoldStartTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.noSmokeGreen,
-          foregroundColor: Colors.black,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        child: Text(
-          context.t('start').toUpperCase(),
-          style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1),
-        ),
-      ),
-    );
-  }
 
   Widget _buildProgressIndicator() {
     return Row(
@@ -1026,15 +1079,27 @@ class _BreathTestPageState extends State<BreathTestPage>
 
   Widget _buildInstructionCard(BuildContext context, {required Key key}) {
     final colorScheme = Theme.of(context).colorScheme;
-    final icon = _isResting
-        ? Icons.psychology
-        : switch (_step) {
-            _AttemptStep.sitRelax => Icons.self_improvement,
-            _AttemptStep.deepBreath => Icons.air,
-            _AttemptStep.holding => Icons.timer_outlined,
-            _AttemptStep.exhale => Icons.graphic_eq,
-            _AttemptStep.notStarted => Icons.info,
-          };
+    // Sit-relax / deep-breath / exhale get a bigger, literal illustration
+    // instead of a small generic Material icon — a seated figure (slouched
+    // vs. sitting up straight) and a phone-with-mic guide respectively, so
+    // what to physically do is obvious without reading or listening.
+    final Widget graphic = !_isResting && _step == _AttemptStep.sitRelax
+        ? _buildSeatedFigureGraphic(upright: false)
+        : !_isResting && _step == _AttemptStep.deepBreath
+        ? _buildSeatedFigureGraphic(upright: true)
+        : !_isResting && _step == _AttemptStep.exhale
+        ? _buildPhoneMicGraphic()
+        : Icon(
+            _isResting
+                ? Icons.psychology
+                : switch (_step) {
+                    _AttemptStep.holding => Icons.timer_outlined,
+                    _AttemptStep.notStarted => Icons.info,
+                    _ => Icons.info,
+                  },
+            color: AppTheme.noSmokeGreen,
+            size: 24,
+          );
     return Card(
       key: key,
       color: colorScheme.surfaceContainerHighest,
@@ -1043,7 +1108,7 @@ class _BreathTestPageState extends State<BreathTestPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: AppTheme.noSmokeGreen, size: 24),
+            graphic,
             const SizedBox(height: 12),
             Text(
               _getInstruction(),
@@ -1070,29 +1135,112 @@ class _BreathTestPageState extends State<BreathTestPage>
     );
   }
 
+  /// A slouched figure for sit-relax, sitting up straight for deep-breath —
+  /// the same posture change the instruction text asks for, shown instead
+  /// of just described. Breathes gently in place via _stepBreathController,
+  /// the same controller already driving the timer circle for these steps.
+  // A real Material figure glyph reads as an actual person at a glance;
+  // the earlier hand-drawn stick figure came out looking abstract/geometric
+  // rather than human. Recline for the relax step, an upright meditative
+  // pose for the deep-breath step, matching what each step asks the user to
+  // physically do.
+  Widget _buildSeatedFigureGraphic({required bool upright}) {
+    return SizedBox(
+      width: 64,
+      height: 64,
+      child: AnimatedBuilder(
+        animation: _stepBreathController,
+        builder: (context, child) {
+          final breathe = _stepBreathController.value;
+          return Transform.scale(
+            scale: 0.94 + (breathe * 0.06),
+            child: Icon(
+              upright
+                  ? Icons.self_improvement
+                  : Icons.airline_seat_recline_extra,
+              size: 60,
+              color: AppTheme.noSmokeGreen,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// A phone outline with the microphone location highlighted and small
+  /// chevrons animating downward toward it — shows exactly where to blow
+  /// instead of just saying "into the microphone".
+  Widget _buildPhoneMicGraphic() {
+    return SizedBox(
+      width: 56,
+      height: 64,
+      child: AnimatedBuilder(
+        animation: _exhaleWaveController,
+        builder: (context, child) {
+          return CustomPaint(
+            painter: _PhoneMicPainter(
+              color: AppTheme.noSmokeGreen,
+              pulse: _exhaleWaveController.value,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildTimerDisplay(int seconds) {
     final isResting = _isResting;
     final isIdle = !_isRunning && !isResting;
+    final isSitRelax = _step == _AttemptStep.sitRelax;
+    final isDeepBreath = _step == _AttemptStep.deepBreath;
+    final isExhaling = _step == _AttemptStep.exhale;
+    final isHoldWaitingForTap =
+        _step == _AttemptStep.holding && _holdWaitingForStartTap;
     final accentColor = isResting
         ? const Color(0xFFFFB74D)
         : AppTheme.noSmokeGreen;
 
     final circle = AnimatedBuilder(
-      animation: Listenable.merge([_pulseController, _exhaleShrinkController]),
+      animation: Listenable.merge([
+        _pulseController,
+        _exhaleShrinkController,
+        _stepBreathController,
+        _exhaleWaveController,
+      ]),
       builder: (context, child) {
         // A slow, continuous scale+glow pulse while an attempt is running —
         // not paced to any fixed inhale/hold/exhale timing (the test is
         // open-ended), just a calming "still breathing, still holding"
         // visual anchor. Static (no pulse) when idle or resting. Kept
         // deliberately muted (low alpha throughout) rather than a bold
-        // solid-fill circle.
-        final pulse = _isRunning ? _pulseController.value : 0.0;
-        final scale = 1.0 + (pulse * 0.04);
+        // solid-fill circle. Held off during sitRelax/deepBreath, which
+        // drive their own bigger breathing animation instead (see below),
+        // and during the hold countdown itself — held breath, no motion —
+        // so the "held still" moment reads as visually distinct from the
+        // steps either side of it.
+        final ambientPulseActive =
+            _isRunning &&
+            !isSitRelax &&
+            !isDeepBreath &&
+            !(_step == _AttemptStep.holding && !isHoldWaitingForTap);
+        final pulse = ambientPulseActive ? _pulseController.value : 0.0;
+        var scale = 1.0 + (pulse * 0.04);
         final glowAlpha = isIdle ? 0.0 : 0.08 + (pulse * 0.14);
+
+        // Sit-relax / deep-breath: a slow grow-shrink loop the user can
+        // visually breathe along with — these two steps otherwise had no
+        // animation at all. Deep-breath uses a much wider range to read as
+        // one deliberate, bigger breath rather than sit-relax's gentle
+        // resting rhythm.
+        if (isSitRelax) {
+          scale = 0.92 + (_stepBreathController.value * 0.08);
+        } else if (isDeepBreath) {
+          scale = 0.80 + (_stepBreathController.value * 0.28);
+        }
+
         // While actively exhaling, an inner disc slowly shrinks — a visual
         // echo of the breath itself running out, on top of (not instead
         // of) the numeric seconds count.
-        final isExhaling = _step == _AttemptStep.exhale;
         final exhaleShrinkScale = 1.0 - (_exhaleShrinkController.value * 0.85);
 
         return Transform.scale(
@@ -1120,7 +1268,13 @@ class _BreathTestPageState extends State<BreathTestPage>
             child: Center(
               child: Stack(
                 alignment: Alignment.center,
+                clipBehavior: Clip.none,
                 children: [
+                  // Outward "wind" rings while exhaling — three staggered
+                  // rings expanding from the mic icon toward the edge and
+                  // fading out, echoing air actually moving out of frame.
+                  if (isExhaling)
+                    ..._exhaleWindRings(accentColor),
                   if (isExhaling)
                     Transform.scale(
                       scale: exhaleShrinkScale.clamp(0.12, 1.0),
@@ -1137,37 +1291,105 @@ class _BreathTestPageState extends State<BreathTestPage>
                         ),
                       ),
                     ),
-                  isIdle
-                      ? Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.play_arrow,
-                              color: accentColor.withValues(alpha: 0.8),
-                              size: 36,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              context.t('start').toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 1,
-                                color: accentColor.withValues(alpha: 0.8),
-                              ),
-                            ),
-                          ],
-                        )
-                      : Text(
+                  if (isIdle)
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.play_arrow,
+                          color: accentColor.withValues(alpha: 0.8),
+                          size: 36,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          context.t('start').toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                            color: accentColor.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
+                    )
+                  else if (isSitRelax || isDeepBreath)
+                    // Same tap-to-continue convention as the rest of this
+                    // circle — an icon that breathes with the animation
+                    // plus the merged "next" label, no separate button.
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isSitRelax
+                              ? Icons.self_improvement
+                              : Icons.air_rounded,
+                          color: accentColor.withValues(alpha: 0.85),
+                          size: 40,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          context.t('breathStepOkAction').toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                            color: accentColor.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
+                    )
+                  else if (isExhaling || isHoldWaitingForTap)
+                    // The seconds counter and the finish/start action are
+                    // the same tappable circle here — both labels kept
+                    // semi-transparent so the number and the word stay
+                    // readable together instead of one hiding the other.
+                    Column(
+                      key: isExhaling
+                          ? null
+                          : const ValueKey('breath_hold_start_button'),
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (isExhaling)
+                          Icon(
+                            Icons.mic_none_rounded,
+                            color: accentColor.withValues(alpha: 0.55),
+                            size: 22,
+                          ),
+                        Text(
                           seconds.toString().padLeft(2, '0'),
                           style: TextStyle(
-                            fontSize: 56,
+                            fontSize: 48,
                             fontWeight: FontWeight.w600,
                             fontFamily: 'monospace',
-                            color: accentColor.withValues(alpha: 0.85),
+                            color: accentColor.withValues(alpha: 0.55),
                             letterSpacing: 2,
                           ),
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          context
+                              .t(isExhaling ? 'breathStepOkAction' : 'start')
+                              .toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1,
+                            color: accentColor.withValues(alpha: 0.55),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      seconds.toString().padLeft(2, '0'),
+                      style: TextStyle(
+                        fontSize: 56,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'monospace',
+                        color: accentColor.withValues(alpha: 0.85),
+                        letterSpacing: 2,
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1188,12 +1410,14 @@ class _BreathTestPageState extends State<BreathTestPage>
               _ when isResting => null,
               _AttemptStep.exhale => _handleBreathPressed,
               _AttemptStep.notStarted => _startCurrentTest,
-              // The 5-second hold is a fixed countdown — nothing to tap.
-              // sitRelax/deepBreath show their own OK button instead of
-              // this circle at all.
-              _AttemptStep.holding ||
-              _AttemptStep.sitRelax ||
-              _AttemptStep.deepBreath => null,
+              _AttemptStep.sitRelax => _advanceFromSitRelax,
+              _AttemptStep.deepBreath => _advanceFromDeepBreath,
+              _AttemptStep.holding when _holdWaitingForStartTap =>
+                _handleHoldStartTap,
+              // The 5-second countdown itself is fixed — nothing to tap
+              // until it finishes and _holdWaitingForStartTap flips true
+              // above.
+              _AttemptStep.holding => null,
             },
             child: circle,
           ),
@@ -1213,5 +1437,97 @@ class _BreathTestPageState extends State<BreathTestPage>
         ),
       ],
     );
+  }
+
+  /// Three rings, evenly staggered a third of a cycle apart so a new one is
+  /// always starting as another fades out — each expands outward from the
+  /// mic icon and fades, standing in for air visibly leaving toward the
+  /// microphone rather than just a countdown ticking.
+  List<Widget> _exhaleWindRings(Color accentColor) {
+    return List.generate(3, (i) {
+      final phase = (_exhaleWaveController.value + (i / 3)) % 1.0;
+      final radius = 40.0 + (phase * 68.0);
+      final opacity = (1.0 - phase).clamp(0.0, 1.0) * 0.5;
+      return Container(
+        width: radius * 2,
+        height: radius * 2,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: accentColor.withValues(alpha: opacity),
+            width: 2,
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// A phone outline with the microphone location marked at the bottom edge
+/// and small chevrons animating downward toward it, one loop per
+/// [pulse] cycle — a literal "blow here" pointer.
+class _PhoneMicPainter extends CustomPainter {
+  final Color color;
+  final double pulse;
+
+  const _PhoneMicPainter({required this.color, required this.pulse});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final phoneStroke = Paint()
+      ..color = color.withValues(alpha: 0.85)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = w * 0.045;
+
+    final phoneRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(w / 2, h / 2),
+        width: w * 0.5,
+        height: h * 0.86,
+      ),
+      Radius.circular(w * 0.09),
+    );
+    canvas.drawRRect(phoneRect, phoneStroke);
+
+    // Microphone location, pulsing.
+    final micCenter = Offset(w / 2, h * 0.80);
+    canvas.drawCircle(
+      micCenter,
+      w * 0.045 + (pulse * 0.02 * w),
+      Paint()..color = color.withValues(alpha: 0.9),
+    );
+    canvas.drawCircle(
+      micCenter,
+      w * 0.09 + (pulse * 0.06 * w),
+      Paint()
+        ..color = color.withValues(alpha: (1 - pulse) * 0.5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.02,
+    );
+
+    // Two chevrons animating downward toward the mic.
+    for (var i = 0; i < 2; i++) {
+      final t = (pulse + (i * 0.5)) % 1.0;
+      final y = h * 0.22 + (t * h * 0.42);
+      final alpha = (1 - t).clamp(0.0, 1.0) * 0.8;
+      final chevronPaint = Paint()
+        ..color = color.withValues(alpha: alpha)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = w * 0.035
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      final path = Path()
+        ..moveTo(w / 2 - w * 0.09, y)
+        ..lineTo(w / 2, y + h * 0.06)
+        ..lineTo(w / 2 + w * 0.09, y);
+      canvas.drawPath(path, chevronPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _PhoneMicPainter oldDelegate) {
+    return oldDelegate.pulse != pulse || oldDelegate.color != color;
   }
 }
