@@ -91,7 +91,7 @@ class NoResponseWatchdogService : Service() {
         createChannelIfNeeded()
         val notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("No Smoke Watchdog")
+            .setContentTitle("Nikotin Away Watchdog")
             .setContentText("10 dakika yanit takibi aktif: $taskTitle")
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -125,7 +125,7 @@ class NoResponseWatchdogService : Service() {
         }
         val channel = NotificationChannel(
             FOREGROUND_CHANNEL_ID,
-            "No Smoke Watchdog",
+            "Nikotin Away Watchdog",
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
             description = "No response 10-minute watchdog foreground service"
@@ -250,7 +250,7 @@ object WatchdogViolationNotifier {
         val id = state.watchdogId.hashCode().let { if (it < 0) -it else it }
         val notification = NotificationCompat.Builder(context, NoResponseWatchdogService.VIOLATION_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("No Smoke Ihlal")
+            .setContentTitle("Nikotin Away Ihlal")
             .setContentText("10 dakika yanit yok. Gorev ihlali kaydedildi: ${state.taskTitle}")
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setAutoCancel(true)
@@ -270,7 +270,7 @@ object WatchdogViolationNotifier {
         }
         val channel = NotificationChannel(
             NoResponseWatchdogService.VIOLATION_CHANNEL_ID,
-            "No Smoke Ihlal Uyarilari",
+            "Nikotin Away Ihlal Uyarilari",
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = "10 dakika yanitsiz gorev ihlali"

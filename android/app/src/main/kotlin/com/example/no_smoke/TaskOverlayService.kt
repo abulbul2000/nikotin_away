@@ -64,14 +64,14 @@ class TaskOverlayService : Service() {
             manager.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    "No Smoke Gorev Ekrani",
+                    "Nikotin Away Gorev Ekrani",
                     NotificationManager.IMPORTANCE_LOW,
                 ).apply { description = "Zorunlu gorev ekrani gosterilirken aktif" },
             )
         }
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("No Smoke")
+            .setContentTitle("Nikotin Away")
             .setContentText("Gorev ekrani gosteriliyor")
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

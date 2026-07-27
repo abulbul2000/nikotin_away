@@ -22,7 +22,8 @@
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
 
 <application
-    android:label="no_smoke"
+   android:label="Nikotin Away"
+
     android:name="${applicationName}"
     android:icon="@mipmap/ic_launcher"
     android:allowBackup="false"

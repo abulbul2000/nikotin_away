@@ -155,7 +155,7 @@ class LocationIntelligenceService {
 
     final title =
         await _storageService.loadSetting('location_notification_title') ??
-        'No Smoke';
+        'Nikotin Away';
     final body =
         await _storageService.loadSetting('location_notification_body') ??
         '';

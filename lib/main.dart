@@ -29,7 +29,9 @@ Future<void> main() async {
       return true;
     };
   } catch (error, stackTrace) {
-    debugPrint('[main] Firebase/Crashlytics init failed (non-blocking): $error');
+    debugPrint(
+      '[main] Firebase/Crashlytics init failed (non-blocking): $error',
+    );
     debugPrintStack(stackTrace: stackTrace);
   }
 
@@ -73,7 +75,7 @@ class _NoSmokeAppState extends State<NoSmokeApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
-      title: 'No Smoke',
+      title: 'Nikotin Away',
       theme: AppTheme.darkTheme,
       locale: _locale,
       supportedLocales: LanguageService.supportedLanguages.values.toList(
@@ -84,6 +86,30 @@ class _NoSmokeAppState extends State<NoSmokeApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      builder: (context, child) {
+        return Stack(
+          children: [
+            ?child,
+            const Positioned.fill(
+              child: IgnorePointer(
+                child: Center(
+                  child: Opacity(
+                    opacity: 0.06,
+                    child: Image(
+                      image: AssetImage(
+                        'assets/images/no_smoke_launcher_icon.png',
+                      ),
+                      width: 240,
+                      height: 240,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
       home: const SplashPage(),
     );
   }

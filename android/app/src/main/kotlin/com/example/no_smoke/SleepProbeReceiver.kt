@@ -1,19 +1,26 @@
 package com.example.no_smoke
 
+import android.Manifest
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabase
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import android.os.BatteryManager
 import android.os.PowerManager
+import androidx.core.content.ContextCompat
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.sqrt
 
 /// Wakes briefly on an AlarmManager tick to record two free, already-cached
 /// OS signals (screen-interactive state, charging state) as one row, then
@@ -54,10 +61,120 @@ class SleepProbeReceiver : BroadcastReceiver() {
             SleepActivityStore.enqueueActivity(context)
         }
 
+        // Opt-in, separate from Sleep Intelligence itself (see
+        // SnoringProbeStore/SnoringDetectionService) -- only runs while the
+        // screen is off (the user is presumably actually asleep, not just
+        // in the configured window) and piggybacks on this same alarm tick
+        // rather than running its own schedule.
+        if (!isAwake &&
+            SleepProbeStore.isSnoringDetectionEnabled(context) &&
+            isWithinWindow(currentMinuteOfDay(), windowStartMinute, windowEndMinute)
+        ) {
+            captureAndAnalyzeSnoring(context)
+        }
+
         if (!isWithinWindow(currentMinuteOfDay(), windowStartMinute, windowEndMinute)) {
             return
         }
         scheduleFireInMinutes(context, windowStartMinute, windowEndMinute, intervalMinutes, intervalMinutes)
+    }
+
+    /// Captures a short (3s) raw audio sample via AudioRecord (not
+    /// MediaRecorder -- no file is ever written, the PCM buffer lives only
+    /// in memory for the few hundred milliseconds it takes to compute an
+    /// energy envelope, then is discarded) and looks for a rhythmic
+    /// loud/quiet pattern in the ~0.3-1.5s cycle range typical of snoring.
+    /// VOICE_RECOGNITION disables the platform's automatic gain control,
+    /// same reasoning as the breath test's acoustic detection: AGC would
+    /// otherwise flatten exactly the energy swings this heuristic looks for.
+    private fun captureAndAnalyzeSnoring(context: Context) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
+        val sampleRate = 16000
+        val channelConfig = AudioFormat.CHANNEL_IN_MONO
+        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+        val minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+        if (minBufferSize <= 0) {
+            return
+        }
+
+        var audioRecord: AudioRecord? = null
+        try {
+            audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                sampleRate,
+                channelConfig,
+                audioFormat,
+                minBufferSize * 2,
+            )
+            if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
+                return
+            }
+            audioRecord.startRecording()
+
+            val windowMs = 100
+            val windowSamples = sampleRate * windowMs / 1000
+            val windowCount = SNORING_CAPTURE_DURATION_MS / windowMs
+            val buffer = ShortArray(windowSamples)
+            val energies = DoubleArray(windowCount)
+
+            for (i in 0 until windowCount) {
+                val read = audioRecord.read(buffer, 0, windowSamples)
+                if (read > 0) {
+                    var sumSquares = 0.0
+                    for (j in 0 until read) {
+                        val normalized = buffer[j] / 32768.0
+                        sumSquares += normalized * normalized
+                    }
+                    energies[i] = sqrt(sumSquares / read)
+                }
+            }
+
+            audioRecord.stop()
+            SnoringProbeStore.insertProbe(context, detectSnorePattern(energies, windowMs))
+        } catch (_: Exception) {
+            // Best-effort -- a missed capture just skips this probe cycle.
+        } finally {
+            audioRecord?.release()
+        }
+    }
+
+    /// Simple rule-based heuristic (energy envelope + periodicity), same
+    /// spirit as BreathAcousticEngine: finds windows loud enough relative to
+    /// this clip's own median to count as a "burst", collapses adjacent
+    /// loud windows into single events, then checks whether consecutive
+    /// events repeat at a snore-typical interval.
+    private fun detectSnorePattern(energies: DoubleArray, windowMs: Int): Boolean {
+        if (energies.isEmpty()) {
+            return false
+        }
+        val sorted = energies.sorted()
+        val median = sorted[sorted.size / 2]
+        val threshold = median * 2.0 + 0.01
+
+        val events = mutableListOf<Int>()
+        var lastEventIndex = -10
+        for (i in energies.indices) {
+            if (energies[i] > threshold && i - lastEventIndex > 2) {
+                events.add(i)
+                lastEventIndex = i
+            }
+        }
+        if (events.size < 2) {
+            return false
+        }
+
+        for (i in 1 until events.size) {
+            val gapMs = (events[i] - events[i - 1]) * windowMs
+            if (gapMs in SNORE_MIN_CYCLE_MS..SNORE_MAX_CYCLE_MS) {
+                return true
+            }
+        }
+        return false
     }
 
     private fun isInteractive(context: Context): Boolean {
@@ -151,6 +268,9 @@ class SleepProbeReceiver : BroadcastReceiver() {
         }
 
         private const val REQUEST_CODE = 84001
+        private const val SNORING_CAPTURE_DURATION_MS = 3000
+        private const val SNORE_MIN_CYCLE_MS = 300
+        private const val SNORE_MAX_CYCLE_MS = 1500
     }
 }
 
@@ -162,8 +282,21 @@ object SleepProbeStore {
     private const val KEY_WINDOW_START = "window_start_minute"
     private const val KEY_WINDOW_END = "window_end_minute"
     private const val KEY_INTERVAL = "interval_minutes"
+    private const val KEY_SNORING_ENABLED = "snoring_detection_enabled"
     private const val TABLE = "sleep_probe_events"
     private const val RETENTION_DAYS = 14
+
+    fun setSnoringDetectionEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_SNORING_ENABLED, enabled)
+            .apply()
+    }
+
+    fun isSnoringDetectionEnabled(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_SNORING_ENABLED, false)
+    }
 
     fun saveSchedule(context: Context, windowStartMinute: Int, windowEndMinute: Int, intervalMinutes: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -250,5 +383,44 @@ object SleepActivityStore {
         val items = prefs.getStringSet(KEY_EVENTS, emptySet())?.toList() ?: emptyList()
         prefs.edit().remove(KEY_EVENTS).apply()
         return items
+    }
+}
+
+/// Writes each snoring probe's boolean result straight to SQLite, same
+/// direct-write pattern as SleepProbeStore.insertProbe -- Dart only ever
+/// reads this table back (StorageService.countRecentSnoreLikelyEvents),
+/// never writes to it, since the whole point is the analysis running
+/// natively without needing the Flutter engine alive overnight.
+object SnoringProbeStore {
+    private const val TABLE = "snoring_probe_events"
+    private const val RETENTION_DAYS = 14
+
+    fun insertProbe(context: Context, snoreLikely: Boolean) {
+        val dbFile = File(File(context.applicationInfo.dataDir, "app_flutter"), "no_smoke.db")
+        if (!dbFile.exists()) {
+            return
+        }
+        try {
+            SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+                val now = System.currentTimeMillis()
+                val values = ContentValues().apply {
+                    put("id", "snoreprobe_${now}")
+                    put("createdAt", formatIsoUtc(now))
+                    put("snoreLikely", if (snoreLikely) 1 else 0)
+                }
+                db.insert(TABLE, null, values)
+
+                val cutoff = now - RETENTION_DAYS * 24 * 60 * 60 * 1000L
+                db.delete(TABLE, "createdAt < ?", arrayOf(formatIsoUtc(cutoff)))
+            }
+        } catch (_: Throwable) {
+            // Best-effort: a missed write just costs one data point.
+        }
+    }
+
+    private fun formatIsoUtc(millis: Long): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+        formatter.timeZone = TimeZone.getTimeZone("UTC")
+        return formatter.format(millis)
     }
 }

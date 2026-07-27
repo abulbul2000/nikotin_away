@@ -11,6 +11,7 @@ import '../services/notification_service.dart';
 import '../models/wearable_health_snapshot.dart';
 import '../services/health_connect_service.dart';
 import '../services/sleep_intelligence_service.dart';
+import '../services/snoring_detection_service.dart';
 import '../services/storage_service.dart';
 import '../services/wearable_intelligence_service.dart';
 import '../widgets/background_reliability_prompt.dart';
@@ -31,12 +32,16 @@ class _SettingsPageState extends State<SettingsPage> {
   final StorageService _storageService = StorageService();
   final SleepIntelligenceService _sleepIntelligenceService =
       SleepIntelligenceService();
+  final SnoringDetectionService _snoringDetectionService =
+      SnoringDetectionService();
   final WearableIntelligenceService _wearableIntelligenceService =
       WearableIntelligenceService();
   final HealthConnectService _healthConnectService = HealthConnectService();
   final DeviceCompatibilityService _deviceCompatibilityService =
       DeviceCompatibilityService();
   bool _sleepIntelligenceEnabled = false;
+  bool _snoringDetectionEnabled = false;
+  int _lastNightSnoreLikelyCount = 0;
   bool _wearableIntelligenceEnabled = false;
   WearableHealthSnapshot _wearableSnapshot = WearableHealthSnapshot.empty;
   bool _wearableSnapshotLoading = false;
@@ -45,6 +50,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _loadSleepIntelligenceState();
+    _loadSnoringDetectionState();
     _loadWearableIntelligenceState();
   }
 
@@ -54,6 +60,45 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _sleepIntelligenceEnabled = enabled;
     });
+  }
+
+  Future<void> _loadSnoringDetectionState() async {
+    final enabled = await _snoringDetectionService.isEnabled();
+    final count = await _snoringDetectionService.lastNightSnoreLikelyCount();
+    if (!mounted) return;
+    setState(() {
+      _snoringDetectionEnabled = enabled;
+      _lastNightSnoreLikelyCount = count;
+    });
+  }
+
+  Future<void> _toggleSnoringDetection(bool value) async {
+    if (value && !_sleepIntelligenceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('snoringDetectionRequiresSleepIntelligence'))),
+      );
+      return;
+    }
+    if (value) {
+      await _snoringDetectionService.enable();
+    } else {
+      await _snoringDetectionService.disable();
+    }
+    if (!mounted) return;
+    setState(() {
+      _snoringDetectionEnabled = value;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          context.t(
+            value
+                ? 'snoringDetectionEnabledConfirmation'
+                : 'snoringDetectionDisabledConfirmation',
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _toggleSleepIntelligence(bool value) async {
@@ -199,21 +244,21 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _openPermissionsCenter() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PermissionsCenterPage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const PermissionsCenterPage()));
   }
 
   void _openCoachMode() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CoachModePage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const CoachModePage()));
   }
 
   void _openLocationIntelligence() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const LocationIntelligencePage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const LocationIntelligencePage()));
   }
 
   void _openMedications() {
@@ -244,9 +289,9 @@ class _SettingsPageState extends State<SettingsPage> {
     if (confirmed != true) return;
     await _storageService.clearAllData();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.t('settingsResetDataDone'))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.t('settingsResetDataDone'))));
   }
 
   /// The passphrase is the only key to a user's backup — never stored,
@@ -287,8 +332,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Text(context.t('no')),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(controller.text),
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
             child: Text(
               isRestore
                   ? context.t('cloudRestoreRow')
@@ -321,16 +365,16 @@ class _SettingsPageState extends State<SettingsPage> {
         storageService: _storageService,
       ).backup(passphrase: passphrase);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('cloudBackupSuccess'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('cloudBackupSuccess'))));
     } catch (error, stackTrace) {
       debugPrint('[SettingsPage] Cloud backup failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('cloudBackupFailed'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('cloudBackupFailed'))));
     }
   }
 
@@ -386,9 +430,9 @@ class _SettingsPageState extends State<SettingsPage> {
       debugPrint('[SettingsPage] Cloud restore failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('cloudRestoreFailed'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('cloudRestoreFailed'))));
     }
   }
 
@@ -421,9 +465,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ListTile(
                   leading: const Icon(Icons.medication_outlined),
                   title: Text(context.t('medicationsSettingsRow')),
-                  subtitle: Text(
-                    context.t('medicationsSettingsRowSubtitle'),
-                  ),
+                  subtitle: Text(context.t('medicationsSettingsRowSubtitle')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: _openMedications,
                 ),
@@ -460,7 +502,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   const SizedBox(height: 10),
                   Text(
                     context.t('sleepIntelligenceDescription'),
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -476,6 +520,60 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const SizedBox(height: 20),
+          _SectionLabel(context.t('settingsSnoringDetectionRow')),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.mic_none_outlined, color: Colors.white70),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          context.t('snoringDetectionTitle'),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        value: _snoringDetectionEnabled,
+                        onChanged: _toggleSnoringDetection,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    context.t('snoringDetectionDescription'),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    context.t('snoringDetectionPurpose'),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  if (_snoringDetectionEnabled) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      '${context.t('snoringDetectionLastNightCount')}: $_lastNightSnoreLikelyCount',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
           _SectionLabel(context.t('settingsWearableIntelligenceRow')),
           Card(
             child: Padding(
@@ -485,10 +583,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   Row(
                     children: [
-                      const Icon(
-                        Icons.watch_outlined,
-                        color: Colors.white70,
-                      ),
+                      const Icon(Icons.watch_outlined, color: Colors.white70),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -508,7 +603,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   const SizedBox(height: 10),
                   Text(
                     context.t('wearableIntelligenceDescription'),
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -604,7 +701,10 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 20),
           Card(
             child: ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+              leading: const Icon(
+                Icons.delete_outline,
+                color: Colors.redAccent,
+              ),
               title: Text(context.t('settingsResetDataRow')),
               subtitle: Text(context.t('settingsResetDataSubtitle')),
               onTap: _confirmResetData,

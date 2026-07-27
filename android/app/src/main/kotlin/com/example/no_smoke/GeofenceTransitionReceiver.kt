@@ -76,7 +76,7 @@ class GeofenceTransitionReceiver : BroadcastReceiver() {
         }
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "No Smoke Konum Hatirlatici",
+            "Nikotin Away Konum Hatirlatici",
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
             description = "Sik gidilen bir yere varildiginda gosterilen hatirlatma"

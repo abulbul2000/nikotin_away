@@ -14,7 +14,7 @@ class AppTexts {
   static const String _runtimeCachePrefix = 'runtime_i18n_';
   // Turkish - Full translation
   static const Map<String, String> _tr = {
-    'appName': 'NO SMOKE',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Dil Sec',
     'continue': 'Devam Et',
     'yes': 'Evet',
@@ -100,7 +100,7 @@ class AppTexts {
     'shareProgressSkip': 'Gec',
     'shareProgressAction': 'Paylas',
     'shareProgressText':
-      'No Smoke ile sigarayi birakma surecimi takip ediyorum. Guncel risk skorum: {score}/100 ({level}).',
+      'Nikotin Away ile sigarayi birakma surecimi takip ediyorum. Guncel risk skorum: {score}/100 ({level}).',
     'saveErrorRetry': 'Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.',
     'loadErrorRetry': 'Veriler yuklenirken bir hata olustu. Lutfen tekrar deneyin.',
     'smokeFreeStreak': 'Sigara İçmeme Serisi',
@@ -162,7 +162,7 @@ class AppTexts {
       'Dik oturun ve rahatlayın. Derin bir nefes alın. Beş saniye tutun. Sonra nefesinizi mikrofona doğru güçlüce ve tamamen bitene kadar üfleyin. Nefesiniz bitince tamama basın.',
     'disciplineDisclosureTitle': 'Nasil destek oluyoruz?',
     'disciplineDisclosureMessage':
-      'No Smoke, seni sigarayi birakma surecinde desteklemek icin bazı arka plan mekanizmalari kullanir:\n\n'
+      'Nikotin Away, seni sigarayi birakma surecinde desteklemek icin bazı arka plan mekanizmalari kullanir:\n\n'
       '- Bir gorev hatırlatmasina zamaninda yanit vermezsen, bunu cihazinda bir uyum kaydi olarak not ederiz.\n'
       '- Aktif bir gorev sirasinda, telefon hareketi ve kullanim oruntülerinden (hareket sensorleri ve mikrofon araciligiyla) olasi riskli anlari tahmin etmeye calisiriz. Ses kaydedilmez veya saklanmaz; yalnizca ortam ses seviyesi olculur.\n'
       '- Bazi gorev hatirlatmalari dikkatini cekmek icin tam ekran uyari olarak gorunebilir.\n'
@@ -506,6 +506,17 @@ class AppTexts {
       'Neden: Sadece ekran acik/kapali ve sarjda olup olmadigin kontrol edilir, baska hicbir sey okunmaz. Yeterli veri yoksa anket sirasinda verdigin uyku saatlerine geri donulur.',
     'sleepIntelligenceEnabledConfirmation': 'Uyku zekasi acildi.',
     'sleepIntelligenceDisabledConfirmation': 'Uyku zekasi kapatildi.',
+    'settingsSnoringDetectionRow': 'Horlama Testi (Deneysel)',
+    'snoringDetectionTitle': 'Horlama Testi (Deneysel)',
+    'snoringDetectionDescription':
+      'Acik oldugunda, uyku saatlerinde birkac saniyelik kisa ses ornekleri alinip cihaz uzerinde analiz edilir; horlamaya benzer ritmik bir ses paterni olup olmadigina bakilir. Ses kaydi hicbir zaman diske yazilmaz veya disariya gonderilmez, sadece sonuc (evet/hayir) kaydedilir.',
+    'snoringDetectionPurpose':
+      'Neden: Horlama, uyku kalitesini ve dolayisiyla ertesi gunku sigara riskini etkileyebilir. Bu ozellik icin once Uyku Zekasi ozelligi acik olmalidir, cunku ayni gece dongusunu kullanir.',
+    'snoringDetectionEnabledConfirmation': 'Horlama testi acildi.',
+    'snoringDetectionDisabledConfirmation': 'Horlama testi kapatildi.',
+    'snoringDetectionRequiresSleepIntelligence':
+      'Once Uyku Zekasini acmalisin, horlama testi onun uzerine calisir.',
+    'snoringDetectionLastNightCount': 'Son gece horlama paterni sayisi',
     'settingsWearableIntelligenceRow': 'Bileklik Verisi (Deneysel)',
     'wearableIntelligenceTitle': 'Bileklik Verisi (Deneysel)',
     'wearableIntelligenceDescription':
@@ -552,7 +563,7 @@ class AppTexts {
     'reportsMonthlyTab': 'Aylik',
     'reportsPreviewButton': 'Onizle / Yazdir',
     'reportsShareButton': 'PDF Olarak Paylas',
-    'reportsPdfTitle': 'No Smoke Raporu',
+    'reportsPdfTitle': 'Nikotin Away Raporu',
     'reportsCigarettesLogged': 'Kaydedilen sigara sayisi',
     'reportsAvgPerDay': 'Gunluk ortalama',
     'reportsRiskScore': 'Risk skoru',
@@ -574,7 +585,7 @@ class AppTexts {
     'locationIntelligencePurpose':
       'Neden: Bildirim gostermek ve risk degerlendirmene katki saglamak icin. Ayarlar > Verilerimi Sifirla ile bu veriler de silinir.',
     'locationIntelligenceBackgroundWarning':
-      'Ana izin verildi ama arka plan izni verilmedi. Uygulama kapaliyken vardigin yerler algilanamaz. Ayarlar > Uygulamalar > No Smoke > Izinler > Konum bolumunden "Her zaman izin ver" secebilirsin.',
+      'Ana izin verildi ama arka plan izni verilmedi. Uygulama kapaliyken vardigin yerler algilanamaz. Ayarlar > Uygulamalar > Nikotin Away > Izinler > Konum bolumunden "Her zaman izin ver" secebilirsin.',
     'locationIntelligenceEnabledConfirmation': 'Konum zekasi acildi.',
     'locationIntelligenceDisabledConfirmation': 'Konum zekasi kapatildi.',
     'locationIntelligencePlacesTitle': 'Ogrenilen Yerler',
@@ -861,12 +872,12 @@ class AppTexts {
       'Risk skorunu guncellemek icin haftalik anketi doldurman gerekiyor.',
     'trialInfoTitle': '14 Gunluk Ucretsiz Deneme',
     'trialInfoMessage':
-      'No Smoke uygulamasini 14 gun boyunca ucretsiz deneyebilirsin. Bu surede gunluk gorevler, nefes testleri ve haftalik anketlerle birakma surecini yakindan takip edecegiz.',
+      'Nikotin Away uygulamasini 14 gun boyunca ucretsiz deneyebilirsin. Bu surede gunluk gorevler, nefes testleri ve haftalik anketlerle birakma surecini yakindan takip edecegiz.',
   };
 
   // English - Full translation
   static const Map<String, String> _en = {
-    'appName': 'NO SMOKE',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Select language',
     'continue': 'Continue',
     'yes': 'Yes',
@@ -952,7 +963,7 @@ class AppTexts {
     'shareProgressSkip': 'Skip',
     'shareProgressAction': 'Share',
     'shareProgressText':
-      'I\'m tracking my quit-smoking journey with No Smoke. My current risk score: {score}/100 ({level}).',
+      'I\'m tracking my quit-smoking journey with Nikotin Away. My current risk score: {score}/100 ({level}).',
     'saveErrorRetry': 'An error occurred while saving. Please try again.',
     'loadErrorRetry': 'Something went wrong loading this data. Please try again.',
     'smokeFreeStreak': 'Smoke-Free Streak',
@@ -1014,7 +1025,7 @@ class AppTexts {
       'Sit upright and relax. Take a deep breath. Hold for five seconds. Then blow forcefully into the microphone until your breath is fully out. Press OK when your breath is done.',
     'disciplineDisclosureTitle': 'How do we support you?',
     'disciplineDisclosureMessage':
-      'No Smoke uses a few background mechanisms to support you through quitting:\n\n'
+      'Nikotin Away uses a few background mechanisms to support you through quitting:\n\n'
       '- If you don\'t respond to a task reminder in time, we note it on your device as a compliance record.\n'
       '- During an active task, we try to estimate possible risky moments from phone motion and usage patterns (via motion sensors and the microphone). Audio is never recorded or stored — only the ambient sound level is measured.\n'
       '- Some task reminders may appear as full-screen alerts to get your attention.\n'
@@ -1256,6 +1267,17 @@ class AppTexts {
       'Why: only whether the screen is on/off and charging is checked, nothing else is read. If there isn\'t enough data, it falls back to the sleep time you gave in the survey.',
     'sleepIntelligenceEnabledConfirmation': 'Sleep intelligence turned on.',
     'sleepIntelligenceDisabledConfirmation': 'Sleep intelligence turned off.',
+    'settingsSnoringDetectionRow': 'Snoring Test (Experimental)',
+    'snoringDetectionTitle': 'Snoring Test (Experimental)',
+    'snoringDetectionDescription':
+      'When on, a few seconds of audio are sampled during your sleep hours and analyzed on-device for a rhythmic, snore-like sound pattern. The recording is never written to disk or sent anywhere -- only the result (yes/no) is stored.',
+    'snoringDetectionPurpose':
+      'Why: snoring can affect sleep quality and, in turn, next-day smoking risk. Sleep Intelligence must be on first for this feature, since it runs on the same overnight cycle.',
+    'snoringDetectionEnabledConfirmation': 'Snoring test turned on.',
+    'snoringDetectionDisabledConfirmation': 'Snoring test turned off.',
+    'snoringDetectionRequiresSleepIntelligence':
+      'Turn on Sleep Intelligence first -- the snoring test runs on top of it.',
+    'snoringDetectionLastNightCount': 'Snore-like patterns detected last night',
     'settingsWearableIntelligenceRow': 'Wearable Data (Experimental)',
     'wearableIntelligenceTitle': 'Wearable Data (Experimental)',
     'wearableIntelligenceDescription':
@@ -1302,7 +1324,7 @@ class AppTexts {
     'reportsMonthlyTab': 'Monthly',
     'reportsPreviewButton': 'Preview / Print',
     'reportsShareButton': 'Share as PDF',
-    'reportsPdfTitle': 'No Smoke Report',
+    'reportsPdfTitle': 'Nikotin Away Report',
     'reportsCigarettesLogged': 'Cigarettes logged',
     'reportsAvgPerDay': 'Daily average',
     'reportsRiskScore': 'Risk score',
@@ -1324,7 +1346,7 @@ class AppTexts {
     'locationIntelligencePurpose':
       'Why: to show the reminder and contribute to your risk assessment. Settings > Reset My Data also clears this data.',
     'locationIntelligenceBackgroundWarning':
-      'The main permission was granted but background permission was not. Arrivals can\'t be detected while the app is closed. You can choose "Allow all the time" from Settings > Apps > No Smoke > Permissions > Location.',
+      'The main permission was granted but background permission was not. Arrivals can\'t be detected while the app is closed. You can choose "Allow all the time" from Settings > Apps > Nikotin Away > Permissions > Location.',
     'locationIntelligenceEnabledConfirmation': 'Location intelligence turned on.',
     'locationIntelligenceDisabledConfirmation': 'Location intelligence turned off.',
     'locationIntelligencePlacesTitle': 'Learned Places',
@@ -1697,7 +1719,7 @@ class AppTexts {
       'Please complete the weekly survey to refresh your risk score.',
     'trialInfoTitle': '14-Day Free Trial',
     'trialInfoMessage':
-      'You can use No Smoke free for 14 days. During this period, we guide your quit journey with daily tasks, breath tests, and weekly surveys.',
+      'You can use Nikotin Away free for 14 days. During this period, we guide your quit journey with daily tasks, breath tests, and weekly surveys.',
   };
 
   // All 40 languages - each inherits from EN, with top keys translated

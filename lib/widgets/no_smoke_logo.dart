@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class NoSmokeLogo extends StatelessWidget {
   final double size;
@@ -18,8 +17,9 @@ class NoSmokeLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final logoSize = size.clamp(48, 240).toDouble();
-    final effectiveIconColor = iconColor ?? Theme.of(context).colorScheme.onSurface;
-    final effectiveLabelColor = labelColor ?? Theme.of(context).colorScheme.onSurface;
+
+    final effectiveLabelColor =
+        labelColor ?? Theme.of(context).colorScheme.onSurface;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -27,17 +27,15 @@ class NoSmokeLogo extends StatelessWidget {
           SizedBox(
             width: logoSize,
             height: logoSize,
-            child: SvgPicture.asset(
-              'assets/images/no_smoke_logo.svg',
+            child: Image.asset(
+              'assets/images/no_smoke_launcher_icon.png',
               fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(effectiveIconColor, BlendMode.srcIn),
-              placeholderBuilder: (_) => _buildPlaceholder(logoSize),
             ),
           ),
           if (showLabel) ...[
             const SizedBox(height: 10),
             Text(
-              'NO SMOKE',
+              'NIKOTIN AWAY',
               style: TextStyle(
                 fontSize: (logoSize * 0.17).clamp(14, 28).toDouble(),
                 fontWeight: FontWeight.w800,
@@ -47,20 +45,6 @@ class NoSmokeLogo extends StatelessWidget {
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildPlaceholder(double logoSize) {
-    return SizedBox(
-      width: logoSize,
-      height: logoSize,
-      child: Center(
-        child: SizedBox(
-          width: logoSize * 0.52,
-          height: logoSize * 0.52,
-          child: const CircularProgressIndicator(strokeWidth: 2),
-        ),
       ),
     );
   }

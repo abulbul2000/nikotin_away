@@ -78,6 +78,12 @@ class MainActivity : FlutterActivity() {
 						result.success(events)
 					}
 
+					"setSnoringDetectionEnabled" -> {
+						val enabled = call.argument<Boolean>("enabled") ?: false
+						SleepProbeStore.setSnoringDetectionEnabled(this, enabled)
+						result.success(true)
+					}
+
 					else -> result.notImplemented()
 				}
 			}

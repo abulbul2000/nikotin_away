@@ -18,6 +18,7 @@ import '../models/medication.dart';
 import '../models/sensor_usage_event.dart';
 import '../models/significant_place.dart';
 import '../models/sleep_probe_event.dart';
+import '../models/snoring_probe_event.dart';
 import '../models/smoking_event.dart';
 import '../models/step_counter_sample.dart';
 import '../models/smoking_time_prediction.dart';
@@ -43,6 +44,7 @@ class StorageService {
   static const _languageHistoryTable = 'language_history';
   static const _sensorUsageTable = 'sensor_usage_events';
   static const _sleepProbeTable = 'sleep_probe_events';
+  static const _snoringProbeTable = 'snoring_probe_events';
   static const _significantPlacesTable = 'significant_places';
   static const _locationVisitEventsTable = 'location_visit_events';
   static const _stepCounterSamplesTable = 'step_counter_samples';
@@ -102,7 +104,7 @@ class StorageService {
     final path = p.join(documentsDirectory.path, _dbFileName);
     return openDatabase(
       path,
-      version: 20,
+      version: 21,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -139,6 +141,7 @@ class StorageService {
         await _ensureSmokingEventsTable(db);
         await _ensureMentorMessagesTable(db);
         await _ensureSleepProbeTable(db);
+        await _ensureSnoringProbeTable(db);
         await _ensureLocationIntelligenceTables(db);
         await _ensureStepCounterTable(db);
         await _ensureConsentEventsTable(db);
@@ -167,6 +170,7 @@ class StorageService {
         await _ensureSmokingEventsTable(db);
         await _ensureMentorMessagesTable(db);
         await _ensureSleepProbeTable(db);
+        await _ensureSnoringProbeTable(db);
         await _ensureLocationIntelligenceTables(db);
         await _ensureStepCounterTable(db);
         await _ensureConsentEventsTable(db);
@@ -543,6 +547,56 @@ class StorageService {
         charging INTEGER NOT NULL
       )
     ''');
+  }
+
+  /// A separate table (not a column bolted onto sleep_probe_events) since
+  /// this is a genuinely different signal with different consent
+  /// implications -- screen/charging state is free OS metadata, this is a
+  /// short opt-in audio sample analyzed on-device for a rhythmic
+  /// snore-like pattern (see SleepProbeReceiver.kt); nothing is ever
+  /// written to disk except the resulting boolean.
+  Future<void> _ensureSnoringProbeTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_snoringProbeTable (
+        id TEXT PRIMARY KEY,
+        createdAt TEXT NOT NULL,
+        snoreLikely INTEGER NOT NULL
+      )
+    ''');
+  }
+
+  Future<List<SnoringProbeEvent>> loadSnoringProbeEventsBetween({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      _snoringProbeTable,
+      where: 'createdAt >= ? AND createdAt <= ?',
+      whereArgs: [start.toUtc().toIso8601String(), end.toUtc().toIso8601String()],
+      orderBy: 'createdAt ASC',
+    );
+    return rows
+        .map(
+          (row) => SnoringProbeEvent(
+            id: row['id'] as String,
+            createdAt: DateTime.parse(row['createdAt'] as String),
+            snoreLikely: (row['snoreLikely'] as int) == 1,
+          ),
+        )
+        .toList();
+  }
+
+  /// Count of snore-likely probes since [since] (defaults to the last 12
+  /// hours, comfortably covering one night) -- shown as a simple summary in
+  /// Settings rather than a full report, matching the feature's scope.
+  Future<int> countRecentSnoreLikelyEvents({DateTime? since}) async {
+    final cutoff = since ?? DateTime.now().subtract(const Duration(hours: 12));
+    final events = await loadSnoringProbeEventsBetween(
+      start: cutoff,
+      end: DateTime.now(),
+    );
+    return events.where((e) => e.snoreLikely).length;
   }
 
   Future<void> _ensureLocationIntelligenceTables(Database db) async {
@@ -3672,6 +3726,7 @@ class StorageService {
       await txn.delete(_smokingEventsTable);
       await txn.delete(_mentorMessagesTable);
       await txn.delete(_sleepProbeTable);
+      await txn.delete(_snoringProbeTable);
       await txn.delete(_significantPlacesTable);
       await txn.delete(_locationVisitEventsTable);
       await txn.delete(_stepCounterSamplesTable);

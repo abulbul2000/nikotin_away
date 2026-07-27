@@ -37,6 +37,20 @@ class SleepProbeService {
     }
   }
 
+  /// Flips the flag the native probe reads each tick to decide whether to
+  /// also run a short snoring-detection audio capture (see
+  /// SnoringDetectionService) -- piggybacks on this same alarm schedule
+  /// rather than arming a separate one.
+  static Future<void> setSnoringDetectionEnabled(bool enabled) async {
+    try {
+      await _channel.invokeMethod('setSnoringDetectionEnabled', {
+        'enabled': enabled,
+      });
+    } catch (_) {
+      // Best-effort.
+    }
+  }
+
   /// Drains queued "user was awake during their sleep window" timestamps
   /// (epoch millis, as strings) recorded by the native probe. Best-effort:
   /// an empty list either means nothing happened, or the channel/platform
