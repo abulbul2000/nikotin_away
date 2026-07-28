@@ -2,43 +2,17 @@ import 'dart:math';
 
 import '../models/adaptive_task_models.dart';
 import '../models/sensor_usage_event.dart';
+import 'smoking_interval_service.dart';
 
 class DisciplineProtocolService {
   final Random _random;
 
   DisciplineProtocolService({Random? random}) : _random = random ?? Random();
 
-  static const int _minDurationBarrierMinutes = 30;
-  static const int _multiDayTierFloorMinutes = 2 * 24 * 60;
-
-  /// Duration-barrier escalation tiers, in minutes. Each tier requires more
-  /// earned trust (difficultyLevel only rises with sustained real task
-  /// success — see [evolveStateFromOutcome] — and successStreak resets to 0
-  /// on any deferred/smoked outcome) than the last, so a user can't reach
-  /// "don't smoke for a week" without weeks of consistent success behind
-  /// them; a single relapse drops the streak-gated top tiers immediately.
-  /// Returns (minMinutes, maxMinutes) — equal values mean a fixed duration
-  /// (no jitter), used for the top "this month" tier.
-  (int, int) resolveDurationTierRange(AdaptiveTaskState state) {
-    final level = state.difficultyLevel;
-    final streak = state.successStreak;
-    if (level >= 9.5 && streak >= 21) {
-      return (30 * 24 * 60, 30 * 24 * 60); // "Bu ay sigara içme"
-    }
-    if (level >= 9 && streak >= 10) {
-      return (_multiDayTierFloorMinutes, 7 * 24 * 60); // 2-7 gün
-    }
-    if (level >= 7.5) {
-      return (12 * 60, 24 * 60); // 12-24 saat
-    }
-    if (level >= 6) {
-      return (4 * 60, 8 * 60); // 4-8 saat
-    }
-    if (level >= 3.5) {
-      return (60, 3 * 60); // 1-3 saat
-    }
-    return (_minDurationBarrierMinutes, 60); // Baslangic: 30-60 dk
-  }
+  /// How far either side of the week's barrier an individual task may land.
+  /// Enough that the user can't time the next one off the last, small enough
+  /// that every task still stands for the same weekly commitment.
+  static const double _durationJitter = 0.1;
 
   double computeSuccessRate({
     required int successCount,
@@ -310,48 +284,31 @@ class DisciplineProtocolService {
     return false;
   }
 
+  /// Lays out one day of tasks around [barrierMinutes] — the length
+  /// SmokingIntervalService derived from the user's own smoking gap and has
+  /// been stretching a step a week.
+  ///
+  /// Both the barrier and the count arrive already decided, because both are
+  /// answers to questions this class can't see: how often the user actually
+  /// smokes, and how much of their day is even available. What's left here is
+  /// purely placement — when the tasks land, and how much each one varies off
+  /// the week's figure.
+  ///
+  /// There's no longer any within-day escalation. The barrier is the week's
+  /// commitment, so a task later in the day asking for longer than one earlier
+  /// would be a different promise than the one the user was told they were
+  /// working to.
   AdaptiveTaskPlan buildDailyAdaptivePlan({
     required DateTime now,
     required DateTime sleepAt,
     required List<String> riskyHours,
+    required int barrierMinutes,
+    required int targetTaskCount,
     required AdaptiveTaskState state,
     required List<AdaptiveHourlyProfileEntry> hourlyProfiles,
-    int baselineTaskCount = 5,
   }) {
     final successRate = state.movingSuccessRate.clamp(0, 1);
-    final failureRate = state.movingFailureRate.clamp(0, 1);
-    final postponeRate = state.postponeRate.clamp(0, 1);
-
-    var targetTaskCount = baselineTaskCount;
-    if (successRate >= 0.75) {
-      targetTaskCount += 1;
-    }
-    if (successRate >= 0.88) {
-      targetTaskCount += 1;
-    }
-    if (failureRate >= 0.45) {
-      targetTaskCount -= 1;
-    }
-    if (postponeRate >= 0.5) {
-      targetTaskCount -= 1;
-    }
-
-    targetTaskCount += _random.nextInt(3) - 1;
-    targetTaskCount = targetTaskCount.clamp(3, 9);
-
-    final tierRange = resolveDurationTierRange(state);
-    var baseDurationMinutes = tierRange.$1 == tierRange.$2
-        ? tierRange.$1
-        : tierRange.$1 + _random.nextInt(tierRange.$2 - tierRange.$1 + 1);
-
-    // The top two tiers (multi-day / "this month") are a single standing
-    // commitment, not several same-day reminders — generating a handful of
-    // independent multi-day barriers in one day's plan wouldn't mean
-    // anything. Once a user has earned one of those tiers, today's plan
-    // collapses to exactly that one commitment instead of the usual spread.
-    if (tierRange.$1 >= _multiDayTierFloorMinutes) {
-      targetTaskCount = 1;
-    }
+    final jitterSpan = max(1, (barrierMinutes * _durationJitter).round());
 
     final moments = generateUnpredictableMoments(
       now: now,
@@ -371,31 +328,22 @@ class DisciplineProtocolService {
         hourlyProfiles: hourlyProfiles,
       );
 
-      int duration;
-      if (tierRange.$1 >= _multiDayTierFloorMinutes) {
-        // A single standing commitment (multi-day / "this month") — no
-        // per-task jitter or within-day escalation, those only make sense
-        // for the same-day minute/hour-scale tiers below.
-        duration = baseDurationMinutes;
-      } else {
-        final strainOffset = hourEntry == null
-            ? 0
-            : (hourEntry.strainScore >= 70
-                  ? -2
-                  : hourEntry.strainScore <= 35
-                  ? 2
-                  : 0);
-        final progressiveStep = i == 0
-            ? 0
-            : (2 + (state.difficultyLevel / 3).floor());
-        duration =
-            (baseDurationMinutes +
-                    (progressiveStep * i) +
-                    strainOffset +
-                    (_random.nextInt(5) - 2))
-                .clamp(_minDurationBarrierMinutes, tierRange.$2)
-                .toInt();
-      }
+      // Hours the user has historically struggled through ask for slightly
+      // less, hours they sail through slightly more — a nudge, not a
+      // different commitment.
+      final strainOffset = hourEntry == null
+          ? 0
+          : (hourEntry.strainScore >= 70
+                ? -jitterSpan
+                : hourEntry.strainScore <= 35
+                ? jitterSpan
+                : 0);
+      final duration =
+          (barrierMinutes +
+                  strainOffset +
+                  (_random.nextInt(jitterSpan * 2 + 1) - jitterSpan))
+              .clamp(SmokingIntervalService.minBarrierMinutes, barrierMinutes * 2)
+              .toInt();
 
       items.add(
         AdaptiveTaskPlanItem(
@@ -408,7 +356,7 @@ class DisciplineProtocolService {
 
     return AdaptiveTaskPlan(
       targetTaskCount: targetTaskCount,
-      baseDurationMinutes: baseDurationMinutes,
+      baseDurationMinutes: barrierMinutes,
       items: items,
     );
   }

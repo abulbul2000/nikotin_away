@@ -115,14 +115,21 @@
 
 ## H. Aralık algoritması (eski kademe merdiveninin yerine)
 
-- [ ] **18.** Doğal aralık hesabı: `(24s − uyku − iş saatleri) ÷ günlük sigara`
-- [ ] **19.** Başlangıç bariyeri = doğal aralık × 1.25
-- [ ] **20.** Haftalık değerlendirme: iyi hafta +%15, kötü hafta −%15
-- [ ] **21.** Ölçüt: gerçek sigara kayıtları **ve** görev başarısı birlikte
-- [ ] **22.** `resolveDurationTierRange` (6 kademeli merdiven) silinecek
-- [ ] **23.** Günlük 4–8 görev, aktif saate göre; iş saatleri hariç, **molalar dahil**
+- [x] **18.** `SmokingIntervalService.naturalIntervalMinutes`
+- [x] **19.** `startingBarrierMinutes` = doğal aralık × 1.25
+- [x] **20.** `evolveWeeklyBarrierMinutes`, simetrik ±%15
+- [x] **21.** `isGoodWeek` ikisini birden istiyor; kayıt hiç yoksa (sıfır değil, yokluk)
+      görev başarısına düşüyor
+- [x] **22.** `resolveDurationTierRange` ve gün içi kademeli artış silindi. Bariyer haftanın
+      taahhüdü olduğu için gün içinde büyümesi, kullanıcıya söylenmemiş bir söz olurdu.
+- [~] **23.** Görev sayısı 4–8, uyanık süreden ölçekleniyor (`dailyTaskCount`). İş saatleri
+      **bariyer hesabından** düşülüyor, ama görevlerin **zamanlanmasından** henüz değil —
+      `generateUnpredictableMoments` mesai penceresini bilmiyor. Sıradaki iş.
 - [ ] **24.** Uzun bariyerde kontrol görevleri (4–8 teması korumak için)
-- [ ] **25.** İlk hafta anket verisiyle, hafta sonunda gerçek kayıtlarla yeniden kalibrasyon
+- [x] **25.** `loadCurrentBarrierMinutes` ilk çağrıda anketten tohumluyor, 7 gün sonra
+      gerçek kayıtlarla yeniden değerlendiriyor. Günlük değil haftalık: tek kötü gün gürültü,
+      ayrıca hedefi hafta ortasında oynatmak kullanıcının onu tutturup tutturamayacağını
+      hiç öğrenememesi demek.
 
 ## I. Görev akışı
 

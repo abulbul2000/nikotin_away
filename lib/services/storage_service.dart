@@ -34,6 +34,7 @@ import '../engines/step_trend_engine.dart';
 import '../engines/wearable_signal_engine.dart';
 import 'behavior_engine.dart';
 import 'discipline_protocol_service.dart';
+import 'smoking_interval_service.dart';
 import 'health_connect_service.dart';
 
 class StorageService {
@@ -76,6 +77,8 @@ class StorageService {
   final MentorEngine _mentorEngine = MentorEngine();
   final DisciplineProtocolService _disciplineProtocolService =
       DisciplineProtocolService();
+  final SmokingIntervalService _smokingIntervalService =
+      SmokingIntervalService();
   Database? _database;
 
   Future<Database> get database async {
@@ -1673,6 +1676,138 @@ class StorageService {
   static const _adaptivePlanDateKey = 'adaptive_plan_cache_date';
   static const _adaptivePlanJsonKey = 'adaptive_plan_cache_json';
 
+  /// The current no-smoking barrier, and the day the week it belongs to
+  /// began. Persisted rather than recomputed because it's a running figure:
+  /// it starts from the user's own smoking gap and then moves a step a week
+  /// from wherever it got to, so recomputing from the survey each time would
+  /// throw away every week of progress.
+  static const _barrierMinutesKey = 'current_barrier_minutes';
+  static const _barrierWeekStartKey = 'current_barrier_week_start';
+
+  /// Cigarettes the user logged since [since], or null when they logged
+  /// nothing at all.
+  ///
+  /// The distinction matters: null means "we have no idea", which the weekly
+  /// review answers by falling back to task success. Returning 0 instead
+  /// would read as a perfect week and stretch the barrier for someone who had
+  /// simply stopped pressing the button.
+  Future<int?> countSmokingEventsSince(DateTime since) async {
+    final db = await database;
+    final rows = await db.query(
+      _smokingEventsTable,
+      columns: ['id'],
+      where: 'timestamp >= ?',
+      whereArgs: [since.toIso8601String()],
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    return rows.length;
+  }
+
+  /// Share of tasks answered since [since] that were seen through.
+  ///
+  /// Unanswered and postponed tasks count against it — a task the user let
+  /// lapse is not evidence the barrier was met. Returns 0 when no tasks were
+  /// issued at all, so a silent week can't earn an increase.
+  Future<double> taskSuccessRateSince(DateTime since) async {
+    final db = await database;
+    final rows = await db.query(
+      _adaptiveTaskEventTable,
+      columns: ['outcome'],
+      where: 'createdAt >= ?',
+      whereArgs: [since.toIso8601String()],
+    );
+    if (rows.isEmpty) {
+      return 0;
+    }
+    final successes = rows
+        .where((row) => row['outcome'] == AdaptiveTaskOutcome.success)
+        .length;
+    return successes / rows.length;
+  }
+
+  /// Reads the survey answers the barrier arithmetic needs.
+  Future<SmokingWindowInput> loadSmokingWindowInput() async {
+    final relevantSurveyRecords = await _loadRelevantSurveyRecords();
+    final contextMap = await loadSurveyContextByRecordId();
+    final profile = _buildMergedProfileContext(
+      surveyRecords: relevantSurveyRecords,
+      contextMap: contextMap,
+    );
+
+    final latestSurvey = relevantSurveyRecords.isEmpty
+        ? null
+        : relevantSurveyRecords.last;
+    final dailyCigarettes = latestSurvey == null
+        ? 20
+        : SurveyRecord.packsToLegacyCigarettes(latestSurvey.packsPerDay);
+
+    final breakWindows =
+        (profile['breakWindows'] as List<Map<String, String>>? ??
+            const <Map<String, String>>[]);
+
+    return SmokingWindowInput(
+      wakeTime: (profile['wakeTime'] as String?) ?? '07:00',
+      sleepTime: (profile['sleepTime'] as String?) ?? '23:00',
+      workStart: profile['workStart'] as String?,
+      workEnd: profile['workEnd'] as String?,
+      workplaceRule: profile['workplaceSmokingRule'] as String?,
+      breaks: breakWindows
+          .map((w) => (w['start'] ?? '', w['end'] ?? ''))
+          .where((pair) => pair.$1.isNotEmpty && pair.$2.isNotEmpty)
+          .toList(growable: false),
+      dailyCigarettes: dailyCigarettes,
+    );
+  }
+
+  /// The barrier in force today, evolving it first if a week has passed.
+  ///
+  /// The first call seeds it from the survey — a quarter above the gap the
+  /// user's own answers imply. Every seventh day after that it's re-judged
+  /// against how the week actually went, then held steady until the next
+  /// review. Deliberately not re-judged daily: a single bad day is noise, and
+  /// moving the target underneath someone mid-week means they never find out
+  /// whether they could have met it.
+  Future<int> loadCurrentBarrierMinutes({DateTime? now}) async {
+    final today = now ?? DateTime.now();
+    final input = await loadSmokingWindowInput();
+    final stored = int.tryParse(await loadSetting(_barrierMinutesKey) ?? '');
+
+    if (stored == null) {
+      final seeded = _smokingIntervalService.startingBarrierMinutes(input);
+      await saveSetting(_barrierMinutesKey, seeded.toString());
+      await saveSetting(_barrierWeekStartKey, today.toIso8601String());
+      return seeded;
+    }
+
+    final weekStart =
+        DateTime.tryParse(await loadSetting(_barrierWeekStartKey) ?? '') ??
+        today;
+    if (today.difference(weekStart).inDays < 7) {
+      return stored;
+    }
+
+    final target = _smokingIntervalService.impliedDailyTarget(
+      input: input,
+      barrierMinutes: stored,
+    );
+    final evolved = _smokingIntervalService.evolveWeeklyBarrierMinutes(
+      currentMinutes: stored,
+      goodWeek: _smokingIntervalService.isGoodWeek(
+        loggedCigarettes: await countSmokingEventsSince(
+          weekStart,
+        ),
+        targetCigarettes: target * 7,
+        taskSuccessRate: await taskSuccessRateSince(weekStart),
+      ),
+    );
+
+    await saveSetting(_barrierMinutesKey, evolved.toString());
+    await saveSetting(_barrierWeekStartKey, today.toIso8601String());
+    return evolved;
+  }
+
   /// The daily task plan (how many tasks, when, how long) is generated from
   /// the behavior engine's *current* learned state (success rate,
   /// difficulty, hourly strain profile) — that connection is deliberate and
@@ -1744,13 +1879,20 @@ class StorageService {
 
     final state = await loadAdaptiveTaskState();
     final hourly = await loadAdaptiveHourlyProfile();
+    final windowInput = await loadSmokingWindowInput();
     final plan = _disciplineProtocolService.buildDailyAdaptivePlan(
       now: now,
       sleepAt: sleepAt,
       riskyHours: riskyHours,
+      barrierMinutes: await loadCurrentBarrierMinutes(now: now),
+      targetTaskCount: _smokingIntervalService.dailyTaskCount(
+        input: windowInput,
+        movingSuccessRate: state.movingSuccessRate,
+        movingFailureRate: state.movingFailureRate,
+        postponeRate: state.postponeRate,
+      ),
       state: state,
       hourlyProfiles: hourly,
-      baselineTaskCount: await loadInterventionBaselineTaskCount(),
     );
     await saveSetting(_adaptivePlanDateKey, todayKey);
     await saveSetting(_adaptivePlanJsonKey, jsonEncode(plan.toJson()));
