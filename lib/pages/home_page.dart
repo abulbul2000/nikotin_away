@@ -11,7 +11,6 @@ import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
-import '../pages/daily_checkin_page.dart';
 import '../pages/health_metrics_page.dart';
 import '../pages/mandatory_task_page.dart';
 import '../pages/personal_progress_page.dart';
@@ -961,15 +960,16 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    // Routes through the consolidated daily check-in (breath exercise +
-    // short recall survey) rather than straight into the breath test alone
-    // — this is meant to be the day's one touchpoint, not just a breath
-    // reminder.
+    // Straight into the breath test. This used to go through a daily
+    // check-in page that paired it with a "which hours did you smoke today?"
+    // recall survey; the quick-log button records those moments as they
+    // happen, so asking the user to reconstruct them at day's end was both
+    // less accurate and an extra screen in the way.
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) =>
-            DailyCheckInPage(name: widget.name, packsPerDay: packsPerDay),
+            BreathTestPage(name: widget.name, packsPerDay: packsPerDay),
       ),
     );
 
@@ -2572,30 +2572,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _logSmokingNow() async {
-    // Optional, non-forcing real-time log: one tap, no follow-up questions,
-    // with a brief undo window for accidental taps. This is purely a
-    // ground-truth data point for SmokingTimePredictionEngine — it does not
-    // gate anything or trigger any other flow.
-    final eventId = await _storageService.logSmokingNow();
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(context.t('smokingLoggedConfirmation')),
-          action: SnackBarAction(
-            label: context.t('undo'),
-            onPressed: () {
-              unawaited(_storageService.deleteSmokingEvent(eventId));
-            },
-          ),
-        ),
-      );
-  }
-
   Widget _buildMainMenuCard() {
     return Card(
       child: Padding(
@@ -2674,34 +2650,12 @@ class _HomePageState extends State<HomePage> {
                     label: Text(context.t('menuSurveyHistory')),
                   ),
                 ),
-                SizedBox(
-                  width: 160,
-                  child: OutlinedButton.icon(
-                    onPressed: _logSmokingNow,
-                    icon: const Icon(Icons.smoking_rooms_outlined),
-                    label: Text(context.t('menuLogSmokingNow')),
-                  ),
-                ),
-                SizedBox(
-                  width: 160,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      final packsPerDay = await _resolveLatestPacksPerDay();
-                      if (!mounted) return;
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DailyCheckInPage(
-                            name: widget.name,
-                            packsPerDay: packsPerDay,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.nights_stay_outlined),
-                    label: Text(context.t('menuDailyCheckIn')),
-                  ),
-                ),
+                // "Sigara İçtim" and "Günlük Değerlendirme" used to sit here.
+                // The first is being replaced by the always-available
+                // quick-log button, which reaches further than a menu entry
+                // the user has to open the app to find; the second asked at
+                // day's end which hours they had smoked, which that same
+                // button now records as it happens.
               ],
             ),
           ],

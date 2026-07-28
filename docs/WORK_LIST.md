@@ -96,12 +96,13 @@
 
 ## G. Silmeler
 
-- [ ] **14.** Haftalık anketteki "Not ekle" alanı — yazılan metin hiçbir yere kaydedilmiyor
-      (`_noteController.text` hiç okunmuyor), ölü giriş.
-- [ ] **15.** Ana sayfadaki "Günlük Değerlendirme" girişi ve `daily_checkin_page.dart` —
-      "Sigara İçtim" butonu aynı veriyi anında topluyor.
-- [ ] **16.** Ana sayfa menüsündeki "Sigara İçtim" butonu — yüzen buton her yerde erişilebilir
-      olacak. Altındaki `_logSmokingNow` mantığı korunacak, yüzen buton onu kullanacak.
+- [x] **14.** "Not ekle" alanı ve "Ek Notlar" başlığı silindi. `addNote` çeviri anahtarı
+      artık öksüz — Parça 3 temizliğinde kaldırılacak.
+- [x] **15.** İki giriş noktası da kaldırıldı, `daily_checkin_page.dart` silindi. Günlük nefes
+      testi akışı artık doğrudan `BreathTestPage`'e gidiyor. `menuDailyCheckIn`,
+      `dailyCheckIn*` anahtarları öksüz kaldı — Parça 3'te temizlenecek.
+- [x] **16.** Menü butonu ve sayfaya özgü `_logSmokingNow` sarmalayıcısı kaldırıldı.
+      **`StorageService.logSmokingNow()` korundu** — yüzen buton (madde 34-35) onu kullanacak.
 
 - [ ] **17.** Parça 1 doğrulama: `flutter analyze` + `flutter test` + `flutter build apk --debug`
 

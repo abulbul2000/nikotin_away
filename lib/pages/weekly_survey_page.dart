@@ -39,7 +39,6 @@ class WeeklySurveyPage extends StatefulWidget {
 class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
   final StorageService _storageService = StorageService();
   final BehaviorEngine _behaviorEngine = BehaviorEngine();
-  final TextEditingController _noteController = TextEditingController();
   bool _detailedMode = false;
   bool _autoDetailedByRisk = false;
   String _mood = 'Orta';
@@ -849,9 +848,9 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
 
   @override
   void dispose() {
-    _noteController.dispose();
     super.dispose();
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -1736,18 +1735,6 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                     _consecutiveSmokingCount = value;
                   });
                 },
-              ),
-              const SurveySectionHeader(
-                title: 'Ek Notlar',
-                icon: Icons.edit_note_outlined,
-              ),
-              TextField(
-                controller: _noteController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  labelText: context.t('addNote'),
-                  border: OutlineInputBorder(),
-                ),
               ),
               const SizedBox(height: 24),
               SizedBox(
