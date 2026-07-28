@@ -67,6 +67,20 @@ class AppTexts {
     'medicationReminderBody': '{name} ilacinizi alma vakti geldi.',
     'overlayPermissionTitle': 'Gorev ekranini goster',
     'overlayPermissionMessage': 'Gorev ekraninin, telefon kilitli olmasa bile diger uygulamalarin ustunde acilabilmesi icin "diger uygulamalarin ustunde goster" iznine ihtiyacimiz var. Simdi ayar ekranini acalim mi?',
+    'smokedLogButtonRow': 'Sigara Ictim butonu',
+    'smokedLogButtonTitle': 'Sigara Ictim Butonu',
+    'smokedLogButtonDescription':
+        'Ekranda kucuk, seffaf bir buton belirir. Sigara ictiginizde 3 saniye basili tutun — cevresindeki halka doldugunda tik isareti cikar ve kayit alinir. Yanlislikla dokunmaniz durumunda kayit alinmaz.',
+    'smokedLogButtonPurpose':
+        'Uygulama boylece hangi saatlerde ve hangi yerlerde sigara icme egiliminiz oldugunu ogrenir, gorevleri tam o riskli anlara denk getirir. Konum bilgisi yalnizca daha once tanimlanmis sik gittiginiz yerlerle eslestirilir; adres veya hareket gecmisiniz saklanmaz. Tum kayitlar yalnizca cihazinizda tutulur.',
+    'smokedLogButtonEnabled': 'Sigara Ictim butonu acildi.',
+    'smokedLogButtonDisabled': 'Sigara Ictim butonu kapatildi.',
+    'smokedLogButtonNeedsOverlay':
+        'Bu buton icin "diger uygulamalarin ustunde goster" izni gerekiyor.',
+    'smokedLogButtonNotificationTitle': 'Nikotin Away',
+    'smokedLogButtonNotificationBody': 'Sigara ictiyseniz buradan kaydedin',
+    'smokedLogButtonAction': 'Sigara Ictim',
+    'smokedLogRecordedWithUndo': 'Sigara kaydedildi.',
     'permissionSetupTitle': 'Gerekli izinler',
     'permissionSetupIntro':
         'Gorevlerin dogru zamanda ve gorunur sekilde ulasabilmesi icin asagidaki izinler gerekiyor. Ayarlardan donunce durum kendiliginden guncellenir.',
@@ -940,6 +954,20 @@ class AppTexts {
     'medicationReminderBody': 'It\'s time to take your {name}.',
     'overlayPermissionTitle': 'Show the task screen',
     'overlayPermissionMessage': 'For the task screen to open over other apps even when the phone isn\'t locked, we need the "display over other apps" permission. Open the settings screen now?',
+    'smokedLogButtonRow': 'I Smoked button',
+    'smokedLogButtonTitle': 'I Smoked Button',
+    'smokedLogButtonDescription':
+        'A small, translucent button appears on screen. When you smoke, press and hold it for 3 seconds — the ring around it fills, a tick appears, and the moment is recorded. A stray tap records nothing.',
+    'smokedLogButtonPurpose':
+        'This is how the app learns which hours and which places you tend to smoke in, so it can aim tasks at exactly those moments. Location is only matched against the handful of places you already visit often; no address or movement history is stored. Everything stays on your device.',
+    'smokedLogButtonEnabled': 'I Smoked button is on.',
+    'smokedLogButtonDisabled': 'I Smoked button is off.',
+    'smokedLogButtonNeedsOverlay':
+        'This button needs the "display over other apps" permission.',
+    'smokedLogButtonNotificationTitle': 'Nikotin Away',
+    'smokedLogButtonNotificationBody': 'Tap to record a cigarette',
+    'smokedLogButtonAction': 'I Smoked',
+    'smokedLogRecordedWithUndo': 'Cigarette recorded.',
     'permissionSetupTitle': 'Permissions needed',
     'permissionSetupIntro':
         'These permissions let tasks reach you at the right moment, and visibly. Each row updates on its own when you come back from Settings.',

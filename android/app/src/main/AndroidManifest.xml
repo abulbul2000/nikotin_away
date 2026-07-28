@@ -16,6 +16,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Confirms the quick-log button's press-and-hold completed, without the
+         user having to keep watching the screen. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
@@ -102,6 +105,20 @@
 
         <receiver
             android:name=".TaskTriggerReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <service
+            android:name=".SmokedLogOverlayService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Keeps the always-available quick-log button on screen so a cigarette can be recorded the moment it happens." />
+        </service>
+
+        <receiver
+            android:name=".SmokedLogActionReceiver"
             android:enabled="true"
             android:exported="false" />
 

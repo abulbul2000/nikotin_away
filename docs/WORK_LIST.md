@@ -150,12 +150,14 @@
 
 ## J. Sigara İçtim butonu
 
-- [ ] **34.** Şeffaf yüzen buton, `no_smoke_splash_icon.png`, sürüklenebilir,
-      **ekran her açıldığında** görünür (`ACTION_SCREEN_ON/OFF`)
-- [ ] **35.** 3 saniye basılı tut → dolan halka → tik + titreşim. Erken bırakılırsa kayıt yok.
-- [ ] **36.** Kilit ekranı için kalıcı bildirimde aksiyon + 5 sn "Geri Al"
-- [ ] **37.** Konum: ham koordinat değil **yer kimliği**, otomatik etiket
-      ("en sık gittiğiniz yer"). Konum alınamazsa kayıt yine yazılır.
+- [x] **34.** `SmokedLogOverlayService` + `SmokedLogButtonView`. Sürüklenebilir, konumu
+      hatırlanıyor, `ACTION_SCREEN_ON/OFF` ile bağlı. Kartsız logo kullanıldı.
+- [x] **35.** 3 sn basılı tut → dolan halka → tik + titreşim. Erken bırakma ve sürükleme
+      kaydı iptal ediyor — butonu yoldan çekmek asla sigara kaydetmemeli.
+- [x] **36.** Kalıcı bildirimde "Sigara İçtim" aksiyonu (`SmokedLogActionReceiver`).
+      Overlay keyguard üstüne çizilemediği için kilit ekranında tek yol bu.
+- [x] **37.** `smoking_events.placeId` (şema v22). Ham koordinat değil yer kimliği;
+      `getLastKnownPosition` (GPS uyandırmadan), ~150 m eşleşme. Konum yoksa kayıt yine yazılıyor.
 - [ ] **38.** İlk kurulumda tanıtım + onay ekranı, KVKK dokümanı güncellenecek
 - [x] **39.** `riskyHours` hesabına bağlandı (son 28 gün). Ağırlık 12 — vekillerin
       *toplamının* üstünde, çünkü vekiller bağımsız değil: uygulamayı açıp nefes testi yapıp

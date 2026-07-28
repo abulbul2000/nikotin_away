@@ -365,6 +365,42 @@ class MainActivity : FlutterActivity() {
 						result.success(true)
 					}
 
+					"setSmokedLogButtonEnabled" -> {
+						val enabled = call.argument<Boolean>("enabled") ?: false
+						if (enabled) {
+							if (!hasOverlayPermission()) {
+								result.success(false)
+								return@setMethodCallHandler
+							}
+							// Labels come from Dart so the ongoing notification
+							// follows the user's chosen language like everything
+							// else; the service has no access to AppTexts.
+							getSharedPreferences(SmokedLogOverlayService.PREFS, MODE_PRIVATE)
+								.edit()
+								.putString(
+									SmokedLogOverlayService.KEY_NOTIF_TITLE,
+									call.argument<String>("notificationTitle"),
+								)
+								.putString(
+									SmokedLogOverlayService.KEY_NOTIF_BODY,
+									call.argument<String>("notificationBody"),
+								)
+								.putString(
+									SmokedLogOverlayService.KEY_NOTIF_ACTION,
+									call.argument<String>("actionLabel"),
+								)
+								.apply()
+							SmokedLogOverlayService.start(this)
+						} else {
+							SmokedLogOverlayService.stop(this)
+						}
+						result.success(true)
+					}
+
+					"consumeSmokedLogEvents" -> {
+						result.success(SmokedLogStore.drain(this))
+					}
+
 					"dismissTaskOverlay" -> {
 						TaskOverlayService.dismiss(this)
 						result.success(true)

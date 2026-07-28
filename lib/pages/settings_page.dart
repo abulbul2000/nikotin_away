@@ -11,6 +11,7 @@ import '../services/notification_service.dart';
 import '../models/wearable_health_snapshot.dart';
 import '../services/health_connect_service.dart';
 import '../services/sleep_intelligence_service.dart';
+import '../services/smoked_log_button_service.dart';
 import '../services/snoring_detection_service.dart';
 import '../services/storage_service.dart';
 import '../services/wearable_intelligence_service.dart';
@@ -19,6 +20,7 @@ import 'coach_mode_page.dart';
 import 'language_selection_page.dart';
 import 'location_intelligence_page.dart';
 import 'medications_page.dart';
+import 'permission_setup_page.dart';
 import 'permissions_center_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -34,6 +36,8 @@ class _SettingsPageState extends State<SettingsPage> {
       SleepIntelligenceService();
   final SnoringDetectionService _snoringDetectionService =
       SnoringDetectionService();
+  final SmokedLogButtonService _smokedLogButtonService =
+      SmokedLogButtonService();
   final WearableIntelligenceService _wearableIntelligenceService =
       WearableIntelligenceService();
   final HealthConnectService _healthConnectService = HealthConnectService();
@@ -41,6 +45,7 @@ class _SettingsPageState extends State<SettingsPage> {
       DeviceCompatibilityService();
   bool _sleepIntelligenceEnabled = false;
   bool _snoringDetectionEnabled = false;
+  bool _smokedLogButtonEnabled = false;
   int _lastNightSnoreLikelyCount = 0;
   bool _wearableIntelligenceEnabled = false;
   WearableHealthSnapshot _wearableSnapshot = WearableHealthSnapshot.empty;
@@ -51,6 +56,7 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadSleepIntelligenceState();
     _loadSnoringDetectionState();
+    _loadSmokedLogButtonState();
     _loadWearableIntelligenceState();
   }
 
@@ -60,6 +66,53 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _sleepIntelligenceEnabled = enabled;
     });
+  }
+
+  Future<void> _loadSmokedLogButtonState() async {
+    final enabled = await _smokedLogButtonService.isEnabled();
+    if (!mounted) return;
+    setState(() {
+      _smokedLogButtonEnabled = enabled;
+    });
+  }
+
+  Future<void> _toggleSmokedLogButton(bool value) async {
+    if (!value) {
+      await _smokedLogButtonService.disable();
+      if (!mounted) return;
+      setState(() => _smokedLogButtonEnabled = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('smokedLogButtonDisabled'))),
+      );
+      return;
+    }
+
+    final started = await _smokedLogButtonService.enable(
+      notificationTitle: context.t('smokedLogButtonNotificationTitle'),
+      notificationBody: context.t('smokedLogButtonNotificationBody'),
+      actionLabel: context.t('smokedLogButtonAction'),
+    );
+    if (!mounted) return;
+
+    // enable() reports failure rather than storing a preference for a button
+    // that can't be drawn — without the overlay permission the switch would
+    // otherwise sit on while nothing appeared on screen.
+    if (!started) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('smokedLogButtonNeedsOverlay'))),
+      );
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(builder: (_) => const PermissionSetupPage()),
+      );
+      if (!mounted) return;
+      await _loadSmokedLogButtonState();
+      return;
+    }
+
+    setState(() => _smokedLogButtonEnabled = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.t('smokedLogButtonEnabled'))),
+    );
   }
 
   Future<void> _loadSnoringDetectionState() async {
@@ -569,6 +622,57 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _SectionLabel(context.t('smokedLogButtonRow')),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.smoking_rooms_outlined,
+                        color: Colors.white70,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          context.t('smokedLogButtonTitle'),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        key: const ValueKey('smoked_log_button_switch'),
+                        value: _smokedLogButtonEnabled,
+                        onChanged: _toggleSmokedLogButton,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    context.t('smokedLogButtonDescription'),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.75),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    context.t('smokedLogButtonPurpose'),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      fontSize: 13,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                 ],
               ),
             ),

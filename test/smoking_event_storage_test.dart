@@ -86,4 +86,71 @@ void main() {
     expect(recent.first.timestamp.month, 7);
     expect(recent.first.timestamp.day, 21);
   });
+
+  group('quick log', () {
+    test('keeps the moment the press happened, not when it was read', () async {
+      final storage = StorageService();
+      // The native button queues presses while no engine is alive, so the
+      // timestamp has to survive the replay — otherwise every cigarette
+      // logged on a locked phone would land at whenever the app next opened,
+      // which is exactly the hour the risky-hour ranking must not learn.
+      final pressedAt = DateTime(2026, 7, 22, 3, 40);
+
+      await storage.logSmokingNow(timestamp: pressedAt);
+
+      final events = await storage.loadSmokingEvents(
+        since: DateTime(2026, 7, 22),
+      );
+      expect(events, hasLength(1));
+      expect(events.first.timestamp, pressedAt);
+      expect(events.first.source, 'quick_log');
+      expect(events.first.approximate, isFalse);
+    });
+
+    test('stores a place id when one was resolved', () async {
+      final storage = StorageService();
+
+      await storage.logSmokingNow(
+        timestamp: DateTime(2026, 7, 23, 14, 0),
+        placeId: 'place_work',
+      );
+
+      final events = await storage.loadSmokingEvents(
+        since: DateTime(2026, 7, 23),
+      );
+      expect(events.single.placeId, 'place_work');
+    });
+
+    test('records without a place when location was unavailable', () async {
+      final storage = StorageService();
+
+      // Location must never gate the record: no permission, no fix, or a
+      // spot the user doesn't often visit all end here, and the cigarette
+      // still has to be counted.
+      await storage.logSmokingNow(timestamp: DateTime(2026, 7, 24, 9, 0));
+
+      final events = await storage.loadSmokingEvents(
+        since: DateTime(2026, 7, 24),
+      );
+      expect(events.single.placeId, isNull);
+    });
+
+    test('counts events since a cutoff, and reports absence as null', () async {
+      final storage = StorageService();
+
+      // null rather than 0: the weekly review treats "nothing logged" as no
+      // evidence and falls back to task success, where 0 would read as a
+      // flawless week and stretch the barrier for someone who had simply
+      // stopped using the button.
+      expect(
+        await storage.countSmokingEventsSince(DateTime(2027, 1, 1)),
+        isNull,
+      );
+
+      await storage.logSmokingNow(timestamp: DateTime(2027, 1, 2, 10, 0));
+      await storage.logSmokingNow(timestamp: DateTime(2027, 1, 2, 12, 0));
+
+      expect(await storage.countSmokingEventsSince(DateTime(2027, 1, 1)), 2);
+    });
+  });
 }

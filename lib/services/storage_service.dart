@@ -107,7 +107,9 @@ class StorageService {
     final path = p.join(documentsDirectory.path, _dbFileName);
     return openDatabase(
       path,
-      version: 21,
+      // 22: smoking_events.placeId — which known place a cigarette happened
+      // at, for the risky-hour ranking.
+      version: 22,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -383,9 +385,16 @@ class StorageService {
         id TEXT PRIMARY KEY,
         timestamp TEXT NOT NULL,
         source TEXT NOT NULL,
-        approximate INTEGER NOT NULL
+        approximate INTEGER NOT NULL,
+        placeId TEXT
       )
     ''');
+    // Added after the table shipped, so existing installs need it separately.
+    // Holds a SignificantPlace id, never coordinates: the app keeps a handful
+    // of finalised centroids and no trail, and writing a position onto every
+    // cigarette would assemble precisely the movement history that design
+    // avoids.
+    await _ensureTableColumn(db, _smokingEventsTable, 'placeId', 'TEXT');
   }
 
   Future<void> _ensureMentorMessagesTable(Database db) async {
@@ -2613,15 +2622,20 @@ class StorageService {
   /// Convenience wrapper for the optional real-time quick-log button.
   /// Returns the created event's id so an accidental tap can be undone via
   /// [deleteSmokingEvent].
-  Future<String> logSmokingNow() async {
-    final now = DateTime.now();
-    final id = 'smoke_${now.microsecondsSinceEpoch}';
+  /// Records a cigarette. [timestamp] lets the native quick-log button replay
+  /// presses it queued while no Flutter engine was alive, so the moment kept
+  /// is when the user actually pressed rather than when the app got round to
+  /// reading it.
+  Future<String> logSmokingNow({DateTime? timestamp, String? placeId}) async {
+    final at = timestamp ?? DateTime.now();
+    final id = 'smoke_${at.microsecondsSinceEpoch}';
     await saveSmokingEvent(
       SmokingEvent(
         id: id,
-        timestamp: now,
+        timestamp: at,
         source: 'quick_log',
         approximate: false,
+        placeId: placeId,
       ),
     );
     return id;

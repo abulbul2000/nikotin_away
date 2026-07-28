@@ -1,0 +1,207 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
+
+import '../models/significant_place.dart';
+import 'location_intelligence_service.dart';
+import 'storage_service.dart';
+
+/// The always-available "I smoked" button.
+///
+/// The barrier length and the risky-hour ranking are both computed from when
+/// the user actually smokes, so the quality of that record decides how well
+/// the whole programme aims. Asking at the end of the day meant asking people
+/// to reconstruct their own afternoon from memory; this records the moment as
+/// it happens, from wherever they are, without opening the app.
+class SmokedLogButtonService {
+  static const MethodChannel _channel = MethodChannel('no_smoke/watchdog');
+
+  static const String settingKey = 'smoked_log_button_enabled';
+
+  /// Bump when the disclosure shown before enabling changes materially, same
+  /// convention as SleepIntelligenceService.
+  static const String consentTextVersion = 'v1';
+
+  final StorageService _storageService;
+  final LocationIntelligenceService _locationService;
+
+  SmokedLogButtonService({
+    StorageService? storageService,
+    LocationIntelligenceService? locationService,
+  }) : _storageService = storageService ?? StorageService(),
+       _locationService = locationService ?? LocationIntelligenceService();
+
+  static bool get _isAndroid => Platform.isAndroid;
+
+  Future<bool> isEnabled() async {
+    return (await _storageService.loadSetting(settingKey)) == '1';
+  }
+
+  /// Returns false when the overlay permission hasn't been granted — the
+  /// caller is expected to send the user to the permission screen rather than
+  /// silently recording the preference for a button that can't appear.
+  Future<bool> enable({
+    required String notificationTitle,
+    required String notificationBody,
+    required String actionLabel,
+  }) async {
+    if (!_isAndroid) {
+      return false;
+    }
+    final started = await _setNative(
+      enabled: true,
+      notificationTitle: notificationTitle,
+      notificationBody: notificationBody,
+      actionLabel: actionLabel,
+    );
+    if (!started) {
+      return false;
+    }
+    await _storageService.saveSetting(settingKey, '1');
+    await _storageService.recordConsentDecision(
+      featureKey: 'smoked_log_button',
+      granted: true,
+      consentTextVersion: consentTextVersion,
+    );
+    return true;
+  }
+
+  Future<void> disable() async {
+    await _storageService.saveSetting(settingKey, '0');
+    await _storageService.recordConsentDecision(
+      featureKey: 'smoked_log_button',
+      granted: false,
+      consentTextVersion: consentTextVersion,
+    );
+    await _setNative(enabled: false);
+  }
+
+  /// Re-arms the overlay after a reboot or a process death.
+  Future<void> restoreIfEnabled({
+    required String notificationTitle,
+    required String notificationBody,
+    required String actionLabel,
+  }) async {
+    if (!_isAndroid || !await isEnabled()) {
+      return;
+    }
+    await _setNative(
+      enabled: true,
+      notificationTitle: notificationTitle,
+      notificationBody: notificationBody,
+      actionLabel: actionLabel,
+    );
+  }
+
+  Future<bool> _setNative({
+    required bool enabled,
+    String? notificationTitle,
+    String? notificationBody,
+    String? actionLabel,
+  }) async {
+    if (!_isAndroid) {
+      return false;
+    }
+    try {
+      return await _channel.invokeMethod<bool>('setSmokedLogButtonEnabled', {
+            'enabled': enabled,
+            'notificationTitle': notificationTitle,
+            'notificationBody': notificationBody,
+            'actionLabel': actionLabel,
+          }) ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Writes any presses the native button queued into the database.
+  ///
+  /// The button runs with no Flutter engine alive, so it can only leave the
+  /// timestamps behind; this is the only writer that ever touches the table.
+  /// Returns how many were taken, so the caller can decide whether an undo
+  /// prompt is worth showing.
+  Future<int> drainPendingEvents() async {
+    if (!_isAndroid) {
+      return 0;
+    }
+
+    List<dynamic>? raw;
+    try {
+      raw = await _channel.invokeMethod<List<dynamic>>('consumeSmokedLogEvents');
+    } catch (_) {
+      return 0;
+    }
+    if (raw == null || raw.isEmpty) {
+      return 0;
+    }
+
+    final placeId = await _resolvePlaceId();
+    for (final entry in raw) {
+      final millis = entry is int ? entry : int.tryParse('$entry');
+      if (millis == null) continue;
+      await _storageService.logSmokingNow(
+        timestamp: DateTime.fromMillisecondsSinceEpoch(millis),
+        placeId: placeId,
+      );
+    }
+    return raw.length;
+  }
+
+  /// Which of the user's known places they were at, or null.
+  ///
+  /// Deliberately an id rather than coordinates. The app's whole location
+  /// story is that it keeps at most a handful of finalised centroids and
+  /// never a trail (see SignificantPlace); attaching raw latitude/longitude to
+  /// every cigarette would build exactly the movement history that design
+  /// avoids, and answer a question nobody asked. "Which of your usual places"
+  /// is all the risky-hour work needs.
+  ///
+  /// Never allowed to block the record: no permission, no fix, feature off —
+  /// the cigarette is still logged, just without a place.
+  Future<String?> _resolvePlaceId() async {
+    try {
+      if (!await _locationService.isEnabled()) {
+        return null;
+      }
+      final position = await _locationService.lastKnownPosition();
+      if (position == null) {
+        return null;
+      }
+      final places = await _locationService.loadPlaces();
+      return _nearestPlaceId(
+        places: places,
+        latitude: position.$1,
+        longitude: position.$2,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Roughly 150 m, in degrees. Close enough to say "the same place" without
+  /// needing a real geodesic at this scale.
+  static const double _placeMatchDegrees = 0.0015;
+
+  static String? _nearestPlaceId({
+    required List<SignificantPlace> places,
+    required double latitude,
+    required double longitude,
+  }) {
+    String? bestId;
+    var bestDistance = double.infinity;
+    for (final place in places) {
+      final dLat = place.latitude - latitude;
+      final dLon = place.longitude - longitude;
+      final distance = (dLat * dLat) + (dLon * dLon);
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        bestId = place.id;
+      }
+    }
+    if (bestId == null || bestDistance > _placeMatchDegrees * _placeMatchDegrees) {
+      return null;
+    }
+    return bestId;
+  }
+}

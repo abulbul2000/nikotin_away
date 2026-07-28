@@ -19,11 +19,25 @@ class SmokingEvent {
   /// precise logged moment.
   final bool approximate;
 
+  /// Which of the user's [SignificantPlace]s this happened at, if any.
+  ///
+  /// An id, never coordinates. The app stores at most a handful of finalised
+  /// place centroids and no location trail at all; writing a position onto
+  /// every cigarette would assemble exactly the movement history that design
+  /// sets out to avoid. "Which of your usual places" is the whole of what the
+  /// risky-hour ranking needs.
+  ///
+  /// Null whenever location was unavailable — permission refused, no fix,
+  /// feature switched off, or simply somewhere the user doesn't often go.
+  /// Location never gates the record.
+  final String? placeId;
+
   const SmokingEvent({
     required this.id,
     required this.timestamp,
     required this.source,
     required this.approximate,
+    this.placeId,
   });
 
   Map<String, dynamic> toJson() {
@@ -32,6 +46,7 @@ class SmokingEvent {
       'timestamp': timestamp.toIso8601String(),
       'source': source,
       'approximate': approximate ? 1 : 0,
+      'placeId': placeId,
     };
   }
 
@@ -41,6 +56,7 @@ class SmokingEvent {
       timestamp: DateTime.parse(json['timestamp'] as String),
       source: json['source'] as String? ?? 'daily_recall',
       approximate: ((json['approximate'] as num?)?.toInt() ?? 1) == 1,
+      placeId: json['placeId'] as String?,
     );
   }
 }

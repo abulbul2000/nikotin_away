@@ -83,6 +83,26 @@ class LocationIntelligenceService {
     await _syncGeofences();
   }
 
+  /// The device's last cached fix as (latitude, longitude), or null.
+  ///
+  /// Deliberately the *cached* one rather than a fresh request: this is
+  /// called the instant the user logs a cigarette, and waking the GPS to wait
+  /// for a lock would both delay the record and drain the battery for a
+  /// question that only needs to resolve to "which of your usual places".
+  /// Null whenever there's nothing cached, permission was refused, or the
+  /// platform declines — every caller must treat location as optional.
+  Future<(double, double)?> lastKnownPosition() async {
+    try {
+      final position = await Geolocator.getLastKnownPosition();
+      if (position == null) {
+        return null;
+      }
+      return (position.latitude, position.longitude);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<SignificantPlace>> loadPlaces() {
     return _storageService.loadSignificantPlaces();
   }

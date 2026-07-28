@@ -15,6 +15,7 @@ import 'android_watchdog_service.dart';
 import 'language_service.dart';
 import 'phone_state_service.dart';
 import 'sleep_probe_service.dart';
+import 'smoked_log_button_service.dart';
 import 'storage_service.dart';
 
 @pragma('vm:entry-point')
@@ -170,10 +171,28 @@ class NotificationService {
     await _syncWatchdogViolationsFromNative();
     await _syncTaskOverlayOutcomesFromNative();
     await _syncSleepActivityFromNative();
+    await _syncSmokedLogEventsFromNative();
   }
 
   static Future<void> refreshLocalizedResources() async {
     await initialize(navigatorKey: _navigatorKey);
+  }
+
+  /// Writes any quick-log presses the floating button queued while the app
+  /// wasn't running.
+  ///
+  /// The button lives in a native overlay with no Flutter engine behind it, so
+  /// it can only leave timestamps in SharedPreferences; nothing reaches the
+  /// database until this runs. Without it every press on a locked or closed
+  /// phone — which is most of them — would be silently discarded, and both the
+  /// weekly barrier review and the risky-hour ranking read from that table.
+  static Future<void> _syncSmokedLogEventsFromNative() async {
+    try {
+      await SmokedLogButtonService().drainPendingEvents();
+    } catch (_) {
+      // Best effort: a failed drain leaves the entries queued for next launch
+      // rather than losing them.
+    }
   }
 
   static Future<void> _syncWatchdogViolationsFromNative() async {
