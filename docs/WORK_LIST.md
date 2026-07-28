@@ -89,10 +89,12 @@
 
 ## F. İzin ekranı
 
-- [ ] **12.** İki ayrı izin penceresi (MIUI + overlay, ikisi de aynı butonları kullanıyor) tek
-      bir durum göstergeli ekranda birleşecek.
-- [ ] **13.** `didChangeAppLifecycleState` ile ayarlardan dönüşte izin durumu tazelenecek. Şu an
-      `requestOverlayPermission()` ayarı açıp devam ediyor, sonucu hiç öğrenmiyor.
+- [x] **12.** `PermissionSetupPage` eklendi: her izin kendi durum satırında, verilmiş olan
+      ✓ ile işaretli. İki pencere de kaldırıldı.
+- [x] **13.** Ekran `WidgetsBindingObserver` ile ayarlardan dönüşte tüm satırları yeniden
+      okuyor. Uygulama içi çözülen izinler için istek sonrası da tazeleme var.
+      OEM satırı okunabilir durum sunmadığı için asla "verildi" demiyor, sadece kısayol.
+      Yeni metinler şimdilik TR/EN — 40 dil Parça 3'te.
 
 ## G. Silmeler
 
@@ -104,7 +106,8 @@
 - [x] **16.** Menü butonu ve sayfaya özgü `_logSmokingNow` sarmalayıcısı kaldırıldı.
       **`StorageService.logSmokingNow()` korundu** — yüzen buton (madde 34-35) onu kullanacak.
 
-- [ ] **17.** Parça 1 doğrulama: `flutter analyze` + `flutter test` + `flutter build apk --debug`
+- [x] **17.** Parça 1 doğrulandı: `flutter analyze` temiz, 145/145 test, debug APK derleniyor.
+      **Cihaz testi bekliyor.**
 
 ---
 

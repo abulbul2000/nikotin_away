@@ -16,6 +16,7 @@ import '../widgets/no_smoke_logo.dart';
 import '../widgets/packs_per_day_section.dart';
 import '../widgets/survey_wizard.dart';
 import 'breath_test_page.dart';
+import 'permission_setup_page.dart';
 
 class SurveyPage extends StatefulWidget {
   const SurveyPage({super.key});
@@ -572,78 +573,24 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       _showValidationMessage(context.t('notificationPermissionRequired'));
     }
 
-    // MIUI/Xiaomi hides the permissions the mandatory task screen's
-    // full-screen notification needs (pop-up-while-in-background, show-on-lock-screen)
-    // behind its own permission editor rather than standard Android
-    // notification settings — granting notificationsGranted above does not
-    // cover them. Offer a direct one-tap deep link into that screen right
-    // here, once, while the user is already in the permissions flow.
-    if (result.notificationsGranted && mounted) {
-      final isMiui = await DevicePermissionService.isMiuiDevice();
-      if (isMiui && mounted) {
-        final brand = await DevicePermissionService.getManufacturer();
-        final brandLabel = (brand == null || brand.trim().isEmpty)
-            ? 'Xiaomi'
-            : brand.trim();
-        if (!mounted) return;
-        final openSettings = await showDialog<bool>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: Text(context.t('miuiPermissionTitle')),
-            content: Text(
-              context
-                  .t('miuiPermissionMessage')
-                  .replaceAll('{brand}', brandLabel),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(context.t('miuiPermissionSkip')),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(context.t('miuiPermissionOpen')),
-              ),
-            ],
-          ),
-        );
-        if (openSettings == true) {
-          final opened = await DevicePermissionService.openPermissionEditor();
-          if (!opened && mounted) {
-            await PermissionService.openPermissionSettings();
-          }
-        }
-      }
-    }
-
-    // "Display over other apps" -- lets the mandatory task screen cover
-    // whatever app is in the foreground instead of only showing as a
-    // notification when the phone is unlocked. Optional (declining just
-    // means the task falls back to the notification-only behavior), so
-    // this is offered once here rather than blocking the flow.
+    // Everything the task system still needs beyond the runtime permissions
+    // requested above — "display over other apps", and on some devices the
+    // manufacturer's own notification editor — is handled on one screen.
+    //
+    // These used to be two consecutive dialogs. Worded near-identically and
+    // carrying the same two buttons, the second arriving right after the
+    // user got back from Settings read as the first one having reappeared;
+    // and neither rechecked anything afterwards, so granting was never
+    // acknowledged. The screen re-reads every row on resume instead.
     if (result.notificationsGranted && mounted) {
       final hasOverlay = await DevicePermissionService.hasOverlayPermission();
-      if (!hasOverlay && mounted) {
-        final openOverlaySettings = await showDialog<bool>(
-          context: context,
-          builder: (dialogContext) => AlertDialog(
-            title: Text(context.t('overlayPermissionTitle')),
-            content: Text(context.t('overlayPermissionMessage')),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(false),
-                child: Text(context.t('miuiPermissionSkip')),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(context.t('miuiPermissionOpen')),
-              ),
-            ],
+      final isMiui = await DevicePermissionService.isMiuiDevice();
+      if ((!hasOverlay || isMiui) && mounted) {
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const PermissionSetupPage(),
           ),
         );
-        if (openOverlaySettings == true) {
-          await DevicePermissionService.requestOverlayPermission();
-        }
       }
     }
 

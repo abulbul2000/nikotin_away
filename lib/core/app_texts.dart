@@ -67,6 +67,16 @@ class AppTexts {
     'medicationReminderBody': '{name} ilacinizi alma vakti geldi.',
     'overlayPermissionTitle': 'Gorev ekranini goster',
     'overlayPermissionMessage': 'Gorev ekraninin, telefon kilitli olmasa bile diger uygulamalarin ustunde acilabilmesi icin "diger uygulamalarin ustunde goster" iznine ihtiyacimiz var. Simdi ayar ekranini acalim mi?',
+    'permissionSetupTitle': 'Gerekli izinler',
+    'permissionSetupIntro':
+        'Gorevlerin dogru zamanda ve gorunur sekilde ulasabilmesi icin asagidaki izinler gerekiyor. Ayarlardan donunce durum kendiliginden guncellenir.',
+    'permissionOverlayDescription':
+        'Gorev ekraninin baska uygulamalarin ustunde acilabilmesi icin gerekli. Verilmezse gorev yine gelir, ama sadece bildirim olarak.',
+    'permissionOemDescription':
+        'Bu telefonda bazi bildirim ayarlari ureticinin kendi izin ekraninda duruyor. Oradan "arka planda calisma" ve "kilit ekraninda goster" seceneklerini acabilirsiniz.',
+    'permissionSetupContinueAnyway': 'Simdilik devam et',
+    'permissionSetupOptionalNote':
+        'Izinleri daha sonra Ayarlar bolumunden de duzenleyebilirsiniz.',
     'packsPerDayQuestion': 'Gunde kac paket sigara iciyorsunuz?',
     'firstCigaretteWhen': 'Ilk sigarayi uyandiktan ne kadar sure sonra iciyorsunuz?',
     'firstCigarette10to30': 'Uyandiktan 10-30 dk sonra',
@@ -444,7 +454,7 @@ class AppTexts {
     'permissionActionOpenSettings': 'Ayarlari Ac',
     'permissionNotificationsTitle': 'Bildirimler',
     'permissionNotificationsDescription':
-      'Hatirlatmalar, gunluk degerlendirme ve mentorundan gelen mesajlar icin kullanilir.',
+      'Gorev hatirlatmalari, nefes testi ve mentorundan gelen mesajlar icin kullanilir.',
     'permissionNotificationsPurpose':
       'Neden: Sana dogru zamanda destek olabilmemiz icin gerekli.',
     'permissionMicrophoneTitle': 'Mikrofon',
@@ -930,6 +940,16 @@ class AppTexts {
     'medicationReminderBody': 'It\'s time to take your {name}.',
     'overlayPermissionTitle': 'Show the task screen',
     'overlayPermissionMessage': 'For the task screen to open over other apps even when the phone isn\'t locked, we need the "display over other apps" permission. Open the settings screen now?',
+    'permissionSetupTitle': 'Permissions needed',
+    'permissionSetupIntro':
+        'These permissions let tasks reach you at the right moment, and visibly. Each row updates on its own when you come back from Settings.',
+    'permissionOverlayDescription':
+        'Lets the task screen open over other apps. Without it tasks still arrive, just as a notification.',
+    'permissionOemDescription':
+        'This phone keeps some notification settings in the manufacturer\'s own permission screen. That\'s where "run in background" and "show on lock screen" live.',
+    'permissionSetupContinueAnyway': 'Continue for now',
+    'permissionSetupOptionalNote':
+        'You can change these later from Settings.',
     'packsPerDayQuestion': 'How many packs of cigarettes do you smoke per day?',
     'firstCigaretteWhen': 'How long after waking up do you smoke your first cigarette?',
     'firstCigarette10to30': '10-30 minutes after waking',
@@ -1205,7 +1225,7 @@ class AppTexts {
     'permissionActionOpenSettings': 'Open Settings',
     'permissionNotificationsTitle': 'Notifications',
     'permissionNotificationsDescription':
-      'Used for reminders, your daily check-in, and messages from your mentor.',
+      'Used for task reminders, breath tests, and messages from your mentor.',
     'permissionNotificationsPurpose':
       'Why: needed so we can support you at the right moment.',
     'permissionMicrophoneTitle': 'Microphone',
