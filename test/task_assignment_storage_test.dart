@@ -1,0 +1,192 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/models/adaptive_task_models.dart';
+import 'package:no_smoke/models/task_assignment.dart';
+import 'package:no_smoke/services/storage_service.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+class _FakePathProviderPlatform extends PathProviderPlatform {
+  @override
+  Future<String?> getApplicationDocumentsPath() async {
+    return Directory.systemTemp.createTempSync('no_smoke_task_assignment').path;
+  }
+}
+
+TaskAssignment _task({
+  String id = 'task_1',
+  String state = TaskLifecycleState.planned,
+  int durationMinutes = 30,
+  DateTime? scheduledAt,
+}) {
+  final at = scheduledAt ?? DateTime(2026, 7, 20, 14, 0);
+  return TaskAssignment(
+    id: id,
+    planDate: '2026-07-20',
+    canonicalTitle: 'ADAPTIVE_NO_SMOKE:$durationMinutes',
+    durationMinutes: durationMinutes,
+    scheduledAt: at,
+    state: state,
+  );
+}
+
+void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    PathProviderPlatform.instance = _FakePathProviderPlatform();
+  });
+
+  test('round-trips every lifecycle field', () async {
+    final storage = StorageService();
+    await storage.saveTaskAssignment(
+      _task(id: 'rt').copyWith(
+        state: TaskLifecycleState.accepted,
+        barrierStartedAt: DateTime(2026, 7, 20, 14, 5),
+        barrierEndsAt: DateTime(2026, 7, 20, 14, 35),
+        postponeCount: 2,
+        sosCount: 1,
+        gateReason: TaskGateReason.gaming,
+        watchdogId: 'wdg_rt',
+      ),
+    );
+
+    final loaded = await storage.loadTaskAssignment('rt');
+
+    expect(loaded, isNotNull);
+    expect(loaded!.state, TaskLifecycleState.accepted);
+    expect(loaded.postponeCount, 2);
+    expect(loaded.sosCount, 1);
+    expect(loaded.gateReason, TaskGateReason.gaming);
+    expect(loaded.watchdogId, 'wdg_rt');
+    expect(loaded.barrierEndsAt, DateTime(2026, 7, 20, 14, 35));
+  });
+
+  test('accepting starts the barrier clock', () async {
+    final storage = StorageService();
+    await storage.saveTaskAssignment(_task(id: 'accept', durationMinutes: 45));
+
+    final at = DateTime(2026, 7, 20, 15, 0);
+    final updated = await storage.transitionTaskAssignment(
+      id: 'accept',
+      state: TaskLifecycleState.accepted,
+      at: at,
+    );
+
+    expect(updated!.barrierStartedAt, at);
+    expect(updated.barrierEndsAt, at.add(const Duration(minutes: 45)));
+  });
+
+  test('postponing pushes the schedule and counts the deferral', () async {
+    final storage = StorageService();
+    await storage.saveTaskAssignment(_task(id: 'snooze'));
+
+    final at = DateTime(2026, 7, 20, 14, 0);
+    final once = await storage.transitionTaskAssignment(
+      id: 'snooze',
+      state: TaskLifecycleState.postponed,
+      at: at,
+      postponeMinutes: 10,
+    );
+
+    expect(once!.postponeCount, 1);
+    expect(once.totalPostponedMinutes, 10);
+    expect(once.scheduledAt, at.add(const Duration(minutes: 10)));
+  });
+
+  test('a finished task reports its outcome exactly once', () async {
+    final storage = StorageService();
+    await storage.saveTaskAssignment(_task(id: 'once'));
+
+    await storage.transitionTaskAssignment(
+      id: 'once',
+      state: TaskLifecycleState.succeeded,
+    );
+    // A notification answered just as the watchdog fires used to be able to
+    // record both an answer and a miss for the same task; terminal states are
+    // final so the second transition is ignored.
+    await storage.transitionTaskAssignment(
+      id: 'once',
+      state: TaskLifecycleState.failedMissed,
+    );
+
+    final loaded = await storage.loadTaskAssignment('once');
+    expect(loaded!.state, TaskLifecycleState.succeeded);
+
+    final rate = await storage.taskSuccessRateSince(DateTime(2026, 1, 1));
+    expect(rate, 1.0);
+  });
+
+  test('declining is scored as smoking, per the agreed rule', () {
+    expect(
+      TaskLifecycleState.outcomeFor(TaskLifecycleState.failedDeclined),
+      AdaptiveTaskOutcome.smoked,
+    );
+    expect(
+      TaskLifecycleState.outcomeFor(TaskLifecycleState.failedMissed),
+      AdaptiveTaskOutcome.missed,
+    );
+    expect(
+      TaskLifecycleState.outcomeFor(TaskLifecycleState.succeeded),
+      AdaptiveTaskOutcome.success,
+    );
+  });
+
+  test('an expired task is never reported to the learning engine', () {
+    // Expiry is the system admitting it was too late to ask, so scoring it
+    // would penalise the user for the app's own delay.
+    expect(
+      TaskLifecycleState.outcomeFor(TaskLifecycleState.expired),
+      isNull,
+    );
+  });
+
+  test('open tasks exclude everything already finished', () async {
+    final storage = StorageService();
+    await storage.saveTaskAssignment(
+      _task(id: 'open_a', state: TaskLifecycleState.delivered),
+    );
+    await storage.saveTaskAssignment(
+      _task(id: 'open_b', state: TaskLifecycleState.succeeded),
+    );
+    await storage.saveTaskAssignment(
+      _task(id: 'open_c', state: TaskLifecycleState.expired),
+    );
+
+    final open = await storage.loadOpenTaskAssignments();
+    final ids = open.map((task) => task.id).toSet();
+
+    expect(ids, contains('open_a'));
+    expect(ids, isNot(contains('open_b')));
+    expect(ids, isNot(contains('open_c')));
+  });
+
+  test('a canonical title resolves to the most recent task', () async {
+    final storage = StorageService();
+    await storage.saveTaskAssignment(
+      _task(
+        id: 'old',
+        durationMinutes: 60,
+        scheduledAt: DateTime(2026, 7, 18, 9, 0),
+      ),
+    );
+    await storage.saveTaskAssignment(
+      _task(
+        id: 'new',
+        durationMinutes: 60,
+        scheduledAt: DateTime(2026, 7, 20, 9, 0),
+      ),
+    );
+
+    // Notification payloads only carry the canonical title, and the same
+    // duration comes round again on later days — an answer can only be about
+    // the one currently in play.
+    final resolved = await storage.loadLatestTaskAssignmentByTitle(
+      'ADAPTIVE_NO_SMOKE:60',
+    );
+    expect(resolved!.id, 'new');
+  });
+}

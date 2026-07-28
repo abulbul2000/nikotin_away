@@ -20,6 +20,7 @@ import '../models/significant_place.dart';
 import '../models/sleep_probe_event.dart';
 import '../models/snoring_probe_event.dart';
 import '../models/smoking_event.dart';
+import '../models/task_assignment.dart';
 import '../models/step_counter_sample.dart';
 import '../models/smoking_time_prediction.dart';
 import '../models/survey_record.dart';
@@ -57,6 +58,7 @@ class StorageService {
   static const _adaptiveTaskEventTable = 'adaptive_task_events';
   static const _adaptiveHourlyProfileTable = 'adaptive_hourly_profile';
   static const _smokingEventsTable = 'smoking_events';
+  static const _taskAssignmentsTable = 'task_assignments';
   static const _mentorMessagesTable = 'mentor_messages';
   static const _consentEventsTable = 'consent_events';
   static const _behaviorDirtyKey = 'behavior_dirty';
@@ -109,7 +111,9 @@ class StorageService {
       path,
       // 22: smoking_events.placeId — which known place a cigarette happened
       // at, for the risky-hour ranking.
-      version: 22,
+      // 23: task_assignments — the live lifecycle of an issued task, which
+      // the append-only adaptive_task_events log was never shaped to hold.
+      version: 23,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -144,6 +148,7 @@ class StorageService {
         await _ensureAdaptiveTaskEventTable(db);
         await _ensureAdaptiveHourlyProfileTable(db);
         await _ensureSmokingEventsTable(db);
+        await _ensureTaskAssignmentsTable(db);
         await _ensureMentorMessagesTable(db);
         await _ensureSleepProbeTable(db);
         await _ensureSnoringProbeTable(db);
@@ -173,6 +178,7 @@ class StorageService {
         await _ensureAdaptiveTaskEventTable(db);
         await _ensureAdaptiveHourlyProfileTable(db);
         await _ensureSmokingEventsTable(db);
+        await _ensureTaskAssignmentsTable(db);
         await _ensureMentorMessagesTable(db);
         await _ensureSleepProbeTable(db);
         await _ensureSnoringProbeTable(db);
@@ -395,6 +401,39 @@ class StorageService {
     // cigarette would assemble precisely the movement history that design
     // avoids.
     await _ensureTableColumn(db, _smokingEventsTable, 'placeId', 'TEXT');
+  }
+
+  /// One row per issued task, carrying the whole lifecycle.
+  ///
+  /// Separate from `adaptive_task_events`, which stays what it has always
+  /// been: an append-only record of finished outcomes for the learning
+  /// engine. This table is the live state a task passes through — accepted,
+  /// postponed, suspended for a breathing exercise — none of which that log
+  /// was ever meant to hold.
+  Future<void> _ensureTaskAssignmentsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_taskAssignmentsTable (
+        id TEXT PRIMARY KEY,
+        planDate TEXT NOT NULL,
+        canonicalTitle TEXT NOT NULL,
+        durationMinutes INTEGER NOT NULL,
+        scheduledAt TEXT NOT NULL,
+        state TEXT NOT NULL,
+        deliveredAt TEXT,
+        respondedAt TEXT,
+        barrierStartedAt TEXT,
+        barrierEndsAt TEXT,
+        attemptCount INTEGER NOT NULL DEFAULT 1,
+        postponeCount INTEGER NOT NULL DEFAULT 0,
+        totalPostponedMinutes INTEGER NOT NULL DEFAULT 0,
+        gateDeferCount INTEGER NOT NULL DEFAULT 0,
+        gateReason TEXT,
+        sosCount INTEGER NOT NULL DEFAULT 0,
+        sosTotalMinutes INTEGER NOT NULL DEFAULT 0,
+        watchdogId TEXT,
+        notificationId INTEGER
+      )
+    ''');
   }
 
   Future<void> _ensureMentorMessagesTable(Database db) async {
@@ -2628,6 +2667,163 @@ class StorageService {
       prior: prior,
       loggedTimes: relevant,
     );
+  }
+
+  // ---------------------------------------------------------------------
+  // Task assignments
+  // ---------------------------------------------------------------------
+
+  Future<void> saveTaskAssignment(TaskAssignment task) async {
+    final db = await database;
+    await db.insert(
+      _taskAssignmentsTable,
+      task.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<TaskAssignment?> loadTaskAssignment(String id) async {
+    final db = await database;
+    final rows = await db.query(
+      _taskAssignmentsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return TaskAssignment.fromJson(rows.first);
+  }
+
+  /// The task a canonical title most recently belongs to.
+  ///
+  /// Notification payloads still carry only `ADAPTIVE_NO_SMOKE:<minutes>`, so
+  /// an answer arriving from a notification has to be matched back to a row
+  /// by title. Most recent wins: the same duration comes round again on later
+  /// days, and the answer can only ever be about the one currently in play.
+  Future<TaskAssignment?> loadLatestTaskAssignmentByTitle(String title) async {
+    final db = await database;
+    final rows = await db.query(
+      _taskAssignmentsTable,
+      where: 'canonicalTitle = ?',
+      whereArgs: [title],
+      orderBy: 'scheduledAt DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return TaskAssignment.fromJson(rows.first);
+  }
+
+  Future<List<TaskAssignment>> loadTaskAssignmentsForDay(DateTime day) async {
+    final db = await database;
+    final key = _planDateKey(day);
+    final rows = await db.query(
+      _taskAssignmentsTable,
+      where: 'planDate = ?',
+      whereArgs: [key],
+      orderBy: 'scheduledAt ASC',
+    );
+    return rows.map(TaskAssignment.fromJson).toList();
+  }
+
+  /// Tasks still waiting on something — not yet delivered, or delivered and
+  /// unanswered. Used to reconcile after the process was killed.
+  Future<List<TaskAssignment>> loadOpenTaskAssignments() async {
+    final db = await database;
+    final rows = await db.query(
+      _taskAssignmentsTable,
+      where: 'state NOT IN (?, ?, ?, ?, ?)',
+      whereArgs: [
+        TaskLifecycleState.succeeded,
+        TaskLifecycleState.failedDeclined,
+        TaskLifecycleState.failedSmoked,
+        TaskLifecycleState.failedMissed,
+        TaskLifecycleState.expired,
+      ],
+      orderBy: 'scheduledAt ASC',
+    );
+    return rows.map(TaskAssignment.fromJson).toList();
+  }
+
+  static String _planDateKey(DateTime day) {
+    final month = day.month.toString().padLeft(2, '0');
+    final dayOfMonth = day.day.toString().padLeft(2, '0');
+    return '${day.year}-$month-$dayOfMonth';
+  }
+
+  /// Moves a task to [state] and, when that state is terminal, reports it to
+  /// the learning engine exactly once.
+  ///
+  /// Going through here rather than letting callers write outcomes directly
+  /// is what stops a task from being counted twice — a notification answered
+  /// just as the watchdog fires used to be able to record both an answer and
+  /// a miss for the same task.
+  Future<TaskAssignment?> transitionTaskAssignment({
+    required String id,
+    required String state,
+    DateTime? at,
+    int? postponeMinutes,
+    int? sosMinutes,
+    String? gateReason,
+  }) async {
+    final existing = await loadTaskAssignment(id);
+    if (existing == null || existing.isTerminal) {
+      return existing;
+    }
+
+    final now = at ?? DateTime.now();
+    var updated = existing.copyWith(
+      state: state,
+      respondedAt: TaskLifecycleState.terminal.contains(state) ? now : null,
+    );
+
+    if (state == TaskLifecycleState.delivered && existing.deliveredAt == null) {
+      updated = updated.copyWith(deliveredAt: now);
+    }
+    if (state == TaskLifecycleState.retrying) {
+      updated = updated.copyWith(attemptCount: existing.attemptCount + 1);
+    }
+    if (state == TaskLifecycleState.postponed && postponeMinutes != null) {
+      updated = updated.copyWith(
+        postponeCount: existing.postponeCount + 1,
+        totalPostponedMinutes:
+            existing.totalPostponedMinutes + postponeMinutes,
+        scheduledAt: now.add(Duration(minutes: postponeMinutes)),
+      );
+    }
+    if (state == TaskLifecycleState.sosActive) {
+      updated = updated.copyWith(sosCount: existing.sosCount + 1);
+    }
+    if (sosMinutes != null) {
+      updated = updated.copyWith(
+        sosTotalMinutes: existing.sosTotalMinutes + sosMinutes,
+      );
+    }
+    if (state == TaskLifecycleState.pendingDelivery) {
+      updated = updated.copyWith(
+        gateDeferCount: existing.gateDeferCount + 1,
+        gateReason: gateReason,
+      );
+    }
+    if (state == TaskLifecycleState.accepted) {
+      updated = updated.copyWith(
+        barrierStartedAt: now,
+        barrierEndsAt: now.add(Duration(minutes: existing.durationMinutes)),
+      );
+    }
+
+    await saveTaskAssignment(updated);
+
+    final outcome = updated.outcome;
+    if (outcome != null) {
+      await recordAdaptiveTaskOutcome(
+        taskTitle: updated.canonicalTitle,
+        outcome: outcome,
+        plannedDurationMinutes: updated.durationMinutes,
+        scheduledAt: updated.barrierStartedAt ?? updated.scheduledAt,
+        respondedAt: now,
+      );
+    }
+    return updated;
   }
 
   Future<void> saveSmokingEvent(SmokingEvent event) async {

@@ -135,7 +135,9 @@
 
 ## I. Görev akışı
 
-- [ ] **26.** `TaskAssignment` modeli + SQLite tablosu (durum makinesi)
+- [x] **26.** `TaskAssignment` + `task_assignments` tablosu (şema v23) + durum makinesi.
+      `transitionTaskAssignment` tek geçiş noktası: terminal durumlar kesin, böylece
+      watchdog ile aynı anda gelen bir cevap görevi iki kez puanlayamıyor. 8 test.
 - [ ] **27.** 4 aksiyon: Kabul Et / Ertele / Reddet / SOS Krizdeyim
 - [ ] **28.** Ertele → 5/10/15 dk alt seçenekleri, görev başına en fazla 2 kez
 - [ ] **29.** Reddet → başarısız **+ sigara kaydı +1**
