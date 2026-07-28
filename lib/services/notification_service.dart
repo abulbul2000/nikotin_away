@@ -923,6 +923,27 @@ class NotificationService {
     );
   }
 
+  /// The instant at which the clock on the user's phone reads [hour]:[minute].
+  ///
+  /// `tz.local` is UTC in this app — `setLocalLocation` is never called,
+  /// because nothing here can resolve the device's IANA zone name. That made
+  /// `tz.TZDateTime(tz.local, y, m, d, hour, minute)` mean "that wall clock in
+  /// UTC": someone in UTC+3 asking to be reminded at 21:00 was scheduled for
+  /// 00:00 the following day. Building from a plain local [DateTime] instead
+  /// pins the correct absolute instant, which is what `absoluteTime`
+  /// scheduling actually consumes — no timezone-name lookup needed.
+  static tz.TZDateTime _atDeviceTimeOfDay(
+    int hour,
+    int minute, {
+    int addDays = 0,
+  }) {
+    final today = DateTime.now();
+    return tz.TZDateTime.from(
+      DateTime(today.year, today.month, today.day + addDays, hour, minute),
+      tz.local,
+    );
+  }
+
   static Future<void> scheduleDailyBreathReminder({
     required String sleepTime,
   }) async {
@@ -962,19 +983,11 @@ class NotificationService {
     final sleepHour = int.tryParse(sleepParts[0]) ?? 21;
     final sleepMinute = int.tryParse(sleepParts[1]) ?? 0;
 
-    var wakeAt = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
+    var wakeAt = _atDeviceTimeOfDay(
       wakeHour,
       wakeMinute,
     );
-    var sleepAt = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
+    var sleepAt = _atDeviceTimeOfDay(
       sleepHour,
       sleepMinute,
     );
@@ -1124,19 +1137,11 @@ class NotificationService {
     final sleepHour = int.tryParse(sleepParts[0]) ?? 21;
     final sleepMinute = int.tryParse(sleepParts.length > 1 ? sleepParts[1] : '0') ?? 0;
 
-    var wakeAt = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
+    var wakeAt = _atDeviceTimeOfDay(
       wakeHour,
       wakeMinute,
     );
-    var sleepAt = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
+    var sleepAt = _atDeviceTimeOfDay(
       sleepHour,
       sleepMinute,
     );
@@ -1218,11 +1223,7 @@ class NotificationService {
         final parts = time.split(':');
         final hour = int.tryParse(parts[0]) ?? 8;
         final minute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
-        var fireAt = tz.TZDateTime(
-          tz.local,
-          now.year,
-          now.month,
-          now.day,
+        var fireAt = _atDeviceTimeOfDay(
           hour,
           minute,
         );
@@ -1529,11 +1530,7 @@ class NotificationService {
     final now = tz.TZDateTime.now(tz.local);
     final windowStart = _parseWindowStart(predictedRiskWindow);
 
-    var base = tz.TZDateTime(
-      tz.local,
-      now.year,
-      now.month,
-      now.day,
+    var base = _atDeviceTimeOfDay(
       windowStart?.hour ?? now.hour,
       windowStart?.minute ?? now.minute,
     );

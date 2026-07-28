@@ -29,11 +29,23 @@
 
 ## B. Bildirim görünürlüğü
 
-- [ ] **3.** Planlı görevlerde de overlay çağrılacak. Şu an `showFirstTaskTriggerNotification`
-      overlay'i çağırıyor ama günlük akışta kullanılan `scheduleFirstTaskTriggerNotification`
-      çağırmıyor.
-- [ ] **4.** Katmanlı düşüş: tam ekran izni (Android 14+ kısıtlı) reddedilmişse overlay,
-      o da yoksa ısrarlı heads-up. Görev asla kaybolmaz.
+- [x] **3.** Planlı görevlerde de overlay çağrılıyor. Zamanlanmış bildirim overlay'i kendi
+      başlatamadığı (ve uygulama kapalıyken o anda Dart çalışmadığı) için görev saatinde
+      ateşlenen native alarm eklendi: `TaskTriggerReceiver`.
+- [x] **4.** Aynı alarm watchdog'u da başlatıyor. Önceden watchdog zamanlama anında
+      başlıyordu — görev 3 saat sonraysa foreground service 3 saat boyunca 15 sn'de bir
+      yokluyordu, ayrıca `WatchdogStore` tek kayıt tuttuğu için iki görev birbirini eziyordu.
+      Overlay izni yoksa bildirim yine kullanıcıya ulaşıyor (kademeli düşüş).
+
+## B2. Saat dilimi hatası *(bu partide bulundu)*
+
+- [x] **4b.** **Saat bazlı tüm bildirimler yanlış saatte geliyordu.** `setLocalLocation` hiç
+      çağrılmadığı için `tz.local` = UTC idi; `tz.TZDateTime(tz.local, y, m, d, 21, 0)` "21:00
+      UTC" demek oluyordu. UTC+3'teki kullanıcı 21:00 istediğinde bildirim ertesi gün 00:00'da
+      geliyordu. Testle doğrulandı. `_atDeviceTimeOfDay` yardımcısıyla 6 çağrı düzeltildi.
+      Etkilenen: günlük nefes hatırlatıcısı, sağlık ipuçları, **ilaç hatırlatmaları**,
+      koç komutları, haftalık anket. (Görev bildirimleri gecikme tabanlı olduğu için
+      etkilenmiyordu — hata bu yüzden fark edilmemiş.)
 
 ## C. Aksiyonlar uygulamayı açmasın
 
