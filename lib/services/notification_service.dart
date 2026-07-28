@@ -525,15 +525,41 @@ class NotificationService {
     }
   }
 
+  /// Notification actions no longer open the app, so this runs in the
+  /// background isolate `notificationTapBackground` spawns — a *cold* isolate
+  /// that never ran [initialize] and therefore has none of its static setup.
+  /// Everything below schedules follow-up notifications through
+  /// `tz.TZDateTime`, which throws unless the timezone database was loaded in
+  /// this isolate first. Cheap and idempotent, so it just runs every time.
+  static void _ensureIsolateReady() {
+    tz.initializeTimeZones();
+  }
+
   static Future<void> _handleActionWithoutUi(Map<String, String> event) async {
     final taskTitle = event['taskTitle']?.trim() ?? '';
     final actionId = event['actionId']?.trim() ?? '';
     if (taskTitle.isEmpty || actionId.isEmpty) {
       return;
     }
+    _ensureIsolateReady();
+
+    final storage = StorageService();
+    final now = DateTime.now();
 
     if (actionId == _actionTaskDone) {
       final delay = _resolveInitialTaskDelay(taskTitle);
+      // Mirrors what HomePage's foreground handler persists, so a task
+      // accepted with the app closed leaves the same trail as one accepted
+      // with it open.
+      await storage.saveTaskResult(
+        taskTitle: taskTitle,
+        taskResult: 'started',
+        completedAt: now,
+      );
+      await storage.saveTaskFollowUp(
+        taskTitle: taskTitle,
+        scheduledAt: now.add(delay),
+      );
       await showTaskTimerStartedNotification(
         taskTitle: taskTitle,
         duration: delay,
@@ -547,6 +573,26 @@ class NotificationService {
         taskDescription: taskTitle,
         delay: const Duration(minutes: 10),
       );
+      return;
+    }
+
+    // The "yes, I got through it" answer. Previously unhandled here: while
+    // actions still opened the app, HomePage's listener recorded it. Now that
+    // they don't, an unhandled action would silently drop the one outcome
+    // that proves a task succeeded.
+    if (actionId == _actionFollowUpDone) {
+      await storage.recordAdaptiveTaskOutcome(
+        taskTitle: taskTitle,
+        outcome: AdaptiveTaskOutcome.success,
+        plannedDurationMinutes: _resolveInitialTaskDelay(taskTitle).inMinutes,
+        respondedAt: now,
+      );
+      await storage.saveTaskResult(
+        taskTitle: taskTitle,
+        taskResult: 'willpower_success',
+        completedAt: now,
+      );
+      await storage.resolveTaskFollowUpByTitle(taskTitle);
       return;
     }
 
@@ -677,13 +723,13 @@ class NotificationService {
             AndroidNotificationAction(
               isFollowUp ? _actionFollowUpDone : _actionTaskDone,
               _text(code, 'taskActionDoneLabel'),
-              showsUserInterface: true,
+              showsUserInterface: false,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
               isFollowUp ? _actionFollowUpLater : _actionTaskNotNow,
               _text(code, 'taskActionNotNowLabel'),
-              showsUserInterface: true,
+              showsUserInterface: false,
               cancelNotification: true,
             ),
           ],
@@ -768,13 +814,13 @@ class NotificationService {
             AndroidNotificationAction(
               _actionTaskDone,
               _text(code, 'taskActionDoneLabel'),
-              showsUserInterface: true,
+              showsUserInterface: false,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
               _actionTaskNotNow,
               _text(code, 'taskActionNotNowLabel'),
-              showsUserInterface: true,
+              showsUserInterface: false,
               cancelNotification: true,
             ),
           ],
@@ -870,13 +916,13 @@ class NotificationService {
             AndroidNotificationAction(
               _actionTaskDone,
               _text(code, 'taskActionDoneLabel'),
-              showsUserInterface: true,
+              showsUserInterface: false,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
               _actionTaskNotNow,
               _text(code, 'taskActionNotNowLabel'),
-              showsUserInterface: true,
+              showsUserInterface: false,
               cancelNotification: true,
             ),
           ],
@@ -1332,13 +1378,13 @@ class NotificationService {
             AndroidNotificationAction(
               _actionFollowUpDone,
               _text(code, 'taskActionDoneLabel'),
-              showsUserInterface: true,
+              showsUserInterface: false,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
               _actionFollowUpLater,
               _text(code, 'taskActionNotNowLabel'),
-              showsUserInterface: true,
+              showsUserInterface: false,
               cancelNotification: true,
             ),
           ],
@@ -1591,13 +1637,13 @@ class NotificationService {
               AndroidNotificationAction(
                 _actionTaskDone,
                 _text(code, 'taskActionDoneLabel'),
-                showsUserInterface: true,
+                showsUserInterface: false,
                 cancelNotification: true,
               ),
               AndroidNotificationAction(
                 _actionTaskNotNow,
                 _text(code, 'taskActionNotNowLabel'),
-                showsUserInterface: true,
+                showsUserInterface: false,
                 cancelNotification: true,
               ),
             ],

@@ -49,8 +49,21 @@
 
 ## C. Aksiyonlar uygulamayı açmasın
 
-- [ ] **5.** Tüm bildirim aksiyonlarında `showsUserInterface: false`, işlem arka plan
-      isolate'inde. **SOS hariç** — o zaten uygulamayı açmalı.
+- [x] **5.** 10 bildirim aksiyonunun hepsi `showsUserInterface: false` oldu; işlem arka plan
+      isolate'inde. (SOS aksiyonu henüz yok — Parça 2'de eklenecek ve tek istisna o olacak.)
+- [x] **5a.** Arka plan isolate'i *soğuk* başlıyor: `initialize()` orada hiç çalışmadığı için
+      `tz.initializeTimeZones()` yapılmamış oluyordu ve takip bildirimi zamanlamak
+      `tz.TZDateTime` üzerinden patlardı. `_ensureIsolateReady()` eklendi.
+- [x] **5b.** **`followup_done` arka planda hiç işlenmiyordu.** Aksiyonlar uygulamayı
+      açtığı sürece HomePage'in dinleyicisi hallediyordu; artık açmadıklarına göre
+      "evet, tamamladım" cevabı — yani bir görevin başarılı olduğunu kanıtlayan tek çıktı —
+      sessizce kaybolacaktı. Sonuç kaydı arka plana taşındı.
+- [x] **5c.** `task_done` arka planda da ön plandakiyle aynı izi bırakıyor
+      (`saveTaskResult` + `saveTaskFollowUp`).
+
+> Not: Arka plan isolate şimdilik SQLite'a doğrudan yazıyor. Çakışma riski düşük (uygulama
+> ayaktayken aksiyon ana isolate'e gidiyor), ama tasarımdaki kalıcı çözüm SharedPreferences
+> kuyruğu — Parça 2'deki `TaskAssignment` işiyle birlikte yapılacak.
 
 ## D. Nefes testi
 
