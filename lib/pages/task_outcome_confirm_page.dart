@@ -57,7 +57,7 @@ class TaskOutcomeConfirmPage extends StatelessWidget {
                   child: ElevatedButton(
                     key: const ValueKey('task_outcome_yes_button'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.noSmokeGreen,
+                      backgroundColor: AppTheme.brandPrimary,
                       foregroundColor: Colors.black,
                       textStyle: const TextStyle(
                         fontSize: 22,

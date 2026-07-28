@@ -1060,17 +1060,17 @@ class _BreathTestPageState extends State<BreathTestPage>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: isCompleted
-                        ? AppTheme.noSmokeGreen
+                        ? AppTheme.brandPrimary
                         : isCurrent
                         ? const Color(0xFF132238)
                         : const Color(0xFF132238),
                     border: isCurrent
-                        ? Border.all(color: AppTheme.noSmokeGreen, width: 2)
+                        ? Border.all(color: AppTheme.brandPrimary, width: 2)
                         : null,
                     boxShadow: isCurrent
                         ? [
                             BoxShadow(
-                              color: AppTheme.noSmokeGreen.withValues(
+                              color: AppTheme.brandPrimary.withValues(
                                 alpha: 0.4,
                               ),
                               blurRadius: 12,
@@ -1113,7 +1113,7 @@ class _BreathTestPageState extends State<BreathTestPage>
                     _AttemptStep.notStarted => Icons.info,
                     _ => Icons.info,
                   },
-            color: AppTheme.noSmokeGreen,
+            color: AppTheme.brandPrimary,
             size: 24,
           );
     return Card(
@@ -1175,7 +1175,7 @@ class _BreathTestPageState extends State<BreathTestPage>
                   ? Icons.self_improvement
                   : Icons.airline_seat_recline_extra,
               size: 60,
-              color: AppTheme.noSmokeGreen,
+              color: AppTheme.brandPrimary,
             ),
           );
         },
@@ -1195,7 +1195,7 @@ class _BreathTestPageState extends State<BreathTestPage>
         builder: (context, child) {
           return CustomPaint(
             painter: _PhoneMicPainter(
-              color: AppTheme.noSmokeGreen,
+              color: AppTheme.brandPrimary,
               pulse: _exhaleWaveController.value,
             ),
           );
@@ -1214,7 +1214,7 @@ class _BreathTestPageState extends State<BreathTestPage>
         _step == _AttemptStep.holding && _holdWaitingForStartTap;
     final accentColor = isResting
         ? const Color(0xFFFFB74D)
-        : AppTheme.noSmokeGreen;
+        : AppTheme.brandPrimary;
 
     final circle = AnimatedBuilder(
       animation: Listenable.merge([

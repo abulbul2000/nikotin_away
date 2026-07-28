@@ -131,8 +131,8 @@ class _CravingSosPageState extends State<CravingSosPage>
                   height: 160,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                   color: AppTheme.noSmokeGreen.withValues(alpha: 0.18),
-                    border: Border.all(color: AppTheme.noSmokeGreen, width: 3),
+                   color: AppTheme.brandPrimary.withValues(alpha: 0.18),
+                    border: Border.all(color: AppTheme.brandPrimary, width: 3),
                   ),
                   alignment: Alignment.center,
                   child: Column(

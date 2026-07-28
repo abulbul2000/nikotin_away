@@ -2245,7 +2245,7 @@ class _HomePageState extends State<HomePage> {
   Widget _buildMentorCard(BuildContext context) {
     final message = _latestMentorMessage!;
     final toneColor = switch (message.tone) {
-      'coach' => AppTheme.noSmokeGreen,
+      'coach' => AppTheme.brandPrimary,
       'supportive' => Colors.amber,
       _ => Colors.white70,
     };

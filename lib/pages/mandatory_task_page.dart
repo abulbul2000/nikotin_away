@@ -130,7 +130,7 @@ class _MandatoryTaskPageState extends State<MandatoryTaskPage>
                   },
                   child: CircleAvatar(
                     radius: 64,
-                    backgroundColor: AppTheme.noSmokeGreen.withValues(
+                    backgroundColor: AppTheme.brandPrimary.withValues(
                       alpha: 0.25,
                     ),
                     child: const Icon(
@@ -179,7 +179,7 @@ class _MandatoryTaskPageState extends State<MandatoryTaskPage>
                     ),
                     _CallStyleButton(
                       key: const ValueKey('mandatory_task_start_button'),
-                      color: AppTheme.noSmokeGreen,
+                      color: AppTheme.brandPrimary,
                       icon: Icons.call,
                       label: context.t('mandatoryTaskStartButton'),
                       onPressed: () => _acceptAndAnnounce(context),

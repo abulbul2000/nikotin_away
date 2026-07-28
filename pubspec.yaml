@@ -73,13 +73,24 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.6
+  # Used by tool/make_transparent_logo.dart to regenerate the in-app mark.
+  image: ^4.2.0
 
+# Pointed at the same artwork the icons currently in android/app/src/main/res
+# were generated from. It used to name no_smoke_launcher_foreground.png, which
+# no longer exists — so running this generator would simply have failed.
+#
+# Regenerating changes the home screen icon, which is deliberate as it stands:
+# the artwork keeps its light card there (right for an icon, wrong inside the
+# dark app — see assets/images/no_smoke_logo_transparent.png for the in-app
+# mark). Re-run only when the icon itself is meant to change, and look at the
+# result before committing it.
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: assets/images/no_smoke_launcher_icon.png
   adaptive_icon_background: "#0D1B2A"
-  adaptive_icon_foreground: assets/images/no_smoke_launcher_foreground.png
+  adaptive_icon_foreground: assets/images/no_smoke_launcher_icon.png
   adaptive_icon_foreground_inset: 0
   remove_alpha_ios: true
 

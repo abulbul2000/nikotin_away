@@ -18,7 +18,7 @@ class StatisticCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accentColor ?? AppTheme.noSmokeGreen;
+    final color = accentColor ?? AppTheme.brandPrimary;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),

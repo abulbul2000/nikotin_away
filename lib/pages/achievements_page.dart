@@ -108,7 +108,7 @@ class _AchievementTile extends StatelessWidget {
               '${achievement.thresholdDays} gün',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: locked ? Colors.white38 : AppTheme.noSmokeGreen,
+                color: locked ? Colors.white38 : AppTheme.brandPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
               ),

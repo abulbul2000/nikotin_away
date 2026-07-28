@@ -28,8 +28,14 @@ class NoSmokeLogo extends StatelessWidget {
             width: logoSize,
             height: logoSize,
             child: Image.asset(
-              'assets/images/no_smoke_launcher_icon.png',
-              fit: BoxFit.cover,
+              // The launcher artwork with its light card removed (see
+              // tool/make_transparent_logo.dart). The card is right for a home
+              // screen icon but reads as a pale rectangle pasted onto the
+              // app's dark background. BoxFit.contain, not cover: the mark
+              // sits inside its own transparent margin now, and cover would
+              // crop into it.
+              'assets/images/no_smoke_logo_transparent.png',
+              fit: BoxFit.contain,
             ),
           ),
           if (showLabel) ...[

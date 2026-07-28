@@ -76,13 +76,16 @@
 
 ## E. Logo ve tema
 
-- [ ] **8.** Saydam zeminli logo üretilecek (beyaz kart kenarlardan taşma-doldurma ile
-      kaldırılacak, kelebeğin içindeki beyaz vurgular korunacak). Ana ekran ikonu değişmez.
-- [ ] **9.** Tema turkuaza geçecek: `#00C853` → `#00B8D4`, ikincil `#3FD2B0`. Logonun ölçülen
-      baskın rengi `#0090B0`; mevcut yeşil logoda hiç yok.
-- [ ] **10.** Watermark saydam logoyla güncellenecek, opaklık %6 → %8.
-- [ ] **11.** `pubspec.yaml:82` var olmayan `no_smoke_launcher_foreground.png` dosyasına işaret
-      ediyor — `flutter_launcher_icons` şu an çalıştırılsa hata verir.
+- [x] **8.** `assets/images/no_smoke_logo_transparent.png` üretildi (`tool/make_transparent_logo.dart`).
+      Sabit renk karşılaştırması kartın gölge degradesini takip edemediği için bölge büyütmeye
+      geçildi; parlaklık tabanı artwork'e taşmayı engelliyor. Ana ekran ikonu değişmedi.
+- [x] **9.** Tema turkuaza geçti: `#00C853` → `#00B8D4`, ikincil `#3FD2B0`. Sabit adı da
+      `noSmokeGreen` → `brandPrimary` yapıldı (11 dosya, 22 kullanım) — "yeşil" adında turkuaz
+      tutmamak için.
+- [x] **10.** Watermark saydam logoya geçti, opaklık %6 → %8.
+- [x] **11.** `pubspec.yaml` kırık ikon referansı, ikonların gerçekte üretildiği dosyaya
+      yönlendirildi. **İkonlar yeniden üretilmedi** — mevcut ana ekran ikonu kasıtlı olarak
+      kartlı ve kullanıcı onu beğeniyor.
 
 ## F. İzin ekranı
 

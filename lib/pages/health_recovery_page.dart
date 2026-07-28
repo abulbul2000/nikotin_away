@@ -64,7 +64,7 @@ class HealthRecoveryPage extends StatelessWidget {
                                 minHeight: 6,
                                 backgroundColor: Colors.white12,
                                 valueColor: const AlwaysStoppedAnimation(
-                                  AppTheme.noSmokeGreen,
+                                  AppTheme.brandPrimary,
                                 ),
                               ),
                             ),
@@ -74,7 +74,7 @@ class HealthRecoveryPage extends StatelessWidget {
                     ),
                     if (reached)
                       const Icon(Icons.check_circle,
-                          color: AppTheme.noSmokeGreen, size: 20),
+                          color: AppTheme.brandPrimary, size: 20),
                   ],
                 ),
               ),

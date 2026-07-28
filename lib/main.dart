@@ -94,10 +94,13 @@ class _NoSmokeAppState extends State<NoSmokeApp> {
               child: IgnorePointer(
                 child: Center(
                   child: Opacity(
-                    opacity: 0.06,
+                    opacity: 0.08,
                     child: Image(
+                      // The card-less mark: the launcher version would render
+                      // its light background as a faint pale square rather
+                      // than the artwork itself.
                       image: AssetImage(
-                        'assets/images/no_smoke_launcher_icon.png',
+                        'assets/images/no_smoke_logo_transparent.png',
                       ),
                       width: 240,
                       height: 240,

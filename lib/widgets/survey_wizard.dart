@@ -137,7 +137,7 @@ class _SurveyWizardState extends State<SurveyWizard> {
                   minHeight: 6,
                   backgroundColor: Colors.white12,
                   valueColor: const AlwaysStoppedAnimation(
-                    AppTheme.noSmokeGreen,
+                    AppTheme.brandPrimary,
                   ),
                 ),
               ),
