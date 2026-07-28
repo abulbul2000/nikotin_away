@@ -342,6 +342,95 @@ class SmokingTimePredictionEngine {
     return result;
   }
 
+  /// How many logged cigarettes it takes before observation and structure
+  /// carry equal weight.
+  ///
+  /// A handful of entries says almost nothing — someone who logs three
+  /// cigarettes on a Tuesday afternoon hasn't shown you their week. Around
+  /// fifty the shape of their day is genuinely visible, so that is the
+  /// half-way point; past a few hundred the prior is barely consulted.
+  static const int calibrationHalfLife = 50;
+
+  /// Ceiling on confidence no matter how much has been logged. This stays a
+  /// heuristic about human behaviour, and presenting it as near-certainty
+  /// would be its own kind of lie.
+  static const double maxCalibratedConfidence = 0.85;
+
+  /// Blends [prior] with what the user has actually logged.
+  ///
+  /// The engine's own output is structural: it knows when they sleep, work
+  /// and take breaks, and reasons about where cigarettes probably fall. That
+  /// is a decent starting guess and a poor finishing one. As real entries
+  /// accumulate this shifts weight onto the observed distribution, so the
+  /// prediction ends up describing this person rather than the schedule they
+  /// described in a survey months ago.
+  ///
+  /// With nothing logged it returns [prior] untouched — no data must never
+  /// look like evidence of a quiet day.
+  SmokingTimePrediction calibrateWithLoggedEvents({
+    required SmokingTimePrediction prior,
+    required List<DateTime> loggedTimes,
+  }) {
+    if (loggedTimes.isEmpty) {
+      return prior;
+    }
+
+    final counts = List<int>.filled(24, 0);
+    for (final time in loggedTimes) {
+      counts[time.hour.clamp(0, 23)] += 1;
+    }
+    final total = counts.fold<int>(0, (sum, value) => sum + value);
+    if (total == 0) {
+      return prior;
+    }
+
+    final observedWeight =
+        total / (total + calibrationHalfLife).toDouble();
+    final structuralWeight = 1 - observedWeight;
+
+    final blended = <double>[];
+    for (var hour = 0; hour < 24; hour++) {
+      final observed = counts[hour] / total;
+      final structural = prior.slotForHour(hour).weight;
+      blended.add((structural * structuralWeight) + (observed * observedWeight));
+    }
+
+    final blendedTotal = blended.fold<double>(0, (sum, value) => sum + value);
+    final estimatedDailyTotal = prior.hourly
+        .fold<int>(0, (sum, slot) => sum + slot.estimatedCigarettes);
+
+    final hourly = <SmokingTimeSlot>[];
+    for (var hour = 0; hour < 24; hour++) {
+      final weight = blendedTotal == 0 ? 0.0 : blended[hour] / blendedTotal;
+      hourly.add(
+        SmokingTimeSlot(
+          hour: hour,
+          weight: weight,
+          estimatedCigarettes: (weight * estimatedDailyTotal).round(),
+        ),
+      );
+    }
+
+    final ranked = List<SmokingTimeSlot>.from(hourly)
+      ..sort((a, b) => b.weight.compareTo(a.weight));
+    final topHours = ranked
+        .where((slot) => slot.weight > 0)
+        .take(3)
+        .map((slot) => slot.hour)
+        .toList(growable: false);
+
+    return SmokingTimePrediction(
+      hourly: hourly,
+      topHours: topHours,
+      confidence: (prior.confidence + observedWeight).clamp(
+        0.0,
+        maxCalibratedConfidence,
+      ),
+      basis: '${prior.basis}+logged',
+      averageMinutesBetweenCigarettes: prior.averageMinutesBetweenCigarettes,
+    );
+  }
+
   int _toInt(dynamic value) {
     if (value is num) {
       return value.toInt();

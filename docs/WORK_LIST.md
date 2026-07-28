@@ -167,7 +167,9 @@
 - [x] **39.** `riskyHours` hesabına bağlandı (son 28 gün). Ağırlık 12 — vekillerin
       *toplamının* üstünde, çünkü vekiller bağımsız değil: uygulamayı açıp nefes testi yapıp
       anket doldurmak tek bir oturum, üç kez sayılıyor. 3 yeni test.
-- [ ] **40.** `SmokingTimePredictionEngine` kalibrasyonu (sentetik veriyle birim testleri)
+- [x] **40.** `calibrateWithLoggedEvents` — yapısal önsel ile gerçek kayıtları harmanlıyor,
+      ağırlık `n/(n+50)` ile kayıt biriktikçe gözleme kayıyor. Güven 0.85 tavanlı.
+      Hafta içi/hafta sonu ayrı kalibre ediliyor. 5 test.
 
 ## K. İlaç sistemi
 

@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/engines/smoking_time_prediction_engine.dart';
+import 'package:no_smoke/models/smoking_time_prediction.dart';
 
 void main() {
   final engine = SmokingTimePredictionEngine();
@@ -198,5 +199,96 @@ void main() {
     // Awake 960 min - (480 min work - 30 min breaks) = 510 min smokable.
     // 510 / 20 = 25.5 -> rounds to 26.
     expect(prediction.averageMinutesBetweenCigarettes, 26);
+  });
+
+  group('calibration against logged events', () {
+    SmokingTimePrediction structuralPrior() => engine.predict(
+      profileContext: const {
+        'sleepTime': '23:00',
+        'wakeTime': '07:00',
+        'workStart': '09:00',
+        'workEnd': '17:00',
+        'workplaceSmokingRule': 'Evet',
+      },
+      packsPerDay: '1 paket',
+    );
+
+    List<DateTime> loggedAt(int hour, int count) => List.generate(
+      count,
+      (i) => DateTime(2026, 7, 1).add(Duration(days: i, hours: hour)),
+    );
+
+    test('nothing logged leaves the prior untouched', () {
+      final prior = structuralPrior();
+
+      final calibrated = engine.calibrateWithLoggedEvents(
+        prior: prior,
+        loggedTimes: const [],
+      );
+
+      // Absence of data must never read as evidence of a quiet day.
+      expect(calibrated.confidence, prior.confidence);
+      expect(calibrated.basis, prior.basis);
+      expect(
+        calibrated.slotForHour(20).weight,
+        prior.slotForHour(20).weight,
+      );
+    });
+
+    test('a few entries nudge the prior without overturning it', () {
+      final prior = structuralPrior();
+
+      final calibrated = engine.calibrateWithLoggedEvents(
+        prior: prior,
+        loggedTimes: loggedAt(21, 5),
+      );
+
+      // Five entries is one evening, not a pattern — the hour rises, but not
+      // to the point of redrawing the day.
+      expect(
+        calibrated.slotForHour(21).weight,
+        greaterThan(prior.slotForHour(21).weight),
+      );
+      expect(calibrated.topHours.first, isNot(21));
+    });
+
+    test('sustained logging takes over the shape of the day', () {
+      final prior = structuralPrior();
+
+      final calibrated = engine.calibrateWithLoggedEvents(
+        prior: prior,
+        loggedTimes: loggedAt(21, 200),
+      );
+
+      expect(calibrated.topHours.first, 21);
+      expect(calibrated.confidence, greaterThan(prior.confidence));
+    });
+
+    test('weights still describe a distribution', () {
+      final calibrated = engine.calibrateWithLoggedEvents(
+        prior: structuralPrior(),
+        loggedTimes: [...loggedAt(8, 30), ...loggedAt(21, 60)],
+      );
+
+      final total = calibrated.hourly
+          .map((slot) => slot.weight)
+          .reduce((a, b) => a + b);
+      expect(total, closeTo(1.0, 0.001));
+      expect(calibrated.hourly, hasLength(24));
+    });
+
+    test('confidence stays short of certainty however much is logged', () {
+      final calibrated = engine.calibrateWithLoggedEvents(
+        prior: structuralPrior(),
+        loggedTimes: loggedAt(21, 5000),
+      );
+
+      // This remains a heuristic about human behaviour; presenting it as
+      // near-certain would be its own kind of lie.
+      expect(
+        calibrated.confidence,
+        lessThanOrEqualTo(SmokingTimePredictionEngine.maxCalibratedConfidence),
+      );
+    });
   });
 }

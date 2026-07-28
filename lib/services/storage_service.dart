@@ -2602,10 +2602,31 @@ class StorageService {
     final isWeekend =
         today.weekday == DateTime.saturday || today.weekday == DateTime.sunday;
 
-    return _smokingTimePredictionEngine.predict(
+    final prior = _smokingTimePredictionEngine.predict(
       profileContext: profileContext,
       packsPerDay: latestSurvey.packsPerDay,
       isWeekend: isWeekend,
+    );
+
+    // Weekdays and weekends are shaped differently, so a weekend prediction
+    // is calibrated against weekend entries only — folding in weekday
+    // afternoons would flatten out exactly the difference being predicted.
+    final logged = await loadSmokingEvents(
+      since: today.subtract(const Duration(days: 90)),
+      limit: 2000,
+    );
+    final relevant = logged
+        .where((event) {
+          final weekend = event.timestamp.weekday == DateTime.saturday ||
+              event.timestamp.weekday == DateTime.sunday;
+          return weekend == isWeekend;
+        })
+        .map((event) => event.timestamp)
+        .toList(growable: false);
+
+    return _smokingTimePredictionEngine.calibrateWithLoggedEvents(
+      prior: prior,
+      loggedTimes: relevant,
     );
   }
 
