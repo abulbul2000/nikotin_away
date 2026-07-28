@@ -122,6 +122,55 @@ void main() {
       expect(service, isNotNull);
     });
 
+    test('no task lands inside a blocked working window', () {
+      final service = DisciplineProtocolService(random: Random(9));
+
+      final plan = service.buildDailyAdaptivePlan(
+        now: DateTime(2026, 7, 16, 7, 0),
+        sleepAt: DateTime(2026, 7, 16, 23, 0),
+        riskyHours: const ['08:00-20:00'],
+        barrierMinutes: 30,
+        targetTaskCount: 8,
+        state: AdaptiveTaskState.initial(),
+        hourlyProfiles: _flatProfile(),
+        // A smoke-free 09:00-17:00 shift with a lunch break left open.
+        blockedWindows: const [('09:00', '12:00'), ('12:30', '17:00')],
+      );
+
+      expect(plan.items, isNotEmpty);
+      for (final item in plan.items) {
+        final minutes = item.scheduledAt.hour * 60 + item.scheduledAt.minute;
+        final inMorningShift = minutes >= 9 * 60 && minutes < 12 * 60;
+        final inAfternoonShift = minutes >= 12 * 60 + 30 && minutes < 17 * 60;
+
+        expect(
+          inMorningShift || inAfternoonShift,
+          isFalse,
+          reason: 'task at ${item.scheduledAt} fell inside the shift',
+        );
+      }
+    });
+
+    test('issues fewer tasks rather than forcing them into blocked time', () {
+      final service = DisciplineProtocolService(random: Random(4));
+
+      final plan = service.buildDailyAdaptivePlan(
+        now: DateTime(2026, 7, 16, 7, 0),
+        sleepAt: DateTime(2026, 7, 16, 23, 0),
+        riskyHours: const ['08:00-22:00'],
+        barrierMinutes: 30,
+        targetTaskCount: 8,
+        state: AdaptiveTaskState.initial(),
+        hourlyProfiles: _flatProfile(),
+        // A long shift leaves barely any room; with a 45-minute minimum gap
+        // eight tasks simply don't fit.
+        blockedWindows: const [('08:00', '20:00')],
+      );
+
+      expect(plan.items.length, lessThan(8));
+      expect(plan.targetTaskCount, plan.items.length);
+    });
+
     test('success outcome increases difficulty and does not reset', () {
       final service = DisciplineProtocolService(random: Random(7));
       final initial = AdaptiveTaskState.initial();

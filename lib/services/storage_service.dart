@@ -1893,6 +1893,7 @@ class StorageService {
       ),
       state: state,
       hourlyProfiles: hourly,
+      blockedWindows: _smokingIntervalService.blockedTaskWindows(windowInput),
     );
     await saveSetting(_adaptivePlanDateKey, todayKey);
     await saveSetting(_adaptivePlanJsonKey, jsonEncode(plan.toJson()));

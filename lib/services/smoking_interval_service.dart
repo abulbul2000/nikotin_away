@@ -152,6 +152,62 @@ class SmokingIntervalService {
     return max(60, available);
   }
 
+  /// Stretches of the day no task should be scheduled into.
+  ///
+  /// Only the working day, and only when the workplace forbids smoking: a
+  /// "don't smoke for 40 minutes" task sent into a shift asks for nothing the
+  /// user wasn't already doing, while still interrupting them for it.
+  ///
+  /// The breaks are handed back as gaps rather than being blocked, because at
+  /// a smoke-free site the break is precisely when people step outside — the
+  /// moment most worth catching. So a 09:00–17:00 shift with a 12:00–12:30
+  /// break blocks 09:00–12:00 and 12:30–17:00, leaving the break open.
+  List<(String, String)> blockedTaskWindows(SmokingWindowInput input) {
+    final rule = input.workplaceRule?.trim().toLowerCase();
+    final smokingBannedAtWork = rule == 'hayır' ||
+        rule == 'hayir' ||
+        rule == 'no' ||
+        rule == 'sadece molalarda' ||
+        rule == 'only breaks';
+    if (!smokingBannedAtWork) {
+      return const [];
+    }
+
+    final workStart = _clockToMinutes(input.workStart);
+    final workEnd = _clockToMinutes(input.workEnd);
+    if (workStart == null || workEnd == null || workEnd == workStart) {
+      return const [];
+    }
+
+    final breaks = input.breaks
+        .map((b) => (_clockToMinutes(b.$1), _clockToMinutes(b.$2)))
+        .where((b) => b.$1 != null && b.$2 != null)
+        .map((b) => (b.$1!, b.$2!))
+        .where((b) => b.$2 > b.$1)
+        .toList()
+      ..sort((a, b) => a.$1.compareTo(b.$1));
+
+    String fmt(int minutes) {
+      final wrapped = minutes % 1440;
+      final h = (wrapped ~/ 60).toString().padLeft(2, '0');
+      final m = (wrapped % 60).toString().padLeft(2, '0');
+      return '$h:$m';
+    }
+
+    final segments = <(String, String)>[];
+    var cursor = workStart;
+    final end = workEnd > workStart ? workEnd : workEnd + 1440;
+    for (final (bStart, bEnd) in breaks) {
+      if (bStart <= cursor || bStart >= end) continue;
+      segments.add((fmt(cursor), fmt(bStart)));
+      cursor = min(bEnd, end);
+    }
+    if (cursor < end) {
+      segments.add((fmt(cursor), fmt(end)));
+    }
+    return segments;
+  }
+
   /// The gap the user currently leaves between cigarettes.
   int naturalIntervalMinutes(SmokingWindowInput input) {
     final cigarettes = input.dailyCigarettes;

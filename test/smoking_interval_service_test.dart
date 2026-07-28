@@ -213,6 +213,50 @@ void main() {
     });
   });
 
+  group('blocked task windows', () {
+    test('blocks nothing when smoking is allowed at work', () {
+      expect(
+        service.blockedTaskWindows(_example(workplaceRule: 'Evet')),
+        isEmpty,
+      );
+    });
+
+    test('blocks the whole shift when the workplace forbids it', () {
+      expect(
+        service.blockedTaskWindows(_example()),
+        [('09:00', '17:00')],
+      );
+    });
+
+    test('leaves the breaks open, blocking only around them', () {
+      final input = _example(
+        workplaceRule: 'Sadece molalarda',
+        breaks: const [('12:00', '12:30'), ('15:00', '15:15')],
+      );
+
+      // The break is exactly when someone steps outside for one, so it stays
+      // available — it's the moment most worth catching.
+      expect(service.blockedTaskWindows(input), [
+        ('09:00', '12:00'),
+        ('12:30', '15:00'),
+        ('15:15', '17:00'),
+      ]);
+    });
+
+    test('handles a shift that runs past midnight', () {
+      final input = _example(workStart: '22:00', workEnd: '06:00');
+
+      expect(service.blockedTaskWindows(input), [('22:00', '06:00')]);
+    });
+
+    test('ignores work times that were never filled in', () {
+      expect(
+        service.blockedTaskWindows(_example(workStart: null, workEnd: null)),
+        isEmpty,
+      );
+    });
+  });
+
   test('implied daily target tracks the barrier', () {
     final input = _example();
 

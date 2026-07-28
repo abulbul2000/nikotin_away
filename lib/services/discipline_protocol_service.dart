@@ -78,12 +78,20 @@ class DisciplineProtocolService {
   // learn to anticipate.
   static const int _minMomentGapMinutes = 45;
 
+  /// [blockedWindows] are stretches no task may land in — in practice the
+  /// working day at a smoke-free workplace. Sending a "don't smoke for 40
+  /// minutes" task into a meeting asks for nothing (the user couldn't have
+  /// smoked anyway) while interrupting them for it, which is the worst of
+  /// both. Breaks are deliberately *not* blocked: at a smoke-free site the
+  /// break is exactly when people step outside, so it's the moment worth
+  /// catching. Each entry is (start, end) as clock strings.
   List<DateTime> generateUnpredictableMoments({
     required DateTime now,
     required DateTime sleepAt,
     required List<String> riskyHours,
     required int minCount,
     required double successRate,
+    List<(String, String)> blockedWindows = const [],
   }) {
     final results = <DateTime>[];
     final seen = <String>{};
@@ -92,6 +100,25 @@ class DisciplineProtocolService {
       sleepAt: sleepAt,
       riskyHours: riskyHours,
     );
+    final blocked = blockedWindows
+        .map((w) => _parseHourRange(now: now, raw: '${w.$1}-${w.$2}'))
+        .whereType<(DateTime, DateTime)>()
+        .toList(growable: false);
+
+    bool isBlocked(DateTime candidate) {
+      for (final (start, end) in blocked) {
+        // Compare against both today's and yesterday's copy of the window so
+        // a shift that runs past midnight still matches.
+        for (final shift in const [-1, 0]) {
+          final s = start.add(Duration(days: shift));
+          final e = end.add(Duration(days: shift));
+          if (!candidate.isBefore(s) && candidate.isBefore(e)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
 
     if (windows.isEmpty) {
       return results;
@@ -123,6 +150,9 @@ class DisciplineProtocolService {
       final minuteOffset = _random.nextInt(maxMinutes);
       final candidate = start.add(Duration(minutes: minuteOffset));
       if (!candidate.isAfter(now) || !candidate.isBefore(sleepAt)) {
+        continue;
+      }
+      if (isBlocked(candidate)) {
         continue;
       }
 
@@ -306,6 +336,7 @@ class DisciplineProtocolService {
     required int targetTaskCount,
     required AdaptiveTaskState state,
     required List<AdaptiveHourlyProfileEntry> hourlyProfiles,
+    List<(String, String)> blockedWindows = const [],
   }) {
     final successRate = state.movingSuccessRate.clamp(0, 1);
     final jitterSpan = max(1, (barrierMinutes * _durationJitter).round());
@@ -316,10 +347,20 @@ class DisciplineProtocolService {
       riskyHours: riskyHours,
       minCount: targetTaskCount,
       successRate: successRate.toDouble(),
+      blockedWindows: blockedWindows,
     );
 
+    // When something is blocked off, take only the moments actually found:
+    // the arithmetic fallback below spaces tasks off `now` with no idea where
+    // the working day sits, so on a long shift it would drop the shortfall
+    // straight into it. Fewer tasks that land somewhere real beats the full
+    // count with some of them unanswerable.
+    final plannedCount = blockedWindows.isEmpty
+        ? targetTaskCount
+        : min(targetTaskCount, moments.length);
+
     final items = <AdaptiveTaskPlanItem>[];
-    for (var i = 0; i < targetTaskCount; i++) {
+    for (var i = 0; i < plannedCount; i++) {
       final scheduledAt = i < moments.length
           ? moments[i]
           : now.add(Duration(minutes: 20 + (i * 35) + _random.nextInt(20)));
@@ -355,7 +396,7 @@ class DisciplineProtocolService {
     }
 
     return AdaptiveTaskPlan(
-      targetTaskCount: targetTaskCount,
+      targetTaskCount: items.length,
       baseDurationMinutes: barrierMinutes,
       items: items,
     );

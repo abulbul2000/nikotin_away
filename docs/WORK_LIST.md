@@ -122,9 +122,11 @@
       görev başarısına düşüyor
 - [x] **22.** `resolveDurationTierRange` ve gün içi kademeli artış silindi. Bariyer haftanın
       taahhüdü olduğu için gün içinde büyümesi, kullanıcıya söylenmemiş bir söz olurdu.
-- [~] **23.** Görev sayısı 4–8, uyanık süreden ölçekleniyor (`dailyTaskCount`). İş saatleri
-      **bariyer hesabından** düşülüyor, ama görevlerin **zamanlanmasından** henüz değil —
-      `generateUnpredictableMoments` mesai penceresini bilmiyor. Sıradaki iş.
+- [x] **23.** Görev sayısı 4–8, uyanık süreden ölçekleniyor (`dailyTaskCount`). İş saatleri
+      hem bariyer hesabından hem görev zamanlamasından dışlanıyor (`blockedTaskWindows` →
+      `generateUnpredictableMoments`). Molalar bilerek **açık** bırakılıyor — dumansız bir iş
+      yerinde mola tam da dışarı çıkılan an. Pencere yetmezse görev sayısı düşürülüyor,
+      mesaiye zorlanmıyor.
 - [ ] **24.** Uzun bariyerde kontrol görevleri (4–8 teması korumak için)
 - [x] **25.** `loadCurrentBarrierMinutes` ilk çağrıda anketten tohumluyor, 7 gün sonra
       gerçek kayıtlarla yeniden değerlendiriyor. Günlük değil haftalık: tek kötü gün gürültü,
