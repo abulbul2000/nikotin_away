@@ -95,6 +95,12 @@ class _BreathTestPageState extends State<BreathTestPage>
   static const int _holdCountdownSeconds = 5;
   int _holdCountdownSecondsLeft = _holdCountdownSeconds;
   bool _holdWaitingForStartTap = false;
+
+  /// When the "Başlat" prompt appeared, on the same clock as
+  /// [BreathAcousticSample.millisecondsSinceStart]. Only samples from this
+  /// point on may start an exhale — the quieter hold before it is what the
+  /// noise floor is measured from, and must not be mistaken for a blow.
+  int? _holdPromptAtMs;
   int _exhaleStartElapsedSeconds = 0;
   Timer? _holdRetryTimer;
   // Long enough for the user to actually hear "Başlata basın" and react to
@@ -310,13 +316,18 @@ class _BreathTestPageState extends State<BreathTestPage>
   /// Sequenced (not fired in parallel with the rationale dialog): starting
   /// the recorder only after permission is actually settled avoids racing
   /// a just-granted permission against the recorder's own startup latency.
-  /// Kicking this off from sit-relax — the very first, user-paced step —
-  /// rather than only at the start of the hold countdown gives the very
-  /// first attempt of a session the same generous calibration window later
-  /// attempts get for free from the rest interval; a cold recorder that's
-  /// only had 5 quiet seconds (the hold step alone) was the likely reason
-  /// attempt 1 specifically struggled to auto-detect while attempts 2/3
-  /// didn't.
+  ///
+  /// Still kicked off from sit-relax so the recorder is warm by the time
+  /// anything is measured — its first samples after start are unreliable. It
+  /// used to be started this early for a second reason too: to hand attempt 1
+  /// a longer calibration window, on the theory that it auto-detected worse
+  /// than attempts 2/3 because it had fewer samples. That was the wrong read.
+  /// The extra samples were the *inhale* the user had just been told to take,
+  /// and the noise floor is measured from the front of the buffer — so a
+  /// longer window meant a louder baseline and a threshold no real blow could
+  /// clear. What fixes attempt 1 is [_startHoldCountdown] clearing the buffer,
+  /// keeping only the hold; warming the recorder here stays worth doing on its
+  /// own. See the searchFromMs tests in breath_acoustic_engine_test.dart.
   Future<void> _prepareMicrophoneForAttempt() async {
     await _ensureMicrophonePermissionWithRationale();
     if (!mounted || _step == _AttemptStep.notStarted) {
@@ -399,6 +410,17 @@ class _BreathTestPageState extends State<BreathTestPage>
   }
 
   void _startHoldCountdown() {
+    // Drop everything captured before the hold. Up to here the attempt has
+    // been anything but quiet — the user was told to sit down, then to take a
+    // deep breath in, and that inhale is loud. Leaving it in the buffer meant
+    // the noise floor was measured off it (so the threshold sat far above any
+    // real exhale, and detection never fired) or it was itself read as an
+    // exhale onset. The hold is the one stretch where the user is
+    // deliberately silent, which makes it the honest baseline. Samples during
+    // the spoken instruction are already discarded by _handleAcousticSample's
+    // _ttsSpeaking guard, so what accumulates from here is just the hold.
+    _currentAttemptSamples.clear();
+    _holdPromptAtMs = null;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
@@ -431,6 +453,9 @@ class _BreathTestPageState extends State<BreathTestPage>
     setState(() {
       _holdWaitingForStartTap = true;
     });
+    _holdPromptAtMs = _currentAttemptSamples.isEmpty
+        ? 0
+        : _currentAttemptSamples.last.millisecondsSinceStart;
     _holdRetryTimer?.cancel();
     _holdRetryTimer = Timer(_holdRetryGrace, () {
       if (!mounted ||
@@ -580,6 +605,7 @@ class _BreathTestPageState extends State<BreathTestPage>
     if (_step == _AttemptStep.holding && _holdWaitingForStartTap) {
       final earlyOnsetMs = _breathAcousticEngine.findExhaleOnsetMs(
         _currentAttemptSamples,
+        searchFromMs: _holdPromptAtMs,
       );
       if (earlyOnsetMs != null) {
         _handleHoldStartTap();
@@ -734,34 +760,24 @@ class _BreathTestPageState extends State<BreathTestPage>
     _beginAutoMeasuredAttempt();
   }
 
+  /// Attempts 2 and 3 run the same sit-relax → deep-breath → hold → exhale
+  /// sequence attempt 1 does.
+  ///
+  /// They used to jump straight to the exhale. That made the three attempts
+  /// measure different things — only attempt 1 included a hold — and it also
+  /// meant the on-screen figure and the step instructions, which live in
+  /// those earlier steps, simply never appeared after the first attempt. The
+  /// only thing still special about attempt 1 is that a tap starts it; the
+  /// rest interval starts these on its own.
   void _beginAutoMeasuredAttempt() {
     SystemSound.play(SystemSoundType.click);
     _autoFinishing = false;
-    _stopwatch
-      ..reset()
-      ..start();
-    _pulseController.repeat(reverse: true);
     setState(() {
       _isRunning = true;
-      _step = _AttemptStep.exhale;
-      _exhaleStartElapsedSeconds = 0;
+      _step = _AttemptStep.sitRelax;
     });
-    _exhaleShrinkController
-      ..stop()
-      ..forward(from: 0);
-    _exhaleWaveController.repeat();
-
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) {
-        setState(() {});
-      }
-    });
-
-    if (_acousticListeningActive) {
-      _acousticGiveUpTimer?.cancel();
-      _acousticGiveUpTimer = Timer(_acousticGiveUpAfter, _giveUpOnAcoustic);
-    }
+    _stepBreathController.repeat(reverse: true);
+    unawaited(_speakStep('breathStepSitRelax', appendPressOk: true));
   }
 
   Future<void> _navigateToResult() async {

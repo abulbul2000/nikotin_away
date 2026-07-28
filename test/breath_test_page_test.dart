@@ -153,13 +153,37 @@ void main() {
     await tester.tap(circleFinder);
     await tester.pump();
 
-    // Attempts 2 and 3: no taps at all to *begin* them — the rest
-    // interval's 20s countdown auto-starts the next attempt directly into
-    // the "exhale" active step once it elapses (there's no real TTS in
-    // the test environment, so nothing blocks on speech completion here).
+    // Attempts 2 and 3: still no tap to *begin* them — the rest interval's
+    // 20s countdown starts the next attempt on its own. From there they run
+    // the same sit-relax → deep-breath → hold → exhale sequence attempt 1
+    // does, so that all three measure the same thing and the step visuals
+    // and instructions appear every time (they used to jump straight to the
+    // exhale, skipping both).
     for (var i = 0; i < 2; i += 1) {
       await tester.pump(const Duration(seconds: 21));
 
+      // sit-relax -> deep-breath
+      await tester.ensureVisible(circleFinder);
+      await tester.tap(circleFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      // deep-breath -> hold
+      await tester.ensureVisible(circleFinder);
+      await tester.tap(circleFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      // hold countdown elapses and prompts "press Start"
+      await tester.pump(const Duration(seconds: 5));
+
+      // confirm the hold -> exhale
+      await tester.ensureVisible(circleFinder);
+      await tester.tap(circleFinder);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      // finish the attempt manually
       await tester.ensureVisible(circleFinder);
       await tester.tap(circleFinder);
       await tester.pump();

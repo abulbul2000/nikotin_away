@@ -216,4 +216,111 @@ void main() {
       expect(quiet.blowIntensity, lessThan(loud.blowIntensity!));
     });
   });
+
+  group('findExhaleOnsetMs searchFromMs', () {
+    /// The shape of a real first attempt: the user is told to breathe in
+    /// deeply (loud), then to hold (quiet — this is the only honest baseline),
+    /// then the "Başlat" prompt appears and they blow (loud again).
+    List<BreathAcousticSample> inhaleThenHoldThenExhale({
+      int inhaleMs = 1200,
+      int holdMs = 3000,
+      int exhaleMs = 2000,
+      int stepMs = 20,
+    }) {
+      final samples = <BreathAcousticSample>[];
+      var t = 0;
+      void run(int durationMs, double energy) {
+        final end = t + durationMs;
+        while (t < end) {
+          samples.add(
+            BreathAcousticSample(millisecondsSinceStart: t, rmsEnergy: energy),
+          );
+          t += stepMs;
+        }
+      }
+
+      run(inhaleMs, 0.25);
+      run(holdMs, 0.001);
+      run(exhaleMs, 0.30);
+      return samples;
+    }
+
+    test('a buffer that opens on the inhale detects nothing at all', () {
+      final engine = BreathAcousticEngine();
+
+      // The baseline is read from the first samples, so when the loud inhale
+      // is still in the buffer it *becomes* the noise floor: the threshold
+      // lands above any real blow and the exhale is never seen. This is why
+      // BreathTestPage clears the buffer when the hold begins — the fix lives
+      // there, and this test pins down what it is protecting against.
+      expect(engine.findExhaleOnsetMs(inhaleThenHoldThenExhale()), isNull);
+    });
+
+    /// What the buffer looks like after that clear: the quiet hold first (so
+    /// the noise floor is honest), then whatever follows.
+    List<BreathAcousticSample> holdThenExhale({
+      int holdMs = 3000,
+      int exhaleMs = 2000,
+      int blipAtMs = -1,
+      int stepMs = 20,
+    }) {
+      final samples = <BreathAcousticSample>[];
+      var t = 0;
+      while (t < holdMs) {
+        final isBlip = blipAtMs >= 0 && t >= blipAtMs && t < blipAtMs + 200;
+        samples.add(
+          BreathAcousticSample(
+            millisecondsSinceStart: t,
+            rmsEnergy: isBlip ? 0.28 : 0.001,
+          ),
+        );
+        t += stepMs;
+      }
+      final end = t + exhaleMs;
+      while (t < end) {
+        samples.add(
+          BreathAcousticSample(millisecondsSinceStart: t, rmsEnergy: 0.30),
+        );
+        t += stepMs;
+      }
+      return samples;
+    }
+
+    test('finds the exhale once the hold provides the baseline', () {
+      final engine = BreathAcousticEngine();
+      final onset = engine.findExhaleOnsetMs(
+        holdThenExhale(),
+        searchFromMs: 3000,
+      );
+
+      expect(onset, isNotNull);
+      expect(onset, greaterThanOrEqualTo(3000));
+    });
+
+    test('a noise during the hold is not taken as the exhale onset', () {
+      final engine = BreathAcousticEngine();
+      final samples = holdThenExhale(blipAtMs: 2000);
+
+      // Someone shifting in their seat mid-hold. Unwindowed, that blip is the
+      // first thing over the threshold and would auto-advance the attempt
+      // before the user has blown.
+      expect(engine.findExhaleOnsetMs(samples), lessThan(3000));
+
+      final onset = engine.findExhaleOnsetMs(samples, searchFromMs: 3000);
+      expect(onset, isNotNull);
+      expect(onset, greaterThanOrEqualTo(3000));
+    });
+
+    test('a hold that stays quiet reports no exhale', () {
+      final engine = BreathAcousticEngine();
+
+      expect(
+        engine.findExhaleOnsetMs(
+          holdThenExhale(exhaleMs: 0),
+          searchFromMs: 3000,
+        ),
+        isNull,
+      );
+    });
+  });
 }

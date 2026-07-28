@@ -115,13 +115,28 @@ class BreathAcousticEngine {
   /// of that run, not the one that confirmed it, so the reported time
   /// matches when the exhale actually started rather than when detection
   /// caught up with it.
-  int? findExhaleOnsetMs(List<BreathAcousticSample> samples) {
+  /// [searchFromMs] restricts which samples may *start* an exhale without
+  /// changing what the noise floor is measured from. The caller needs that
+  /// separation: the hold step is the only genuinely quiet stretch of an
+  /// attempt (the user is holding their breath), so it makes the honest
+  /// baseline — but the loud inhale that preceded it sits in the same buffer
+  /// and would otherwise be picked up as an exhale onset that already
+  /// happened.
+  int? findExhaleOnsetMs(
+    List<BreathAcousticSample> samples, {
+    int? searchFromMs,
+  }) {
     if (!_isCalibrated(samples)) {
       return null;
     }
     final baseline = _baseline(samples);
     final threshold = baseline * onsetMultiplier + onsetAbsoluteMargin;
-    final candidates = samples.skip(_calibrationSampleTotal).toList();
+    final candidates = samples
+        .skip(_calibrationSampleTotal)
+        .where(
+          (s) => searchFromMs == null || s.millisecondsSinceStart >= searchFromMs,
+        )
+        .toList();
 
     var streak = 0;
     for (var i = 0; i < candidates.length; i++) {

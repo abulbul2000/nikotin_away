@@ -67,12 +67,12 @@
 
 ## D. Nefes testi
 
-- [ ] **6.** Ses hafızası "Başlat" anında sıfırlanacak. Şu an derin nefes alma gürültüsü
-      hafızada kaldığı için birinci testte otomatik algılama çalışmıyor
-      (`findExhaleOnsetMs` tüm geçmişi tarıyor, sessizlik ölçümü nefes alma anından alınıyor).
-- [ ] **7.** Üç deneme de aynı tam akışı yaşayacak: otur → derin nefes → tut → üfle. Şu an 2. ve
-      3. deneme doğrudan üflemeye atlıyor (`_beginAutoMeasuredAttempt`), o yüzden görsel ve
-      yönerge yok, ölçümler de aynı şeyi ölçmüyor.
+- [x] **6.** Ses tamponu nefes tutma başlarken temizleniyor, arama penceresi `searchFromMs`
+      ile prompt sonrasına kısıtlandı. Sorun örnek azlığı değil içeriğiydi: gürültü tabanı
+      tamponun başından ölçüldüğü için, oraya düşen derin nefes alma sesi eşiği hiçbir
+      üflemenin aşamayacağı yere çıkarıyordu. 4 yeni motor testi bunu sabitliyor.
+- [x] **7.** Üç deneme de aynı akışı yaşıyor: otur → derin nefes → tut → üfle. Denemeler arası
+      otomatik başlama korundu, sadece atlanan adımlar geri geldi.
 
 ## E. Logo ve tema
 
