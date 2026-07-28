@@ -81,6 +81,15 @@ class AppTexts {
     'smokedLogButtonNotificationBody': 'Sigara ictiyseniz buradan kaydedin',
     'smokedLogButtonAction': 'Sigara Ictim',
     'smokedLogRecordedWithUndo': 'Sigara kaydedildi.',
+    'smokedLogConsentHeading': 'Sigara Ictim butonunu acalim mi?',
+    'smokedLogConsentDataTitle': 'Neler kaydedilir',
+    'smokedLogConsentDataBody':
+        'Sadece butona bastiginiz an ve — Konum Zekasi aciksa — o an sik gittiginiz yerlerden hangisine yakin oldugunuz. Adresiniz, koordinatlariniz veya hareket gecmisiniz kaydedilmez. Konum alinamazsa sigara yine kaydedilir, yer bilgisi bos kalir.',
+    'smokedLogConsentStorageTitle': 'Nerede tutulur',
+    'smokedLogConsentStorageBody':
+        'Yalnizca bu cihazda. Hicbir kayit disari gonderilmez. Butonu ve gecmis kayitlari istediginiz zaman Ayarlar bolumunden kaldirabilirsiniz.',
+    'smokedLogConsentAccept': 'Butonu ac',
+    'smokedLogConsentDecline': 'Simdilik istemiyorum',
     'permissionSetupTitle': 'Gerekli izinler',
     'permissionSetupIntro':
         'Gorevlerin dogru zamanda ve gorunur sekilde ulasabilmesi icin asagidaki izinler gerekiyor. Ayarlardan donunce durum kendiliginden guncellenir.',
@@ -968,6 +977,15 @@ class AppTexts {
     'smokedLogButtonNotificationBody': 'Tap to record a cigarette',
     'smokedLogButtonAction': 'I Smoked',
     'smokedLogRecordedWithUndo': 'Cigarette recorded.',
+    'smokedLogConsentHeading': 'Turn on the I Smoked button?',
+    'smokedLogConsentDataTitle': 'What gets recorded',
+    'smokedLogConsentDataBody':
+        'Only the moment you press the button and — if Location Intelligence is on — which of your frequent places you were near at the time. No address, no coordinates, no movement history. If location isn\'t available the cigarette is still recorded, just without a place.',
+    'smokedLogConsentStorageTitle': 'Where it is kept',
+    'smokedLogConsentStorageBody':
+        'On this device only. Nothing is sent anywhere. You can remove the button and your past records from Settings at any time.',
+    'smokedLogConsentAccept': 'Turn on the button',
+    'smokedLogConsentDecline': 'Not right now',
     'permissionSetupTitle': 'Permissions needed',
     'permissionSetupIntro':
         'These permissions let tasks reach you at the right moment, and visibly. Each row updates on its own when you come back from Settings.',

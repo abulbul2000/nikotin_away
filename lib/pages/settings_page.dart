@@ -21,6 +21,7 @@ import 'language_selection_page.dart';
 import 'location_intelligence_page.dart';
 import 'medications_page.dart';
 import 'permission_setup_page.dart';
+import 'smoked_log_consent_page.dart';
 import 'permissions_center_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -87,6 +88,20 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
 
+    // Shown before the first switch-on only. The button records where the
+    // user was, reduced to one of their own known places — not something to
+    // start collecting off a toggle nobody read.
+    if (!await _smokedLogButtonService.hasEverConsented()) {
+      if (!mounted) return;
+      final accepted = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const SmokedLogConsentPage()),
+      );
+      if (!mounted || accepted != true) {
+        return;
+      }
+    }
+
+    if (!mounted) return;
     final started = await _smokedLogButtonService.enable(
       notificationTitle: context.t('smokedLogButtonNotificationTitle'),
       notificationBody: context.t('smokedLogButtonNotificationBody'),

@@ -19,17 +19,25 @@ Play Console → App content (Uygulama içeriği) → Permissions declaration / 
 > SYSTEM_ALERT_WINDOW is used exclusively to draw this scheduled intervention screen over the foreground app at its exact scheduled time, so it functions the same way regardless of lock state. Specifics:
 > - The permission is optional and requested once, with an explicit in-app explanation, during onboarding (Settings → the same screen also lets the user revoke it at any time).
 > - The overlay is shown only when a scheduled task the user themself set up (via the app's onboarding survey) becomes due — never on app launch, never unprompted, never for advertising or unrelated content.
-> - The overlay always presents two clear actions ("Done" / "Not now") and dismisses itself immediately on either tap; it does not block the device, does not persist as a floating bubble/chat-head, and does not run when no task is due.
+> - The overlay always presents clear actions and dismisses itself immediately on any of them; it does not block the device and does not run when no task is due.
 > - If the permission is not granted, the app falls back to the standard notification-only behavior — no feature is otherwise gated behind this permission.
 >
-> We believe this qualifies as a core, non-substitutable use case per Play's overlay policy, since no alternative Android API reliably presents a foreground-app-agnostic, time-critical prompt without it.
+> The same permission also powers a second, separately opt-in feature: a small translucent quick-log button the user can keep on screen to record a cigarette the moment they smoke one. This one *is* a persistent floating element, so to be explicit about it:
+> - It is off by default and enabled only from Settings, behind a disclosure screen stating what is recorded and where it is kept. It can be switched off in the same place at any time.
+> - It is a single ~64dp translucent button. It never covers the screen, never intercepts touches outside itself (the window is `FLAG_NOT_FOCUSABLE`), is freely draggable out of the way, and shows no advertising or third-party content of any kind.
+> - It requires a deliberate 3-second press-and-hold to register, specifically so that accidental contact cannot record anything; dragging it cancels the hold.
+> - It is attached to screen state, not a schedule: the view is torn down on `ACTION_SCREEN_OFF` and rebuilt on `ACTION_SCREEN_ON`, so it exists only while the screen is on anyway.
+> - Its purpose is the app's core function rather than an add-on: the intervention schedule is computed from when the user actually smokes, and asking them to reconstruct that at the end of the day produced markedly worse data than recording it in the moment.
+>
+> We believe both uses qualify as core, non-substitutable per Play's overlay policy: no alternative Android API reliably presents a foreground-app-agnostic, time-critical prompt, nor offers a one-gesture capture affordance that works while the user is inside another app.
 
 ## Video/ekran görüntüsü için not
 
 Google genelde bu deklarasyona ek olarak kısa bir ekran kaydı ister (30-60 sn yeterli). Şunu göster:
 1. Ayarlar'dan izni açma ekranı (izin diyaloğu + sistem ayar ekranı).
 2. Telefon kilidi açıkken, başka bir uygulama (ör. tarayıcı) önde çalışırken, zamanlanmış görev geldiğinde overlay'in belirmesi.
-3. "Yaptım"/"Şimdi değil" butonlarından birine basılınca overlay'in kapanması.
+3. Görev ekranındaki butonlardan birine basılınca overlay'in kapanması.
+4. **Sigara İçtim butonu için ayrıca:** Ayarlar'dan açılışı (onay ekranı dahil), butonun başka bir uygulama üzerinde dururken altındaki içeriğin normal kaydırılabildiği, 3 saniye basılı tutunca halkanın dolup tik çıktığı, ve sürüklenip kenara çekilebildiği.
 
 ## Kısa Türkçe özet (form'a girmeyecek, hatırlatma amaçlı)
 

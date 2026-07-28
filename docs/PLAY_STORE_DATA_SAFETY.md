@@ -21,8 +21,8 @@ Bu belge, Google Play Console'un "Data Safety" (Veri Güvenliği) formunu doldur
 
 | Play Console Kategorisi | Toplanıyor mu? | Detay |
 |---|---|---|
-| **Konum — Yaklaşık** | Hayır (bkz. not) | Ham konum SQLite'a **hiç yazılmıyor**. Sadece opt-in "Konum Zekası" açıkken, tek seferlik bir GPS örneği anlık olarak işlenip en fazla 8 "önemli yer" merkez-noktasına indirgeniyor; bu merkez noktalar + geofence giriş/çıkış zaman damgaları saklanıyor, ham rota/iz asla değil. |
-| **Konum — Kesin** | Hayır | Aynı gerekçe — hiçbir zaman ham hassas koordinat kalıcı olarak tutulmuyor. |
+| **Konum — Yaklaşık** | Hayır (bkz. not) | Ham konum SQLite'a **hiç yazılmıyor**. Sadece opt-in "Konum Zekası" açıkken, tek seferlik bir GPS örneği anlık olarak işlenip en fazla 8 "önemli yer" merkez-noktasına indirgeniyor; bu merkez noktalar + geofence giriş/çıkış zaman damgaları saklanıyor, ham rota/iz asla değil. **Ek olarak** (opt-in "Sigara İçtim" butonu açıkken) her sigara kaydına, o an bu 8 yerden hangisine yakın olunduğunu gösteren bir **yer kimliği** yazılıyor — koordinat değil, mevcut bir merkez noktaya referans. Hiçbir yere yakın değilse boş kalıyor. |
+| **Konum — Kesin** | Hayır | Aynı gerekçe — hiçbir zaman ham hassas koordinat kalıcı olarak tutulmuyor. Sigara kaydındaki yer bilgisi de koordinat değil, var olan bir merkez noktanın kimliği. |
 | **Kişisel bilgiler — Ad** | Evet | Kullanıcının kendi girdiği isim (anket). Hesap/kimlik doğrulama amaçlı değil. |
 | **Kişisel bilgiler — Diğer (yaş, cinsiyet, meslek)** | Evet | Anket verisi, risk skorlaması için. |
 | **Sağlık ve fitness — Sağlık bilgileri** | Evet | Sigara alışkanlığı, nefes testi sonuçları, uyku tahmini (opt-in), nabız (opt-in, Health Connect), adım sayısı. |

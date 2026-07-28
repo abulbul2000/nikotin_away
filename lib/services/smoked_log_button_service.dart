@@ -37,6 +37,18 @@ class SmokedLogButtonService {
     return (await _storageService.loadSetting(settingKey)) == '1';
   }
 
+  /// Whether the disclosure has been shown and answered before.
+  ///
+  /// Separate from [isEnabled] so switching the button back on later doesn't
+  /// re-explain itself, while a first-ever enable always goes through the
+  /// disclosure — the setting alone can't tell those apart, since both start
+  /// out unset.
+  Future<bool> hasEverConsented() async {
+    return (await _storageService.loadSetting(_consentSeenKey)) == '1';
+  }
+
+  static const String _consentSeenKey = 'smoked_log_button_consent_seen';
+
   /// Returns false when the overlay permission hasn't been granted — the
   /// caller is expected to send the user to the permission screen rather than
   /// silently recording the preference for a button that can't appear.
@@ -58,6 +70,7 @@ class SmokedLogButtonService {
       return false;
     }
     await _storageService.saveSetting(settingKey, '1');
+    await _storageService.saveSetting(_consentSeenKey, '1');
     await _storageService.recordConsentDecision(
       featureKey: 'smoked_log_button',
       granted: true,

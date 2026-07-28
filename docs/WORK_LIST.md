@@ -158,7 +158,12 @@
       Overlay keyguard üstüne çizilemediği için kilit ekranında tek yol bu.
 - [x] **37.** `smoking_events.placeId` (şema v22). Ham koordinat değil yer kimliği;
       `getLastKnownPosition` (GPS uyandırmadan), ~150 m eşleşme. Konum yoksa kayıt yine yazılıyor.
-- [ ] **38.** İlk kurulumda tanıtım + onay ekranı, KVKK dokümanı güncellenecek
+- [x] **38.** `SmokedLogConsentPage` — ilk açılıştan önce bir kez. `hasEverConsented`
+      ayrı tutuluyor, böylece sonradan kapatıp açmak metni tekrar göstermiyor.
+      `PLAY_STORE_DATA_SAFETY.md` yer kimliği bağlantısını beyan ediyor.
+      `PLAY_STORE_PERMISSIONS_JUSTIFICATION.md` düzeltildi — eski metin overlay için
+      "does not persist as a floating bubble/chat-head" diyordu, yeni buton tam olarak o;
+      bu haliyle Play incelemesine gitse yanıltıcı beyan olurdu.
 - [x] **39.** `riskyHours` hesabına bağlandı (son 28 gün). Ağırlık 12 — vekillerin
       *toplamının* üstünde, çünkü vekiller bağımsız değil: uygulamayı açıp nefes testi yapıp
       anket doldurmak tek bir oturum, üç kez sayılıyor. 3 yeni test.
