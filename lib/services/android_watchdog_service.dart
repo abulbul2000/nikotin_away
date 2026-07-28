@@ -85,6 +85,58 @@ class AndroidWatchdogService {
     }
   }
 
+  /// Arms a native alarm for the moment [triggerAt] arrives, which then shows
+  /// the task overlay and starts that task's watchdog.
+  ///
+  /// A scheduled notification can't do either of those itself: both need code
+  /// running at fire time, and with the app closed there is no Dart alive
+  /// then. Starting the watchdog from here (rather than at schedule time)
+  /// also keeps its timeout window tied to when the user was actually asked,
+  /// and stops two tasks scheduled hours apart from overwriting each other's
+  /// watchdog state.
+  static Future<void> scheduleTaskTrigger({
+    required String title,
+    required String body,
+    required String doneLabel,
+    required String declineLabel,
+    required String watchdogId,
+    required String taskTitle,
+    required DateTime triggerAt,
+    required Duration watchdogWindow,
+  }) async {
+    if (!_isAndroid) {
+      return;
+    }
+    try {
+      await _channel.invokeMethod('scheduleTaskTrigger', {
+        'title': title,
+        'body': body,
+        'doneLabel': doneLabel,
+        'declineLabel': declineLabel,
+        'watchdogId': watchdogId,
+        'taskTitle': taskTitle,
+        'triggerAtMillis': triggerAt.millisecondsSinceEpoch,
+        'watchdogWindowMillis': watchdogWindow.inMilliseconds,
+      });
+    } catch (_) {
+      // Best-effort: the scheduled notification is still the user-facing
+      // prompt, so a failed alarm degrades rather than losing the task.
+    }
+  }
+
+  static Future<void> cancelTaskTrigger(String watchdogId) async {
+    if (!_isAndroid || watchdogId.trim().isEmpty) {
+      return;
+    }
+    try {
+      await _channel.invokeMethod('cancelTaskTrigger', {
+        'watchdogId': watchdogId,
+      });
+    } catch (_) {
+      // Best-effort.
+    }
+  }
+
   static Future<void> dismissTaskOverlay() async {
     if (!_isAndroid) {
       return;

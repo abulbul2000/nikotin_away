@@ -1,0 +1,209 @@
+# Güncel İş Listesi
+
+> Oturum kapanıp açıldığında **buradan devam edilir.** Madde tamamlandıkça `[x]` işaretlenir ve
+> yanına kısa not düşülür. Kararların gerekçeleri `docs/TASK_ASSIGNMENT_SYSTEM_DESIGN.md`
+> dosyasında.
+>
+> Son güncelleme: 2026-07-28
+
+## Teslim sırası
+
+1. **Parça 1 — Hatalar** (aşağıda A-G): kullanıcının şikâyet ettiği, yeni sistem gerektirmeyen
+   düzeltmeler. Bitince APK → cihazda test.
+2. **Parça 2 — Yeni sistemler**: aralık algoritması, görev akışı, Sigara İçtim butonu, ilaç,
+   anket yeniden düzeni.
+3. **Parça 3 — Çeviri**: 40 dil, ~28.000 satır. En sona bırakıldı çünkü önce hangi metinlerin
+   kalacağı netleşmeli.
+
+---
+
+# PARÇA 1 — Hatalar
+
+## A. Görev bildirimi spam'i
+
+- [x] **1.** Gecikmiş görevler artık 1 dakikaya yığılmıyor — 15 dakikalık ödemesiz süreyi aşan
+      görev `missed` olarak kapatılıyor, geç teslim edilmiyor. (`home_page.dart`,
+      `_overdueTaskGrace`)
+- [x] **2.** `_ensureMinimumFiveNotificationsUntilSleep` silindi — plan boşken 5 ek bildirim
+      üreten, hepsinde aynı metni kullanan eski yedek zamanlayıcı.
+
+## B. Bildirim görünürlüğü
+
+- [ ] **3.** Planlı görevlerde de overlay çağrılacak. Şu an `showFirstTaskTriggerNotification`
+      overlay'i çağırıyor ama günlük akışta kullanılan `scheduleFirstTaskTriggerNotification`
+      çağırmıyor.
+- [ ] **4.** Katmanlı düşüş: tam ekran izni (Android 14+ kısıtlı) reddedilmişse overlay,
+      o da yoksa ısrarlı heads-up. Görev asla kaybolmaz.
+
+## C. Aksiyonlar uygulamayı açmasın
+
+- [ ] **5.** Tüm bildirim aksiyonlarında `showsUserInterface: false`, işlem arka plan
+      isolate'inde. **SOS hariç** — o zaten uygulamayı açmalı.
+
+## D. Nefes testi
+
+- [ ] **6.** Ses hafızası "Başlat" anında sıfırlanacak. Şu an derin nefes alma gürültüsü
+      hafızada kaldığı için birinci testte otomatik algılama çalışmıyor
+      (`findExhaleOnsetMs` tüm geçmişi tarıyor, sessizlik ölçümü nefes alma anından alınıyor).
+- [ ] **7.** Üç deneme de aynı tam akışı yaşayacak: otur → derin nefes → tut → üfle. Şu an 2. ve
+      3. deneme doğrudan üflemeye atlıyor (`_beginAutoMeasuredAttempt`), o yüzden görsel ve
+      yönerge yok, ölçümler de aynı şeyi ölçmüyor.
+
+## E. Logo ve tema
+
+- [ ] **8.** Saydam zeminli logo üretilecek (beyaz kart kenarlardan taşma-doldurma ile
+      kaldırılacak, kelebeğin içindeki beyaz vurgular korunacak). Ana ekran ikonu değişmez.
+- [ ] **9.** Tema turkuaza geçecek: `#00C853` → `#00B8D4`, ikincil `#3FD2B0`. Logonun ölçülen
+      baskın rengi `#0090B0`; mevcut yeşil logoda hiç yok.
+- [ ] **10.** Watermark saydam logoyla güncellenecek, opaklık %6 → %8.
+- [ ] **11.** `pubspec.yaml:82` var olmayan `no_smoke_launcher_foreground.png` dosyasına işaret
+      ediyor — `flutter_launcher_icons` şu an çalıştırılsa hata verir.
+
+## F. İzin ekranı
+
+- [ ] **12.** İki ayrı izin penceresi (MIUI + overlay, ikisi de aynı butonları kullanıyor) tek
+      bir durum göstergeli ekranda birleşecek.
+- [ ] **13.** `didChangeAppLifecycleState` ile ayarlardan dönüşte izin durumu tazelenecek. Şu an
+      `requestOverlayPermission()` ayarı açıp devam ediyor, sonucu hiç öğrenmiyor.
+
+## G. Silmeler
+
+- [ ] **14.** Haftalık anketteki "Not ekle" alanı — yazılan metin hiçbir yere kaydedilmiyor
+      (`_noteController.text` hiç okunmuyor), ölü giriş.
+- [ ] **15.** Ana sayfadaki "Günlük Değerlendirme" girişi ve `daily_checkin_page.dart` —
+      "Sigara İçtim" butonu aynı veriyi anında topluyor.
+- [ ] **16.** Ana sayfa menüsündeki "Sigara İçtim" butonu — yüzen buton her yerde erişilebilir
+      olacak. Altındaki `_logSmokingNow` mantığı korunacak, yüzen buton onu kullanacak.
+
+- [ ] **17.** Parça 1 doğrulama: `flutter analyze` + `flutter test` + `flutter build apk --debug`
+
+---
+
+# PARÇA 2 — Yeni sistemler
+
+## H. Aralık algoritması (eski kademe merdiveninin yerine)
+
+- [ ] **18.** Doğal aralık hesabı: `(24s − uyku − iş saatleri) ÷ günlük sigara`
+- [ ] **19.** Başlangıç bariyeri = doğal aralık × 1.25
+- [ ] **20.** Haftalık değerlendirme: iyi hafta +%15, kötü hafta −%15
+- [ ] **21.** Ölçüt: gerçek sigara kayıtları **ve** görev başarısı birlikte
+- [ ] **22.** `resolveDurationTierRange` (6 kademeli merdiven) silinecek
+- [ ] **23.** Günlük 4–8 görev, aktif saate göre; iş saatleri hariç, **molalar dahil**
+- [ ] **24.** Uzun bariyerde kontrol görevleri (4–8 teması korumak için)
+- [ ] **25.** İlk hafta anket verisiyle, hafta sonunda gerçek kayıtlarla yeniden kalibrasyon
+
+## I. Görev akışı
+
+- [ ] **26.** `TaskAssignment` modeli + SQLite tablosu (durum makinesi)
+- [ ] **27.** 4 aksiyon: Kabul Et / Ertele / Reddet / SOS Krizdeyim
+- [ ] **28.** Ertele → 5/10/15 dk alt seçenekleri, görev başına en fazla 2 kez
+- [ ] **29.** Reddet → başarısız **+ sigara kaydı +1**
+- [ ] **30.** SOS → nefes egzersizi → aktivite önerisi → kullanıcı erteleme süresi seçer
+      (30dk/1sa/2sa), görev iptal olmaz, en fazla 2 SOS
+- [ ] **31.** Süre bitince **aynı tam ekran**: "Bu süre içinde sigara içtiniz mi?"
+      **Evet = başarısız, Hayır = başarılı** (mevcut sorunun tam tersi — ters bağlanırsa
+      öğrenme motoru tüm veriyi ters kaydeder)
+- [ ] **32.** Yanıtsızlık: 3 deneme × 5 dk → başarısız (uygulama kapalıyken de)
+- [ ] **33.** Oyun/DND/tam ekran tespiti → kuyruk, max 90 dk, kuyrukta >2 görev birikirse
+      `expired` (öğrenmeye nötr). `AccessibilityService` **kullanılmayacak** (Play yasağı).
+
+## J. Sigara İçtim butonu
+
+- [ ] **34.** Şeffaf yüzen buton, `no_smoke_splash_icon.png`, sürüklenebilir,
+      **ekran her açıldığında** görünür (`ACTION_SCREEN_ON/OFF`)
+- [ ] **35.** 3 saniye basılı tut → dolan halka → tik + titreşim. Erken bırakılırsa kayıt yok.
+- [ ] **36.** Kilit ekranı için kalıcı bildirimde aksiyon + 5 sn "Geri Al"
+- [ ] **37.** Konum: ham koordinat değil **yer kimliği**, otomatik etiket
+      ("en sık gittiğiniz yer"). Konum alınamazsa kayıt yine yazılır.
+- [ ] **38.** İlk kurulumda tanıtım + onay ekranı, KVKK dokümanı güncellenecek
+- [ ] **39.** `riskyHours` hesabına bağlanacak — şu an sigara kayıtları oraya **girmiyor**
+      (`storage_service.dart:2832` sadece anket zamanı, telefon kullanımı, görev başarısızlığı
+      kullanıyor)
+- [ ] **40.** `SmokingTimePredictionEngine` kalibrasyonu (sentetik veriyle birim testleri)
+
+## K. İlaç sistemi
+
+- [ ] **41.** "Günde kaç kez?" sorulacak, saatler uyanık saatlere eşit dağıtılıp önerilecek
+- [ ] **42.** Hastalığa özel tavsiye her ilaç hatırlatmasına gömülecek, ayrı bildirim
+      gönderilmeyecek (`scheduleHealthConditionAdviceNotifications` kaldırılacak)
+- [ ] **43.** İpucu havuzu 10 → 150 (5 hastalık × 30)
+- [ ] **44.** İlaç kullanmayan ama hastalığı olan kullanıcıya günde 1 tavsiye bildirimi
+- [ ] **45.** Her ipucunun altına "doktorunuza danışın"
+
+## L. Ana sayfa göstergeleri
+
+- [ ] **46.** "🔥 Sigarasız Seri" kaldırılacak — `quitDate`'ten beri geçen günü sayıyor,
+      kullanıcının içip içmediğine **hiç bakmıyor**
+- [ ] **47.** Yerine üç metrikli azaltma kartı: hedef tutturma serisi + içilmeyen sigara +
+      aralık ilerlemesi
+- [ ] **48.** Ana ekran widget'ı (`NoSmokeWidgetProvider.kt`) aynı metriklere geçecek
+- [ ] **49.** Başarımlar azaltma kilometre taşlarına bağlanacak; `AchievementsPage` şu an
+      hiçbir yerden açılmıyor (ölü ekran), ana akışa bağlanacak
+
+## M. Haftalık anket
+
+- [ ] **50.** Detaylı mod tamamen kaldırılacak (~870 satırlık blok), mod seçici silinecek,
+      "Hızlı (15 sn)" etiketi hiç görünmeyecek
+- [ ] **51.** Uydurma veriler gerçek sorulara dönüşecek — `triggerExposureDays` sabitleri
+      (kahve:3, yemek:3, araba:2, telefon:3, sosyal:3), `withdrawal` (hepsi `isBad ? 2 : 1`),
+      `alcoholDays`, `familySupport`, `cravingMax`
+- [ ] **52.** Kullanılmayan alanlar hem anketten hem skorlamadan çıkarılacak: tedavi/ilaç
+      (artık ilaç sisteminde), danışmanlık hattı, "en yararlı kategori"
+- [ ] **53.** Hızlı Solunum Kontrolü'ne 2 alan eklenecek (uykuya etkisi, enerjiye etkisi).
+      `_quickRespiratoryBaselineSymptom` silinecek — solunum skoru sigara verisinden
+      türetilmeyecek
+- [ ] **54.** mMRC anlaşılır ifadelere geçecek, "Zorlanmıyorum" seçeneği eklenecek ve varsayılan
+      olacak (şu an varsayılan 2 = kullanıcı dokunmasa bile hasta sayılıyor)
+- [ ] **55.** 12 solunum sorusu anlaşılır ifadelere geçecek (8 şiddet: başlık + somut örnek,
+      4 sıklık: gün sayısı yerine "bir iki gece / neredeyse her gece")
+- [ ] **56.** Anket sonrası "ne değişti" özeti: risk skoru değişimi, öğrenilen riskli
+      saat/tetikleyici, yarınki görev planına etkisi
+
+## N. SOS ekranı
+
+- [ ] **57.** "Görev ver" butonu bağlanacak (şu an `// Hook point` placeholder) — aktivite
+      önerisi gösterecek
+- [ ] **58.** Sayfanın tamamı çevrilecek — şu an sıfır `context.t()` kullanımı var, 24 dilin
+      hepsinde Türkçe görünüyor
+
+## O. iOS sınırı
+
+- [ ] **59.** Üç noktada platform arayüzü çizilecek (teslim / zamanlama / meşguliyet tespiti).
+      **iOS kodu bu partide yazılmayacak** — Mac + fiziksel cihaz gerektiriyor.
+      Kabul edilen kısıt: iOS'ta overlay API'si yok, zorlayıcı tam ekran görev imkânsız.
+
+---
+
+# PARÇA 3 — Çeviri
+
+- [ ] **60.** Çalışma zamanı Google Translate mekanizması kaldırılacak
+      (`_requestTranslation` → `translate.googleapis.com` resmî olmayan iç endpoint;
+      ToS riski + gizlilik beyanıyla çelişiyor + ilk açılışta ~95 ardışık istek)
+- [ ] **61.** 24 dilin eksik 201 anahtarı tamamlanacak (~4.800 satır)
+- [ ] **62.** Hiç çevirisi olmayan 14 dil sıfırdan çevrilecek (~10.600 satır):
+      Filipince, Ukraynaca, Romence, Yunanca, Macarca, Çekçe, İsveççe, Danca, Norveççe,
+      Fince, Felemenkçe, Belarusça, Sırpça, Hırvatça
+- [ ] **63.** Yeni özelliklerin metinleri + 150 sağlık ipucu + 130 anket seçeneği (~13.000 satır)
+- [ ] **64.** Sabit metinler `context.t()`'ye çevrilecek: `craving_sos`, `achievements`,
+      `savings`, `health_recovery` (hiç çevrilmemiş) + diğerlerinde 27 sabit metin
+- [ ] **65.** RTL desteği — Arapça için yönlü hizalama
+- [ ] **66.** Taşma koruması — `Expanded`/`Flexible` + `maxLines`/`overflow`.
+      Bilinen somut örnek: `it @ 320×568` anket sayfası 115 piksel taşıyor
+- [ ] **67.** `PLAY_STORE_DATA_SAFETY.md` güncellenecek (artık gerçekten tamamen çevrimdışı)
+
+---
+
+# Ertelenmiş
+
+- **Simülasyon testi** — 1000+ profil davranış simülasyonu + 40 dil × ekran boyutu taraması.
+  Kanıt testi yazıldı ve çalıştı (İtalyanca taşmasını 4 saniyede buldu), kullanıcı sonraya
+  bırakmayı seçti. Test dosyası scratchpad'de saklı.
+- **Geçmişe sigara kaydı ekleme** — Günlük Değerlendirme kaldırıldığı için kullanıcı unuttuğu
+  bir sigarayı sonradan ekleyemeyecek. Gerekirse raporlar ekranına eklenebilir.
+- **Mentor + para kazanma sistemi**, **sigara içmeyenlerin mentor olarak katılması** — ayrı faz.
+
+# Onay bekleyen
+
+- 150 sağlık ipucunun tıbbi içeriği yayına çıkmadan gözden geçirilmeli.
+- Asya dilleri (Tamilce, Kannada, Malayalam, Telugu) için anadili konuşan gözden geçirmesi
+  önerilir.

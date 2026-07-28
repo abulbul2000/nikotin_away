@@ -842,9 +842,6 @@ class NotificationService {
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
     final reminderId = _deriveReminderId(id);
     final watchdogId = 'wdg_$id';
-    // See showFirstTaskTriggerNotification's dueAt for why this spans the
-    // full retry chain rather than a single interval.
-    final dueAt = fireAt.add(_unansweredReminderDelay * _maxTaskAttempts);
     await _plugin.zonedSchedule(
       id,
       _text(code, 'disciplineCommand'),
@@ -899,10 +896,23 @@ class NotificationService {
       }),
     );
 
-    await AndroidWatchdogService.startWatchdog(
-      taskTitle: adjustedDescription,
+    // Armed for [fireAt], not for now: the overlay has to be raised at the
+    // moment the task is actually due (a scheduled notification can't start
+    // it, and with the app closed no Dart is running then), and the watchdog
+    // has to start counting from when the user was really asked. Starting it
+    // here instead would have it poll in the foreground for however many
+    // hours away the task is — and, because WatchdogStore keeps a single
+    // active entry, two tasks scheduled in the same session would overwrite
+    // each other's watchdog.
+    await AndroidWatchdogService.scheduleTaskTrigger(
+      title: _text(code, 'disciplineCommand'),
+      body: adjustedDescription,
+      doneLabel: _text(code, 'taskActionDoneLabel'),
+      declineLabel: _text(code, 'taskActionNotNowLabel'),
       watchdogId: watchdogId,
-      dueAt: dueAt,
+      taskTitle: adjustedDescription,
+      triggerAt: fireAt,
+      watchdogWindow: _unansweredReminderDelay * _maxTaskAttempts,
     );
 
     await _scheduleUnansweredTaskUpdateReminder(

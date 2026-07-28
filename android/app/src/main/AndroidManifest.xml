@@ -101,6 +101,11 @@
             android:exported="false" />
 
         <receiver
+            android:name=".TaskTriggerReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
             android:name=".SleepProbeReceiver"
             android:enabled="true"
             android:exported="false" />

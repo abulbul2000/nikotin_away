@@ -334,6 +334,37 @@ class MainActivity : FlutterActivity() {
 						}
 					}
 
+					"scheduleTaskTrigger" -> {
+						val watchdogId = call.argument<String>("watchdogId").orEmpty()
+						val taskTitle = call.argument<String>("taskTitle").orEmpty()
+						val triggerAtMillis = call.argument<Number>("triggerAtMillis")?.toLong() ?: 0L
+						if (watchdogId.isBlank() || taskTitle.isBlank() || triggerAtMillis <= 0L) {
+							result.error("invalid_args", "watchdogId/taskTitle/triggerAtMillis required", null)
+							return@setMethodCallHandler
+						}
+						TaskTriggerReceiver.schedule(
+							context = this,
+							title = call.argument<String>("title").orEmpty(),
+							body = call.argument<String>("body").orEmpty(),
+							doneLabel = call.argument<String>("doneLabel").orEmpty(),
+							declineLabel = call.argument<String>("declineLabel").orEmpty(),
+							watchdogId = watchdogId,
+							taskTitle = taskTitle,
+							triggerAtMillis = triggerAtMillis,
+							watchdogWindowMillis = call.argument<Number>("watchdogWindowMillis")?.toLong()
+								?: TaskTriggerReceiver.DEFAULT_WATCHDOG_WINDOW_MILLIS,
+						)
+						result.success(true)
+					}
+
+					"cancelTaskTrigger" -> {
+						val watchdogId = call.argument<String>("watchdogId").orEmpty()
+						if (watchdogId.isNotBlank()) {
+							TaskTriggerReceiver.cancel(this, watchdogId)
+						}
+						result.success(true)
+					}
+
 					"dismissTaskOverlay" -> {
 						TaskOverlayService.dismiss(this)
 						result.success(true)

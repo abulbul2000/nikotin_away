@@ -1543,6 +1543,11 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  /// How late a planned task may be and still be worth firing. Past this the
+  /// real-world window it was aimed at is gone, so it is closed out as missed
+  /// rather than delivered late (see the overdue branch in [_notifyNewTasks]).
+  static const Duration _overdueTaskGrace = Duration(minutes: 15);
+
   Future<void> _notifyNewTasks() async {
     if (_todaysTasks.isEmpty) {
       return;
@@ -1569,7 +1574,24 @@ class _HomePageState extends State<HomePage> {
         }
 
         var delay = item.scheduledAt.difference(DateTime.now());
+        if (delay <= -_overdueTaskGrace) {
+          // The moment this task was tied to has already passed — firing it
+          // now would just be catch-up spam with no therapeutic value, and
+          // reopening the app after a few hours away would dump every task
+          // the user was away for onto them at once. Close it out as missed
+          // instead so the learning engine still hears about it.
+          await _storageService.recordAdaptiveTaskOutcome(
+            taskTitle: task,
+            outcome: AdaptiveTaskOutcome.missed,
+            plannedDurationMinutes: item.durationMinutes,
+            scheduledAt: item.scheduledAt,
+          );
+          _notifiedTaskTitles.add(task);
+          await _storageService.markTaskTitleNotifiedToday(task);
+          continue;
+        }
         if (delay.inSeconds <= 0) {
+          // Only just missed (still inside the grace window) — worth firing.
           delay = const Duration(minutes: 1);
         }
 
@@ -1616,8 +1638,6 @@ class _HomePageState extends State<HomePage> {
       await _storageService.markTaskTitleNotifiedToday(task);
       index += 1;
     }
-
-    await _ensureMinimumFiveNotificationsUntilSleep();
   }
 
   static const Duration _sedentaryReminderCooldown = Duration(hours: 3);
@@ -1662,76 +1682,6 @@ class _HomePageState extends State<HomePage> {
       'last_sedentary_reminder_at',
       now.toIso8601String(),
     );
-  }
-
-  Future<void> _ensureMinimumFiveNotificationsUntilSleep() async {
-    if (!_registrationCompleted) {
-      return;
-    }
-
-    // No persisted guard here previously meant this ran — and scheduled a
-    // fresh batch of >=5 more notifications — on *every* app open, not
-    // once per day, compounding the same duplicate-notification bug fixed
-    // in _notifyNewTasks above.
-    if (await _storageService.hasEnsuredMinimumTaskNotificationsToday()) {
-      return;
-    }
-
-    final sleep = await _storageService.loadSleepTime();
-    final parts = (sleep ?? '21:00').split(':');
-    final sleepHour = int.tryParse(parts.first) ?? 21;
-    final sleepMinute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
-    final now = DateTime.now();
-    var sleepAt = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      sleepHour,
-      sleepMinute,
-    );
-    if (!sleepAt.isAfter(now)) {
-      sleepAt = sleepAt.add(const Duration(days: 1));
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    final fallbackTask = _todaysTasks.isNotEmpty
-        ? _todaysTasks.first
-        : context.t('firstTaskNoSmoke15');
-
-    final schedule = _disciplineProtocolService.generateUnpredictableMoments(
-      now: now,
-      sleepAt: sleepAt,
-      riskyHours: _riskyHours,
-      minCount: 5,
-      successRate: _currentSuccessRate(),
-    );
-
-    if (schedule.isEmpty) {
-      await _storageService.markMinimumTaskNotificationsEnsuredToday();
-      return;
-    }
-
-    for (final at in schedule) {
-      final delay = at.difference(DateTime.now());
-      if (delay.inSeconds <= 0) {
-        continue;
-      }
-      await NotificationService.scheduleFirstTaskTriggerNotification(
-        taskDescription: fallbackTask,
-        delay: delay,
-      );
-    }
-    await _storageService.markMinimumTaskNotificationsEnsuredToday();
-
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _nextTaskNotificationText = _formatDateTime(schedule.first);
-    });
   }
 
   Future<void> _refreshNextTaskNotificationInsight(
