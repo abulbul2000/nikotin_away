@@ -10,6 +10,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../core/app_texts.dart';
 import '../models/adaptive_task_models.dart';
 import '../models/medication.dart';
+import '../models/task_assignment.dart';
 import '../pages/breath_test_page.dart';
 import 'android_watchdog_service.dart';
 import 'language_service.dart';
@@ -33,18 +34,213 @@ class NotificationService {
   static const String _typeBreath = 'breath';
   static const String _typeTaskStart = 'task_start';
   static const String _typeTaskFollowUp = 'task_followup';
+  static const String _typeTaskPostpone = 'task_postpone';
+  static const String _typeTaskConfirm = 'task_confirm';
   static const String _typeWeeklySurvey = 'weekly_survey';
   static const String _typeHealthTip = 'health_tip';
   static const String _typeMedicationReminder = 'medication_reminder';
 
+  /// "Kabul Et" — starts the no-smoking window. Kept under its original id so
+  /// notifications already scheduled on a user's device still resolve after
+  /// an update.
   static const String _actionTaskDone = 'task_done';
+
+  /// "Ertele" — opens the 5/10/15 choice below rather than snoozing by a
+  /// fixed amount.
   static const String _actionTaskNotNow = 'task_not_now';
+
+  static const String _actionTaskDecline = 'task_decline';
+  static const String _actionTaskSos = 'task_sos';
+
+  static const String _actionPostpone5 = 'task_postpone_5';
+  static const String _actionPostpone10 = 'task_postpone_10';
+  static const String _actionPostpone15 = 'task_postpone_15';
+
+  /// The window elapsed and we're asking whether they got through it.
+  ///
+  /// Note the polarity: the question is "did you smoke?", so *yes* is the
+  /// failure. The older followup_done/smoked_no pair asked the opposite
+  /// ("did you complete it?") and are kept only so notifications scheduled
+  /// before an update still resolve correctly.
+  static const String _actionConfirmSmokedYes = 'confirm_smoked_yes';
+  static const String _actionConfirmSmokedNo = 'confirm_smoked_no';
+
   static const String _actionFollowUpDone = 'followup_done';
   static const String _actionFollowUpLater = 'followup_later';
   static const String _actionSmokedNo = 'smoked_no';
 
+  static const String _postponeChannelId = 'task_postpone_channel_v1';
+  static const String _taskConfirmChannelId = 'task_confirm_channel_v1';
+
+  /// The four answers a task offers.
+  ///
+  /// Only SOS opens the app. The other three are recorded in the background
+  /// isolate, because a task prompt that yanks the user out of whatever they
+  /// were doing to answer it is its own small punishment for engaging. SOS is
+  /// the exception on purpose: it leads into a breathing exercise, which is a
+  /// screen by nature.
+  static List<AndroidNotificationAction> _taskTriggerActions(String code) {
+    return <AndroidNotificationAction>[
+      AndroidNotificationAction(
+        _actionTaskDone,
+        _text(code, 'taskActionDoneLabel'),
+        showsUserInterface: false,
+        cancelNotification: true,
+      ),
+      AndroidNotificationAction(
+        _actionTaskNotNow,
+        _text(code, 'taskActionNotNowLabel'),
+        showsUserInterface: false,
+        cancelNotification: true,
+      ),
+      AndroidNotificationAction(
+        _actionTaskDecline,
+        _text(code, 'taskActionDeclineLabel'),
+        showsUserInterface: false,
+        cancelNotification: true,
+      ),
+      AndroidNotificationAction(
+        _actionTaskSos,
+        _text(code, 'taskActionSosLabel'),
+        showsUserInterface: true,
+        cancelNotification: true,
+      ),
+    ];
+  }
+
+  /// Asks how long to postpone by, once "Ertele" has been tapped.
+  ///
+  /// A second notification rather than a dialog, because the whole point is
+  /// that answering a task never opens the app. Notification actions can't
+  /// nest, so the choice has to arrive as its own prompt.
+  static Future<void> showPostponeChoiceNotification({
+    required String taskTitle,
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final id = _postponeChoiceIdFor(taskTitle);
+
+    await _plugin.show(
+      id,
+      _text(code, 'postponeChoiceTitle'),
+      _text(code, 'postponeChoiceBody'),
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _postponeChannelId,
+          'Gorev erteleme secimi',
+          importance: Importance.high,
+          priority: Priority.high,
+          // Quiet: the user just answered a loud prompt, and a second alarm
+          // for a follow-up question they asked for would read as nagging.
+          playSound: false,
+          enableVibration: false,
+          visibility: NotificationVisibility.private,
+          actions: <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              _actionPostpone5,
+              _text(code, 'postpone5Label'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionPostpone10,
+              _text(code, 'postpone10Label'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionPostpone15,
+              _text(code, 'postpone15Label'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+          ],
+        ),
+        iOS: const DarwinNotificationDetails(
+          categoryIdentifier: _categoryPostpone,
+        ),
+      ),
+      payload: jsonEncode({
+        'type': _typeTaskPostpone,
+        'taskTitle': taskTitle,
+      }),
+    );
+  }
+
+  /// The end-of-window question, scheduled for when the barrier elapses.
+  ///
+  /// Worded as "did you smoke?", so **yes is the failure**. The older
+  /// follow-up asked "did you complete the task?", where yes meant success —
+  /// wiring these two the same way would invert every outcome the learning
+  /// engine records, which is why the action ids are distinct rather than
+  /// reused.
+  static Future<void> scheduleTaskConfirmationPrompt({
+    required String taskTitle,
+    required Duration delay,
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final scheduleMode = await _resolveAndroidScheduleMode();
+    final fireAt = tz.TZDateTime.now(tz.local).add(delay);
+
+    await _plugin.zonedSchedule(
+      _confirmIdFor(taskTitle),
+      _text(code, 'taskConfirmQuestionTitle'),
+      _text(code, 'taskConfirmQuestion'),
+      fireAt,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _taskConfirmChannelId,
+          'Gorev sonu onayi',
+          importance: Importance.max,
+          priority: Priority.high,
+          playSound: true,
+          enableVibration: true,
+          vibrationPattern: _taskVibrationPattern,
+          sound: _taskAlarmSound,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
+          category: AndroidNotificationCategory.call,
+          fullScreenIntent: true,
+          visibility: NotificationVisibility.private,
+          actions: <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              _actionConfirmSmokedYes,
+              _text(code, 'taskConfirmYesLabel'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionConfirmSmokedNo,
+              _text(code, 'taskConfirmNoLabel'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+          ],
+        ),
+        iOS: const DarwinNotificationDetails(
+          categoryIdentifier: _categoryTaskConfirm,
+        ),
+      ),
+      androidScheduleMode: scheduleMode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: jsonEncode({
+        'type': _typeTaskConfirm,
+        'taskTitle': taskTitle,
+      }),
+    );
+  }
+
+  /// Stable per-task ids so a re-issued prompt replaces its predecessor
+  /// instead of stacking a second copy of the same question.
+  static int _postponeChoiceIdFor(String taskTitle) =>
+      (taskTitle.hashCode.abs() % 100000) + 810000;
+
+  static int _confirmIdFor(String taskTitle) =>
+      (taskTitle.hashCode.abs() % 100000) + 820000;
+
   static const String _categoryTaskStart = 'task_start_category';
   static const String _categoryTaskFollowUp = 'task_followup_category';
+  static const String _categoryPostpone = 'task_postpone_category';
+  static const String _categoryTaskConfirm = 'task_confirm_category';
   // Bumped (v4->v5, v5->v6, v1->v2): Android freezes a channel's
   // sound/vibration settings the first time it's created and ignores code
   // changes afterward unless the channel ID itself changes — this forces
@@ -554,6 +750,33 @@ class NotificationService {
     tz.initializeTimeZones();
   }
 
+  /// Moves the task a notification belongs to into [state].
+  ///
+  /// Payloads carry only the canonical title, so the row has to be found by
+  /// it. A no-op when nothing matches: tasks issued before this table existed
+  /// have no row, and they should keep working through the older path rather
+  /// than throwing here.
+  static Future<void> _transitionTask(
+    String taskTitle,
+    String state, {
+    int? postponeMinutes,
+  }) async {
+    try {
+      final storage = StorageService();
+      final task = await storage.loadLatestTaskAssignmentByTitle(taskTitle);
+      if (task == null) {
+        return;
+      }
+      await storage.transitionTaskAssignment(
+        id: task.id,
+        state: state,
+        postponeMinutes: postponeMinutes,
+      );
+    } catch (_) {
+      // Best effort — never let bookkeeping swallow the user's answer.
+    }
+  }
+
   static Future<void> _handleActionWithoutUi(Map<String, String> event) async {
     final taskTitle = event['taskTitle']?.trim() ?? '';
     final actionId = event['actionId']?.trim() ?? '';
@@ -579,19 +802,72 @@ class NotificationService {
         taskTitle: taskTitle,
         scheduledAt: now.add(delay),
       );
+      await _transitionTask(taskTitle, TaskLifecycleState.accepted);
       await showTaskTimerStartedNotification(
         taskTitle: taskTitle,
         duration: delay,
       );
-      await scheduleTaskFollowUpReminder(taskTitle: taskTitle, delay: delay);
+      // The end-of-window question, asked as "did you smoke?". Replaces the
+      // old follow-up, which asked whether the task was completed — the same
+      // moment, the opposite polarity.
+      await scheduleTaskConfirmationPrompt(taskTitle: taskTitle, delay: delay);
       return;
     }
 
+    // "Ertele" asks how long rather than picking for the user.
     if (actionId == _actionTaskNotNow) {
+      await showPostponeChoiceNotification(taskTitle: taskTitle);
+      return;
+    }
+
+    const postponeMinutes = <String, int>{
+      _actionPostpone5: 5,
+      _actionPostpone10: 10,
+      _actionPostpone15: 15,
+    };
+    final chosen = postponeMinutes[actionId];
+    if (chosen != null) {
+      await _transitionTask(
+        taskTitle,
+        TaskLifecycleState.postponed,
+        postponeMinutes: chosen,
+      );
       await scheduleFirstTaskTriggerNotification(
         taskDescription: taskTitle,
-        delay: const Duration(minutes: 10),
+        delay: Duration(minutes: chosen),
       );
+      return;
+    }
+
+    if (actionId == _actionTaskDecline) {
+      // Scored as smoking, per the rule agreed for this flow: declining is
+      // treated as intending to smoke, so the barrier doesn't keep growing on
+      // the strength of tasks that were simply turned down.
+      await _transitionTask(taskTitle, TaskLifecycleState.failedDeclined);
+      return;
+    }
+
+    if (actionId == _actionTaskSos) {
+      // Suspended, not finished — the breathing exercise runs and hands the
+      // user back to this same task afterwards.
+      await _transitionTask(taskTitle, TaskLifecycleState.sosActive);
+      return;
+    }
+
+    // The end-of-window answer. "Did you smoke?" — so yes is the failure.
+    // Getting this backwards would invert every outcome the learning engine
+    // ever records, which is why these ids are distinct from the older
+    // followup pair rather than reused.
+    if (actionId == _actionConfirmSmokedYes) {
+      await _transitionTask(taskTitle, TaskLifecycleState.failedSmoked);
+      // An admission is also a real cigarette, so it belongs in the same
+      // table the quick-log button writes to — otherwise the risky-hour
+      // ranking never learns about the ones admitted this way.
+      await StorageService().logSmokingNow();
+      return;
+    }
+    if (actionId == _actionConfirmSmokedNo) {
+      await _transitionTask(taskTitle, TaskLifecycleState.succeeded);
       return;
     }
 
@@ -829,20 +1105,7 @@ class NotificationService {
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.call,
           fullScreenIntent: true,
-          actions: <AndroidNotificationAction>[
-            AndroidNotificationAction(
-              _actionTaskDone,
-              _text(code, 'taskActionDoneLabel'),
-              showsUserInterface: false,
-              cancelNotification: true,
-            ),
-            AndroidNotificationAction(
-              _actionTaskNotNow,
-              _text(code, 'taskActionNotNowLabel'),
-              showsUserInterface: false,
-              cancelNotification: true,
-            ),
-          ],
+          actions: _taskTriggerActions(code),
         ),
         iOS: const DarwinNotificationDetails(
           categoryIdentifier: _categoryTaskStart,
@@ -931,20 +1194,7 @@ class NotificationService {
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.call,
           fullScreenIntent: true,
-          actions: <AndroidNotificationAction>[
-            AndroidNotificationAction(
-              _actionTaskDone,
-              _text(code, 'taskActionDoneLabel'),
-              showsUserInterface: false,
-              cancelNotification: true,
-            ),
-            AndroidNotificationAction(
-              _actionTaskNotNow,
-              _text(code, 'taskActionNotNowLabel'),
-              showsUserInterface: false,
-              cancelNotification: true,
-            ),
-          ],
+          actions: _taskTriggerActions(code),
         ),
         iOS: const DarwinNotificationDetails(
           categoryIdentifier: _categoryTaskStart,

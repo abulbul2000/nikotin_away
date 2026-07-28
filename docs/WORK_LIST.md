@@ -138,14 +138,17 @@
 - [x] **26.** `TaskAssignment` + `task_assignments` tablosu (şema v23) + durum makinesi.
       `transitionTaskAssignment` tek geçiş noktası: terminal durumlar kesin, böylece
       watchdog ile aynı anda gelen bir cevap görevi iki kez puanlayamıyor. 8 test.
-- [ ] **27.** 4 aksiyon: Kabul Et / Ertele / Reddet / SOS Krizdeyim
-- [ ] **28.** Ertele → 5/10/15 dk alt seçenekleri, görev başına en fazla 2 kez
-- [ ] **29.** Reddet → başarısız **+ sigara kaydı +1**
+- [x] **27.** 4 aksiyon bildirimde. Sadece SOS uygulamayı açıyor (nefes egzersizi doğası
+      gereği ekran); diğer üçü arka planda.
+- [~] **28.** Ertele → ayrı bildirimle 5/10/15 seçimi (bildirim aksiyonları iç içe
+      olamıyor). Sayaç modelde tutuluyor; 2 kez sınırının uygulanması kaldı.
+- [x] **29.** Reddet → `failed_declined`, öğrenmede `smoked` olarak puanlanıyor.
 - [ ] **30.** SOS → nefes egzersizi → aktivite önerisi → kullanıcı erteleme süresi seçer
       (30dk/1sa/2sa), görev iptal olmaz, en fazla 2 SOS
-- [ ] **31.** Süre bitince **aynı tam ekran**: "Bu süre içinde sigara içtiniz mi?"
-      **Evet = başarısız, Hayır = başarılı** (mevcut sorunun tam tersi — ters bağlanırsa
-      öğrenme motoru tüm veriyi ters kaydeder)
+- [x] **31.** `scheduleTaskConfirmationPrompt` — tam ekran, "Bu süre içinde sigara içtiniz
+      mi?". **Evet = başarısız, Hayır = başarılı.** Eski followup aksiyonları yeniden
+      kullanılmadı, ayrı kimlikler verildi; ters kutup 3 testle sabitlendi. "Evet" ayrıca
+      gerçek sigara kaydı yazıyor, yoksa riskli saat sıralaması bu itirafları hiç görmezdi.
 - [ ] **32.** Yanıtsızlık: 3 deneme × 5 dk → başarısız (uygulama kapalıyken de)
 - [ ] **33.** Oyun/DND/tam ekran tespiti → kuyruk, max 90 dk, kuyrukta >2 görev birikirse
       `expired` (öğrenmeye nötr). `AccessibilityService` **kullanılmayacak** (Play yasağı).
