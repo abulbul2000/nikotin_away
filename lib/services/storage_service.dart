@@ -2988,6 +2988,15 @@ class StorageService {
       breathTestTimes: breathRecords
           .map((record) => record.completedAt)
           .toList(),
+      // The one direct signal in this list. Until now risky hours were
+      // inferred entirely from proxies — when surveys happened to be filled
+      // in, when the phone was busy, when tasks failed — while the moments
+      // the user had actually reported smoking sat unused in the database.
+      // That left the day's tasks aimed at the app's usage pattern rather
+      // than the habit they exist to interrupt.
+      smokingTimes: (await loadSmokingEvents(
+        since: DateTime.now().subtract(const Duration(days: 28)),
+      )).map((event) => event.timestamp).toList(),
     );
 
     final smokingTrend = _behaviorEngine.calculateSmokingTrendFromRecords(

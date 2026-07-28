@@ -193,11 +193,26 @@ class BehaviorEngine {
     return sorted.map((entry) => entry.key).toList();
   }
 
+  /// Ranks the two-hour windows the user is most at risk in.
+  ///
+  /// [smokingTimes] carries the most weight by some distance because it is
+  /// the only direct evidence here: the user said they smoked, and when. The
+  /// rest are proxies of varying quality — a failed task suggests a craving,
+  /// heavy phone use suggests idle time, a survey timestamp only says when
+  /// they happened to open the app.
+  ///
+  /// Its weight is set well above the proxies' *combined* total rather than
+  /// just above the largest, because the proxies are not independent of one
+  /// another. Opening the app, running a breath test and filling in a survey
+  /// are typically one sitting, counted three times over; letting that pile
+  /// up against a directly reported cigarette would aim the day's tasks at
+  /// when the user opens the app instead of when they smoke.
   List<String> calculateRiskyHoursFromTimestamps({
     required List<DateTime> surveyTimes,
     required List<DateTime> appUsageTimes,
     required List<DateTime> taskFailureTimes,
     required List<DateTime> breathTestTimes,
+    List<DateTime> smokingTimes = const [],
   }) {
     final frequency = <String, int>{};
 
@@ -208,9 +223,10 @@ class BehaviorEngine {
       }
     }
 
+    addTimes(smokingTimes, 12);
+    addTimes(taskFailureTimes, 4);
     addTimes(surveyTimes, 3);
     addTimes(appUsageTimes, 2);
-    addTimes(taskFailureTimes, 4);
     addTimes(breathTestTimes, 1);
 
     if (frequency.isEmpty) {

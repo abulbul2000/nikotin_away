@@ -257,5 +257,51 @@ void main() {
 
       expect(trend, 'trendImproving');
     });
+
+    group('risky hours', () {
+      final engine = BehaviorEngine();
+
+      List<DateTime> at(int hour, {int count = 1}) => List.generate(
+        count,
+        (i) => DateTime(2026, 7, 20 - i, hour, 15),
+      );
+
+      test('logged cigarettes decide the top window over proxy signals', () {
+        final hours = engine.calculateRiskyHoursFromTimestamps(
+          // Proxies all pointing at the morning...
+          surveyTimes: at(9, count: 4),
+          appUsageTimes: at(9, count: 4),
+          breathTestTimes: at(9, count: 4),
+          taskFailureTimes: at(9, count: 2),
+          // ...but the user actually reported smoking in the evening.
+          smokingTimes: at(20, count: 4),
+        );
+
+        expect(hours.first, contains('20'));
+      });
+
+      test('still works when nothing has been logged', () {
+        final hours = engine.calculateRiskyHoursFromTimestamps(
+          surveyTimes: at(9, count: 3),
+          appUsageTimes: const [],
+          taskFailureTimes: const [],
+          breathTestTimes: const [],
+        );
+
+        expect(hours, isNotEmpty);
+      });
+
+      test('a single logged cigarette outweighs one failed task', () {
+        final hours = engine.calculateRiskyHoursFromTimestamps(
+          surveyTimes: const [],
+          appUsageTimes: const [],
+          taskFailureTimes: at(11),
+          breathTestTimes: const [],
+          smokingTimes: at(16),
+        );
+
+        expect(hours.first, contains('16'));
+      });
+    });
   });
 }

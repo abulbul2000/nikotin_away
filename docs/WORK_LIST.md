@@ -157,9 +157,9 @@
 - [ ] **37.** Konum: ham koordinat değil **yer kimliği**, otomatik etiket
       ("en sık gittiğiniz yer"). Konum alınamazsa kayıt yine yazılır.
 - [ ] **38.** İlk kurulumda tanıtım + onay ekranı, KVKK dokümanı güncellenecek
-- [ ] **39.** `riskyHours` hesabına bağlanacak — şu an sigara kayıtları oraya **girmiyor**
-      (`storage_service.dart:2832` sadece anket zamanı, telefon kullanımı, görev başarısızlığı
-      kullanıyor)
+- [x] **39.** `riskyHours` hesabına bağlandı (son 28 gün). Ağırlık 12 — vekillerin
+      *toplamının* üstünde, çünkü vekiller bağımsız değil: uygulamayı açıp nefes testi yapıp
+      anket doldurmak tek bir oturum, üç kez sayılıyor. 3 yeni test.
 - [ ] **40.** `SmokingTimePredictionEngine` kalibrasyonu (sentetik veriyle birim testleri)
 
 ## K. İlaç sistemi
