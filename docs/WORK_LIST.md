@@ -140,8 +140,8 @@
       watchdog ile aynı anda gelen bir cevap görevi iki kez puanlayamıyor. 8 test.
 - [x] **27.** 4 aksiyon bildirimde. Sadece SOS uygulamayı açıyor (nefes egzersizi doğası
       gereği ekran); diğer üçü arka planda.
-- [~] **28.** Ertele → ayrı bildirimle 5/10/15 seçimi (bildirim aksiyonları iç içe
-      olamıyor). Sayaç modelde tutuluyor; 2 kez sınırının uygulanması kaldı.
+- [x] **28.** Ertele → ayrı bildirimle 5/10/15 seçimi. Görev başına 2 erteleme / 2 SOS
+      sınırı uygulanıyor: tükenen seçenek bildirimde hiç gösterilmiyor.
 - [x] **29.** Reddet → `failed_declined`, öğrenmede `smoked` olarak puanlanıyor.
 - [ ] **30.** SOS → nefes egzersizi → aktivite önerisi → kullanıcı erteleme süresi seçer
       (30dk/1sa/2sa), görev iptal olmaz, en fazla 2 SOS

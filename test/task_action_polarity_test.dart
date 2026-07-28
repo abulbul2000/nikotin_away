@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/models/adaptive_task_models.dart';
 import 'package:no_smoke/models/task_assignment.dart';
+import 'package:no_smoke/services/notification_service.dart';
 
 /// The end-of-window prompt asks "did you smoke during this time?", so **yes
 /// is the failure**. The prompt it replaced asked "did you complete the
@@ -81,6 +82,17 @@ void main() {
       expect(task(state: TaskLifecycleState.delivered).outcome, isNull);
       expect(task(state: TaskLifecycleState.accepted).outcome, isNull);
       expect(task(state: TaskLifecycleState.sosActive).outcome, isNull);
+    });
+  });
+
+  group('escape-hatch limits', () {
+    test('postpone and SOS are capped at two per task', () {
+      // Both exist so an escape hatch doesn't become the whole flow: without
+      // a cap, postponing indefinitely turns every task into no task, and
+      // SOS — which suspends rather than fails a task — becomes the costless
+      // way to never answer one.
+      expect(NotificationService.maxPostponesPerTask, 2);
+      expect(NotificationService.maxSosPerTask, 2);
     });
   });
 }

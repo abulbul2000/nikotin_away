@@ -72,14 +72,34 @@ class NotificationService {
   static const String _postponeChannelId = 'task_postpone_channel_v1';
   static const String _taskConfirmChannelId = 'task_confirm_channel_v1';
 
-  /// The four answers a task offers.
+  /// How many times one task may be postponed, and how many times SOS may be
+  /// used on it.
+  ///
+  /// Both exist so an escape hatch doesn't become the whole flow. Without a
+  /// cap, postponing indefinitely quietly turns every task into no task, and
+  /// SOS — which suspends the task rather than failing it — becomes the
+  /// costless way to never answer one. Two is enough for a genuinely bad
+  /// moment and short of a habit.
+  static const int maxPostponesPerTask = 2;
+  static const int maxSosPerTask = 2;
+
+  /// The answers a task offers, minus any the user has used up.
   ///
   /// Only SOS opens the app. The other three are recorded in the background
   /// isolate, because a task prompt that yanks the user out of whatever they
   /// were doing to answer it is its own small punishment for engaging. SOS is
   /// the exception on purpose: it leads into a breathing exercise, which is a
   /// screen by nature.
-  static List<AndroidNotificationAction> _taskTriggerActions(String code) {
+  ///
+  /// Exhausted options are dropped rather than shown-and-refused: offering a
+  /// button that answers with "no, not any more" is worse than not offering
+  /// it, and on the third prompt the honest choices really are accept,
+  /// decline, or say nothing.
+  static List<AndroidNotificationAction> _taskTriggerActions(
+    String code, {
+    int postponeCount = 0,
+    int sosCount = 0,
+  }) {
     return <AndroidNotificationAction>[
       AndroidNotificationAction(
         _actionTaskDone,
@@ -87,25 +107,47 @@ class NotificationService {
         showsUserInterface: false,
         cancelNotification: true,
       ),
-      AndroidNotificationAction(
-        _actionTaskNotNow,
-        _text(code, 'taskActionNotNowLabel'),
-        showsUserInterface: false,
-        cancelNotification: true,
-      ),
+      if (postponeCount < maxPostponesPerTask)
+        AndroidNotificationAction(
+          _actionTaskNotNow,
+          _text(code, 'taskActionNotNowLabel'),
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
       AndroidNotificationAction(
         _actionTaskDecline,
         _text(code, 'taskActionDeclineLabel'),
         showsUserInterface: false,
         cancelNotification: true,
       ),
-      AndroidNotificationAction(
-        _actionTaskSos,
-        _text(code, 'taskActionSosLabel'),
-        showsUserInterface: true,
-        cancelNotification: true,
-      ),
+      if (sosCount < maxSosPerTask)
+        AndroidNotificationAction(
+          _actionTaskSos,
+          _text(code, 'taskActionSosLabel'),
+          showsUserInterface: true,
+          cancelNotification: true,
+        ),
     ];
+  }
+
+  /// Reads how much of a task's postpone/SOS allowance is already spent.
+  ///
+  /// Returns zeroes for anything without a row — tasks issued before the
+  /// assignments table existed, and the very first prompt of a new one.
+  static Future<(int postponeCount, int sosCount)> _taskAllowanceFor(
+    String taskTitle,
+  ) async {
+    try {
+      final task = await StorageService().loadLatestTaskAssignmentByTitle(
+        taskTitle,
+      );
+      if (task == null || task.isTerminal) {
+        return (0, 0);
+      }
+      return (task.postponeCount, task.sosCount);
+    } catch (_) {
+      return (0, 0);
+    }
   }
 
   /// Asks how long to postpone by, once "Ertele" has been tapped.
@@ -725,6 +767,11 @@ class NotificationService {
       final event = {
         'type': type ?? '',
         'taskTitle': payload['taskTitle'] ?? '',
+        // Falls back to taskTitle for notifications scheduled before this
+        // field existed — they'll simply not resolve to a row, which is the
+        // same as the behaviour they already had.
+        'canonicalTitle':
+            payload['canonicalTitle'] ?? payload['taskTitle'] ?? '',
         'actionId': actionId ?? '',
       };
 
@@ -783,6 +830,11 @@ class NotificationService {
     if (taskTitle.isEmpty || actionId.isEmpty) {
       return;
     }
+    // The exact ADAPTIVE_NO_SMOKE:<minutes> form. taskTitle is what the user
+    // reads and varies by language, so it can't identify a stored task.
+    final canonicalTitle = (event['canonicalTitle']?.trim().isNotEmpty ?? false)
+        ? event['canonicalTitle']!.trim()
+        : taskTitle;
     _ensureIsolateReady();
 
     final storage = StorageService();
@@ -802,7 +854,8 @@ class NotificationService {
         taskTitle: taskTitle,
         scheduledAt: now.add(delay),
       );
-      await _transitionTask(taskTitle, TaskLifecycleState.accepted);
+      await _transitionTask(
+        canonicalTitle, TaskLifecycleState.accepted);
       await showTaskTimerStartedNotification(
         taskTitle: taskTitle,
         duration: delay,
@@ -828,7 +881,7 @@ class NotificationService {
     final chosen = postponeMinutes[actionId];
     if (chosen != null) {
       await _transitionTask(
-        taskTitle,
+        canonicalTitle,
         TaskLifecycleState.postponed,
         postponeMinutes: chosen,
       );
@@ -843,14 +896,16 @@ class NotificationService {
       // Scored as smoking, per the rule agreed for this flow: declining is
       // treated as intending to smoke, so the barrier doesn't keep growing on
       // the strength of tasks that were simply turned down.
-      await _transitionTask(taskTitle, TaskLifecycleState.failedDeclined);
+      await _transitionTask(
+        canonicalTitle, TaskLifecycleState.failedDeclined);
       return;
     }
 
     if (actionId == _actionTaskSos) {
       // Suspended, not finished — the breathing exercise runs and hands the
       // user back to this same task afterwards.
-      await _transitionTask(taskTitle, TaskLifecycleState.sosActive);
+      await _transitionTask(
+        canonicalTitle, TaskLifecycleState.sosActive);
       return;
     }
 
@@ -859,7 +914,8 @@ class NotificationService {
     // ever records, which is why these ids are distinct from the older
     // followup pair rather than reused.
     if (actionId == _actionConfirmSmokedYes) {
-      await _transitionTask(taskTitle, TaskLifecycleState.failedSmoked);
+      await _transitionTask(
+        canonicalTitle, TaskLifecycleState.failedSmoked);
       // An admission is also a real cigarette, so it belongs in the same
       // table the quick-log button writes to — otherwise the risky-hour
       // ranking never learns about the ones admitted this way.
@@ -867,7 +923,8 @@ class NotificationService {
       return;
     }
     if (actionId == _actionConfirmSmokedNo) {
-      await _transitionTask(taskTitle, TaskLifecycleState.succeeded);
+      await _transitionTask(
+        canonicalTitle, TaskLifecycleState.succeeded);
       return;
     }
 
@@ -1070,6 +1127,7 @@ class NotificationService {
       contextLabel: contextLabel,
       confidence: confidence,
     );
+    final allowance = await _taskAllowanceFor(taskDescription);
     final adjustedDescription = contextLabel == 'eating'
         ? _text(code, 'postMealShieldCommand')
       : AppTexts.localizeCanonicalTextForCode(code, taskDescription);
@@ -1105,7 +1163,11 @@ class NotificationService {
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.call,
           fullScreenIntent: true,
-          actions: _taskTriggerActions(code),
+          actions: _taskTriggerActions(
+            code,
+            postponeCount: allowance.$1,
+            sosCount: allowance.$2,
+          ),
         ),
         iOS: const DarwinNotificationDetails(
           categoryIdentifier: _categoryTaskStart,
@@ -1114,6 +1176,12 @@ class NotificationService {
       payload: jsonEncode({
         'type': _typeTaskStart,
         'taskTitle': taskTitle,
+        // The exact ADAPTIVE_NO_SMOKE:<minutes> form, carried separately.
+        // `taskTitle` here is the on-screen heading and the other trigger
+        // notification puts localised text in the same field, so neither can
+        // be matched back to a task_assignments row — a lookup on them finds
+        // nothing and silently does nothing.
+        'canonicalTitle': taskDescription,
         'reminderId': '$reminderId',
         'watchdogId': watchdogId,
       }),
@@ -1164,6 +1232,7 @@ class NotificationService {
     );
     final now = tz.TZDateTime.now(tz.local);
     final fireAt = now.add(delay).add(Duration(minutes: extraDelay));
+    final allowance = await _taskAllowanceFor(taskDescription);
     final adjustedDescription = contextLabel == 'eating'
         ? _text(code, 'postMealShieldCommand')
       : AppTexts.localizeCanonicalTextForCode(code, taskDescription);
@@ -1194,7 +1263,11 @@ class NotificationService {
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.call,
           fullScreenIntent: true,
-          actions: _taskTriggerActions(code),
+          actions: _taskTriggerActions(
+            code,
+            postponeCount: allowance.$1,
+            sosCount: allowance.$2,
+          ),
         ),
         iOS: const DarwinNotificationDetails(
           categoryIdentifier: _categoryTaskStart,
@@ -1206,6 +1279,10 @@ class NotificationService {
       payload: jsonEncode({
         'type': _typeTaskStart,
         'taskTitle': adjustedDescription,
+        // See showFirstTaskTriggerNotification: adjustedDescription is the
+        // localised, user-facing wording, so the canonical form has to travel
+        // alongside it for the task row to be findable.
+        'canonicalTitle': taskDescription,
         'reminderId': '$reminderId',
         'watchdogId': watchdogId,
       }),
