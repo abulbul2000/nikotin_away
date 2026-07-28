@@ -164,6 +164,39 @@ void main() {
     expect(ids, isNot(contains('open_c')));
   });
 
+  test('SOS suspends a task and hands it back, never ends it', () async {
+    final storage = StorageService();
+    await storage.saveTaskAssignment(
+      _task(id: 'sos', state: TaskLifecycleState.delivered),
+    );
+
+    await storage.transitionTaskAssignment(
+      id: 'sos',
+      state: TaskLifecycleState.sosActive,
+    );
+    final suspended = await storage.loadTaskAssignment('sos');
+    expect(suspended!.sosCount, 1);
+    expect(suspended.isTerminal, isFalse);
+    expect(suspended.outcome, isNull);
+
+    // Then the user picks when to be handed back. Cancelling the task
+    // outright would make SOS the cheapest way to never answer one, so this
+    // has to land on postponed rather than any finished state.
+    final resumed = await storage.transitionTaskAssignment(
+      id: 'sos',
+      state: TaskLifecycleState.postponed,
+      postponeMinutes: 60,
+      sosMinutes: 4,
+    );
+
+    expect(resumed!.state, TaskLifecycleState.postponed);
+    expect(resumed.totalPostponedMinutes, 60);
+    // Time spent breathing is tracked so it isn't charged against the
+    // watchdog's silence window.
+    expect(resumed.sosTotalMinutes, 4);
+    expect(resumed.isTerminal, isFalse);
+  });
+
   test('a canonical title resolves to the most recent task', () async {
     final storage = StorageService();
     await storage.saveTaskAssignment(

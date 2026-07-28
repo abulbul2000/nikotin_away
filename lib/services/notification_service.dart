@@ -12,6 +12,7 @@ import '../models/adaptive_task_models.dart';
 import '../models/medication.dart';
 import '../models/task_assignment.dart';
 import '../pages/breath_test_page.dart';
+import '../pages/craving_sos_page.dart';
 import 'android_watchdog_service.dart';
 import 'language_service.dart';
 import 'phone_state_service.dart';
@@ -824,6 +825,26 @@ class NotificationService {
     }
   }
 
+  /// Opens the craving page for [canonicalTitle], so the breathing exercise
+  /// knows which task to hand the user back to afterwards.
+  ///
+  /// Only reachable when the app is actually running — the SOS action is the
+  /// one action declared `showsUserInterface: true`, so Android brings the
+  /// app up first. If the navigator isn't ready yet the exercise is simply
+  /// skipped; the task is already suspended either way, so nothing is lost
+  /// beyond the screen itself.
+  static void _openSosPage(String canonicalTitle) {
+    final context = _navigatorKey?.currentContext;
+    if (context == null) {
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => CravingSosPage(taskCanonicalTitle: canonicalTitle),
+      ),
+    );
+  }
+
   static Future<void> _handleActionWithoutUi(Map<String, String> event) async {
     final taskTitle = event['taskTitle']?.trim() ?? '';
     final actionId = event['actionId']?.trim() ?? '';
@@ -906,6 +927,7 @@ class NotificationService {
       // user back to this same task afterwards.
       await _transitionTask(
         canonicalTitle, TaskLifecycleState.sosActive);
+      _openSosPage(canonicalTitle);
       return;
     }
 

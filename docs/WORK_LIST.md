@@ -143,8 +143,9 @@
 - [x] **28.** Ertele → ayrı bildirimle 5/10/15 seçimi. Görev başına 2 erteleme / 2 SOS
       sınırı uygulanıyor: tükenen seçenek bildirimde hiç gösterilmiyor.
 - [x] **29.** Reddet → `failed_declined`, öğrenmede `smoked` olarak puanlanıyor.
-- [ ] **30.** SOS → nefes egzersizi → aktivite önerisi → kullanıcı erteleme süresi seçer
-      (30dk/1sa/2sa), görev iptal olmaz, en fazla 2 SOS
+- [x] **30.** SOS → nefes (4-7-8) → aktivite önerisi → "ne zaman dönelim?" (30dk/1sa/2sa).
+      Görev `postponed`'a geçiyor, asla terminal duruma değil. Nefeste geçen süre
+      `sosTotalMinutes`'a yazılıyor ki watchdog'ın sessizlik penceresinden düşülmesin.
 - [x] **31.** `scheduleTaskConfirmationPrompt` — tam ekran, "Bu süre içinde sigara içtiniz
       mi?". **Evet = başarısız, Hayır = başarılı.** Eski followup aksiyonları yeniden
       kullanılmadı, ayrı kimlikler verildi; ters kutup 3 testle sabitlendi. "Evet" ayrıca
@@ -216,10 +217,8 @@
 
 ## N. SOS ekranı
 
-- [ ] **57.** "Görev ver" butonu bağlanacak (şu an `// Hook point` placeholder) — aktivite
-      önerisi gösterecek
-- [ ] **58.** Sayfanın tamamı çevrilecek — şu an sıfır `context.t()` kullanımı var, 24 dilin
-      hepsinde Türkçe görünüyor
+- [x] **57.** Placeholder kaldırıldı; buton artık aktivite önerisi gösteriyor.
+- [x] **58.** SOS sayfası tamamen çevrildi (TR/EN); 40 dil Parça 3'te.
 
 ## O. iOS sınırı
 
