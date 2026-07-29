@@ -10,7 +10,7 @@ Bu belge, Google Play Console'un "Data Safety" (Veri Güvenliği) formunu doldur
 
 - Uygulama **varsayılan olarak cihaz-yerel** çalışır: kendi backend'i yok, kullanıcı hesabı sistemi yok.
 - Tüm kalıcı veri SQLite (`no_smoke.db`) ve `SharedPreferences` içinde, cihazın kendi uygulama sanal alanında (`android:allowBackup="false"` — Android'in otomatik bulut yedeklemesine bile dahil edilmiyor).
-- **Google Translate:** nadir görülen bir cihaz dili seçildiğinde (uygulamanın önceden hazırladığı 39 dilin dışında bir dil), arayüz metinlerini çevirmek için `translate.googleapis.com`'a tek seferlik bir HTTP isteği gidiyor — bkz. Bölüm 4.
+- **Arayüz metinleri hiçbir ağ çağrısı yapmıyor.** Uygulama eskiden, hazır çevirisi olmayan bir cihaz dili seçildiğinde arayüz metinlerini `translate.googleapis.com`'dan çekiyordu; bu yol tamamen kaldırıldı (2026-07-29). Tüm diller uygulamanın içine gömülü tablodan çözülüyor, çevirisi eksik anahtarlar İngilizceye düşüyor. `lib/core/app_texts.dart` artık hiçbir I/O yapmıyor ve bunu bir test koruyor (`test/translation_coverage_test.dart`).
 - **Firebase Crashlytics:** uygulama çöktüğünde, kişisel veri içermeyen teknik hata raporu (hata türü, stack trace, cihaz modeli) otomatik olarak gönderiliyor — bkz. Bölüm 4.
 - **Firebase Storage (isteğe bağlı bulut yedekleme):** kullanıcı Ayarlar → Bulut Yedekleme'yi kendi belirlediği bir şifreyle açarsa, tüm yerel veritabanı cihaz üzerinde şifrelenip (AES-256-GCM) Firebase Storage'a yükleniyor. Şifre sunucuya hiç gönderilmiyor — bkz. Bölüm 4.
 - Reklam SDK'sı veya kullanıcı davranışı izleyen bir analitik SDK'sı **yok**.
@@ -41,13 +41,14 @@ Kullanıcı verisi **hiçbir zaman satılmıyor veya reklam amacıyla paylaşıl
 1. **Çökme raporları** (Firebase Crashlytics) — kişisel veri içermez, yalnızca teknik hata bilgisi. Google'ın [Firebase hizmet şartları](https://firebase.google.com/terms) kapsamında bir "hizmet sağlayıcı" paylaşımıdır, reklam/pazarlama amaçlı değildir.
 2. **Şifreli yedek dosyası** (Firebase Storage) — yalnızca kullanıcı bulut yedeklemeyi kendi isteğiyle açarsa. Yüklenen dosya cihaz üzerinde şifrelenmiştir; Google (ya da biz) şifreyi bilmediği için içeriği okuyamaz.
 
-Çeviri isteği (Bölüm 4) kişisel veri içermez, sadece statik arayüz metni gönderir.
+Bunların dışında uygulama hiçbir sunucuya bağlanmıyor.
 
 ---
 
 ## 4) Ağ Kullanımı Detayı (Play Console "veri aktarımı şifreli mi" sorusu için)
 
-- **Çeviri:** `lib/core/app_texts.dart` → `_translateBatch` → `https://translate.googleapis.com/translate_a/single` (HTTPS). Sadece kullanıcının cihaz dili, önceden hazırlanmış 39 dilin **hiçbirine** denk gelmediğinde, o dilde İLK açılışta. Uygulamanın kendi İngilizce arayüz metinleri dışında hiçbir şey gönderilmiyor. Sonuç cihazda `SharedPreferences`'a önbelleğe alınıyor. Play Console: "Veri şifreli aktarılıyor mu" → Evet (HTTPS); "veri paylaşımı" değil, kullanıcı verisi içermiyor.
+Uygulamanın **yalnızca iki** ağ yolu var, ikisi de HTTPS:
+
 - **Crashlytics:** `lib/main.dart` → `FirebaseCrashlytics` — uygulama çöktüğünde otomatik, HTTPS üzerinden. Kişisel veri göndermez.
 - **Bulut yedekleme:** `lib/services/cloud_backup_service.dart` → Firebase Storage — yalnızca kullanıcı Ayarlar'dan açıp bir yedekleme/geri yükleme başlattığında, HTTPS üzerinden. Gönderilen içerik AES-256-GCM ile cihaz üzerinde önceden şifrelenmiştir; şifreleme anahtarı kullanıcının girdiği şifreden türetilir ve sunucuya hiçbir zaman gönderilmez.
 

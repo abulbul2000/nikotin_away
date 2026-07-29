@@ -39,7 +39,8 @@ Fotoğraf/video, kişi listesi, takvim, mesajlar, finansal bilgi, web geçmişi 
 
 Verilerinizi **hiçbir zaman satmıyor veya reklam/analitik amacıyla paylaşmıyoruz.**
 
-- **Çeviri:** Telefonunuzun dili, uygulamanın önceden hazırladığı 39 dilin dışında nadir bir dilse, arayüz metinlerini çevirmek için Google'ın çeviri servisine (`translate.googleapis.com`) tek seferlik, şifreli (HTTPS) bir istek gönderilir. Bu istekte yalnızca uygulamanın kendi İngilizce arayüz metinleri yer alır — anket cevabınız, sağlık veriniz veya başka bir kişisel veriniz **asla** gönderilmez.
+Uygulamanın internete çıktığı **yalnızca iki** durum var:
+
 - **Hata raporlama (Firebase Crashlytics):** Uygulama beklenmedik şekilde çökerse, hatanın türünü ve teknik ayrıntılarını (hangi ekranda, hangi hata) — isim, anket cevabı veya sağlık verisi **olmadan** — otomatik olarak Google'ın Firebase Crashlytics servisine göndeririz. Amaç yalnızca hataları bulup düzeltmektir.
 - **Bulut yedekleme (Firebase Storage):** Yukarıda (madde 3) açıklandığı gibi, yalnızca siz açtığınızda ve yalnızca sizin şifrenizle şifrelenmiş halde, Google'ın Firebase Storage servisine gönderilir. Şifrelenmemiş içerik bize veya Google'a hiçbir zaman ulaşmaz.
 

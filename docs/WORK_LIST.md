@@ -261,7 +261,8 @@
 - [x] **65.** 9 nokta yönlü karşılığına çevrildi; kaynak taraması testte.
 - [x] **66.** 320×568 render testi tr/de/ru/ta/ar için anket, rozet ızgarası ve ilaç
       düzenleyicisini kapsıyor. Sebep: 31 dropdown'un hiçbirinde isExpanded yoktu.
-- [ ] **67.** `PLAY_STORE_DATA_SAFETY.md` güncellenecek (artık gerçekten tamamen çevrimdışı)
+- [x] **67.** Veri güvenliği belgesi, gizlilik politikası ve mimari yol haritası güncellendi.
+      Uygulamanın artık yalnızca iki ağ yolu var: Crashlytics ve isteğe bağlı bulut yedekleme.
 
 ---
 
