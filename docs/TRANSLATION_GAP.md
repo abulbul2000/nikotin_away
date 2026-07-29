@@ -2,7 +2,7 @@
 
 Referans: İngilizce tabloda **1027** anahtar.
 Desteklenen dil: **39**.
-Toplam eksik giriş: **23.255**.
+Toplam eksik giriş: **22.519**.
 
 Eksik anahtar İngilizceye düşer — uygulama çalışır, ama kullanıcı
 cümlenin ortasında dil değiştirir. Çalışma anı çevirisi kaldırıldığı
@@ -23,14 +23,6 @@ için bu boşluk artık ağdan kapatılmıyor, elle kapatılacak.
 | `be` | 0 | 1027 | %0 |
 | `sr` | 0 | 1027 | %0 |
 | `hr` | 0 | 1027 | %0 |
-| `bn` | 553 | 474 | %54 |
-| `pa` | 553 | 474 | %54 |
-| `te` | 553 | 474 | %54 |
-| `mr` | 553 | 474 | %54 |
-| `ta` | 553 | 474 | %54 |
-| `gu` | 553 | 474 | %54 |
-| `kn` | 553 | 474 | %54 |
-| `ml` | 553 | 474 | %54 |
 | `de` | 645 | 382 | %63 |
 | `ar` | 645 | 382 | %63 |
 | `fr` | 645 | 382 | %63 |
@@ -43,6 +35,14 @@ için bu boşluk artık ağdan kapatılmıyor, elle kapatılacak.
 | `zh` | 645 | 382 | %63 |
 | `ko` | 645 | 382 | %63 |
 | `hi` | 645 | 382 | %63 |
+| `bn` | 645 | 382 | %63 |
+| `pa` | 645 | 382 | %63 |
+| `te` | 645 | 382 | %63 |
+| `mr` | 645 | 382 | %63 |
+| `ta` | 645 | 382 | %63 |
+| `gu` | 645 | 382 | %63 |
+| `kn` | 645 | 382 | %63 |
+| `ml` | 645 | 382 | %63 |
 | `th` | 645 | 382 | %63 |
 | `vi` | 645 | 382 | %63 |
 | `id` | 645 | 382 | %63 |
