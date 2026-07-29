@@ -250,19 +250,17 @@
 
 # PARÇA 3 — Çeviri
 
-- [ ] **60.** Çalışma zamanı Google Translate mekanizması kaldırılacak
-      (`_requestTranslation` → `translate.googleapis.com` resmî olmayan iç endpoint;
-      ToS riski + gizlilik beyanıyla çelişiyor + ilk açılışta ~95 ardışık istek)
-- [ ] **61.** 24 dilin eksik 201 anahtarı tamamlanacak (~4.800 satır)
-- [ ] **62.** Hiç çevirisi olmayan 14 dil sıfırdan çevrilecek (~10.600 satır):
-      Filipince, Ukraynaca, Romence, Yunanca, Macarca, Çekçe, İsveççe, Danca, Norveççe,
-      Fince, Felemenkçe, Belarusça, Sırpça, Hırvatça
-- [ ] **63.** Yeni özelliklerin metinleri + 150 sağlık ipucu + 130 anket seçeneği (~13.000 satır)
-- [ ] **64.** Sabit metinler `context.t()`'ye çevrilecek: `craving_sos`, `achievements`,
-      `savings`, `health_recovery` (hiç çevrilmemiş) + diğerlerinde 27 sabit metin
-- [ ] **65.** RTL desteği — Arapça için yönlü hizalama
-- [ ] **66.** Taşma koruması — `Expanded`/`Flexible` + `maxLines`/`overflow`.
-      Bilinen somut örnek: `it @ 320×568` anket sayfası 115 piksel taşıyor
+- [x] **60.** Kaldırıldı. app_texts.dart artık hiçbir I/O yapmıyor; dosyada googleapis,
+      HttpClient veya dart:io geçmediğini test koruyor.
+- [~] **61-63.** Kritik yol anahtarları (92 adet: azaltma kartı, rozetler, yeni anket,
+      ilaç akışı) 14 dilde tamamlandı → 1.472 giriş. 150 sağlık ipucu TR/EN yazıldı.
+      Kalan boşluk `docs/TRANSLATION_GAP.md` içinde dil dil dökülü: 23.255 giriş,
+      8 Hint dili %54, 13 dil %0.
+- [~] **64.** `craving_sos` ve `achievements` çevrildi. `savings`, `health_recovery`
+      ve diğerlerindeki sabit metinler duruyor.
+- [x] **65.** 9 nokta yönlü karşılığına çevrildi; kaynak taraması testte.
+- [x] **66.** 320×568 render testi tr/de/ru/ta/ar için anket, rozet ızgarası ve ilaç
+      düzenleyicisini kapsıyor. Sebep: 31 dropdown'un hiçbirinde isExpanded yoktu.
 - [ ] **67.** `PLAY_STORE_DATA_SAFETY.md` güncellenecek (artık gerçekten tamamen çevrimdışı)
 
 ---
