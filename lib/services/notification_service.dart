@@ -457,6 +457,25 @@ class NotificationService {
     await _syncTaskOverlayOutcomesFromNative();
     await _syncSleepActivityFromNative();
     await _syncSmokedLogEventsFromNative();
+    await _restoreSmokedLogButton(code);
+  }
+
+  /// Puts the floating button back after a reboot or a process death.
+  ///
+  /// Android does not restart the overlay service on its own, so without this
+  /// the button disappeared the first time the phone was restarted and never
+  /// came back — the switch in settings still read "on", which made it look
+  /// like the feature had simply stopped working.
+  static Future<void> _restoreSmokedLogButton(String code) async {
+    try {
+      await SmokedLogButtonService().restoreIfEnabled(
+        notificationTitle: _text(code, 'smokedLogButtonNotificationTitle'),
+        notificationBody: _text(code, 'smokedLogButtonNotificationBody'),
+        actionLabel: _text(code, 'smokedLogButtonAction'),
+      );
+    } catch (_) {
+      // Best effort: the user can always toggle it again from settings.
+    }
   }
 
   static Future<void> refreshLocalizedResources() async {

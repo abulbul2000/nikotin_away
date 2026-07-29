@@ -25,13 +25,20 @@ class SmokedLogButtonService {
   final StorageService _storageService;
   final LocationIntelligenceService _locationService;
 
+  /// Every method here is a no-op off Android, since the overlay is an
+  /// Android-only surface. Injectable because reading `Platform.isAndroid`
+  /// directly made the whole service unreachable from tests, which run on
+  /// the host machine — the lifecycle this class exists to manage could not
+  /// be checked at all.
+  final bool _isAndroid;
+
   SmokedLogButtonService({
     StorageService? storageService,
     LocationIntelligenceService? locationService,
+    bool? isAndroid,
   }) : _storageService = storageService ?? StorageService(),
-       _locationService = locationService ?? LocationIntelligenceService();
-
-  static bool get _isAndroid => Platform.isAndroid;
+       _locationService = locationService ?? LocationIntelligenceService(),
+       _isAndroid = isAndroid ?? Platform.isAndroid;
 
   Future<bool> isEnabled() async {
     return (await _storageService.loadSetting(settingKey)) == '1';

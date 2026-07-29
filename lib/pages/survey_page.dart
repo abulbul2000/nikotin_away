@@ -11,12 +11,14 @@ import '../services/device_permission_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/permission_service.dart';
+import '../services/smoked_log_button_service.dart';
 import '../widgets/consecutive_smoking_section.dart';
 import '../widgets/no_smoke_logo.dart';
 import '../widgets/packs_per_day_section.dart';
 import '../widgets/survey_wizard.dart';
 import 'breath_test_page.dart';
 import 'permission_setup_page.dart';
+import 'smoked_log_consent_page.dart';
 
 class SurveyPage extends StatefulWidget {
   const SurveyPage({super.key});
@@ -447,6 +449,43 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
     return medications;
   }
 
+  /// Introduces the floating "I smoked" button once, during setup.
+  ///
+  /// The button is the app's only source of ground truth about when someone
+  /// actually smokes — the barrier length and the risky-hour ranking are both
+  /// computed from it. It used to be reachable only from a switch in
+  /// settings, so a new user had no reason to know it existed, and the
+  /// disclosure written for it was never shown to anyone who did not go
+  /// looking. Offered here because it is the moment the overlay permission
+  /// it depends on has just been dealt with.
+  ///
+  /// Declining is free: the button stays off and nothing asks again.
+  Future<void> _offerQuickLogButton() async {
+    final service = SmokedLogButtonService();
+    if (await service.hasEverConsented()) {
+      return;
+    }
+    if (!await DevicePermissionService.hasOverlayPermission()) {
+      // Without the permission the button cannot be drawn, and enable()
+      // would refuse anyway. Settings still offers it later.
+      return;
+    }
+    if (!mounted) return;
+
+    final accepted = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const SmokedLogConsentPage()),
+    );
+    if (accepted != true || !mounted) {
+      return;
+    }
+
+    await service.enable(
+      notificationTitle: context.t('smokedLogButtonNotificationTitle'),
+      notificationBody: context.t('smokedLogButtonNotificationBody'),
+      actionLabel: context.t('smokedLogButtonAction'),
+    );
+  }
+
   Future<void> _saveInitialProfileSnapshot(String recordId) async {
     final selectedTriggers = _selectedTriggerLabels();
     final selectedHealth = _selectedHealthConditions();
@@ -591,6 +630,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             builder: (_) => const PermissionSetupPage(),
           ),
         );
+      }
+      if (mounted) {
+        await _offerQuickLogButton();
       }
     }
 
