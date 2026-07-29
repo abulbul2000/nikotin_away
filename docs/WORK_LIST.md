@@ -138,8 +138,10 @@
 - [x] **26.** `TaskAssignment` + `task_assignments` tablosu (şema v23) + durum makinesi.
       `transitionTaskAssignment` tek geçiş noktası: terminal durumlar kesin, böylece
       watchdog ile aynı anda gelen bir cevap görevi iki kez puanlayamıyor. 8 test.
-- [x] **27.** 4 aksiyon bildirimde. Sadece SOS uygulamayı açıyor (nefes egzersizi doğası
-      gereği ekran); diğer üçü arka planda.
+- [x] **27.** 4 aksiyon hem bildirimde hem overlay'de. Sadece SOS uygulamayı açıyor (nefes
+      egzersizi doğası gereği ekran); diğer üçü arka planda. Overlay eskiden 2 butonluydu ve
+      "done" dışındaki her şeyi erteleme sayıyordu — overlay üzerinden verilen bir ret
+      öğrenme motoruna hiç başarısızlık olarak ulaşmıyordu.
 - [x] **28.** Ertele → ayrı bildirimle 5/10/15 seçimi. Görev başına 2 erteleme / 2 SOS
       sınırı uygulanıyor: tükenen seçenek bildirimde hiç gösterilmiyor.
 - [x] **29.** Reddet → `failed_declined`, öğrenmede `smoked` olarak puanlanıyor.

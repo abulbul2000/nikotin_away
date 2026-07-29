@@ -32,13 +32,16 @@ class TaskOverlayService : Service() {
         when (intent?.action) {
             ACTION_SHOW -> {
                 ensureForeground()
-                val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
-                val body = intent.getStringExtra(EXTRA_BODY).orEmpty()
-                val doneLabel = intent.getStringExtra(EXTRA_DONE_LABEL).orEmpty()
-                val declineLabel = intent.getStringExtra(EXTRA_DECLINE_LABEL).orEmpty()
-                val watchdogId = intent.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty()
-                val taskTitle = intent.getStringExtra(EXTRA_TASK_TITLE).orEmpty()
-                showOverlay(title, body, doneLabel, declineLabel, watchdogId, taskTitle)
+                showOverlay(
+                    title = intent.getStringExtra(EXTRA_TITLE).orEmpty(),
+                    body = intent.getStringExtra(EXTRA_BODY).orEmpty(),
+                    acceptLabel = intent.getStringExtra(EXTRA_DONE_LABEL).orEmpty(),
+                    postponeLabel = intent.getStringExtra(EXTRA_DECLINE_LABEL).orEmpty(),
+                    declineLabel = intent.getStringExtra(EXTRA_DECLINE_ONLY_LABEL).orEmpty(),
+                    sosLabel = intent.getStringExtra(EXTRA_SOS_LABEL).orEmpty(),
+                    watchdogId = intent.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty(),
+                    taskTitle = intent.getStringExtra(EXTRA_TASK_TITLE).orEmpty(),
+                )
             }
             ACTION_DISMISS -> {
                 removeOverlay()
@@ -82,8 +85,10 @@ class TaskOverlayService : Service() {
     private fun showOverlay(
         title: String,
         body: String,
-        doneLabel: String,
+        acceptLabel: String,
+        postponeLabel: String,
         declineLabel: String,
+        sosLabel: String,
         watchdogId: String,
         taskTitle: String,
     ) {
@@ -128,20 +133,27 @@ class TaskOverlayService : Service() {
             stopSelf()
         }
 
-        val doneButton = Button(this).apply {
-            text = doneLabel
-            setOnClickListener { finish("done") }
-        }
-        val declineButton = Button(this).apply {
-            text = declineLabel
-            setPadding(0, dp(12), 0, 0)
-            setOnClickListener { finish("declined") }
+        // Same four answers the notification offers, so the overlay isn't a
+        // reduced version of the same prompt — whichever surface the user
+        // happens to be looking at should let them say the same things.
+        // Outcome strings are matched in NotificationService's drain.
+        fun answerButton(label: String, outcome: String) = Button(this).apply {
+            text = label
+            minHeight = dp(56)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setOnClickListener { finish(outcome) }
         }
 
         container.addView(titleView)
         container.addView(bodyView)
-        container.addView(doneButton)
-        container.addView(declineButton)
+        container.addView(answerButton(acceptLabel, OUTCOME_ACCEPTED))
+        if (postponeLabel.isNotBlank()) {
+            container.addView(answerButton(postponeLabel, OUTCOME_POSTPONED))
+        }
+        container.addView(answerButton(declineLabel, OUTCOME_DECLINED))
+        if (sosLabel.isNotBlank()) {
+            container.addView(answerButton(sosLabel, OUTCOME_SOS))
+        }
 
         val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -183,17 +195,33 @@ class TaskOverlayService : Service() {
         const val EXTRA_BODY = "extra_body"
         const val EXTRA_DONE_LABEL = "extra_done_label"
         const val EXTRA_DECLINE_LABEL = "extra_decline_label"
+        const val EXTRA_DECLINE_ONLY_LABEL = "extra_decline_only_label"
+        const val EXTRA_SOS_LABEL = "extra_sos_label"
+
+        /// Kept in sync with NotificationService's overlay-outcome drain.
+        /// "done" is unchanged so an overlay raised by an older build still
+        /// resolves after an update.
+        const val OUTCOME_ACCEPTED = "done"
+        const val OUTCOME_POSTPONED = "postponed"
+        const val OUTCOME_DECLINED = "declined"
+        const val OUTCOME_SOS = "sos"
         const val EXTRA_WATCHDOG_ID = "extra_watchdog_id"
         const val EXTRA_TASK_TITLE = "extra_task_title"
         const val CHANNEL_ID = "task_overlay_foreground_channel"
         const val FOREGROUND_NOTIFICATION_ID = 73101
 
+        /// [postponeLabel] and [sosLabel] may be blank, which hides those
+        /// buttons — the flow caps postpone and SOS at two uses per task, and
+        /// a button whose answer is "no, not any more" is worse than no
+        /// button.
         fun show(
             context: Context,
             title: String,
             body: String,
-            doneLabel: String,
+            acceptLabel: String,
+            postponeLabel: String,
             declineLabel: String,
+            sosLabel: String,
             watchdogId: String,
             taskTitle: String,
         ) {
@@ -201,8 +229,10 @@ class TaskOverlayService : Service() {
                 action = ACTION_SHOW
                 putExtra(EXTRA_TITLE, title)
                 putExtra(EXTRA_BODY, body)
-                putExtra(EXTRA_DONE_LABEL, doneLabel)
-                putExtra(EXTRA_DECLINE_LABEL, declineLabel)
+                putExtra(EXTRA_DONE_LABEL, acceptLabel)
+                putExtra(EXTRA_DECLINE_LABEL, postponeLabel)
+                putExtra(EXTRA_DECLINE_ONLY_LABEL, declineLabel)
+                putExtra(EXTRA_SOS_LABEL, sosLabel)
                 putExtra(EXTRA_WATCHDOG_ID, watchdogId)
                 putExtra(EXTRA_TASK_TITLE, taskTitle)
             }

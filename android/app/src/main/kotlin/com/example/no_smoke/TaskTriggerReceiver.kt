@@ -46,13 +46,15 @@ class TaskTriggerReceiver : BroadcastReceiver() {
         // losing the task.
         if (canDrawOverlays(context)) {
             TaskOverlayService.show(
-                context,
-                intent.getStringExtra(EXTRA_TITLE).orEmpty(),
-                intent.getStringExtra(EXTRA_BODY).orEmpty(),
-                intent.getStringExtra(EXTRA_DONE_LABEL).orEmpty(),
-                intent.getStringExtra(EXTRA_DECLINE_LABEL).orEmpty(),
-                watchdogId,
-                taskTitle,
+                context = context,
+                title = intent.getStringExtra(EXTRA_TITLE).orEmpty(),
+                body = intent.getStringExtra(EXTRA_BODY).orEmpty(),
+                acceptLabel = intent.getStringExtra(EXTRA_DONE_LABEL).orEmpty(),
+                postponeLabel = intent.getStringExtra(EXTRA_POSTPONE_LABEL).orEmpty(),
+                declineLabel = intent.getStringExtra(EXTRA_DECLINE_LABEL).orEmpty(),
+                sosLabel = intent.getStringExtra(EXTRA_SOS_LABEL).orEmpty(),
+                watchdogId = watchdogId,
+                taskTitle = taskTitle,
             )
         }
     }
@@ -67,7 +69,9 @@ class TaskTriggerReceiver : BroadcastReceiver() {
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_BODY = "extra_body"
         const val EXTRA_DONE_LABEL = "extra_done_label"
+        const val EXTRA_POSTPONE_LABEL = "extra_postpone_label"
         const val EXTRA_DECLINE_LABEL = "extra_decline_label"
+        const val EXTRA_SOS_LABEL = "extra_sos_label"
         const val EXTRA_WATCHDOG_ID = "extra_watchdog_id"
         const val EXTRA_TASK_TITLE = "extra_task_title"
         const val EXTRA_WATCHDOG_WINDOW_MILLIS = "extra_watchdog_window_millis"
@@ -97,8 +101,10 @@ class TaskTriggerReceiver : BroadcastReceiver() {
             context: Context,
             title: String,
             body: String,
-            doneLabel: String,
+            acceptLabel: String,
+            postponeLabel: String,
             declineLabel: String,
+            sosLabel: String,
             watchdogId: String,
             taskTitle: String,
             triggerAtMillis: Long,
@@ -107,8 +113,10 @@ class TaskTriggerReceiver : BroadcastReceiver() {
             val pending = pendingIntent(context, watchdogId) {
                 putExtra(EXTRA_TITLE, title)
                 putExtra(EXTRA_BODY, body)
-                putExtra(EXTRA_DONE_LABEL, doneLabel)
+                putExtra(EXTRA_DONE_LABEL, acceptLabel)
+                putExtra(EXTRA_POSTPONE_LABEL, postponeLabel)
                 putExtra(EXTRA_DECLINE_LABEL, declineLabel)
+                putExtra(EXTRA_SOS_LABEL, sosLabel)
                 putExtra(EXTRA_WATCHDOG_ID, watchdogId)
                 putExtra(EXTRA_TASK_TITLE, taskTitle)
                 putExtra(EXTRA_WATCHDOG_WINDOW_MILLIS, watchdogWindowMillis)

@@ -576,10 +576,22 @@ class NotificationService {
         if (taskTitle.isEmpty || outcome.isEmpty) {
           continue;
         }
+        // The overlay now offers the same four answers the notification
+        // does. Previously anything that wasn't "done" collapsed into
+        // "postpone", so a decline recorded through the overlay was scored
+        // as a deferral and never reached the learning engine as a failure.
+        final actionId = switch (outcome) {
+          'done' => _actionTaskDone,
+          'postponed' => _actionTaskNotNow,
+          'declined' => _actionTaskDecline,
+          'sos' => _actionTaskSos,
+          _ => _actionTaskNotNow,
+        };
         _dispatchTaskAction({
           'type': _typeTaskStart,
           'taskTitle': taskTitle,
-          'actionId': outcome == 'done' ? _actionTaskDone : _actionTaskNotNow,
+          'canonicalTitle': taskTitle,
+          'actionId': actionId,
         });
       }
     } catch (_) {
@@ -1218,7 +1230,15 @@ class NotificationService {
       title: _text(code, 'disciplineCommand'),
       body: adjustedDescription,
       doneLabel: _text(code, 'taskActionDoneLabel'),
-      declineLabel: _text(code, 'taskActionNotNowLabel'),
+      // Blank when the allowance is spent, so the overlay shows exactly the
+      // same answers the notification does.
+      postponeLabel: allowance.$1 < maxPostponesPerTask
+          ? _text(code, 'taskActionNotNowLabel')
+          : '',
+      declineLabel: _text(code, 'taskActionDeclineLabel'),
+      sosLabel: allowance.$2 < maxSosPerTask
+          ? _text(code, 'taskActionSosLabel')
+          : '',
       watchdogId: watchdogId,
       taskTitle: taskTitle,
     );
@@ -1322,7 +1342,15 @@ class NotificationService {
       title: _text(code, 'disciplineCommand'),
       body: adjustedDescription,
       doneLabel: _text(code, 'taskActionDoneLabel'),
-      declineLabel: _text(code, 'taskActionNotNowLabel'),
+      // Blank when the allowance is spent, so the overlay shows exactly the
+      // same answers the notification does.
+      postponeLabel: allowance.$1 < maxPostponesPerTask
+          ? _text(code, 'taskActionNotNowLabel')
+          : '',
+      declineLabel: _text(code, 'taskActionDeclineLabel'),
+      sosLabel: allowance.$2 < maxSosPerTask
+          ? _text(code, 'taskActionSosLabel')
+          : '',
       watchdogId: watchdogId,
       taskTitle: adjustedDescription,
       triggerAt: fireAt,

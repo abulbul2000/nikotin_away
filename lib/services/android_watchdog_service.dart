@@ -63,7 +63,12 @@ class AndroidWatchdogService {
     required String title,
     required String body,
     required String doneLabel,
+    /// Blank hides the button — postpone and SOS are each capped at two uses
+    /// per task, and a button whose answer is "no, not any more" is worse
+    /// than no button.
+    required String postponeLabel,
     required String declineLabel,
+    required String sosLabel,
     required String watchdogId,
     required String taskTitle,
   }) async {
@@ -75,7 +80,9 @@ class AndroidWatchdogService {
             'title': title,
             'body': body,
             'doneLabel': doneLabel,
+            'postponeLabel': postponeLabel,
             'declineLabel': declineLabel,
+            'sosLabel': sosLabel,
             'watchdogId': watchdogId,
             'taskTitle': taskTitle,
           }) ??
@@ -98,7 +105,12 @@ class AndroidWatchdogService {
     required String title,
     required String body,
     required String doneLabel,
+    /// Blank hides the button — postpone and SOS are each capped at two uses
+    /// per task, and a button whose answer is "no, not any more" is worse
+    /// than no button.
+    required String postponeLabel,
     required String declineLabel,
+    required String sosLabel,
     required String watchdogId,
     required String taskTitle,
     required DateTime triggerAt,
@@ -112,7 +124,9 @@ class AndroidWatchdogService {
         'title': title,
         'body': body,
         'doneLabel': doneLabel,
+            'postponeLabel': postponeLabel,
         'declineLabel': declineLabel,
+            'sosLabel': sosLabel,
         'watchdogId': watchdogId,
         'taskTitle': taskTitle,
         'triggerAtMillis': triggerAt.millisecondsSinceEpoch,

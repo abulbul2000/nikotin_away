@@ -327,7 +327,17 @@ class MainActivity : FlutterActivity() {
 						val watchdogId = call.argument<String>("watchdogId").orEmpty()
 						val taskTitle = call.argument<String>("taskTitle").orEmpty()
 						if (hasOverlayPermission() && title.isNotBlank() && watchdogId.isNotBlank()) {
-							TaskOverlayService.show(this, title, body, doneLabel, declineLabel, watchdogId, taskTitle)
+							TaskOverlayService.show(
+								context = this,
+								title = title,
+								body = body,
+								acceptLabel = doneLabel,
+								postponeLabel = call.argument<String>("postponeLabel").orEmpty(),
+								declineLabel = declineLabel,
+								sosLabel = call.argument<String>("sosLabel").orEmpty(),
+								watchdogId = watchdogId,
+								taskTitle = taskTitle,
+							)
 							result.success(true)
 						} else {
 							result.success(false)
@@ -346,8 +356,10 @@ class MainActivity : FlutterActivity() {
 							context = this,
 							title = call.argument<String>("title").orEmpty(),
 							body = call.argument<String>("body").orEmpty(),
-							doneLabel = call.argument<String>("doneLabel").orEmpty(),
+							acceptLabel = call.argument<String>("doneLabel").orEmpty(),
+							postponeLabel = call.argument<String>("postponeLabel").orEmpty(),
 							declineLabel = call.argument<String>("declineLabel").orEmpty(),
+							sosLabel = call.argument<String>("sosLabel").orEmpty(),
 							watchdogId = watchdogId,
 							taskTitle = taskTitle,
 							triggerAtMillis = triggerAtMillis,
