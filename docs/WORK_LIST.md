@@ -190,8 +190,8 @@
 - [x] **42.** Tavsiye artık ilaç hatırlatmasının gövdesine ekleniyor (`💡` + uyarı satırı),
       ayrı bildirim gönderilmiyor. `scheduleHealthConditionAdviceNotifications`
       ilaç kullanan kullanıcıda erken dönüyor — kaldırılmadı çünkü 44 ona bağlı.
-- [ ] **43.** İpucu havuzu 10 → 150 (5 hastalık × 30) — mekanizma hazır
-      (`_healthTipPrefixByCondition` + `_healthTipsPerCondition`), metinler PARÇA 3'te
+- [x] **43.** İpucu havuzu 10 → 150 (5 hastalık × 30). Her ipucu kriz anına bağlı tek somut
+      eylem; doz/tanı/tedavi yok, altında "doktorunuza danışın". 5 test.
 - [x] **44.** İlaç kullanmayan ama hastalığı olan kullanıcıya günde 1 tavsiye bildirimi
       (`_healthTipDailyCount` 3 → 1)
 - [x] **45.** Her ipucunun altına `medicationAdviceDisclaimer` ("doktorunuza danışın")

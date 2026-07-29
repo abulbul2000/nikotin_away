@@ -662,6 +662,286 @@ class AppTexts {
       'Sigara, kalbini gereksiz yere hizlandirir. Sakin bir nefes molasi kalbin icin daha iyi bir secim.',
     'healthTipHeartDisease2':
       'Kalp sagligin icin attigin en degerli adim, şu anki sigarayi icmemek.',
+    'healthTipHypertension3':
+      'Sigara içtiğin her an damarların büzülür. Şimdi ayağa kalkıp birkaç adım atmak tam tersini yapar.',
+    'healthTipHypertension4':
+      'Tansiyonun sabahları en oynak olduğu saatte. Bugünün ilk sigarasını geciktirmek en çok bu saatte işe yarar.',
+    'healthTipHypertension5':
+      'Bir bardak su iç ve iki dakika bekle. İstek genelde bu süre içinde geçer, tansiyonun ise sakin kalır.',
+    'healthTipHypertension6':
+      'Yürüyüş, tansiyon için sigaranın vaat ettiği rahatlamayı gerçekten verir. On dakika yeter.',
+    'healthTipHypertension7':
+      'Öfkelendiğinde tansiyon da sigara isteği de birlikte yükselir. Önce nefesini yavaşlat, karar sonra gelsin.',
+    'healthTipHypertension8':
+      'Kahveyle sigarayı birlikte içmek tansiyonuna iki yönlü yüklenir. Bugün kahveyi sigarasız dene.',
+    'healthTipHypertension9':
+      'Tuzlu atıştırmalık, sigara isteğini de tansiyonu da tetikler. Elin uzanırken bunu hatırla.',
+    'healthTipHypertension10':
+      'Sigarasız geçen her saat, kalbinin aynı kanı daha az zorlanarak pompaladığı bir saattir.',
+    'healthTipHypertension11':
+      'Tansiyon ilacını düzenli almak önemli, ama sigara onun işini zorlaştırır. İkisi aynı yöne çalışsın.',
+    'healthTipHypertension12':
+      'Şu an istek geldiyse, üç dakika sonra tekrar sor kendine. Çoğu zaman cevap değişir.',
+    'healthTipHypertension13':
+      'Merdiveni asansöre tercih etmek, tansiyonun için sigarayı bırakmanın küçük kardeşidir.',
+    'healthTipHypertension14':
+      'Stresli bir görüşmeden sonra sigara arıyorsan, aslında aradığın şey nefeslenmek.',
+    'healthTipHypertension15':
+      'Sıcak duş, sigaranın verdiği gevşemenin aynısını tansiyonunu yükseltmeden verir.',
+    'healthTipHypertension16':
+      'Akşam sigarası uykunu böler, bölünen uyku da tansiyonu yükseltir. Zincir buradan kırılıyor.',
+    'healthTipHypertension17':
+      'Bugün hedefinin altında kaldıysan, damarların bunu zaten fark etti.',
+    'healthTipHypertension18':
+      'Sigara istediğinde ellerini meşgul et. Tansiyonun bu birkaç dakikayı sana borçlu.',
+    'healthTipHypertension19':
+      'Yemekten sonraki sigara alışkanlığın en güçlü olduğu an. Sofradan kalkıp yürümeyi dene.',
+    'healthTipHypertension20':
+      'Bir kişiye bugünkü hedefini söyle. Söylenen hedef, tutulan hedef olur.',
+    'healthTipHypertension21':
+      'Tansiyonun için en iyi haber: bıraktığın gün değil, azalttığın her gün sayılıyor.',
+    'healthTipHypertension22':
+      'Nefesini dörde kadar sayarak al, altıya kadar say vererek. Bunu üç kez yap.',
+    'healthTipHypertension23':
+      'Sigara molası yerine pencere molası ver. Aynı ara, farklı sonuç.',
+    'healthTipHypertension24':
+      'Kolundaki tansiyon aleti sigarayı görmez ama etkisini ölçer.',
+    'healthTipHypertension25':
+      'Bugün içmediğin sigara, yarınki ölçümünde görünecek.',
+    'healthTipHypertension26':
+      'Alkolle birlikte sigara isteği katlanır, tansiyon da öyle. İkisini ayır.',
+    'healthTipHypertension27':
+      'Yorgunluk sigara isteği gibi hissettirir. Önce on dakika otur, sonra karar ver.',
+    'healthTipHypertension28':
+      'Sabah kalkınca bir bardak su, günün ilk sigarasını geciktirmenin en kolay yolu.',
+    'healthTipHypertension29':
+      'Tansiyonunu düşüren şey tek bir büyük karar değil, üst üste gelen küçük ertelemeler.',
+    'healthTipHypertension30':
+      'Bugünün hedefini tutturduysan, bunu yarın da yapabilirsin. Kanıtı sensin.',
+    'healthTipAsthma3':
+      'Duman, hava yollarını saatlerce hassas bırakır. Şimdi içmezsen gece daha rahat nefes alırsın.',
+    'healthTipAsthma4':
+      'Göğsün sıkıştığında sigara onu açmaz, daraltır. Nefes egzersizi tam tersini yapar.',
+    'healthTipAsthma5':
+      'Soğuk havada sigara, hava yollarına iki kat yüklenir. Bugün içeride kal ve ertele.',
+    'healthTipAsthma6':
+      'Astım için en kötü kombinasyon: duman ve toz. Bulunduğun yeri havalandır.',
+    'healthTipAsthma7':
+      'Öksürüğün sabah artıyorsa, gece içilen sigarayla ilgili olabilir. Bir gece dene, farkı gör.',
+    'healthTipAsthma8':
+      'Nefes darlığında panik isteği büyütür. Omuzlarını gevşet, nefesini uzat.',
+    'healthTipAsthma9':
+      'Egzersiz astımını tetikliyorsa sigara bu eşiği daha da düşürür. Bugün bir sigara az.',
+    'healthTipAsthma10':
+      'Sigarasız geçen her gün, kurtarıcı ilacına daha az ihtiyaç duyduğun bir gündür.',
+    'healthTipAsthma11':
+      'Duman kokusu kıyafetinde kalır ve seni tekrar tetikler. Üstünü değiştir, isteği kes.',
+    'healthTipAsthma12':
+      'Hırıltı duyduğunda sigara değil, temiz hava ara.',
+    'healthTipAsthma13':
+      'Polen mevsiminde hava yolların zaten yüklü. Bu hafta ertelemeler daha çok işe yarar.',
+    'healthTipAsthma14':
+      'Sigara isteği geldiğinde ağzından değil, burnundan yavaşça nefes al.',
+    'healthTipAsthma15':
+      'Astımlı biri için en değerli kazanç, gece kesintisiz uyumak. Akşam sigarası onu çalıyor.',
+    'healthTipAsthma16':
+      'Bugün içmediğin sigara, merdivende bir basamak fazla demek.',
+    'healthTipAsthma17':
+      'Kapalı alanda içilen sigara, hava yollarına açık alandakinden çok daha ağır gelir.',
+    'healthTipAsthma18':
+      'Nefesin daraldığında oturup öne eğil ve yavaş nefes ver. Bu his geçecek.',
+    'healthTipAsthma19':
+      'Sigara isteği ortalama üç dakika sürer. Astım atağı ise saatler. Hangisini beklemek daha kolay?',
+    'healthTipAsthma20':
+      'Yatak odanı dumandan uzak tut. Uyurken hava yolların dinlenmeli.',
+    'healthTipAsthma21':
+      'Bir sigarayı ertelediğinde sadece istek geçmez, nefesin de yerine gelir.',
+    'healthTipAsthma22':
+      'Stres astımı da tetikler, sigarayı da. Kaynağı aynı, çözümü de aynı: yavaş nefes.',
+    'healthTipAsthma23':
+      'Bugün öksürüğün az mı? Bu tesadüf değil, dünkü kararların.',
+    'healthTipAsthma24':
+      'Sigara dumanı, ilacının etkisini de zayıflatır. İkisini yarıştırma.',
+    'healthTipAsthma25':
+      'Nefes testinde bir saniyelik artış bile hava yollarının açıldığını gösterir.',
+    'healthTipAsthma26':
+      'Yürürken nefesin yetmiyorsa yavaşla, dur, nefeslen. Sigara bu sıralamayı bozar.',
+    'healthTipAsthma27':
+      'Evde biri sigara içiyorsa senin hava yolların da içiyor. Bunu konuşmaya değer.',
+    'healthTipAsthma28':
+      'Sıcak buhar, göğsündeki sıkışmayı sigaradan çok daha iyi açar.',
+    'healthTipAsthma29':
+      'Bugünkü hedefin altında kalmak, bu gece daha az uyanmak demek.',
+    'healthTipAsthma30':
+      'Hava yolların iyileşmeyi hemen başlatır. Bir günün bile karşılığı var.',
+    'healthTipDiabetes3':
+      'Sigara, insülinin işini zorlaştırır. Şimdi içmemek, bugünkü şekerini daha öngörülebilir kılar.',
+    'healthTipDiabetes4':
+      'Yemekten sonraki sigara, şeker yükselmesinin üstüne binen ikinci bir yüktür.',
+    'healthTipDiabetes5':
+      'Ayaklarındaki dolaşım en çok sigaradan etkilenir. Bugün bir sigara az, bir adım fazla.',
+    'healthTipDiabetes6':
+      'Kan şekerin düştüğünde sigara isteği artar. Önce bir şeyler ye, sonra tekrar düşün.',
+    'healthTipDiabetes7':
+      'Sigarasız geçen her hafta, vücudunun kendi insülinini daha iyi kullandığı bir haftadır.',
+    'healthTipDiabetes8':
+      'Yürüyüş hem şekerini hem sigara isteğini aynı anda düşürür. İki iş, tek çaba.',
+    'healthTipDiabetes9':
+      'Yaraların geç iyileşiyorsa sigara bunun büyük bir payı. Azaltmak fark ediyor.',
+    'healthTipDiabetes10':
+      'Şekerli içecekle sigara birlikte gelir. Birini bıraktığında diğeri de zayıflar.',
+    'healthTipDiabetes11':
+      'Sabah şekerin yüksekse, dünkü akşam sigarasına da bakmaya değer.',
+    'healthTipDiabetes12':
+      'Sigara, göz damarlarını da zorlar. Bugün ertelediğin her sigara oraya da yazılıyor.',
+    'healthTipDiabetes13':
+      'İstek geldiğinde bir bardak su iç. Susuzluk da şeker de isteği büyütür.',
+    'healthTipDiabetes14':
+      'Stres şekerini yükseltir, sigara stresi geçirmez sadece erteler.',
+    'healthTipDiabetes15':
+      'Ayak kontrolünü yaparken şunu düşün: dolaşımına en çok yardım eden şey azaltmak.',
+    'healthTipDiabetes16':
+      'Sigara isteği üç dakika sürer. Şeker dalgalanması saatler. Kısa olanı bekle.',
+    'healthTipDiabetes17':
+      'Bugün hedefini tutturduysan, pankreasın da bunu fark etti.',
+    'healthTipDiabetes18':
+      'Böbreklerin sigaradan da şekerden de yorulur. İkisini birden azaltmak en iyi hediye.',
+    'healthTipDiabetes19':
+      'Öğün atlamak isteği büyütür. Düzenli yemek, sigarayı ertelemeyi kolaylaştırır.',
+    'healthTipDiabetes20':
+      'Akşam yürüyüşü, hem gece şekerini hem gece sigarasını devre dışı bırakır.',
+    'healthTipDiabetes21':
+      'Sigarayı azaltmak, ilaçlarının aynı işi daha az çabayla yapması demek.',
+    'healthTipDiabetes22':
+      'Ellerini meşgul et: bir şey soy, bir şey karıştır. İstek geçecek.',
+    'healthTipDiabetes23':
+      'Tatlı isteği ve sigara isteği aynı anda gelirse, önce su ve on dakika.',
+    'healthTipDiabetes24':
+      'Uykusuzluk hem şekerini hem isteğini bozar. Bu gece erken yat.',
+    'healthTipDiabetes25':
+      'Bugün içilmeyen sigara, damarlarında hemen etkisini gösteriyor.',
+    'healthTipDiabetes26':
+      'Kahvaltıyı atlayıp sigara içmek, güne şekerini iki kez zorlayarak başlamak demek.',
+    'healthTipDiabetes27':
+      'Arkadaş ortamında hem tatlı hem sigara gelir. Bir tanesine hazırlıklı git.',
+    'healthTipDiabetes28':
+      'Şekerini ölçerken sigara sayını da düşün. İkisi aynı grafiğin parçası.',
+    'healthTipDiabetes29':
+      'Azaltmak, bırakmanın küçük hâli değil; kendi başına kazanç.',
+    'healthTipDiabetes30':
+      'Bir haftadır hedefinin altındaysan, bunu vücudun çoktan hissediyor.',
+    'healthTipCopd3':
+      'KOAH\'ta her sigara, kaybedilen kapasitenin üstüne biner. Bugünkü erteleme kalıcı bir kazanç.',
+    'healthTipCopd4':
+      'Nefesin daraldığında öne eğilip dudak büzerek nefes ver. Sigaradan hızlı rahatlatır.',
+    'healthTipCopd5':
+      'Sabah balgamı fazlaysa, gece içilen sigarayla ilgisi var. Bir gece dene.',
+    'healthTipCopd6':
+      'Alevlenmelerin çoğu sigarayla başlar. Bugün içmemek, bu ayı hastanesiz geçirmene yardım eder.',
+    'healthTipCopd7':
+      'Merdiven çıkarken durup nefeslenmek zayıflık değil, doğru teknik. Sigara bu tekniği bozar.',
+    'healthTipCopd8':
+      'Akciğerlerin iyileşmeyi bugün başlatabilir. Yaşın ya da süren fark etmez.',
+    'healthTipCopd9':
+      'Soğuk hava hava yollarını daraltır. Sigarayla birleşince iki kat zorlar. Bugün içeride kal.',
+    'healthTipCopd10':
+      'Sigara isteği üç dakika sürer. Nefes darlığı ise günü alır. Üç dakikayı bekle.',
+    'healthTipCopd11':
+      'Balgamının rengi değişiyorsa doktoruna söyle. Bu arada bir sigara az iç.',
+    'healthTipCopd12':
+      'Kısa yürüyüşler akciğer kapasiteni korur. Sigara molası yerine yürüyüş molası ver.',
+    'healthTipCopd13':
+      'Gece nefes darlığıyla uyanıyorsan, akşam sigarası bunun en kolay değiştirilebilir sebebi.',
+    'healthTipCopd14':
+      'Nefes egzersizini yaparken sayı tut. Ölçülen ilerleme, hissedilenden daha inandırıcı.',
+    'healthTipCopd15':
+      'Sigarasız geçen her gün, öksürüğünün biraz daha azaldığı bir gündür.',
+    'healthTipCopd16':
+      'Evi havalandırmak, akciğerlerine bugün verebileceğin en kolay iyilik.',
+    'healthTipCopd17':
+      'Konuşurken nefesin yetmiyorsa, bu geri kazanılabilir bir şey. Azaltmakla başlıyor.',
+    'healthTipCopd18':
+      'Ağır yemek sonrası nefesin daralır. Sigarayı da ekleme, biraz yürü.',
+    'healthTipCopd19':
+      'Bugün hedefinin altında kaldıysan, akciğerlerin bunu bir hafta boyunca hatırlayacak.',
+    'healthTipCopd20':
+      'Duman, hava yollarındaki temizleyici tüycükleri felç eder. Onlar birkaç saatte toparlanır.',
+    'healthTipCopd21':
+      'Nefes testinde bir saniye artış küçük görünür ama merdivende hissedilir.',
+    'healthTipCopd22':
+      'Kalabalık ve dumanlı yerlerden uzak dur. Hava yolların bugün zaten çalışıyor.',
+    'healthTipCopd23':
+      'Sigara isteği panikle büyür. Otur, dudak büzerek ver, tekrar değerlendir.',
+    'healthTipCopd24':
+      'Grip aşını yaptırdıysan iyi. Sigarayı azaltmak onun etkisini destekler.',
+    'healthTipCopd25':
+      'Su içmek balgamı inceltir ve öksürmeyi kolaylaştırır. Sigara tam tersini yapar.',
+    'healthTipCopd26':
+      'Bugün bir sigara az içtiysen, bu gece bir kez az uyanabilirsin.',
+    'healthTipCopd27':
+      'Ev işlerini parçalara böl ve aralarda nefeslen. Bu, sigara molasının yerini alabilir.',
+    'healthTipCopd28':
+      'Akciğer kapasiten yavaş iyileşir ama geri gider de. Yön senin elinde.',
+    'healthTipCopd29':
+      'Nefes darlığı arttığında ilk yapılacak şey durmak, ikinci şey yavaş nefes vermek.',
+    'healthTipCopd30':
+      'Azaltarak gitmek de bir yol. Akciğerlerin her adımı sayıyor.',
+    'healthTipHeartDisease3':
+      'Sigara, kalbinin oksijen ihtiyacını artırırken damarları daraltır. Şu an içmemek ikisini de düzeltir.',
+    'healthTipHeartDisease4':
+      'Göğsünde baskı hissedersen dur ve dinlen. Bu bir sigara zamanı değil.',
+    'healthTipHeartDisease5':
+      'Sigarasız geçen ilk gün bile kalp krizi riskini düşürmeye başlar.',
+    'healthTipHeartDisease6':
+      'Nabzın hızlandığında sigara onu daha da hızlandırır. Nefesini yavaşlat.',
+    'healthTipHeartDisease7':
+      'Yürüyüş kalbini güçlendirir, sigara yorar. Bugün hangisini seçeceğin belli.',
+    'healthTipHeartDisease8':
+      'Sabah saatleri kalp için en riskli zaman. Günün ilk sigarasını geciktir.',
+    'healthTipHeartDisease9':
+      'Merdiven çıkarken zorlanıyorsan bu geri kazanılabilir. Azaltmakla başlar.',
+    'healthTipHeartDisease10':
+      'Sigara kanı koyulaştırır ve pıhtı riskini artırır. Bugün içmediğin her sigara sayılıyor.',
+    'healthTipHeartDisease11':
+      'Stres kalbini de sigara isteğini de tetikler. Kaynağı çözmek ikisini birden çözer.',
+    'healthTipHeartDisease12':
+      'Kalp ilaçların sigarayla yarışmak zorunda kalmasın.',
+    'healthTipHeartDisease13':
+      'Bacaklarında yürürken ağrı oluyorsa damarların konuşuyor. Dinle.',
+    'healthTipHeartDisease14':
+      'Ağır yemek sonrası kalp zaten çalışıyor. Üstüne sigara ekleme.',
+    'healthTipHeartDisease15':
+      'Sigara isteği geldiğinde iki dakika ayakta yürü. Kalbin bu takası kabul eder.',
+    'healthTipHeartDisease16':
+      'Kolesterol ve sigara birlikte damar duvarına yüklenir. Birini azaltmak diğerini hafifletir.',
+    'healthTipHeartDisease17':
+      'Bugün hedefinin altında kaldıysan, kalbin bugün daha az attı.',
+    'healthTipHeartDisease18':
+      'Uyku kalbini onarır. Akşam sigarası o onarımı böler.',
+    'healthTipHeartDisease19':
+      'Nefes egzersizi nabzını düşürür, sigara yükseltir. Aynı üç dakika, zıt sonuç.',
+    'healthTipHeartDisease20':
+      'Tuz ve sigara birlikte tansiyonu iter. Bugün ikisinden birini geri çek.',
+    'healthTipHeartDisease21':
+      'Kalp için en iyi haber: hasar durduğu anda onarım başlar.',
+    'healthTipHeartDisease22':
+      'Soğukta yürürken kalp daha çok çalışır. Sigarayı buna ekleme.',
+    'healthTipHeartDisease23':
+      'Bir sigarayı ertelediğinde kalbin o dakikalarda daha rahat kan pompalıyor.',
+    'healthTipHeartDisease24':
+      'Alkolle sigara birlikte nabzı iki yönden zorlar. Ayrı tut.',
+    'healthTipHeartDisease25':
+      'Bugünkü yürüyüşün, bu haftanın en iyi kalp kararı olabilir.',
+    'healthTipHeartDisease26':
+      'Sigara isteği geldiğinde nabzını say. Sayarken istek genelde geçer.',
+    'healthTipHeartDisease27':
+      'Kalp sağlığı için azaltmak, bırakmaya giden yolun tamamı kadar değerli.',
+    'healthTipHeartDisease28':
+      'Göğüs ağrın değişiyorsa doktoruna söyle. Bu arada bir sigara az.',
+    'healthTipHeartDisease29':
+      'Damarların esnekliğini geri kazanabilir. Bu, azalttığın her gün biraz daha olur.',
+    'healthTipHeartDisease30':
+      'Kalbin bugüne kadar durmadan çalıştı. Bugün ona bir sigara borcun yok.',
     'menuReports': 'Raporlar',
     'reportsTitle': 'Raporlar',
     'reportsWeeklyTab': 'Haftalik',
@@ -1605,6 +1885,286 @@ class AppTexts {
       'Smoking speeds up your heart for no reason. A calm breathing break is the better choice for it.',
     'healthTipHeartDisease2':
       'The most valuable thing you can do for your heart right now is skip this cigarette.',
+    'healthTipHypertension3':
+      'Every cigarette tightens your blood vessels. Standing up and walking a few steps does the opposite.',
+    'healthTipHypertension4':
+      'Blood pressure swings most in the morning. Delaying today\'s first cigarette matters most right now.',
+    'healthTipHypertension5':
+      'Drink a glass of water and wait two minutes. The urge usually passes in that time; your blood pressure stays calm.',
+    'healthTipHypertension6':
+      'A walk actually delivers the relief a cigarette only promises. Ten minutes is enough.',
+    'healthTipHypertension7':
+      'Anger raises your blood pressure and your craving together. Slow your breathing first; decide after.',
+    'healthTipHypertension8':
+      'Coffee and a cigarette together push your blood pressure from two directions. Try the coffee alone today.',
+    'healthTipHypertension9':
+      'Salty snacks trigger both the craving and your blood pressure. Remember that as you reach out.',
+    'healthTipHypertension10':
+      'Every smoke-free hour is an hour your heart moves the same blood with less strain.',
+    'healthTipHypertension11':
+      'Taking your blood pressure medicine regularly matters, but smoking works against it. Let them pull the same way.',
+    'healthTipHypertension12':
+      'If the urge just hit, ask yourself again in three minutes. The answer usually changes.',
+    'healthTipHypertension13':
+      'Choosing the stairs over the lift is the little sibling of quitting, for your blood pressure.',
+    'healthTipHypertension14':
+      'If you want a cigarette after a tense meeting, what you actually want is to catch your breath.',
+    'healthTipHypertension15':
+      'A warm shower gives the same loosening a cigarette does, without raising your blood pressure.',
+    'healthTipHypertension16':
+      'An evening cigarette breaks your sleep, and broken sleep raises blood pressure. This is where the chain breaks.',
+    'healthTipHypertension17':
+      'If you stayed under your target today, your blood vessels have already noticed.',
+    'healthTipHypertension18':
+      'Keep your hands busy when the urge comes. Your blood pressure owes you these few minutes.',
+    'healthTipHypertension19':
+      'The after-meal cigarette is where habit is strongest. Try getting up and walking instead.',
+    'healthTipHypertension20':
+      'Tell one person today\'s target. A target spoken out loud is a target kept.',
+    'healthTipHypertension21':
+      'The good news for your blood pressure: it isn\'t only the day you quit that counts, but every day you cut down.',
+    'healthTipHypertension22':
+      'Breathe in for a count of four, out for a count of six. Do it three times.',
+    'healthTipHypertension23':
+      'Take a window break instead of a smoke break. Same pause, different outcome.',
+    'healthTipHypertension24':
+      'The cuff on your arm can\'t see the cigarette, but it measures what it did.',
+    'healthTipHypertension25':
+      'The cigarette you skip today shows up in tomorrow\'s reading.',
+    'healthTipHypertension26':
+      'Alcohol multiplies the craving, and your blood pressure with it. Keep them apart.',
+    'healthTipHypertension27':
+      'Tiredness disguises itself as a craving. Sit for ten minutes first, then decide.',
+    'healthTipHypertension28':
+      'A glass of water on waking is the easiest way to push back the day\'s first cigarette.',
+    'healthTipHypertension29':
+      'What lowers your blood pressure isn\'t one big decision but small delays stacked together.',
+    'healthTipHypertension30':
+      'If you hit today\'s target, you can do it tomorrow too. You\'re the proof.',
+    'healthTipAsthma3':
+      'Smoke leaves your airways irritable for hours. Skipping this one means easier breathing tonight.',
+    'healthTipAsthma4':
+      'When your chest tightens, a cigarette narrows it further. A breathing exercise does the opposite.',
+    'healthTipAsthma5':
+      'In cold air a cigarette hits your airways twice as hard. Stay in and put it off today.',
+    'healthTipAsthma6':
+      'Smoke and dust are the worst pairing for asthma. Air out the room you\'re in.',
+    'healthTipAsthma7':
+      'If your cough is worse in the morning, the night-time cigarette may be why. Try one night without and see.',
+    'healthTipAsthma8':
+      'Panic makes breathlessness feel bigger. Drop your shoulders and lengthen your breath.',
+    'healthTipAsthma9':
+      'If exercise sets off your asthma, smoking lowers that threshold further. One cigarette fewer today.',
+    'healthTipAsthma10':
+      'Every smoke-free day is a day you reach for your reliever less.',
+    'healthTipAsthma11':
+      'Smoke clings to your clothes and re-triggers you. Change your top and cut the loop.',
+    'healthTipAsthma12':
+      'When you hear a wheeze, look for fresh air, not a cigarette.',
+    'healthTipAsthma13':
+      'In pollen season your airways are already loaded. Delaying pays off more this week.',
+    'healthTipAsthma14':
+      'When the urge comes, breathe slowly through your nose rather than your mouth.',
+    'healthTipAsthma15':
+      'For someone with asthma the best win is a night without waking. The evening cigarette steals it.',
+    'healthTipAsthma16':
+      'The cigarette you skipped today is one more stair you\'ll manage.',
+    'healthTipAsthma17':
+      'Smoking indoors is far heavier on your airways than outdoors.',
+    'healthTipAsthma18':
+      'When breathing tightens, sit, lean forward, and breathe out slowly. It will pass.',
+    'healthTipAsthma19':
+      'A craving lasts about three minutes. An asthma flare lasts hours. Which is easier to wait out?',
+    'healthTipAsthma20':
+      'Keep your bedroom smoke-free. Your airways need the night off.',
+    'healthTipAsthma21':
+      'When you put off a cigarette, the urge isn\'t the only thing that passes — your breath comes back too.',
+    'healthTipAsthma22':
+      'Stress triggers both asthma and the urge. Same source, same answer: slow breathing.',
+    'healthTipAsthma23':
+      'Coughing less today? That isn\'t chance — it\'s yesterday\'s decisions.',
+    'healthTipAsthma24':
+      'Cigarette smoke weakens what your medicine does. Don\'t make them compete.',
+    'healthTipAsthma25':
+      'Even a one-second gain on the breathing test means your airways are opening.',
+    'healthTipAsthma26':
+      'If you run out of breath walking, slow down, stop, recover. A cigarette breaks that sequence.',
+    'healthTipAsthma27':
+      'If someone smokes at home, your airways smoke too. That\'s worth a conversation.',
+    'healthTipAsthma28':
+      'Warm steam opens the tightness in your chest far better than a cigarette.',
+    'healthTipAsthma29':
+      'Staying under today\'s target means waking less tonight.',
+    'healthTipAsthma30':
+      'Your airways start recovering immediately. Even one day pays back.',
+    'healthTipDiabetes3':
+      'Smoking makes insulin\'s job harder. Skipping this one keeps today\'s numbers more predictable.',
+    'healthTipDiabetes4':
+      'The after-meal cigarette lands on top of a rise your body is already handling.',
+    'healthTipDiabetes5':
+      'Circulation in your feet suffers most from smoking. One cigarette fewer, one step more today.',
+    'healthTipDiabetes6':
+      'Cravings get stronger when your blood sugar drops. Eat something first, then reconsider.',
+    'healthTipDiabetes7':
+      'Every smoke-free week is a week your body uses its own insulin better.',
+    'healthTipDiabetes8':
+      'A walk lowers your blood sugar and your craving at once. Two jobs, one effort.',
+    'healthTipDiabetes9':
+      'If cuts heal slowly, smoking is a big part of why. Cutting down changes it.',
+    'healthTipDiabetes10':
+      'The sugary drink and the cigarette travel together. Drop one and the other weakens.',
+    'healthTipDiabetes11':
+      'If your morning number is high, last night\'s cigarette is worth looking at too.',
+    'healthTipDiabetes12':
+      'Smoking strains the vessels in your eyes too. Every cigarette you skip counts there as well.',
+    'healthTipDiabetes13':
+      'Drink water when the urge comes. Thirst and blood sugar both make it feel bigger.',
+    'healthTipDiabetes14':
+      'Stress raises your blood sugar, and a cigarette doesn\'t resolve stress — it postpones it.',
+    'healthTipDiabetes15':
+      'While you check your feet, remember: cutting down is what helps that circulation most.',
+    'healthTipDiabetes16':
+      'A craving lasts three minutes. A blood sugar swing lasts hours. Wait out the short one.',
+    'healthTipDiabetes17':
+      'If you hit today\'s target, your pancreas noticed too.',
+    'healthTipDiabetes18':
+      'Your kidneys tire from both smoking and blood sugar. Easing both is the best gift.',
+    'healthTipDiabetes19':
+      'Skipping meals makes the urge bigger. Eating regularly makes delaying easier.',
+    'healthTipDiabetes20':
+      'An evening walk takes out both the night-time number and the night-time cigarette.',
+    'healthTipDiabetes21':
+      'Cutting down means your medicines do the same work with less effort.',
+    'healthTipDiabetes22':
+      'Keep your hands busy — peel something, stir something. The urge will pass.',
+    'healthTipDiabetes23':
+      'If a sweet craving and a cigarette craving arrive together, water and ten minutes first.',
+    'healthTipDiabetes24':
+      'Poor sleep worsens both your numbers and your cravings. Turn in early tonight.',
+    'healthTipDiabetes25':
+      'The cigarette not smoked today shows up in your vessels right away.',
+    'healthTipDiabetes26':
+      'Skipping breakfast for a cigarette starts your day by straining your blood sugar twice.',
+    'healthTipDiabetes27':
+      'Sweets and cigarettes both show up in company. Go in with a plan for one of them.',
+    'healthTipDiabetes28':
+      'When you check your sugar, think about your cigarette count too. They\'re on the same chart.',
+    'healthTipDiabetes29':
+      'Cutting down isn\'t a lesser version of quitting — it\'s a gain in itself.',
+    'healthTipDiabetes30':
+      'If you\'ve been under target for a week, your body already feels it.',
+    'healthTipCopd3':
+      'With COPD every cigarette adds to capacity already lost. Today\'s delay is a lasting gain.',
+    'healthTipCopd4':
+      'When breathing tightens, lean forward and breathe out through pursed lips. It works faster than a cigarette.',
+    'healthTipCopd5':
+      'More phlegm in the morning is linked to the night-time cigarette. Try one night without.',
+    'healthTipCopd6':
+      'Most flare-ups start with a cigarette. Skipping today helps you get through the month without one.',
+    'healthTipCopd7':
+      'Stopping to catch your breath on stairs is technique, not weakness. Smoking undoes it.',
+    'healthTipCopd8':
+      'Your lungs can start recovering today. Your age and history don\'t change that.',
+    'healthTipCopd9':
+      'Cold air narrows your airways; a cigarette doubles it. Stay in today.',
+    'healthTipCopd10':
+      'A craving lasts three minutes. Breathlessness takes the day. Wait out the three minutes.',
+    'healthTipCopd11':
+      'If your phlegm changes colour, tell your doctor. In the meantime, one cigarette fewer.',
+    'healthTipCopd12':
+      'Short walks protect your lung capacity. Take a walking break instead of a smoke break.',
+    'healthTipCopd13':
+      'If breathlessness wakes you at night, the evening cigarette is the easiest cause to change.',
+    'healthTipCopd14':
+      'Count while you do your breathing exercise. Measured progress convinces more than felt progress.',
+    'healthTipCopd15':
+      'Every smoke-free day is a day your cough eases a little further.',
+    'healthTipCopd16':
+      'Airing out the house is the easiest kindness you can do your lungs today.',
+    'healthTipCopd17':
+      'If you run short of breath while talking, that\'s recoverable. It starts with cutting down.',
+    'healthTipCopd18':
+      'Breathing gets harder after a heavy meal. Don\'t add a cigarette — walk a little.',
+    'healthTipCopd19':
+      'If you stayed under target today, your lungs will remember it for a week.',
+    'healthTipCopd20':
+      'Smoke paralyses the tiny hairs that clean your airways. They recover within hours.',
+    'healthTipCopd21':
+      'One extra second on the breathing test looks small but shows up on the stairs.',
+    'healthTipCopd22':
+      'Stay away from crowded, smoky places. Your airways are working hard enough today.',
+    'healthTipCopd23':
+      'Panic inflates a craving. Sit, breathe out through pursed lips, then reassess.',
+    'healthTipCopd24':
+      'Good that you\'ve had your flu jab. Cutting down supports what it does.',
+    'healthTipCopd25':
+      'Water thins phlegm and makes clearing it easier. Smoking does the opposite.',
+    'healthTipCopd26':
+      'One cigarette fewer today can mean one fewer waking tonight.',
+    'healthTipCopd27':
+      'Break chores into pieces and rest between them. That can replace the smoke break.',
+    'healthTipCopd28':
+      'Lung capacity recovers slowly, but it also declines. The direction is yours.',
+    'healthTipCopd29':
+      'When breathlessness rises, the first thing is to stop and the second is to breathe out slowly.',
+    'healthTipCopd30':
+      'Cutting down is a route too. Your lungs count every step of it.',
+    'healthTipHeartDisease3':
+      'Smoking raises your heart\'s oxygen demand while narrowing the vessels. Skipping this fixes both.',
+    'healthTipHeartDisease4':
+      'If you feel pressure in your chest, stop and rest. This is not a moment for a cigarette.',
+    'healthTipHeartDisease5':
+      'Even the first smoke-free day starts lowering your heart attack risk.',
+    'healthTipHeartDisease6':
+      'When your pulse climbs, a cigarette pushes it higher. Slow your breathing instead.',
+    'healthTipHeartDisease7':
+      'Walking strengthens your heart; smoking tires it. Today\'s choice is clear.',
+    'healthTipHeartDisease8':
+      'Mornings are the riskiest hours for your heart. Push back the day\'s first cigarette.',
+    'healthTipHeartDisease9':
+      'If stairs are getting harder, that\'s recoverable. It starts with cutting down.',
+    'healthTipHeartDisease10':
+      'Smoking thickens your blood and raises clot risk. Every cigarette you skip today counts.',
+    'healthTipHeartDisease11':
+      'Stress triggers your heart and your craving alike. Addressing the source addresses both.',
+    'healthTipHeartDisease12':
+      'Don\'t make your heart medicines compete with a cigarette.',
+    'healthTipHeartDisease13':
+      'Pain in your legs when walking is your arteries talking. Listen.',
+    'healthTipHeartDisease14':
+      'Your heart is already working after a heavy meal. Don\'t add a cigarette.',
+    'healthTipHeartDisease15':
+      'When the urge comes, walk for two minutes. Your heart accepts that trade.',
+    'healthTipHeartDisease16':
+      'Cholesterol and smoking press on the artery wall together. Easing one lightens the other.',
+    'healthTipHeartDisease17':
+      'If you stayed under target today, your heart beat fewer times for it.',
+    'healthTipHeartDisease18':
+      'Sleep repairs your heart. The evening cigarette interrupts the repair.',
+    'healthTipHeartDisease19':
+      'A breathing exercise lowers your pulse; a cigarette raises it. Same three minutes, opposite result.',
+    'healthTipHeartDisease20':
+      'Salt and smoking push your blood pressure together. Pull back on one today.',
+    'healthTipHeartDisease21':
+      'The best news for your heart: repair starts the moment the damage stops.',
+    'healthTipHeartDisease22':
+      'Your heart works harder walking in the cold. Don\'t add a cigarette.',
+    'healthTipHeartDisease23':
+      'When you put off a cigarette, your heart pumps easier for those minutes.',
+    'healthTipHeartDisease24':
+      'Alcohol and cigarettes strain your pulse from two directions. Keep them apart.',
+    'healthTipHeartDisease25':
+      'Today\'s walk might be the best decision your heart gets this week.',
+    'healthTipHeartDisease26':
+      'Count your pulse when the urge comes. It usually passes while you count.',
+    'healthTipHeartDisease27':
+      'For your heart, cutting down is as valuable as the whole road to quitting.',
+    'healthTipHeartDisease28':
+      'If your chest pain changes, tell your doctor. In the meantime, one cigarette fewer.',
+    'healthTipHeartDisease29':
+      'Your arteries can regain flexibility. It happens a little more with every day you cut down.',
+    'healthTipHeartDisease30':
+      'Your heart hasn\'t stopped once. You don\'t owe it a cigarette today.',
     'menuReports': 'Reports',
     'reportsTitle': 'Reports',
     'reportsWeeklyTab': 'Weekly',

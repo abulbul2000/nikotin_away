@@ -329,7 +329,7 @@ class NotificationService {
   /// How many tips exist per condition. Missing keys fall back to the
   /// English/Turkish text rather than showing a raw key, so a pool that has
   /// grown ahead of the translations degrades quietly.
-  static const int _healthTipsPerCondition = 2;
+  static const int _healthTipsPerCondition = 30;
 
   /// Picks a tip for the user's conditions, rotating so the same sentence
   /// doesn't arrive with every dose.
