@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' show max;
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -13,6 +14,7 @@ import '../models/behavior_dashboard.dart';
 import '../models/breath_test_result.dart';
 import '../models/mentor_message.dart';
 import '../models/protocol_violation.dart';
+import '../models/reduction_progress.dart';
 import '../models/location_visit_event.dart';
 import '../models/medication.dart';
 import '../models/sensor_usage_event.dart';
@@ -1854,6 +1856,148 @@ class StorageService {
     await saveSetting(_barrierMinutesKey, evolved.toString());
     await saveSetting(_barrierWeekStartKey, today.toIso8601String());
     return evolved;
+  }
+
+  /// The three figures the home page reports: how many days running the user
+  /// stayed at or under target, how many cigarettes that adds up to not
+  /// smoking, and how far the barrier has moved from their natural gap.
+  ///
+  /// Replaces a counter that read `now - quitDate` and never once asked
+  /// whether the user had smoked. Every figure here comes from a logged
+  /// cigarette or an answered task, and days with neither are treated as
+  /// unknown rather than quietly counted as good.
+  Future<ReductionProgress> loadReductionProgress({
+    DateTime? now,
+    int lookbackDays = 400,
+  }) async {
+    final today = now ?? DateTime.now();
+    final input = await loadSmokingWindowInput();
+    final barrier = await loadCurrentBarrierMinutes(now: today);
+    final natural = _smokingIntervalService.naturalIntervalMinutes(input);
+    final target = _smokingIntervalService.impliedDailyTarget(
+      input: input,
+      barrierMinutes: barrier,
+    );
+
+    final since = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).subtract(Duration(days: lookbackDays));
+    final smokedByDay = await _countByDay(
+      table: _smokingEventsTable,
+      timestampColumn: 'timestamp',
+      since: since,
+    );
+    final taskDays = await _taskSuccessRateByDay(since: since);
+
+    var streak = 0;
+    var avoided = 0;
+    var evidenceDays = 0;
+    var streakOpen = true;
+
+    for (var back = 0; back <= lookbackDays; back++) {
+      final day = _dayKey(today.subtract(Duration(days: back)));
+      final smoked = smokedByDay[day];
+      final successRate = taskDays[day];
+
+      if (smoked == null && successRate == null) {
+        // No evidence either way. Today can legitimately be empty — it may
+        // only be nine in the morning — so an empty today doesn't end
+        // anything. An empty day further back does: we can't credit a day we
+        // know nothing about, and counting it would bring back exactly the
+        // bug this replaced.
+        if (back > 0) streakOpen = false;
+        continue;
+      }
+
+      evidenceDays++;
+      if (smoked != null) {
+        avoided += max(0, input.dailyCigarettes - smoked);
+      }
+
+      // A logged count is direct evidence and outranks task outcomes. Task
+      // outcomes are the fallback for the many users who never press the
+      // quick-log button; the 0.6 threshold matches the weekly review's.
+      final metTarget = smoked != null
+          ? smoked <= target
+          : successRate! >= 0.6;
+      if (streakOpen) {
+        if (metTarget) {
+          streak++;
+        } else {
+          streakOpen = false;
+        }
+      }
+    }
+
+    return ReductionProgress(
+      targetStreakDays: streak,
+      cigarettesAvoided: avoided,
+      naturalIntervalMinutes: natural,
+      currentBarrierMinutes: barrier,
+      dailyTarget: target,
+      baselineDaily: input.dailyCigarettes,
+      loggedToday: smokedByDay[_dayKey(today)],
+      evidenceDays: evidenceDays,
+    );
+  }
+
+  static String _dayKey(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-'
+      '${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
+
+  /// Rows per calendar day, keyed by local date. Grouped in Dart rather than
+  /// SQL because the timestamps are stored as ISO strings in local time and
+  /// SQLite's date functions would reinterpret them as UTC.
+  Future<Map<String, int>> _countByDay({
+    required String table,
+    required String timestampColumn,
+    required DateTime since,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      table,
+      columns: [timestampColumn],
+      where: '$timestampColumn >= ?',
+      whereArgs: [since.toIso8601String()],
+    );
+    final counts = <String, int>{};
+    for (final row in rows) {
+      final parsed = DateTime.tryParse(row[timestampColumn] as String? ?? '');
+      if (parsed == null) continue;
+      final key = _dayKey(parsed);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  Future<Map<String, double>> _taskSuccessRateByDay({
+    required DateTime since,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      _adaptiveTaskEventTable,
+      columns: ['createdAt', 'outcome'],
+      where: 'createdAt >= ?',
+      whereArgs: [since.toIso8601String()],
+    );
+    final total = <String, int>{};
+    final succeeded = <String, int>{};
+    for (final row in rows) {
+      final parsed = DateTime.tryParse(row['createdAt'] as String? ?? '');
+      if (parsed == null) continue;
+      final key = _dayKey(parsed);
+      total[key] = (total[key] ?? 0) + 1;
+      if (row['outcome'] == AdaptiveTaskOutcome.success) {
+        succeeded[key] = (succeeded[key] ?? 0) + 1;
+      }
+    }
+    return {
+      for (final entry in total.entries)
+        entry.key: (succeeded[entry.key] ?? 0) / entry.value,
+    };
   }
 
   /// The daily task plan (how many tasks, when, how long) is generated from

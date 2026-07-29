@@ -198,13 +198,17 @@
 
 ## L. Ana sayfa göstergeleri
 
-- [ ] **46.** "🔥 Sigarasız Seri" kaldırılacak — `quitDate`'ten beri geçen günü sayıyor,
-      kullanıcının içip içmediğine **hiç bakmıyor**
-- [ ] **47.** Yerine üç metrikli azaltma kartı: hedef tutturma serisi + içilmeyen sigara +
-      aralık ilerlemesi
-- [ ] **48.** Ana ekran widget'ı (`NoSmokeWidgetProvider.kt`) aynı metriklere geçecek
-- [ ] **49.** Başarımlar azaltma kilometre taşlarına bağlanacak; `AchievementsPage` şu an
-      hiçbir yerden açılmıyor (ölü ekran), ana akışa bağlanacak
+- [x] **46.** "🔥 Sigarasız Seri" kaldırıldı. Rapor sayfasındaki "Sigarasız geçen gün"
+      satırı da aynı hatayı yapıyordu — silinmedi, ölçtüğü şeyle etiketi eşitlendi
+      ("Programa başlayalı geçen gün").
+- [x] **47.** `ReductionProgress` + `loadReductionProgress`: hedef tutturma serisi,
+      içilmeyen sigara, aralık ilerlemesi. Kanıtı olmayan gün "bilinmiyor" sayılıyor,
+      iyi güne yazılmıyor. Kayıt yoksa kart üç sıfır yerine ne eksik olduğunu söylüyor.
+      11 test.
+- [x] **48.** `NoSmokeWidgetProvider.kt` aynı seriye geçti (`reductionStreakDays`)
+- [x] **49.** Rozetler üç eksene bağlandı (seri / içilmeyen sigara / aralık kazancı),
+      `AchievementsPage` tamamen çevrildi (metin anahtarları hiç yoktu) ve azaltma
+      kartına dokununca açılıyor. 9 test.
 
 ## M. Haftalık anket
 

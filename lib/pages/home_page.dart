@@ -7,8 +7,10 @@ import '../core/app_texts.dart';
 import '../core/app_theme.dart';
 import '../models/adaptive_task_models.dart';
 import '../models/mentor_message.dart';
+import '../models/reduction_progress.dart';
 import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
+import '../pages/achievements_page.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
 import '../pages/health_metrics_page.dart';
@@ -122,7 +124,7 @@ class _HomePageState extends State<HomePage> {
   double _weeklyAverage = 0;
   double _monthlyAverage = 0;
   double _dailyAverage = 0;
-  int _smokeFreeDays = 0; // Kaç gündür sigara içmedi
+  ReductionProgress? _reductionProgress;
 
   @override
   void initState() {
@@ -549,11 +551,17 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) {
       return;
     }
-    final daysLabel = context.t('smokeFreeDaysWidgetLabel');
+    final streakLabel = context.t('reductionStreakLabel');
     final riskLabel = '${context.t('riskLevel')}: $_adaptiveRiskScore/100';
     try {
-      await HomeWidget.saveWidgetData<int>('smokeFreeDays', _smokeFreeDays);
-      await HomeWidget.saveWidgetData<String>('smokeFreeDaysLabel', daysLabel);
+      await HomeWidget.saveWidgetData<int>(
+        'reductionStreakDays',
+        _reductionProgress?.targetStreakDays ?? 0,
+      );
+      await HomeWidget.saveWidgetData<String>(
+        'reductionStreakLabel',
+        streakLabel,
+      );
       await HomeWidget.saveWidgetData<String>('breathScoreLabel', riskLabel);
       await HomeWidget.updateWidget(
         androidName: 'NoSmokeWidgetProvider',
@@ -566,16 +574,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadHomeMetrics() async {
-    // İlk anketin quit date'ini al ve smoke-free days hesapla
-    final initialRecord = await _storageService.loadSurveyHistory().then(
-      (records) => records.where((r) => r.type == 'initial').firstOrNull,
-    );
-    int smokeFreeDays = 0;
-    if (initialRecord?.quitDate != null) {
-      smokeFreeDays = DateTime.now()
-          .difference(initialRecord!.quitDate!)
-          .inDays;
-    }
+    // Was `now - quitDate`, which counted days the user had smoked on. The
+    // reduction figures are derived from logged cigarettes and answered
+    // tasks instead, so a day only counts when something actually happened.
+    final reductionProgress = await _storageService.loadReductionProgress();
 
     final registrationCompleted = await _storageService
         .loadInitialRegistrationCompleted();
@@ -636,7 +638,7 @@ class _HomePageState extends State<HomePage> {
     );
     if (!mounted) return;
     setState(() {
-      _smokeFreeDays = smokeFreeDays;
+      _reductionProgress = reductionProgress;
       _registrationCompleted = registrationCompleted;
       _lastSurveyDateText = lastDate == null
           ? 'noRecordYet'
@@ -2170,7 +2172,7 @@ class _HomePageState extends State<HomePage> {
                 _buildMentorCard(context),
                 const SizedBox(height: 24),
               ],
-              _buildStreakCounter(context),
+              _buildReductionCard(context),
               const SizedBox(height: 24),
               _buildHealthMetricsButton(context),
               const SizedBox(height: 24),
@@ -2308,39 +2310,174 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildStreakCounter(BuildContext context) {
-    return Container(
+  /// Replaces a counter that showed calendar days since the quit date and
+  /// never checked whether the user had smoked. This app asks people to cut
+  /// down, not to stop outright, so an abstinence streak measured nothing
+  /// they were being asked to do — and it went up on days they smoked.
+  Widget _buildReductionCard(BuildContext context) {
+    final progress = _reductionProgress;
+    const accent = Colors.teal;
+
+    return InkWell(
+      // The badge grid had no entry point anywhere in the app — it was
+      // written, then never linked. The card showing the figures badges are
+      // awarded on is the natural place to reach it from.
+      borderRadius: BorderRadius.circular(12),
+      onTap: progress == null
+          ? null
+          : () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AchievementsPage(progress: progress),
+                ),
+              );
+            },
+      child: Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.teal.withAlpha((255 * 0.2).toInt()),
-        border: Border.all(color: Colors.teal, width: 2),
+        color: accent.withAlpha((255 * 0.2).toInt()),
+        border: Border.all(color: accent, width: 2),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            '🔥 ${context.t('smokeFreeStreak')}',
+            '📉 ${context.t('reductionCardTitle')}',
+            textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Colors.teal,
+              color: accent,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '$_smokeFreeDays',
-            style: const TextStyle(
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-              color: Colors.teal,
+          const SizedBox(height: 16),
+          if (progress == null || !progress.hasEvidence) ...[
+            // Three confident zeros would read as failure to someone who has
+            // simply just installed the app. Say what's missing instead.
+            Text(
+              context.t('reductionNoDataTitle'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: accent,
+              ),
             ),
-          ),
-          Text(
-            context.t('dayUnit'),
-            style: const TextStyle(fontSize: 18, color: Colors.teal),
-          ),
+            const SizedBox(height: 6),
+            Text(
+              context.t('reductionNoDataBody'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: accent.withAlpha((255 * 0.85).toInt()),
+              ),
+            ),
+          ] else ...[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _buildReductionMetric(
+                    context,
+                    value: '${progress.targetStreakDays}',
+                    unit: context.t('dayUnit'),
+                    label: context.t('reductionStreakLabel'),
+                  ),
+                ),
+                Expanded(
+                  child: _buildReductionMetric(
+                    context,
+                    value: '${progress.cigarettesAvoided}',
+                    unit: context.t('cigaretteUnit'),
+                    label: context.t('reductionAvoidedLabel'),
+                  ),
+                ),
+                Expanded(
+                  child: _buildReductionMetric(
+                    context,
+                    value: '${progress.currentBarrierMinutes}',
+                    unit: context.t('minutesShort'),
+                    label: context.t('reductionIntervalLabel'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Text(
+              context
+                  .t('reductionTargetToday')
+                  .replaceAll('{target}', '${progress.dailyTarget}'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: accent,
+              ),
+            ),
+            if (progress.loggedToday != null)
+              Text(
+                context
+                    .t('reductionLoggedToday')
+                    .replaceAll('{count}', '${progress.loggedToday}'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: accent.withAlpha((255 * 0.85).toInt()),
+                ),
+              ),
+            if (progress.naturalIntervalMinutes > 0) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${context.t('reductionIntervalDetail').replaceAll('{natural}', '${progress.naturalIntervalMinutes}').replaceAll('{barrier}', '${progress.currentBarrierMinutes}')}'
+                ' • '
+                '${context.t('reductionIntervalGain').replaceAll('{percent}', '${(progress.intervalProgress * 100).round()}')}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: accent.withAlpha((255 * 0.85).toInt()),
+                ),
+              ),
+            ],
+          ],
         ],
       ),
+      ),
+    );
+  }
+
+  Widget _buildReductionMetric(
+    BuildContext context, {
+    required String value,
+    required String unit,
+    required String label,
+  }) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 30,
+            fontWeight: FontWeight.bold,
+            color: Colors.teal,
+          ),
+        ),
+        Text(
+          unit,
+          style: const TextStyle(fontSize: 12, color: Colors.teal),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.25,
+            color: Colors.teal.withAlpha((255 * 0.9).toInt()),
+          ),
+        ),
+      ],
     );
   }
 

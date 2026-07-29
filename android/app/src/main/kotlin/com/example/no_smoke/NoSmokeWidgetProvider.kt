@@ -20,11 +20,15 @@ class NoSmokeWidgetProvider : HomeWidgetProvider() {
     ) {
         appWidgetIds.forEach { widgetId ->
             val views = RemoteViews(context.packageName, R.layout.no_smoke_widget).apply {
-                val days = widgetData.getInt("smokeFreeDays", 0)
+                // Was a count of calendar days since the quit date, which went
+                // up whether or not the user smoked. Now the same slot carries
+                // the reduction streak — days they actually stayed at or under
+                // target — so the widget and the home page agree.
+                val headline = widgetData.getInt("reductionStreakDays", 0)
                 val breathLabel = widgetData.getString("breathScoreLabel", "") ?: ""
-                val daysLabel = widgetData.getString("smokeFreeDaysLabel", "gun sigarasiz") ?: "gun sigarasiz"
-                setTextViewText(R.id.widget_smoke_free_days, days.toString())
-                setTextViewText(R.id.widget_smoke_free_label, daysLabel)
+                val headlineLabel = widgetData.getString("reductionStreakLabel", "gun hedefte") ?: "gun hedefte"
+                setTextViewText(R.id.widget_smoke_free_days, headline.toString())
+                setTextViewText(R.id.widget_smoke_free_label, headlineLabel)
                 setTextViewText(R.id.widget_breath_score, breathLabel)
             }
             appWidgetManager.updateAppWidget(widgetId, views)

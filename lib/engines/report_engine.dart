@@ -71,6 +71,9 @@ class ReportEngine {
     final periodDays = periodEnd.difference(periodStart).inDays.clamp(1, 366);
     final avgCigarettesPerDay = smokingEventsInPeriod.length / periodDays;
 
+    // Calendar days since the date the user named, nothing more — it does
+    // not know whether they smoked on any of them. The label says exactly
+    // that now; it used to read "smoke-free days", which it never was.
     final quitDate = _earliestQuitDate(allSurveyRecords);
     final daysSinceQuitDate = quitDate == null
         ? null
