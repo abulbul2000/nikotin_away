@@ -1638,29 +1638,21 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    final timingContext = await _storageService.loadLatestTaskTimingContext();
-    var index = 0;
-    for (final task in _todaysTasks) {
-      if (_notifiedTaskTitles.contains(task)) {
-        continue;
-      }
-      if ((_taskStates[task] ?? 'new') != 'new') {
-        continue;
-      }
-      final delay = _resolveTaskNotificationDelay(
-        taskTitle: task,
-        index: index,
-        timingContext: timingContext,
-      );
-      await NotificationService.scheduleFirstTaskTriggerNotification(
-        taskDescription: task,
-        delay: delay,
-      );
-
-      _notifiedTaskTitles.add(task);
-      await _storageService.markTaskTitleNotifiedToday(task);
-      index += 1;
-    }
+    // No second scheduler beyond this point.
+    //
+    // There used to be a fallback here that fired whenever the adaptive plan
+    // was empty, spacing tasks as `base + index * gap` measured from the
+    // moment the app happened to be open. That is not a time of day — it is
+    // an offset from install, so a user who finished setup at nine in the
+    // evening had their whole day's tasks stacked into the next hour and a
+    // half, one after another. It also produced titles the learning engine
+    // cannot score: only `ADAPTIVE_NO_SMOKE:n` is recognised, so nothing
+    // those tasks did ever reached the barrier review.
+    //
+    // The plan is the schedule. When it comes back empty the honest answer
+    // is no tasks — either setup isn't finished, or the remaining part of
+    // today genuinely has no room left for a barrier-length commitment.
+    // Registration still starts the first one on its own.
   }
 
   static const Duration _sedentaryReminderCooldown = Duration(hours: 3);
@@ -1736,24 +1728,11 @@ class _HomePageState extends State<HomePage> {
             ..sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
           label = _formatDateTime(sorted.first.scheduledAt);
         }
-      } else {
-        final nextNewTaskIndex = _todaysTasks.indexWhere(
-          (task) =>
-              (_taskStates[task] ?? 'new') == 'new' &&
-              !_notifiedTaskTitles.contains(task),
-        );
-
-        if (nextNewTaskIndex >= 0) {
-          final timingContext = await _storageService
-              .loadLatestTaskTimingContext();
-          final delay = _resolveTaskNotificationDelay(
-            taskTitle: _todaysTasks[nextNewTaskIndex],
-            index: nextNewTaskIndex,
-            timingContext: timingContext,
-          );
-          label = _formatDateTime(DateTime.now().add(delay));
-        }
       }
+      // With no plan there is no next task, so there is no time to show.
+      // This branch used to compute one from the same `index * gap` offset
+      // the retired fallback scheduler used, which meant the card announced
+      // a task that nothing was going to deliver.
     }
 
     if (!mounted) {
@@ -1807,116 +1786,6 @@ class _HomePageState extends State<HomePage> {
     }
 
     return const Duration(minutes: 30);
-  }
-
-  Duration _resolveTaskNotificationDelay({
-    required String taskTitle,
-    required int index,
-    required Map<String, dynamic> timingContext,
-  }) {
-    final riskScore = _adaptiveRiskScore == 0
-        ? widget.riskScore
-        : _adaptiveRiskScore;
-    final baseMinutes = riskScore >= 80
-        ? 10
-        : riskScore >= 60
-        ? 20
-        : riskScore >= 40
-        ? 35
-        : riskScore >= 20
-        ? 50
-        : 75;
-    final gapMinutes = riskScore >= 80
-        ? 12
-        : riskScore >= 60
-        ? 20
-        : riskScore >= 40
-        ? 30
-        : riskScore >= 20
-        ? 45
-        : 60;
-
-    var minutes = baseMinutes + (index * gapMinutes);
-    final isDriving = timingContext['isDriving'] == true;
-    final isSleepWindow = timingContext['isSleepWindow'] == true;
-    final isActiveDuringSleep = timingContext['isActiveDuringSleep'] == true;
-    final isWorkWindow = timingContext['isWorkWindow'] == true;
-    final isTodayWorkingDay = timingContext['isTodayWorkingDay'] == true;
-    final isBreakWindow = timingContext['isBreakWindow'] == true;
-    final isPhoneBusy = timingContext['isPhoneBusy'] == true;
-    final isLongIdle = timingContext['isLongIdle'] == true;
-    final isWeekend = timingContext['isWeekend'] == true;
-    final workplaceSmokingRule =
-        (timingContext['workplaceSmokingRule'] as String?) ?? '';
-    final weekendSmokingPattern =
-        (timingContext['weekendSmokingPattern'] as String?) ?? 'Ayni';
-    final minutesUntilWake =
-        (timingContext['minutesUntilWake'] as num?)?.toInt() ?? 0;
-    final minutesUntilWorkEnd =
-        (timingContext['minutesUntilWorkEnd'] as num?)?.toInt() ?? 0;
-    final minutesUntilNextBreak =
-        (timingContext['minutesUntilNextBreak'] as num?)?.toInt() ?? -1;
-
-    if (isDriving) {
-      minutes += 20;
-    }
-
-    if (isSleepWindow) {
-      if (isActiveDuringSleep) {
-        minutes = 3 + (index * 3);
-      } else {
-        minutes = minutesUntilWake + 5 + (index * 5);
-      }
-    }
-
-    if (isWorkWindow && isTodayWorkingDay) {
-      if (workplaceSmokingRule == 'Hayır') {
-        minutes = minutesUntilWorkEnd + 10 + (index * 5);
-      } else if (workplaceSmokingRule == 'Sadece molalarda') {
-        if (isBreakWindow) {
-          minutes = minutes < 8 ? 8 + (index * 4) : minutes;
-        } else if (minutesUntilNextBreak > 0) {
-          minutes = minutesUntilNextBreak + 2 + (index * 4);
-        } else {
-          minutes = minutes < 25 ? 25 : minutes;
-        }
-      }
-    }
-
-    if (isWeekend && !isWorkWindow) {
-      if (weekendSmokingPattern == 'HaftaSonuDahaFazla') {
-        minutes -= 10;
-      } else if (weekendSmokingPattern == 'HaftaSonuDahaAz') {
-        minutes += 10;
-      }
-    }
-
-    if (isPhoneBusy && !isSleepWindow && !isDriving) {
-      minutes += 15;
-    }
-
-    if (isLongIdle && !isSleepWindow && !isDriving) {
-      minutes = minutes > 5 ? 5 + (index * 5) : minutes;
-    }
-
-    if (taskTitle.contains('120 dakika') || taskTitle.contains('2 saat')) {
-      minutes += 20;
-    } else if (taskTitle.contains('90 dakika')) {
-      minutes += 10;
-    }
-
-    return _disciplineProtocolService.computeUnpredictableDelay(
-      baseDelay: Duration(minutes: minutes < 3 ? 3 : minutes),
-      successRate: _currentSuccessRate(),
-      minMinutes: 3,
-    );
-  }
-
-  double _currentSuccessRate() {
-    return _disciplineProtocolService.computeSuccessRate(
-      successCount: _recentSuccessCount,
-      failureCount: _recentFailureCount,
-    );
   }
 
   String _buildBreathDeltaText({
@@ -2092,9 +1961,6 @@ class _HomePageState extends State<HomePage> {
       debugPrint('[CompleteRegistration] Creating first task: $firstTask');
       final createdAt = DateTime.now();
       const firstTaskDelay = Duration(minutes: 10);
-      const followUpDelay = Duration(minutes: 5);
-      const followUpRetryDelay = Duration(seconds: 30);
-
       try {
         await _storageService.saveTaskResult(
           taskTitle: firstTask,
@@ -2110,22 +1976,21 @@ class _HomePageState extends State<HomePage> {
       }
 
       try {
+        // Once. This used to fire the same task three times — at +10 min,
+        // +10 min 30 s and +15 min — apparently as a delivery safety net.
+        // But one call is not one notification: it schedules the alert, arms
+        // the native overlay trigger, and starts the unanswered-task retry
+        // chain (two more alerts, five minutes apart, with different wording
+        // and a different notification style). Three calls therefore meant
+        // nine notifications for a single task inside the first half hour
+        // after install, which reads as a broken app rather than a
+        // programme. The retry chain is the safety net.
         await NotificationService.scheduleFirstTaskTriggerNotification(
           taskDescription: firstTask,
           delay: firstTaskDelay,
         );
-
-        await NotificationService.scheduleFirstTaskTriggerNotification(
-          taskDescription: firstTask,
-          delay: firstTaskDelay + followUpRetryDelay,
-        );
-
-        await NotificationService.scheduleFirstTaskTriggerNotification(
-          taskDescription: firstTask,
-          delay: firstTaskDelay + followUpDelay,
-        );
         debugPrint(
-          '[CompleteRegistration] first task notification scheduled (10m, +30s, +5m)',
+          '[CompleteRegistration] first task notification scheduled (10m)',
         );
       } catch (error, stackTrace) {
         debugPrint(
