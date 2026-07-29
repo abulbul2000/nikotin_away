@@ -2280,6 +2280,15 @@ class NotificationService {
     try {
       const budget = NotificationBudget();
       final storage = StorageService();
+
+      // Checked before spending anything from the budget: a kind the user
+      // switched off in Settings should not also use up a slot another,
+      // wanted kind could have had today.
+      if (budget.classOf(kind) == NotificationClass.offered &&
+          !await storage.isNotificationKindEnabled(kind.name)) {
+        return false;
+      }
+
       final when = at ?? DateTime.now();
       final (sentToday, lastSentAt) = await storage
           .loadNotificationBudgetState(now: when);

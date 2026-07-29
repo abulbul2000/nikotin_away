@@ -16,6 +16,7 @@ import '../services/snoring_detection_service.dart';
 import '../services/storage_service.dart';
 import '../services/wearable_intelligence_service.dart';
 import '../widgets/background_reliability_prompt.dart';
+import '../widgets/notification_kinds_card.dart';
 import 'coach_mode_page.dart';
 import 'language_selection_page.dart';
 import 'location_intelligence_page.dart';
@@ -517,6 +518,9 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _SectionLabel(context.t('notifKindsSectionTitle')),
+          const NotificationKindsCard(),
+          const SizedBox(height: 20),
           _SectionLabel(context.t('settingsSectionGeneral')),
           Card(
             child: Column(

@@ -102,6 +102,15 @@ class AppTexts {
         'Gorev ekraninin baska uygulamalarin ustunde acilabilmesi icin gerekli. Verilmezse gorev yine gelir, ama sadece bildirim olarak.',
     'permissionOemDescription':
         'Bu telefonda bazi bildirim ayarlari ureticinin kendi izin ekraninda duruyor. Oradan "arka planda calisma" ve "kilit ekraninda goster" seceneklerini acabilirsiniz.',
+    'notifKindsSectionTitle': 'Bildirim Türleri',
+    'notifKindsTitle': 'Hangi bildirimleri almak istersin?',
+    'notifKindsHint':
+        'Görev bildirimleri ve kendi seçtiğin ilaç saatleri her zaman gelir. Aşağıdakiler isteğe bağlı — kapatmak günlük ilerlemeni etkilemez.',
+    'notifKindBreathTest': 'Nefes testi hatırlatıcısı',
+    'notifKindWeeklySurvey': 'Haftalık anket hatırlatıcısı',
+    'notifKindHealthTip': 'Sağlık ipuçları',
+    'notifKindCoachCommand': 'Mentör önerileri',
+    'notifKindSedentary': 'Hareketsizlik hatırlatıcısı',
     'permissionSetupOptionalHeading': 'İsteğe bağlı özellikler için izinler',
     'permissionSetupOptionalHint':
         'Bunlar olmadan da uygulama çalışır. Vermek, ilgili özelliği otomatik açmaz — yalnızca Ayarlar\'dan açtığında izin sormasına gerek kalmaz.',
@@ -1447,6 +1456,17 @@ class AppTexts {
         'Lets the task screen open over other apps. Without it tasks still arrive, just as a notification.',
     'permissionOemDescription':
         'This phone keeps some notification settings in the manufacturer\'s own permission screen. That\'s where "run in background" and "show on lock screen" live.',
+    'notifKindsSectionTitle': 'Notification Types',
+    'notifKindsTitle': 'Which notifications do you want?',
+    'notifKindsHint':
+        'Task alerts and the medication times you set yourself always '
+        'arrive. The ones below are optional — turning them off does not '
+        'affect your daily progress.',
+    'notifKindBreathTest': 'Breath test reminder',
+    'notifKindWeeklySurvey': 'Weekly survey reminder',
+    'notifKindHealthTip': 'Health tips',
+    'notifKindCoachCommand': 'Coaching suggestions',
+    'notifKindSedentary': 'Sedentary reminder',
     'permissionSetupOptionalHeading': 'Permissions for optional features',
     'permissionSetupOptionalHint':
         'The app works without these. Granting one does not switch the '

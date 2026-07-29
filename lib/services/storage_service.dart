@@ -2065,6 +2065,28 @@ class StorageService {
     await saveSetting(_budgetLastSentKey, when.toIso8601String());
   }
 
+  /// Whether the user wants a given *offered* notification kind at all.
+  ///
+  /// Only [NotificationKind]s the app merely offers are ever asked about here
+  /// — the ones the user is owed (a due task, a dose they scheduled
+  /// themselves) are not a preference to switch off, they are a promise the
+  /// app already made. Defaults to on: someone who has never opened this
+  /// screen gets the same behaviour as before it existed.
+  Future<bool> isNotificationKindEnabled(String kindName) async {
+    final raw = await loadSetting('notification_kind_enabled_$kindName');
+    return raw != '0';
+  }
+
+  Future<void> setNotificationKindEnabled(
+    String kindName,
+    bool enabled,
+  ) async {
+    await saveSetting(
+      'notification_kind_enabled_$kindName',
+      enabled ? '1' : '0',
+    );
+  }
+
   Future<String> loadInterventionIntensity() async {
     final raw = await loadSetting(_interventionIntensityKey);
     if (raw == 'gentle' || raw == 'strict') {
