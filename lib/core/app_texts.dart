@@ -1,17 +1,8 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'generated_language_data.dart';
 
 class AppTexts {
-  static final Map<String, Map<String, String>> _runtimeLanguageData =
-      <String, Map<String, String>>{};
-  static final Map<String, Future<void>> _languageLoadFutures =
-      <String, Future<void>>{};
-  static const String _runtimeCachePrefix = 'runtime_i18n_';
   // Turkish - Full translation
   static const Map<String, String> _tr = {
     'appName': 'NIKOTIN AWAY',
@@ -2093,7 +2084,7 @@ class AppTexts {
     'de': {
       ..._en,
       'selectLanguage': 'Sprache wählen',
-      'appName': 'NICHT RAUCHEN',
+      'appName': 'NIKOTIN AWAY',
       'initialSurvey': 'Anfangsumfrage',
       'continue': 'Weiter',
       'yes': 'Ja',
@@ -2114,7 +2105,7 @@ class AppTexts {
     'ar': {
       ..._en,
       'selectLanguage': 'اختر اللغة',
-      'appName': 'لا تدخن',
+      'appName': 'NIKOTIN AWAY',
       'initialSurvey': 'الاستطلاع الأولي',
       'continue': 'تابع',
       'yes': 'نعم',
@@ -2129,7 +2120,7 @@ class AppTexts {
     'fr': {
       ..._en,
       'selectLanguage': 'Choisir la langue',
-      'appName': 'ARRÊT DU TABAC',
+      'appName': 'NIKOTIN AWAY',
       'initialSurvey': 'Enquête initiale',
       'continue': 'Continuer',
       'yes': 'Oui',
@@ -2144,7 +2135,7 @@ class AppTexts {
     'es': {
       ..._en,
       'selectLanguage': 'Seleccionar idioma',
-      'appName': 'SIN HUMO',
+      'appName': 'NIKOTIN AWAY',
       'initialSurvey': 'Encuesta inicial',
       'continue': 'Continuar',
       'yes': 'Sí',
@@ -2159,7 +2150,7 @@ class AppTexts {
     'pt': {
       ..._en,
       'selectLanguage': 'Selecione o idioma',
-      'appName': 'SEM FUMO',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Continuar',
       'yes': 'Sim',
       'no': 'Não',
@@ -2172,7 +2163,7 @@ class AppTexts {
     'it': {
       ..._en,
       'selectLanguage': 'Seleziona lingua',
-      'appName': 'SENZA FUMO',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Continua',
       'yes': 'Sì',
       'no': 'No',
@@ -2185,7 +2176,7 @@ class AppTexts {
     'pl': {
       ..._en,
       'selectLanguage': 'Wybierz język',
-      'appName': 'BEZ DYMU',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Dalej',
       'yes': 'Tak',
       'no': 'Nie',
@@ -2198,7 +2189,7 @@ class AppTexts {
     'ru': {
       ..._en,
       'selectLanguage': 'Выберите язык',
-      'appName': 'БЕЗ ДЫМА',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Продолжить',
       'yes': 'Да',
       'no': 'Нет',
@@ -2211,7 +2202,7 @@ class AppTexts {
     'ja': {
       ..._en,
       'selectLanguage': '言語を選択',
-      'appName': '禁煙',
+      'appName': 'NIKOTIN AWAY',
       'continue': '続行',
       'yes': 'はい',
       'no': 'いいえ',
@@ -2224,7 +2215,7 @@ class AppTexts {
     'zh': {
       ..._en,
       'selectLanguage': '选择语言',
-      'appName': '无烟',
+      'appName': 'NIKOTIN AWAY',
       'continue': '继续',
       'yes': '是',
       'no': '否',
@@ -2237,7 +2228,7 @@ class AppTexts {
     'ko': {
       ..._en,
       'selectLanguage': '언어 선택',
-      'appName': '금연',
+      'appName': 'NIKOTIN AWAY',
       'continue': '계속',
       'yes': '예',
       'no': '아니오',
@@ -2250,7 +2241,7 @@ class AppTexts {
     'hi': {
       ..._en,
       'selectLanguage': 'भाषा चुनें',
-      'appName': 'धुआं नहीं',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'जारी रखें',
       'yes': 'हाँ',
       'no': 'नहीं',
@@ -2263,7 +2254,7 @@ class AppTexts {
     'th': {
       ..._en,
       'selectLanguage': 'เลือกภาษา',
-      'appName': 'ไม่สูบบุหรี่',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'ต่อไป',
       'yes': 'ใช่',
       'no': 'ไม่ใช่',
@@ -2276,7 +2267,7 @@ class AppTexts {
     'vi': {
       ..._en,
       'selectLanguage': 'Chọn ngôn ngữ',
-      'appName': 'KHÔNG HÚT THUỐC',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Tiếp tục',
       'yes': 'Có',
       'no': 'Không',
@@ -2289,7 +2280,7 @@ class AppTexts {
     'id': {
       ..._en,
       'selectLanguage': 'Pilih bahasa',
-      'appName': 'BEBAS ASAP',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Lanjutkan',
       'yes': 'Ya',
       'no': 'Tidak',
@@ -2390,7 +2381,7 @@ class AppTexts {
     'uk': {
       ..._en,
       'selectLanguage': 'Виберіть мову',
-      'appName': 'БЕЗ ДИМУ',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Продовжити',
       'yes': 'Так',
       'no': 'Ні',
@@ -2446,7 +2437,7 @@ class AppTexts {
     'sv': {
       ..._en,
       'selectLanguage': 'Välj språk',
-      'appName': 'RÖKFRI',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Fortsätt',
       'yes': 'Ja',
       'no': 'Nej',
@@ -2469,7 +2460,7 @@ class AppTexts {
     'no': {
       ..._en,
       'selectLanguage': 'Velg språk',
-      'appName': 'RØYKFRI',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Fortsett',
       'yes': 'Ja',
       'no': 'Nei',
@@ -2481,7 +2472,7 @@ class AppTexts {
     'fi': {
       ..._en,
       'selectLanguage': 'Valitse kieli',
-      'appName': 'SAVUTON',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Jatka',
       'yes': 'Kyllä',
       'no': 'Ei',
@@ -2504,7 +2495,7 @@ class AppTexts {
     'be': {
       ..._en,
       'selectLanguage': 'Выберыце мову',
-      'appName': 'БЕЗ ДЫМУ',
+      'appName': 'NIKOTIN AWAY',
       'continue': 'Прадолжыць',
       'yes': 'Так',
       'no': 'Не',
@@ -2571,146 +2562,18 @@ class AppTexts {
       return generatedMap[key] ?? _en[key] ?? _tr[key] ?? key;
     }
 
-    final runtimeMap = _runtimeLanguageData[code];
-    if (runtimeMap != null && runtimeMap.containsKey(key)) {
-      return runtimeMap[key] ?? _en[key] ?? _tr[key] ?? key;
-    }
-
     final langMap = _data[code] ?? _data['en']!;
     return langMap[key] ?? _data['en']![key] ?? _data['tr']![key] ?? key;
   }
 
-  static Future<void> ensureLanguageLoaded(String code) async {
-    if (code == 'tr' || code == 'en' || generatedLanguageData.containsKey(code)) {
-      return;
-    }
-    if (_runtimeLanguageData.containsKey(code)) {
-      return;
-    }
-
-    final inflight = _languageLoadFutures[code];
-    if (inflight != null) {
-      return inflight;
-    }
-
-    final future = _loadRuntimeLanguage(code);
-    _languageLoadFutures[code] = future;
-    try {
-      await future;
-    } finally {
-      _languageLoadFutures.remove(code);
-    }
-  }
-
-  static Future<void> _loadRuntimeLanguage(String code) async {
-    final prefs = await SharedPreferences.getInstance();
-    final cached = prefs.getString('$_runtimeCachePrefix$code');
-    if (cached != null && cached.isNotEmpty) {
-      final decoded = jsonDecode(cached) as Map<String, dynamic>;
-      _runtimeLanguageData[code] = decoded.map(
-        (key, value) => MapEntry(key, value.toString()),
-      );
-      return;
-    }
-
-    final translated = await _translateLanguageMap(code);
-    _runtimeLanguageData[code] = translated;
-    await prefs.setString('$_runtimeCachePrefix$code', jsonEncode(translated));
-  }
-
-  static Future<Map<String, String>> _translateLanguageMap(String code) async {
-    const batchSize = 8;
-    final keys = _en.keys.toList(growable: false);
-    final values = keys.map((key) => _en[key] ?? key).toList(growable: false);
-    final translated = <String, String>{};
-
-    for (var offset = 0; offset < values.length; offset += batchSize) {
-      final end = (offset + batchSize < values.length)
-          ? offset + batchSize
-          : values.length;
-      final batchValues = values.sublist(offset, end);
-      final batchKeys = keys.sublist(offset, end);
-      final translatedValues = await _translateBatchResilient(code, batchValues);
-      for (var index = 0; index < batchKeys.length; index++) {
-        translated[batchKeys[index]] = translatedValues[index];
-      }
-    }
-
-    return translated;
-  }
-
-  static Future<List<String>> _translateBatchResilient(
-    String code,
-    List<String> texts,
-  ) async {
-    try {
-      return await _translateBatch(code, texts);
-    } catch (_) {
-      if (texts.length <= 1) {
-        rethrow;
-      }
-      final mid = texts.length ~/ 2;
-      final left = await _translateBatchResilient(code, texts.sublist(0, mid));
-      final right = await _translateBatchResilient(code, texts.sublist(mid));
-      return <String>[...left, ...right];
-    }
-  }
-
-  static Future<List<String>> _translateBatch(
-    String code,
-    List<String> texts,
-  ) async {
-    final client = HttpClient()..connectionTimeout = const Duration(seconds: 30);
-    try {
-      if (texts.length == 1) {
-        final single = texts.first.replaceAll('\n', '__NSMOKE_NL__');
-        final translated = await _requestTranslation(client, code, single);
-        return <String>[translated.replaceAll('__NSMOKE_NL__', '\n').trim()];
-      }
-
-      final joined = List<String>.generate(
-        texts.length,
-        (index) => '[$index] ${texts[index].replaceAll('\n', '__NSMOKE_NL__')}',
-      ).join(' ');
-      final translated = await _requestTranslation(client, code, joined);
-      final matchExp = RegExp(r'\[(\d+)\]\s*(.*?)(?=\s*\[\d+\]|$)');
-      final matches = matchExp.allMatches(translated).toList(growable: false);
-      if (matches.length != texts.length) {
-        throw StateError('Split mismatch for $code');
-      }
-
-      final ordered = List<String>.filled(texts.length, '');
-      for (final match in matches) {
-        final slot = int.parse(match.group(1)!);
-        ordered[slot] = match
-            .group(2)!
-            .replaceAll('__NSMOKE_NL__', '\n')
-            .trim();
-      }
-      return ordered;
-    } finally {
-      client.close(force: true);
-    }
-  }
-
-  static Future<String> _requestTranslation(
-    HttpClient client,
-    String code,
-    String text,
-  ) async {
-    final encoded = Uri.encodeQueryComponent(text);
-    final uri = Uri.parse(
-      'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=$code&dt=t&q=$encoded',
-    );
-    final request = await client.getUrl(uri);
-    final response = await request.close().timeout(const Duration(seconds: 30));
-    final body = await response.transform(utf8.decoder).join();
-    final decoded = jsonDecode(body) as List<dynamic>;
-    final segments = decoded.first as List<dynamic>;
-    return segments
-        .map((segment) => (segment as List<dynamic>).first?.toString() ?? '')
-        .join();
-  }
+  /// Kept so callers do not have to know whether a language needs loading.
+  ///
+  /// It used to fetch the whole string table from translate.googleapis.com
+  /// on first use of any language without bundled data — an undocumented
+  /// endpoint, and a network call in an app whose data-safety declaration
+  /// says nothing leaves the device. Every language now resolves from the
+  /// bundle, falling back to English for keys not yet translated.
+  static Future<void> ensureLanguageLoaded(String code) async {}
 
   static String text(BuildContext context, String key) {
     final code = Localizations.localeOf(context).languageCode;

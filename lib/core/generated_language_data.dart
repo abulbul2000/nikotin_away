@@ -1,6 +1,6 @@
 ﻿const Map<String, Map<String, String>> generatedLanguageData = <String, Map<String, String>>{
   'de': <String, String>{
-    'appName': 'KEIN RAUCH',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Sprache auswählen',
     'continue': 'Weiter',
     'yes': 'Ja',
@@ -555,7 +555,7 @@
     'snoringDetectionLastNightCount': 'Letzte Nacht erkannte schnarchähnliche Muster',
   },
   'ar': <String, String>{
-    'appName': 'ممنوع التدخين',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'اختر لغة',
     'continue': 'متابعة',
     'yes': 'نعم',
@@ -1110,7 +1110,7 @@
     'snoringDetectionLastNightCount': 'أنماط الشخير المكتشفة الليلة الماضية',
   },
   'fr': <String, String>{
-    'appName': 'PAS DE FUMÉE',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Sélectionnez la langue',
     'continue': 'Continuer',
     'yes': 'Oui',
@@ -1665,7 +1665,7 @@
     'snoringDetectionLastNightCount': 'Motifs de ronflement détectés la nuit dernière',
   },
   'es': <String, String>{
-    'appName': 'NO FUMAR',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Seleccionar idioma',
     'continue': 'Continuar',
     'yes': 'Sí',
@@ -2220,7 +2220,7 @@
     'snoringDetectionLastNightCount': 'Patrones de ronquido detectados anoche',
   },
   'pt': <String, String>{
-    'appName': 'NÃO FUMAR',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Selecione o idioma',
     'continue': 'Continuar',
     'yes': 'Sim',
@@ -2775,7 +2775,7 @@
     'snoringDetectionLastNightCount': 'Padrões de ronco detectados na última noite',
   },
   'it': <String, String>{
-    'appName': 'NO FUMO',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Seleziona lingua',
     'continue': 'Continua',
     'yes': 'Sì',
@@ -3330,7 +3330,7 @@
     'snoringDetectionLastNightCount': 'Pattern simili al russare rilevati la scorsa notte',
   },
   'pl': <String, String>{
-    'appName': 'BEZ DYM',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Wybierz język',
     'continue': 'Kontynuuj',
     'yes': 'Tak',
@@ -3885,7 +3885,7 @@
     'snoringDetectionLastNightCount': 'Wzorce chrapania wykryte zeszłej nocy',
   },
   'ru': <String, String>{
-    'appName': 'НЕ КУРИТЬ',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Выберите язык',
     'continue': 'Продолжить',
     'yes': 'Да',
@@ -4440,7 +4440,7 @@
     'snoringDetectionLastNightCount': 'Обнаруженные прошлой ночью паттерны храпа',
   },
   'ja': <String, String>{
-    'appName': '禁煙',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': '言語を選択',
     'continue': '続行',
     'yes': 'はい',
@@ -4995,7 +4995,7 @@
     'snoringDetectionLastNightCount': '昨夜検出されたいびきのようなパターン',
   },
   'zh': <String, String>{
-    'appName': '禁止吸烟',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': '选择语言',
     'continue': '继续',
     'yes': '是',
@@ -5550,7 +5550,7 @@
     'snoringDetectionLastNightCount': '昨晚检测到的类似打鼾的模式',
   },
   'ko': <String, String>{
-    'appName': '금연',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': '언어 선택',
     'continue': '계속',
     'yes': '예',
@@ -6105,7 +6105,7 @@
     'snoringDetectionLastNightCount': '지난밤 감지된 코골이 유사 패턴',
   },
   'hi': <String, String>{
-    'appName': 'धूम्रपान निषेध',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'भाषा चुनें',
     'continue': 'जारी रखें',
     'yes': 'हां',
@@ -6660,7 +6660,7 @@
     'snoringDetectionLastNightCount': 'पिछली रात पाए गए खर्राटे जैसे पैटर्न',
   },
   'bn': <String, String>{
-    'appName': 'নো স্মোক',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'ভাষা নির্বাচন করুন',
     'continue': 'চালিয়ে যান',
     'yes': 'হ্যাঁ',
@@ -7215,7 +7215,7 @@
     'snoringDetectionLastNightCount': 'গত রাতে সনাক্ত করা নাক ডাকার প্যাটার্ন',
   },
   'pa': <String, String>{
-    'appName': 'ਕੋਈ ਧੂੰਆਂ ਨਹੀਂ',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'ਭਾਸ਼ਾ ਚੁਣੋ',
     'continue': 'ਜਾਰੀ ਰੱਖੋ',
     'yes': 'ਹਾਂ',
@@ -7770,7 +7770,7 @@
     'snoringDetectionLastNightCount': 'ਪਿਛਲੀ ਰਾਤ ਪਾਏ ਗਏ ਘੁਰਾੜਿਆਂ ਵਰਗੇ ਪੈਟਰਨ',
   },
   'te': <String, String>{
-    'appName': 'పొగ వద్దు',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'భాషను ఎంచుకోండి',
     'continue': 'కొనసాగించు',
     'yes': 'అవును',
@@ -8325,7 +8325,7 @@
     'snoringDetectionLastNightCount': 'నిన్న రాత్రి గుర్తించిన గురక వంటి నమూనాలు',
   },
   'mr': <String, String>{
-    'appName': 'धूर नाही',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'भाषा निवडा',
     'continue': 'सुरू ठेवा',
     'yes': 'होय',
@@ -8880,7 +8880,7 @@
     'snoringDetectionLastNightCount': 'काल रात्री आढळलेले घोरण्यासारखे पॅटर्न',
   },
   'ta': <String, String>{
-    'appName': 'புகை வேண்டாம்',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'மொழியைத் தேர்ந்தெடு',
     'continue': 'தொடரவும்',
     'yes': 'ஆம்',
@@ -9435,7 +9435,7 @@
     'snoringDetectionLastNightCount': 'நேற்று இரவு கண்டறியப்பட்ட குறட்டை போன்ற முறைகள்',
   },
   'gu': <String, String>{
-    'appName': 'સ્મોક નહીં',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'ભાષા પસંદ કરો',
     'continue': 'ચાલુ રાખો',
     'yes': 'હા',
@@ -9990,7 +9990,7 @@
     'snoringDetectionLastNightCount': 'ગઈકાલે રાત્રે મળેલા નસકોરાં જેવા પેટર્ન',
   },
   'kn': <String, String>{
-    'appName': 'ಹೊಗೆ ಇಲ್ಲ',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ',
     'continue': 'ಮುಂದುವರಿಸಿ',
     'yes': 'ಹೌದು',
@@ -10545,7 +10545,7 @@
     'snoringDetectionLastNightCount': 'ನಿನ್ನೆ ರಾತ್ರಿ ಪತ್ತೆಯಾದ ಗೊರಕೆಯಂತಹ ಮಾದರಿಗಳು',
   },
   'ml': <String, String>{
-    'appName': 'പുകവലിക്കരുത്',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'ഭാഷ തിരഞ്ഞെടുക്കുക',
     'continue': 'തുടരുക',
     'yes': 'അതെ',
@@ -11100,7 +11100,7 @@
     'snoringDetectionLastNightCount': 'ഇന്നലെ രാത്രി കണ്ടെത്തിയ കൂർക്കംവലി പോലുള്ള പാറ്റേണുകൾ',
   },
   'th': <String, String>{
-    'appName': 'ห้ามสูบบุหรี่',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'เลือกภาษา',
     'continue': 'ดำเนินการต่อ',
     'yes': 'ใช่',
@@ -11655,7 +11655,7 @@
     'snoringDetectionLastNightCount': 'รูปแบบคล้ายการนอนกรนที่ตรวจพบเมื่อคืนนี้',
   },
   'vi': <String, String>{
-    'appName': 'KHÔNG HÚT THUỐC',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Chọn ngôn ngữ',
     'continue': 'Tiếp tục',
     'yes': 'Có',
@@ -12210,7 +12210,7 @@
     'snoringDetectionLastNightCount': 'Các mẫu giống tiếng ngáy được phát hiện đêm qua',
   },
   'id': <String, String>{
-    'appName': 'DILARANG ASAP',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Pilih bahasa',
     'continue': 'Lanjutkan',
     'yes': 'Ya',
@@ -12765,7 +12765,7 @@
     'snoringDetectionLastNightCount': 'Pola mirip dengkuran yang terdeteksi tadi malam',
   },
   'ms': <String, String>{
-    'appName': 'TIADA WASAP',
+    'appName': 'NIKOTIN AWAY',
     'selectLanguage': 'Pilih bahasa',
     'continue': 'Teruskan',
     'yes': 'Ya',
