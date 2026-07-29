@@ -9,10 +9,16 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabase
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.BatteryManager
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import androidx.core.content.ContextCompat
 import java.io.File
@@ -25,13 +31,10 @@ import kotlin.math.sqrt
 /// Wakes briefly on an AlarmManager tick to record two free, already-cached
 /// OS signals (screen-interactive state, charging state) as one row, then
 /// reschedules itself for as long as the current time stays inside the
-/// configured window. No sensor listener is ever registered — reading
-/// PowerManager/BatteryManager state costs no measurable battery, unlike
-/// keeping an accelerometer or the app process alive all night. Stops once
-/// past the window end; SleepProbeBootReceiver re-arms after a reboot, and
-/// SleepIntelligenceEngine (Dart side) treats a night with too few rows as
-/// "insufficient coverage" and falls back to the user's static survey sleep
-/// time rather than guessing.
+/// configured window. Stops once past the window end; SleepProbeBootReceiver
+/// re-arms after a reboot, and SleepIntelligenceEngine (Dart side) treats a
+/// night with too few rows as "insufficient coverage" and falls back to the
+/// user's static survey sleep time rather than guessing.
 class SleepProbeReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action != ACTION_PROBE) {
@@ -47,20 +50,60 @@ class SleepProbeReceiver : BroadcastReceiver() {
 
         val isAwake = isInteractive(context)
         SleepProbeStore.insertProbe(context, isScreenOff = !isAwake, isCharging = isCharging(context))
+        val inWindow = isWithinWindow(currentMinuteOfDay(), windowStartMinute, windowEndMinute)
 
-        // The user is awake (screen on) during what should be their sleep
-        // window -- queue this so the Dart side can decide, next time it
-        // runs, whether to fire a full mandatory task or just a small
-        // advisory tip (see StorageService.isDailyTaskQuotaMet). Detection
-        // granularity is however often this probe fires (intervalMinutes,
-        // tightened specifically during the sleep window -- see
-        // SleepIntelligenceService) rather than truly instant, since acting
-        // on it needs Dart-side business logic this native receiver
-        // deliberately doesn't duplicate.
-        if (isAwake && isWithinWindow(currentMinuteOfDay(), windowStartMinute, windowEndMinute)) {
-            SleepActivityStore.enqueueActivity(context)
+        if (isAwake && inWindow) {
+            // Screen-on alone used to be enough to count as "awake", which is
+            // wrong for exactly the case that matters most here: someone who
+            // fell asleep with a video playing. Playback keeps the screen on
+            // and blocks the auto-lock timer, so the phone reads as "in use"
+            // for as long as the video runs, whether anyone is watching it or
+            // not. A brief accelerometer read (a few hundred milliseconds,
+            // registered and unregistered on the spot — no listener kept
+            // alive) tells the two apart: a phone actually being held or
+            // touched moves; a phone left running video on a nightstand does
+            // not.
+            readMotionThenDecide(context, windowStartMinute, windowEndMinute, intervalMinutes)
+            return
         }
 
+        finishProbeCycle(context, isAwake, inWindow, windowStartMinute, windowEndMinute, intervalMinutes)
+    }
+
+    private fun readMotionThenDecide(
+        context: Context,
+        windowStartMinute: Int,
+        windowEndMinute: Int,
+        intervalMinutes: Int,
+    ) {
+        val pendingResult = goAsync()
+        MotionSampler.sample(context) { isMoving ->
+            if (isMoving) {
+                // The user is awake (screen on, phone moving) during what
+                // should be their sleep window -- queue this so the Dart side
+                // can decide, next time it runs, whether to fire a full
+                // mandatory task or just a small advisory tip (see
+                // StorageService.isDailyTaskQuotaMet). Detection granularity
+                // is however often this probe fires (intervalMinutes,
+                // tightened specifically during the sleep window -- see
+                // SleepIntelligenceService) rather than truly instant, since
+                // acting on it needs Dart-side business logic this native
+                // receiver deliberately doesn't duplicate.
+                SleepActivityStore.enqueueActivity(context)
+            }
+            finishProbeCycle(context, true, true, windowStartMinute, windowEndMinute, intervalMinutes)
+            pendingResult.finish()
+        }
+    }
+
+    private fun finishProbeCycle(
+        context: Context,
+        isAwake: Boolean,
+        inWindow: Boolean,
+        windowStartMinute: Int,
+        windowEndMinute: Int,
+        intervalMinutes: Int,
+    ) {
         // Opt-in, separate from Sleep Intelligence itself (see
         // SnoringProbeStore/SnoringDetectionService) -- only runs while the
         // screen is off (the user is presumably actually asleep, not just
@@ -68,12 +111,12 @@ class SleepProbeReceiver : BroadcastReceiver() {
         // rather than running its own schedule.
         if (!isAwake &&
             SleepProbeStore.isSnoringDetectionEnabled(context) &&
-            isWithinWindow(currentMinuteOfDay(), windowStartMinute, windowEndMinute)
+            inWindow
         ) {
             captureAndAnalyzeSnoring(context)
         }
 
-        if (!isWithinWindow(currentMinuteOfDay(), windowStartMinute, windowEndMinute)) {
+        if (!inWindow) {
             return
         }
         scheduleFireInMinutes(context, windowStartMinute, windowEndMinute, intervalMinutes, intervalMinutes)
@@ -276,6 +319,69 @@ class SleepProbeReceiver : BroadcastReceiver() {
 
 /// Shared SharedPreferences-backed schedule config, read by the boot
 /// receiver to re-arm probing without needing the Dart side to run first.
+/// A brief, one-shot accelerometer read used only to tell "phone actually
+/// being held" apart from "phone lying still with the screen kept on by
+/// video playback" — the two situations `PowerManager.isInteractive` alone
+/// cannot distinguish, since both report the screen as on.
+///
+/// Registered and unregistered within one probe tick; no listener is ever
+/// left running, so this costs nothing between sleep-window probes.
+object MotionSampler {
+    private const val SAMPLE_DURATION_MS = 600L
+    private const val TIMEOUT_MS = 1500L
+
+    /// A phone resting on a nightstand still picks up gravity's ~9.8 m/s² and
+    /// a little sensor noise; this threshold is comfortably above that noise
+    /// floor but well below what a hand holding or a screen tap produces.
+    private const val MOVEMENT_THRESHOLD = 1.2f
+
+    fun sample(context: Context, callback: (Boolean) -> Unit) {
+        val sensorManager =
+            context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        val sensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        if (sensorManager == null || sensor == null) {
+            // No accelerometer to read — fail toward the old behaviour
+            // (treat screen-on as awake) rather than silently going quiet
+            // for a whole night on a device that can't support this check.
+            callback(true)
+            return
+        }
+
+        val handler = Handler(Looper.getMainLooper())
+        var finished = false
+        var maxDeviation = 0f
+
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                val x = event.values.getOrNull(0) ?: return
+                val y = event.values.getOrNull(1) ?: return
+                val z = event.values.getOrNull(2) ?: return
+                val magnitude = kotlin.math.sqrt(x * x + y * y + z * z)
+                val deviation = kotlin.math.abs(magnitude - SensorManager.GRAVITY_EARTH)
+                if (deviation > maxDeviation) {
+                    maxDeviation = deviation
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+
+        fun finish() {
+            if (finished) return
+            finished = true
+            sensorManager.unregisterListener(listener)
+            handler.removeCallbacksAndMessages(null)
+            callback(maxDeviation > MOVEMENT_THRESHOLD)
+        }
+
+        sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
+        handler.postDelayed(::finish, SAMPLE_DURATION_MS)
+        // Belt-and-suspenders timeout in case the sensor never delivers an
+        // event on some OEM's power-saving profile.
+        handler.postDelayed(::finish, TIMEOUT_MS)
+    }
+}
+
 object SleepProbeStore {
     private const val PREFS = "no_smoke_sleep_probe"
     private const val KEY_ENABLED = "enabled"
