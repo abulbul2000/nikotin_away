@@ -544,36 +544,22 @@ class BehaviorEngine {
     final lapseCount = _toInt(weeklyPayload['lapseCount']);
     final motivation = _toInt(weeklyPayload['motivation']);
     final selfEfficacy = _toInt(weeklyPayload['selfEfficacy']);
-    final alcoholDays = _toInt(weeklyPayload['alcoholDays']);
-    final socialDays = _toInt(weeklyPayload['socialSmokingContextDays']);
 
-    final withdrawal =
-        weeklyPayload['withdrawal'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final withdrawalSum =
-        _toInt(withdrawal['irritability']) +
-        _toInt(withdrawal['anxiety']) +
-        _toInt(withdrawal['sleepProblem']) +
-        _toInt(withdrawal['concentrationProblem']) +
-        _toInt(withdrawal['appetiteIncrease']);
+    // Which withdrawal symptoms the user actually reported this week. Was a
+    // 0-3 severity per symptom, all five of which the quick survey filled in
+    // as `isBad ? 2 : 1` — five numbers carrying one bit of real information.
+    // Now it's a list of what they ticked, and the score reflects how many.
+    final reportedWithdrawal = _toStringList(weeklyPayload['withdrawal']);
+    const withdrawalSymptomCount = 5;
 
-    final trigger =
-        weeklyPayload['triggerExposureDays'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final triggerSum =
-        _toInt(trigger['coffee']) +
-        _toInt(trigger['meal']) +
-        _toInt(trigger['driving']) +
-        _toInt(trigger['stress']) +
-        _toInt(trigger['phone']) +
-        _toInt(trigger['social']) +
-        _toInt(trigger['alcohol']);
+    // Same story: seven trigger categories each carried a 0-7 day count, and
+    // five of the seven were hardcoded constants. Asking "which of these set
+    // you off this week" gets real answers to one question.
+    final triggers = _toStringList(weeklyPayload['triggers']);
+    const triggerCount = 7;
 
     final task =
         weeklyPayload['task'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final treatment =
-        weeklyPayload['treatment'] as Map<String, dynamic>? ??
         const <String, dynamic>{};
     final respiratory =
         weeklyPayload['respiratory'] as Map<String, dynamic>? ??
@@ -585,18 +571,30 @@ class BehaviorEngine {
         respiratory['warningSigns'] as Map<String, dynamic>? ??
         const <String, dynamic>{};
     final completion = _toInt(task['weeklyCompletionRate']);
-    final adherence = _toInt(treatment['adherence']);
 
-    final mmrcGrade = _toInt(respiratory['mmrcGrade']).clamp(1, 5);
-    final catSum =
-        _toInt(catLike['cough']) +
-        _toInt(catLike['phlegm']) +
-        _toInt(catLike['chestTightness']) +
-        _toInt(catLike['breathlessnessStairs']) +
-        _toInt(catLike['activityLimitation']) +
-        _toInt(catLike['confidenceLeavingHome']) +
-        _toInt(catLike['sleepQualityResp']) +
-        _toInt(catLike['energyLevelResp']);
+    // 0 means "no trouble at all" and is a legitimate answer, so the grade is
+    // clamped from 0 rather than 1. It used to start at 1, which meant a user
+    // who never touched the control was recorded as mildly breathless.
+    final mmrcGrade = _toInt(respiratory['mmrcGrade']).clamp(0, 5);
+
+    // Only the items the user was actually asked. The survey used to carry
+    // all eight and fill the unasked ones with an average of the asked ones,
+    // which inflated a real answer into four fabricated ones.
+    const catKeys = [
+      'cough',
+      'phlegm',
+      'chestTightness',
+      'breathlessnessStairs',
+      'activityLimitation',
+      'confidenceLeavingHome',
+      'sleepQualityResp',
+      'energyLevelResp',
+    ];
+    final answeredCat = catKeys.where(catLike.containsKey).toList();
+    final catSum = answeredCat.fold<int>(
+      0,
+      (sum, key) => sum + _toInt(catLike[key]),
+    );
     final warningNight = _toInt(
       warningSigns['increasedNightBreathlessnessDays'],
     ).clamp(0, 7);
@@ -608,8 +606,10 @@ class BehaviorEngine {
     ).clamp(0, 7);
     final warningWheeze = _toInt(warningSigns['wheezeDays']).clamp(0, 7);
 
-    final mmrcComponent = ((mmrcGrade - 1) / 4) * 100;
-    final catComponent = (catSum / 40) * 100;
+    final mmrcComponent = (mmrcGrade / 5) * 100;
+    final catComponent = answeredCat.isEmpty
+        ? 0.0
+        : (catSum / (answeredCat.length * 5)) * 100;
     final warningComponent =
         (((warningNight +
                         warningSputumIncrease +
@@ -635,22 +635,32 @@ class BehaviorEngine {
     c = c.clamp(0, 100);
 
     final l = (lapseCount * 15).clamp(0, 100);
-    final w = ((withdrawalSum / 15) * 100).round().clamp(0, 100);
-    var t = ((triggerSum / 49) * 100).round();
-    if (_toInt(trigger['stress']) >= 5) {
+    final w = ((reportedWithdrawal.length / withdrawalSymptomCount) * 100)
+        .round()
+        .clamp(0, 100);
+    var t = ((triggers.length / triggerCount) * 100).round();
+    // Stress and alcohol are the two that most reliably precede a lapse, so
+    // they still weigh more than the rest.
+    if (triggers.contains('stress')) {
       t += 10;
     }
-    if (_toInt(trigger['alcohol']) >= 3) {
+    if (triggers.contains('alcohol')) {
       t += 10;
     }
     t = t.clamp(0, 100);
 
-    final a = (alcoholDays * 8 + socialDays * 6).clamp(0, 100);
+    // Was two separate day counts, both hardcoded. The trigger answers say
+    // the same thing without asking anything extra.
+    final a =
+        ((triggers.contains('alcohol') ? 55 : 0) +
+                (triggers.contains('social') ? 45 : 0))
+            .clamp(0, 100);
     final m = ((10 - motivation).clamp(0, 10) * 10).clamp(0, 100);
     final s = ((10 - selfEfficacy).clamp(0, 10) * 10).clamp(0, 100);
-    final p = (100 - ((0.6 * completion * 10) + (0.4 * adherence * 10)))
-        .round()
-        .clamp(0, 100);
+    // Medication adherence used to make up 40% of this. It was never asked —
+    // the survey filled it in — and medication now lives in its own tracker,
+    // so plan adherence is what the user's answered tasks actually show.
+    final p = (100 - (completion * 10)).round().clamp(0, 100);
 
     var weeklyRiskScore =
         (0.22 * c +
@@ -680,7 +690,7 @@ class BehaviorEngine {
     );
     weeklyRiskScore = (weeklyRiskScore + structuralModifier).clamp(0, 100);
 
-    if (lapseCount >= 3 && _toInt(weeklyPayload['cravingMax']) >= 8) {
+    if (lapseCount >= 3 && _toInt(weeklyPayload['cravingPeak']) >= 8) {
       weeklyRiskScore = (weeklyRiskScore + 12).clamp(0, 100);
     }
     if (lapseCount == 0 && selfEfficacy >= 8 && completion >= 8) {
@@ -720,7 +730,7 @@ class BehaviorEngine {
     final mode =
         weeklyRiskScore >= 65 ||
             lapseCount >= 2 ||
-            _toInt(weeklyPayload['cravingMax']) >= 8 ||
+            _toInt(weeklyPayload['cravingPeak']) >= 8 ||
             respiratoryBurden >= 65
         ? 'aggressive'
         : (weeklyRiskScore < 40 && lapseCount == 0 && completion >= 7)
@@ -1730,6 +1740,25 @@ class BehaviorEngine {
       return int.tryParse(value) ?? 0;
     }
     return 0;
+  }
+
+  /// Reads a multi-select answer.
+  ///
+  /// Tolerates the old shape (a map of key → severity/day count) so records
+  /// written before the survey rework still score: any non-zero entry counts
+  /// as "reported". Without this, every survey already in the database would
+  /// silently drop to zero withdrawal and zero triggers.
+  List<String> _toStringList(dynamic value) {
+    if (value is List) {
+      return value.map((item) => item.toString()).toList(growable: false);
+    }
+    if (value is Map) {
+      return value.entries
+          .where((entry) => _toInt(entry.value) > 0)
+          .map((entry) => entry.key.toString())
+          .toList(growable: false);
+    }
+    return const <String>[];
   }
 
   String _resolveRespiratoryState({

@@ -330,7 +330,74 @@ class AppTexts {
     'weeklyDecrease': 'Azaldı',
     'weeklySame': 'Aynı',
     'weeklyIncrease': 'Arttı',
-    'weeklyLapseCount': 'Kayma sayısı (lapse)',
+    'surveySummaryTitle': 'Cevapların ne değiştirdi',
+    'surveySummaryFirstScore':
+        'İlk haftalık kaydın alındı. Risk skorun: {score}/100. '
+        'Önümüzdeki hafta bunun nasıl değiştiğini göreceksin.',
+    'surveySummaryScoreDown':
+        'Risk skorun {previous} → {score} ({delta} puan düştü).',
+    'surveySummaryScoreUp':
+        'Risk skorun {previous} → {score} ({delta} puan yükseldi).',
+    'surveySummaryScoreSame': 'Risk skorun {score}/100, geçen haftayla aynı.',
+    'surveySummaryTriggers':
+        'Zorlandığını söylediğin durumlar: {triggers}. Görevler bu saatlere '
+        'göre ayarlanacak.',
+    'surveySummaryRiskyHours': 'En riskli saatlerin: {hours}.',
+    'surveySummaryPlan':
+        'Yarınki plan: sigara arası hedef {minutes} dakika, {mode} tempo.',
+    'surveyMode_aggressive': 'sıkı',
+    'surveyMode_balanced': 'dengeli',
+    'surveyMode_protective': 'rahat',
+    'weeklyLapseCount': 'Bu hafta kaç kez hedefini aştın?',
+    'weeklyCravingPeak': 'En zorlandığın an ne kadar zorluydu? (0-10)',
+    'weeklyWithdrawalHint': 'Bu hafta yaşadıklarını işaretle. Hiçbiri yoksa boş bırak.',
+    'weeklyWithdrawal_irritability': 'Sinirlilik',
+    'weeklyWithdrawal_anxiety': 'Huzursuzluk',
+    'weeklyWithdrawal_sleepProblem': 'Uyku sorunu',
+    'weeklyWithdrawal_concentrationProblem': 'Odaklanamama',
+    'weeklyWithdrawal_appetiteIncrease': 'İştah artışı',
+    'weeklyTriggerHint':
+        'Bu hafta hangi durumlarda sigara isteği geldi? Hepsini işaretleyebilirsin.',
+    'weeklyTrigger_coffee': 'Kahve / çay',
+    'weeklyTrigger_meal': 'Yemek sonrası',
+    'weeklyTrigger_driving': 'Araba kullanırken',
+    'weeklyTrigger_stress': 'Stres / gerginlik',
+    'weeklyTrigger_phone': 'Telefonla konuşurken',
+    'weeklyTrigger_social': 'Arkadaş ortamı',
+    'weeklyTrigger_alcohol': 'Alkol',
+    'weeklyOutlookTitle': 'Bu Haftaki Bakışın',
+    'severityLevel0': 'Hiç yok',
+    'severityLevel1': 'Çok az',
+    'severityLevel2': 'Az',
+    'severityLevel3': 'Orta',
+    'severityLevel4': 'Fazla',
+    'severityLevel5': 'Çok fazla',
+    'frequencyNever': 'Hiç olmadı',
+    'frequencyOneOrTwoNights': 'Bir iki gece',
+    'frequencyMostNights': 'Çoğu gece',
+    'frequencyEveryNight': 'Neredeyse her gece',
+    'weeklyRespTitle': 'Solunum Kontrolü',
+    'weeklyRespHint':
+        'Son bir haftayı düşünerek yanıtla. Bu bir tanı testi değil, '
+        'zaman içindeki değişimi görmek için.',
+    'weeklyCoughExample':
+        'Sabah kalkınca ya da gün içinde öksürüyor musun?',
+    'weeklyBreathlessnessStairsExample':
+        'Bir kat merdiven çıkınca durup nefeslenmen gerekiyor mu?',
+    'weeklySleepImpact': 'Uykuna etkisi',
+    'weeklySleepImpactExample':
+        'Öksürük ya da nefes darlığı yüzünden gece uyanıyor musun?',
+    'weeklyEnergyImpact': 'Enerjine etkisi',
+    'weeklyEnergyImpactExample':
+        'Gün içinde eskisine göre daha çabuk yoruluyor musun?',
+    'mmrcPlain0': 'Nefes darlığı yaşamıyorum.',
+    'mmrcPlain1': 'Sadece hızlı yürürken ya da hafif yokuşta nefesim daralıyor.',
+    'mmrcPlain2':
+        'Düz yolda kendi hızımda yürürken yaşıtlarımdan geride kalıyorum.',
+    'mmrcPlain3':
+        'Düz yolda yaklaşık 100 metre yürüyünce durup nefeslenmem gerekiyor.',
+    'mmrcPlain4':
+        'Evden çıkamayacak kadar ya da giyinirken bile nefesim daralıyor.',
     'weeklyCravingAvg': 'Craving ortalama (0-10)',
     'weeklyCravingMax': 'Craving maksimum (0-10)',
     'weeklyWithdrawalSymptoms': 'Yoksunluk belirtileri (0-3)',
@@ -1225,7 +1292,75 @@ class AppTexts {
     'weeklyDecrease': 'Decreased',
     'weeklySame': 'Same',
     'weeklyIncrease': 'Increased',
-    'weeklyLapseCount': 'Lapse count',
+    'surveySummaryTitle': 'What your answers changed',
+    'surveySummaryFirstScore':
+        'Your first weekly check-in is saved. Risk score: {score}/100. '
+        'Next week you will see how it moved.',
+    'surveySummaryScoreDown':
+        'Your risk score went {previous} → {score} (down {delta}).',
+    'surveySummaryScoreUp':
+        'Your risk score went {previous} → {score} (up {delta}).',
+    'surveySummaryScoreSame':
+        'Your risk score is {score}/100 — same as last week.',
+    'surveySummaryTriggers':
+        'What you said sets you off: {triggers}. Tasks will be timed around '
+        'these.',
+    'surveySummaryRiskyHours': 'Your riskiest hours: {hours}.',
+    'surveySummaryPlan':
+        "Tomorrow's plan: {minutes} minutes between cigarettes, {mode} pace.",
+    'surveyMode_aggressive': 'firm',
+    'surveyMode_balanced': 'balanced',
+    'surveyMode_protective': 'easy',
+    'weeklyLapseCount': 'How many times did you go over your target this week?',
+    'weeklyCravingPeak': 'How hard was the toughest moment? (0-10)',
+    'weeklyWithdrawalHint':
+        'Tick anything you had this week. Leave it empty if none.',
+    'weeklyWithdrawal_irritability': 'Irritability',
+    'weeklyWithdrawal_anxiety': 'Restlessness',
+    'weeklyWithdrawal_sleepProblem': 'Trouble sleeping',
+    'weeklyWithdrawal_concentrationProblem': 'Trouble concentrating',
+    'weeklyWithdrawal_appetiteIncrease': 'Bigger appetite',
+    'weeklyTriggerHint':
+        'What made you want a cigarette this week? Tick all that apply.',
+    'weeklyTrigger_coffee': 'Coffee or tea',
+    'weeklyTrigger_meal': 'After a meal',
+    'weeklyTrigger_driving': 'Driving',
+    'weeklyTrigger_stress': 'Stress',
+    'weeklyTrigger_phone': 'On the phone',
+    'weeklyTrigger_social': 'With friends',
+    'weeklyTrigger_alcohol': 'Alcohol',
+    'weeklyOutlookTitle': 'Where You Stand This Week',
+    'severityLevel0': 'Not at all',
+    'severityLevel1': 'Barely',
+    'severityLevel2': 'A little',
+    'severityLevel3': 'Moderately',
+    'severityLevel4': 'A lot',
+    'severityLevel5': 'Severely',
+    'frequencyNever': 'Never',
+    'frequencyOneOrTwoNights': 'A night or two',
+    'frequencyMostNights': 'Most nights',
+    'frequencyEveryNight': 'Almost every night',
+    'weeklyRespTitle': 'Breathing Check',
+    'weeklyRespHint':
+        'Answer for the past week. This is not a diagnosis — it is here to '
+        'show how things change over time.',
+    'weeklyCoughExample': 'Do you cough in the morning or during the day?',
+    'weeklyBreathlessnessStairsExample':
+        'Do you have to stop for breath after one flight of stairs?',
+    'weeklySleepImpact': 'Effect on your sleep',
+    'weeklySleepImpactExample':
+        'Do coughing or breathlessness wake you at night?',
+    'weeklyEnergyImpact': 'Effect on your energy',
+    'weeklyEnergyImpactExample': 'Do you tire more easily than you used to?',
+    'mmrcPlain0': 'I am not short of breath.',
+    'mmrcPlain1':
+        'I get short of breath hurrying on the flat or up a slight hill.',
+    'mmrcPlain2':
+        'I walk slower than people my age on the flat, or have to stop.',
+    'mmrcPlain3':
+        'I stop for breath after about 100 metres on the flat.',
+    'mmrcPlain4':
+        'I am too breathless to leave the house, or breathless dressing.',
     'weeklyCravingAvg': 'Average craving (0-10)',
     'weeklyCravingMax': 'Maximum craving (0-10)',
     'weeklyWithdrawalSymptoms': 'Withdrawal symptoms (0-3)',

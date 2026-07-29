@@ -212,22 +212,28 @@
 
 ## M. Haftalık anket
 
-- [ ] **50.** Detaylı mod tamamen kaldırılacak (~870 satırlık blok), mod seçici silinecek,
-      "Hızlı (15 sn)" etiketi hiç görünmeyecek
-- [ ] **51.** Uydurma veriler gerçek sorulara dönüşecek — `triggerExposureDays` sabitleri
-      (kahve:3, yemek:3, araba:2, telefon:3, sosyal:3), `withdrawal` (hepsi `isBad ? 2 : 1`),
-      `alcoholDays`, `familySupport`, `cravingMax`
-- [ ] **52.** Kullanılmayan alanlar hem anketten hem skorlamadan çıkarılacak: tedavi/ilaç
-      (artık ilaç sisteminde), danışmanlık hattı, "en yararlı kategori"
-- [ ] **53.** Hızlı Solunum Kontrolü'ne 2 alan eklenecek (uykuya etkisi, enerjiye etkisi).
-      `_quickRespiratoryBaselineSymptom` silinecek — solunum skoru sigara verisinden
-      türetilmeyecek
-- [ ] **54.** mMRC anlaşılır ifadelere geçecek, "Zorlanmıyorum" seçeneği eklenecek ve varsayılan
-      olacak (şu an varsayılan 2 = kullanıcı dokunmasa bile hasta sayılıyor)
-- [ ] **55.** 12 solunum sorusu anlaşılır ifadelere geçecek (8 şiddet: başlık + somut örnek,
-      4 sıklık: gün sayısı yerine "bir iki gece / neredeyse her gece")
-- [ ] **56.** Anket sonrası "ne değişti" özeti: risk skoru değişimi, öğrenilen riskli
-      saat/tetikleyici, yarınki görev planına etkisi
+- [x] **50.** Detaylı mod ve mod seçici silindi; sayfa 1792 → ~1440 satır, tek anket kaldı.
+- [x] **51.** Uydurma alanların hepsi gerçek soruya döndü: `withdrawal` ve `triggers` artık
+      çoklu seçim (5 slider + 7 slider yerine 2 soru), `cravingAvg`+`cravingMax` tek
+      `cravingPeak` oldu (sadece peak skorlanıyordu zaten), `alcoholDays` ve
+      `socialSmokingContextDays` tetikleyici cevabından türüyor — ayrı soru yok.
+      `weeklyCompletionRate` sorulmuyor, `taskSuccessRateSince` ile ölçülüyor.
+- [x] **52.** Çıkarılanlar: tedavi/ilaç bloğu (`medicationUse`, `sideEffects`, `adherence` —
+      skorun %40'ıydı ve hiç sorulmuyordu), `usedCounselingOrQuitline`, `familySupport`,
+      `mostHelpfulCategory`, `dailyTaskAdherenceLevel`, `commandBurdenLevel`.
+- [x] **53.** Uyku ve enerji etkisi soruluyor; `_quickRespiratoryBaselineSymptom` silindi.
+      Motor artık sorulan CAT maddelerinin ortalamasını alıyor (8 sabitine bölmüyor).
+- [x] **54.** mMRC 5 düz cümlelik radyo listesi, 0 = "Nefes darlığı yaşamıyorum" ve
+      varsayılan. Motorda `clamp(1,5)` → `clamp(0,5)`.
+- [x] **55.** Şiddet soruları başlık + somut örnek + sözel 6 kademe; gece nefes darlığı
+      "hiç / bir iki gece / çoğu gece / neredeyse her gece".
+- [x] **56.** Anket sonrası özet: skor değişimi, bildirilen tetikleyiciler, riskli saatler,
+      yarınki bariyer ve tempo. Paylaşım teklifinden önce gösteriliyor.
+- [x] **56b.** `saveSurveyDetail`'e `triggers: const []` gidiyordu — cevap toplanıp
+      atılıyordu, artık gerçek liste gidiyor.
+- [x] **56c.** Haftalık risk skorlaması hiç test edilmemişti: 12 test eklendi. Eski kayıtlar
+      (map biçimli `withdrawal`/`triggers`) hâlâ skorlanıyor, sıfıra düşmüyor. Sayfa için
+      7 widget testi.
 
 ## N. SOS ekranı
 

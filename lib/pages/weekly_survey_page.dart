@@ -39,61 +39,64 @@ class WeeklySurveyPage extends StatefulWidget {
 class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
   final StorageService _storageService = StorageService();
   final BehaviorEngine _behaviorEngine = BehaviorEngine();
-  bool _detailedMode = false;
-  bool _autoDetailedByRisk = false;
   String _mood = 'Orta';
   String _packOption = '1 paketten az';
   String? _consecutiveSmokingHabit;
   String? _consecutiveSmokingCount;
   String _deltaVsLastWeek = 'same';
-  String _medicationUse = 'regular';
-  bool _sideEffects = false;
-  bool _usedCounselingOrQuitline = false;
 
-  int _avgCigarettesPerDay = 8;
   int _lapseCount = 0;
-  int _cravingAvg = 5;
-  int _cravingMax = 7;
-  int _alcoholDays = 0;
-  int _socialSmokingContextDays = 1;
 
-  int _withdrawIrritability = 1;
-  int _withdrawAnxiety = 1;
-  int _withdrawSleep = 1;
-  int _withdrawConcentration = 1;
-  int _withdrawAppetite = 1;
+  /// The hardest single moment of the week. Was two questions — an average
+  /// and a peak — of which only the peak was ever scored, and in the quick
+  /// survey the peak was just the average plus two.
+  int _cravingPeak = 5;
 
-  int _triggerCoffeeDays = 4;
-  int _triggerMealDays = 4;
-  int _triggerDrivingDays = 2;
-  int _triggerStressDays = 5;
-  int _triggerPhoneDays = 3;
-  int _triggerSocialDays = 3;
-  int _triggerAlcoholDays = 1;
+  /// Which withdrawal symptoms and which triggers the user reports. Both
+  /// used to be numeric grids the survey filled in itself: five severities
+  /// that were all `isBad ? 2 : 1`, and seven day-counts of which five were
+  /// fixed constants.
+  final Set<String> _withdrawalSymptoms = <String>{};
+  final Set<String> _triggers = <String>{};
 
-  int _medicationAdherence = 8;
-  int _familySupport = 6;
+  static const List<String> withdrawalSymptomKeys = [
+    'irritability',
+    'anxiety',
+    'sleepProblem',
+    'concentrationProblem',
+    'appetiteIncrease',
+  ];
+
+  static const List<String> triggerKeys = [
+    'coffee',
+    'meal',
+    'driving',
+    'stress',
+    'phone',
+    'social',
+    'alcohol',
+  ];
+
   int _selfEfficacy = 6;
   int _motivation = 7;
+
+  /// Filled from the user's actual task outcomes rather than asked. The
+  /// survey used to derive it from the mood dropdown.
   int _weeklyCompletionRate = 6;
-  String _dailyTaskAdherenceLevel = 'orta';
-  String _commandBurdenLevel = 'orta';
-  int _dailyBreathTestTarget = 1;
+
+  final int _dailyBreathTestTarget = 1;
   String _lunchTime = '12:30';
   String _dinnerTime = '19:00';
-  int _mmrcGrade = 2;
+
+  /// 0 = no trouble at all, which is where this now starts. It defaulted to
+  /// 2, so anyone who left it alone was recorded as breathless walking on
+  /// the flat.
+  int _mmrcGrade = 0;
   int _catCough = 1;
-  int _catPhlegm = 1;
-  int _catChestTightness = 1;
   int _catBreathlessnessStairs = 1;
-  int _catActivityLimitation = 1;
-  int _catConfidenceLeavingHome = 1;
   int _catSleepQualityResp = 1;
   int _catEnergyLevelResp = 1;
   int _warningNightBreathlessnessDays = 0;
-  int _warningSputumIncreaseDays = 0;
-  int _warningSputumColorChangeDays = 0;
-  int _warningWheezeDays = 0;
   bool _profileContextChanged = false;
   String? _updatedWorkStart;
   String? _updatedWorkEnd;
@@ -127,31 +130,42 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
 
   String get _resolvedPacksPerDay => _packOption;
 
+  /// Last week's score, read before this week's record is written so the
+  /// summary at the end can say which way things moved. Null on the first
+  /// weekly survey.
+  int? _previousWeeklyScore;
+
   @override
   void initState() {
     super.initState();
-    _prepareModeFromRecentRisk();
+    _loadPriorContext();
   }
 
-  Future<void> _prepareModeFromRecentRisk() async {
+  /// Plan adherence comes from the tasks the user answered over the past
+  /// week, not from a question. Asking someone to rate their own compliance
+  /// gets an opinion; the task log already holds the fact.
+  Future<void> _loadPriorContext() async {
+    final rate = await _storageService.taskSuccessRateSince(
+      DateTime.now().subtract(const Duration(days: 7)),
+    );
     final records = await _storageService.loadSurveyHistory();
-    SurveyRecord? latestWeekly;
+    int? previous;
     for (final record in records.reversed) {
       if (record.type == 'weekly') {
-        latestWeekly = record;
+        previous = record.riskScore;
         break;
       }
     }
-
-    final recentRisk = latestWeekly?.riskScore ?? 0;
-    if (recentRisk >= 60 && mounted) {
-      setState(() {
-        _autoDetailedByRisk = true;
-        // Keep quick mode as default for lower user effort.
-        _detailedMode = false;
-      });
-    }
+    if (!mounted) return;
+    setState(() {
+      _weeklyCompletionRate = (rate * 10).round().clamp(0, 10);
+      _previousWeeklyScore = previous;
+    });
   }
+
+  /// Set by [_saveWeeklySurvey] so the summary can report the recommended
+  /// mode without scoring the same answers a second time.
+  Map<String, dynamic> _lastEvaluation = const {};
 
   Future<SurveyRecord> _saveWeeklySurvey() async {
     // Read everything from `context` before the first await below — this
@@ -162,9 +176,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
 
     final now = DateTime.now();
     final recordId = now.millisecondsSinceEpoch.toString();
-    final weeklyPayload = _detailedMode
-        ? _buildWeeklyPayload()
-        : _buildQuickWeeklyPayload();
+    final weeklyPayload = _buildWeeklyPayload();
     // Single source of truth for weekly risk scoring: the same formula the
     // home dashboard uses (BehaviorEngine.evaluateWeeklySurveyRisk), so the
     // score/level shown right after submitting can never disagree with the
@@ -174,6 +186,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
       weeklyPayload,
       profileContext: profileContext,
     );
+    _lastEvaluation = weeklyEvaluation;
     final weeklyRiskScore = (weeklyEvaluation['weeklyRiskScore'] as num)
         .toInt();
     final weeklyRiskLevel = weeklyEvaluation['weeklyRiskLevel'].toString();
@@ -201,7 +214,10 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
 
     await _storageService.saveSurveyDetail(
       recordId: recordId,
-      triggers: const [],
+      // The survey asks which situations set the user off and this field is
+      // where the profile keeps them; it used to be handed an empty list
+      // every week, so the answer was collected and discarded.
+      triggers: _triggers.toList(),
       healthConditions: const [],
       stressLevel: _mood,
       workStart: _profileUpdateValue(weeklyPayload, 'workStart'),
@@ -258,204 +274,43 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     return record;
   }
 
+  /// Everything the risk model is scored on.
+  ///
+  /// There used to be two of these: a long "detailed" one, and a "quick" one
+  /// that filled most of the same fields with constants derived from a single
+  /// mood dropdown — seven trigger day-counts, five withdrawal severities,
+  /// medication adherence, family support, four of the eight respiratory
+  /// items. Those numbers reached the scoring engine indistinguishable from
+  /// answers. Only the detailed mode ever asked them, and it was not the
+  /// default. Now there is one survey and every field in it was answered.
   Map<String, dynamic> _buildWeeklyPayload() {
     return {
-      'avgCigarettesPerDay': _avgCigarettesPerDay,
+      'avgCigarettesPerDay': _estimatedDailyCigarettes(_resolvedPacksPerDay),
       'deltaVsLastWeek': _deltaVsLastWeek,
       'lapseCount': _lapseCount,
-      'cravingAvg': _cravingAvg,
-      'cravingMax': _cravingMax,
-      'withdrawal': {
-        'irritability': _withdrawIrritability,
-        'anxiety': _withdrawAnxiety,
-        'sleepProblem': _withdrawSleep,
-        'concentrationProblem': _withdrawConcentration,
-        'appetiteIncrease': _withdrawAppetite,
-      },
-      'triggerExposureDays': {
-        'coffee': _triggerCoffeeDays,
-        'meal': _triggerMealDays,
-        'driving': _triggerDrivingDays,
-        'stress': _triggerStressDays,
-        'phone': _triggerPhoneDays,
-        'social': _triggerSocialDays,
-        'alcohol': _triggerAlcoholDays,
-      },
-      'alcoholDays': _alcoholDays,
-      'socialSmokingContextDays': _socialSmokingContextDays,
-      'treatment': {
-        'medicationUse': _medicationUse,
-        'sideEffects': _sideEffects,
-        'adherence': _medicationAdherence,
-      },
-      'support': {
-        'usedCounselingOrQuitline': _usedCounselingOrQuitline,
-        'familySupport': _familySupport,
-      },
+      'cravingPeak': _cravingPeak,
+      'mood': _mood,
+      'withdrawal': _withdrawalSymptoms.toList(),
+      'triggers': _triggers.toList(),
       'selfEfficacy': _selfEfficacy,
       'motivation': _motivation,
       'task': {
         'weeklyCompletionRate': _weeklyCompletionRate,
-        'dailyTaskAdherenceLevel': _dailyTaskAdherenceLevel,
-        'commandBurdenLevel': _commandBurdenLevel,
         'dailyBreathTestTarget': _dailyBreathTestTarget,
-        'mostHelpfulCategory': 'breath',
       },
       'respiratory': {
         'mmrcGrade': _mmrcGrade,
+        // Only the items actually put to the user. The engine averages over
+        // what it finds here, so leaving one out costs nothing but inventing
+        // one would cost the score its meaning.
         'catLike': {
           'cough': _catCough,
-          'phlegm': _catPhlegm,
-          'chestTightness': _catChestTightness,
           'breathlessnessStairs': _catBreathlessnessStairs,
-          'activityLimitation': _catActivityLimitation,
-          'confidenceLeavingHome': _catConfidenceLeavingHome,
           'sleepQualityResp': _catSleepQualityResp,
           'energyLevelResp': _catEnergyLevelResp,
         },
         'warningSigns': {
           'increasedNightBreathlessnessDays': _warningNightBreathlessnessDays,
-          'sputumIncreaseDays': _warningSputumIncreaseDays,
-          'sputumColorChangeDays': _warningSputumColorChangeDays,
-          'wheezeDays': _warningWheezeDays,
-        },
-      },
-      'mealSchedule': {'lunchTime': _lunchTime, 'dinnerTime': _dinnerTime},
-      'profileUpdate': {
-        'changed': _profileContextChanged,
-        'workStart': _profileContextChanged ? _updatedWorkStart : null,
-        'workEnd': _profileContextChanged ? _updatedWorkEnd : null,
-        'workplaceSmokingRule': _profileContextChanged
-            ? _updatedWorkplaceSmokingRule
-            : null,
-        'workingDays': _profileContextChanged
-            ? _updatedWorkingDays.toList()
-            : <String>[],
-        'breakWindows': _profileContextChanged
-            ? _updatedBreakWindows()
-            : <Map<String, String>>[],
-        'weekendSmokingPattern': _profileContextChanged
-            ? _updatedWeekendSmokingPattern
-            : null,
-      },
-    };
-  }
-
-  Map<String, dynamic> _buildQuickWeeklyPayload() {
-    final moodLower = _mood.toLowerCase();
-    final isGood = moodLower == 'iyi';
-    final isBad = moodLower == 'kötü' || moodLower == 'kotu';
-    final packAvg = _estimatedDailyCigarettes(_resolvedPacksPerDay);
-    final lapseFromConsecutive = _consecutiveSmokingHabit == 'Evet'
-        ? int.tryParse(_consecutiveSmokingCount ?? '1') ?? 1
-        : 0;
-
-    final motivation = isGood
-        ? 8
-        : isBad
-        ? 4
-        : 6;
-    final selfEfficacy = isGood
-        ? 8
-        : isBad
-        ? 4
-        : 6;
-    final stressTriggerDays = isGood
-        ? 2
-        : isBad
-        ? 6
-        : 4;
-    final cravingAvg = isGood
-        ? 3
-        : isBad
-        ? 7
-        : 5;
-    final completion = isGood
-        ? 8
-        : isBad
-        ? 4
-        : 6;
-    final quickRespiratoryBase = _quickRespiratoryBaselineSymptom(
-      isGood: isGood,
-      isBad: isBad,
-    );
-    final quickCatAverage =
-        ((_catCough + _catBreathlessnessStairs + quickRespiratoryBase) / 3)
-            .round()
-            .clamp(0, 5);
-    final quickMmrc = _mmrcGrade.clamp(1, 5);
-    final quickWarningNight = _warningNightBreathlessnessDays.clamp(0, 7);
-    final quickWarningSputumColor = _warningSputumColorChangeDays.clamp(0, 7);
-    final quickWarningSputumIncrease = _warningSputumIncreaseDays.clamp(0, 7);
-    final quickWarningWheeze = _warningWheezeDays.clamp(0, 7);
-
-    return {
-      'avgCigarettesPerDay': packAvg,
-      'deltaVsLastWeek': isBad
-          ? 'increased'
-          : isGood
-          ? 'decreased'
-          : 'same',
-      'lapseCount': lapseFromConsecutive,
-      'cravingAvg': cravingAvg,
-      'cravingMax': (cravingAvg + 2).clamp(0, 10),
-      'withdrawal': {
-        'irritability': isBad ? 2 : 1,
-        'anxiety': isBad ? 2 : 1,
-        'sleepProblem': isBad ? 2 : 1,
-        'concentrationProblem': isBad ? 2 : 1,
-        'appetiteIncrease': isBad ? 2 : 1,
-      },
-      'triggerExposureDays': {
-        'coffee': 3,
-        'meal': 3,
-        'driving': 2,
-        'stress': stressTriggerDays,
-        'phone': 3,
-        'social': 3,
-        'alcohol': isBad ? 2 : 1,
-      },
-      'alcoholDays': isBad ? 2 : 1,
-      'socialSmokingContextDays': isBad ? 4 : 2,
-      'treatment': {
-        'medicationUse': 'regular',
-        'sideEffects': false,
-        'adherence': isBad ? 5 : 7,
-      },
-      'support': {
-        'usedCounselingOrQuitline': false,
-        'familySupport': isBad ? 5 : 7,
-      },
-      'selfEfficacy': selfEfficacy,
-      'motivation': motivation,
-      'task': {
-        'weeklyCompletionRate': completion,
-        'dailyTaskAdherenceLevel': isGood
-            ? 'cok'
-            : isBad
-            ? 'az'
-            : 'orta',
-        'commandBurdenLevel': isBad ? 'cok' : 'orta',
-        'dailyBreathTestTarget': _dailyBreathTestTarget,
-        'mostHelpfulCategory': 'breath',
-      },
-      'respiratory': {
-        'mmrcGrade': quickMmrc,
-        'catLike': {
-          'cough': _catCough.clamp(0, 5),
-          'phlegm': quickCatAverage,
-          'chestTightness': quickCatAverage,
-          'breathlessnessStairs': _catBreathlessnessStairs.clamp(0, 5),
-          'activityLimitation': quickCatAverage,
-          'confidenceLeavingHome': quickCatAverage,
-          'sleepQualityResp': quickCatAverage,
-          'energyLevelResp': quickCatAverage,
-        },
-        'warningSigns': {
-          'increasedNightBreathlessnessDays': quickWarningNight,
-          'sputumIncreaseDays': quickWarningSputumIncrease,
-          'sputumColorChangeDays': quickWarningSputumColor,
-          'wheezeDays': quickWarningWheeze,
         },
       },
       'mealSchedule': {'lunchTime': _lunchTime, 'dinnerTime': _dinnerTime},
@@ -555,19 +410,6 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
         )
         .where((item) => item['start']!.isNotEmpty && item['end']!.isNotEmpty)
         .toList();
-  }
-
-  int _quickRespiratoryBaselineSymptom({
-    required bool isGood,
-    required bool isBad,
-  }) {
-    if (isBad) {
-      return 3;
-    }
-    if (isGood) {
-      return 1;
-    }
-    return 2;
   }
 
   List<String> _timeOptions() {
@@ -691,55 +533,127 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     );
   }
 
-  Widget _buildSurveyModeCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.t('surveyModeTitle'),
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
+  /// A row of chips the user ticks. Replaces two grids of numeric sliders —
+  /// five withdrawal severities and seven trigger day-counts — that the
+  /// survey filled in itself. Asking "which of these happened" gets an answer
+  /// per item in about the time one slider used to take.
+  Widget _multiSelectChips({
+    required List<String> keys,
+    required Set<String> selected,
+    required String labelKeyPrefix,
+  }) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      children: [
+        for (final key in keys)
+          FilterChip(
+            key: ValueKey('$labelKeyPrefix$key'),
+            label: Text(context.t('$labelKeyPrefix$key')),
+            selected: selected.contains(key),
+            onSelected: (isOn) {
+              setState(() {
+                if (isOn) {
+                  selected.add(key);
+                } else {
+                  selected.remove(key);
+                }
+              });
+            },
+          ),
+      ],
+    );
+  }
+
+  /// Severity asked in words rather than a bare 0-5 scale.
+  ///
+  /// A label reading "Cough (0-5)" leaves the user to invent what a 3 means,
+  /// and two people answering the same way meant nothing comparable. Each
+  /// step now names a situation, so the answer is about their week rather
+  /// than about the number.
+  Widget _severityChoice({
+    required String titleKey,
+    required String exampleKey,
+    required int value,
+    required ValueChanged<int> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.t(titleKey),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          Text(
+            context.t(exampleKey),
+            style: const TextStyle(fontSize: 12, height: 1.3),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (var level = 0; level <= 5; level++)
                 ChoiceChip(
-                  label: Text(context.t('surveyModeQuick')),
-                  selected: !_detailedMode,
-                  onSelected: (_) {
-                    setState(() {
-                      _detailedMode = false;
-                    });
-                  },
+                  key: ValueKey('${titleKey}_$level'),
+                  label: Text(context.t('severityLevel$level')),
+                  selected: value == level,
+                  onSelected: (_) => onChanged(level),
                 ),
-                ChoiceChip(
-                  label: Text(context.t('surveyModeDetailed')),
-                  selected: _detailedMode,
-                  onSelected: (_) {
-                    setState(() {
-                      _detailedMode = true;
-                    });
-                  },
-                ),
-              ],
-            ),
-            if (_autoDetailedByRisk) ...[
-              const SizedBox(height: 8),
-              Text(
-                context.t('surveyModeAutoDetailedHint'),
-                style: TextStyle(fontSize: 12),
-              ),
             ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildQuickRespiratoryMiniCard() {
+  /// How often something happened, in the words people use. The scale was a
+  /// 0-7 day count, which asks the user to reconstruct a week they were not
+  /// counting.
+  Widget _frequencyChoice({
+    required String titleKey,
+    required int value,
+    required ValueChanged<int> onChanged,
+  }) {
+    // Each option maps to a representative number of days so the score keeps
+    // its existing 0-7 range.
+    const options = <int, String>{
+      0: 'frequencyNever',
+      1: 'frequencyOneOrTwoNights',
+      4: 'frequencyMostNights',
+      7: 'frequencyEveryNight',
+    };
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.t(titleKey),
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              for (final entry in options.entries)
+                ChoiceChip(
+                  key: ValueKey('${titleKey}_${entry.key}'),
+                  label: Text(context.t(entry.value)),
+                  selected: value == entry.key,
+                  onSelected: (_) => onChanged(entry.key),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRespiratoryCard() {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -747,50 +661,74 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              context.t('weeklyQuickRespTitle'),
-              style: TextStyle(fontWeight: FontWeight.w700),
+              context.t('weeklyRespTitle'),
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
-              context.t('weeklyQuickRespHint'),
-              style: TextStyle(fontSize: 12),
+              context.t('weeklyRespHint'),
+              style: const TextStyle(fontSize: 12),
             ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<int>(
-              initialValue: _mmrcGrade,
-              decoration: InputDecoration(
-                labelText: context.t('weeklyMmrcGrade'),
-                border: OutlineInputBorder(),
+            const SizedBox(height: 12),
+            // mMRC in plain language, and it now opens at "no trouble at
+            // all". It used to default to grade 2 — breathless enough to stop
+            // for breath walking on the flat — so a user who never touched it
+            // was scored as symptomatic.
+            Text(
+              context.t('weeklyMmrcGrade'),
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 6),
+            RadioGroup<int>(
+              groupValue: _mmrcGrade,
+              onChanged: (value) => setState(() => _mmrcGrade = value ?? 0),
+              child: Column(
+                children: [
+                  for (var grade = 0; grade <= 4; grade++)
+                    RadioListTile<int>(
+                      key: ValueKey('mmrc_$grade'),
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      value: grade,
+                      title: Text(
+                        context.t('mmrcPlain$grade'),
+                        style: const TextStyle(fontSize: 13, height: 1.3),
+                      ),
+                    ),
+                ],
               ),
-              items: const [
-                DropdownMenuItem(value: 1, child: Text('1')),
-                DropdownMenuItem(value: 2, child: Text('2')),
-                DropdownMenuItem(value: 3, child: Text('3')),
-                DropdownMenuItem(value: 4, child: Text('4')),
-                DropdownMenuItem(value: 5, child: Text('5')),
-              ],
-              onChanged: (value) => setState(() => _mmrcGrade = value ?? 2),
             ),
-            const SizedBox(height: 8),
-            _intSlider(
-              label: '${context.t('weeklyCough')} (0-5)',
+            const SizedBox(height: 12),
+            _severityChoice(
+              titleKey: 'weeklyCough',
+              exampleKey: 'weeklyCoughExample',
               value: _catCough,
-              min: 0,
-              max: 5,
               onChanged: (v) => setState(() => _catCough = v),
             ),
-            _intSlider(
-              label: '${context.t('weeklyBreathlessnessStairs')} (0-5)',
+            _severityChoice(
+              titleKey: 'weeklyBreathlessnessStairs',
+              exampleKey: 'weeklyBreathlessnessStairsExample',
               value: _catBreathlessnessStairs,
-              min: 0,
-              max: 5,
               onChanged: (v) => setState(() => _catBreathlessnessStairs = v),
             ),
-            _intSlider(
-              label: '${context.t('weeklyNightBreathlessness')} (0-7)',
+            // The two the user asked for: what this is costing them in sleep
+            // and in energy. Both are things people notice without having to
+            // measure anything.
+            _severityChoice(
+              titleKey: 'weeklySleepImpact',
+              exampleKey: 'weeklySleepImpactExample',
+              value: _catSleepQualityResp,
+              onChanged: (v) => setState(() => _catSleepQualityResp = v),
+            ),
+            _severityChoice(
+              titleKey: 'weeklyEnergyImpact',
+              exampleKey: 'weeklyEnergyImpactExample',
+              value: _catEnergyLevelResp,
+              onChanged: (v) => setState(() => _catEnergyLevelResp = v),
+            ),
+            _frequencyChoice(
+              titleKey: 'weeklyNightBreathlessness',
               value: _warningNightBreathlessnessDays,
-              min: 0,
-              max: 7,
               onChanged: (v) =>
                   setState(() => _warningNightBreathlessnessDays = v),
             ),
@@ -808,6 +746,100 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
       }
     }
     return fallbackName;
+  }
+
+  /// What the answers just changed.
+  ///
+  /// The survey used to end by saving and navigating away, so a user who had
+  /// just answered twenty questions saw nothing come back — the score moved
+  /// somewhere on a dashboard they hadn't opened yet, and nothing said what
+  /// their answers were used for. This names the four things that actually
+  /// changed: the score, what they told us sets them off, when they're most
+  /// at risk, and what tomorrow's plan looks like as a result.
+  Future<void> _showWhatChanged({
+    required int score,
+    required Map<String, dynamic> evaluation,
+  }) async {
+    final previous = _previousWeeklyScore;
+    final riskyHours = (await _storageService.loadBehaviorDashboard())
+        .riskyHours;
+    final barrierMinutes = await _storageService.loadCurrentBarrierMinutes();
+    if (!mounted || !context.mounted) return;
+
+    final lines = <String>[];
+
+    if (previous == null) {
+      lines.add(
+        context.t('surveySummaryFirstScore').replaceAll('{score}', '$score'),
+      );
+    } else {
+      final delta = score - previous;
+      final key = delta == 0
+          ? 'surveySummaryScoreSame'
+          : delta < 0
+          ? 'surveySummaryScoreDown'
+          : 'surveySummaryScoreUp';
+      lines.add(
+        context
+            .t(key)
+            .replaceAll('{previous}', '$previous')
+            .replaceAll('{score}', '$score')
+            .replaceAll('{delta}', '${delta.abs()}'),
+      );
+    }
+
+    if (_triggers.isNotEmpty) {
+      final named = _triggers
+          .map((key) => context.t('weeklyTrigger_$key'))
+          .join(', ');
+      lines.add(
+        context.t('surveySummaryTriggers').replaceAll('{triggers}', named),
+      );
+    }
+
+    if (riskyHours.isNotEmpty) {
+      lines.add(
+        context
+            .t('surveySummaryRiskyHours')
+            .replaceAll('{hours}', riskyHours.take(2).join(', ')),
+      );
+    }
+
+    lines.add(
+      context
+          .t('surveySummaryPlan')
+          .replaceAll('{minutes}', '$barrierMinutes')
+          .replaceAll(
+            '{mode}',
+            context.t(
+              'surveyMode_${evaluation['recommendedMode'] ?? 'balanced'}',
+            ),
+          ),
+    );
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('surveySummaryTitle')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final line in lines)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Text(line, style: const TextStyle(height: 1.35)),
+              ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.t('continue')),
+          ),
+        ],
+      ),
+    );
   }
 
   /// A skippable "share your progress" moment right after completing the
@@ -866,8 +898,6 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSurveyModeCard(),
-              const SizedBox(height: 10),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -927,445 +957,97 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                   });
                 },
               ),
-              if (_detailedMode) ...[
-                const SizedBox(height: 12),
-                _intSlider(
-                  label: context.t('weeklyAvgDailyCigarettes'),
-                  value: _avgCigarettesPerDay,
-                  min: 0,
-                  max: 40,
-                  onChanged: (v) => setState(() => _avgCigarettesPerDay = v),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _deltaVsLastWeek,
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyComparedLastWeek'),
+                  border: OutlineInputBorder(),
                 ),
-                DropdownButtonFormField<String>(
-                  initialValue: _deltaVsLastWeek,
-                  decoration: InputDecoration(
-                    labelText: context.t('weeklyComparedLastWeek'),
-                    border: OutlineInputBorder(),
+                items: [
+                  DropdownMenuItem(
+                    value: 'decreased',
+                    child: Text(context.t('weeklyDecrease')),
                   ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'decreased',
-                      child: Text(context.t('weeklyDecrease')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'same',
-                      child: Text(context.t('weeklySame')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'increased',
-                      child: Text(context.t('weeklyIncrease')),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _deltaVsLastWeek = value ?? 'same'),
-                ),
-                const SizedBox(height: 12),
-                _intSlider(
-                  label: context.t('weeklyLapseCount'),
-                  value: _lapseCount,
-                  min: 0,
-                  max: 10,
-                  onChanged: (v) => setState(() => _lapseCount = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyCravingAvg'),
-                  value: _cravingAvg,
-                  min: 0,
-                  max: 10,
-                  onChanged: (v) => setState(() => _cravingAvg = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyCravingMax'),
-                  value: _cravingMax,
-                  min: 0,
-                  max: 10,
-                  onChanged: (v) => setState(() => _cravingMax = v),
-                ),
-                SurveySectionHeader(
-                  title: context.t('weeklyWithdrawalSymptoms'),
-                  icon: Icons.mood_bad_outlined,
-                ),
-                _intSlider(
-                  label: context.t('weeklyIrritability'),
-                  value: _withdrawIrritability,
-                  min: 0,
-                  max: 3,
-                  onChanged: (v) => setState(() => _withdrawIrritability = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyAnxiety'),
-                  value: _withdrawAnxiety,
-                  min: 0,
-                  max: 3,
-                  onChanged: (v) => setState(() => _withdrawAnxiety = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklySleepIssue'),
-                  value: _withdrawSleep,
-                  min: 0,
-                  max: 3,
-                  onChanged: (v) => setState(() => _withdrawSleep = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyConcentrationIssue'),
-                  value: _withdrawConcentration,
-                  min: 0,
-                  max: 3,
-                  onChanged: (v) => setState(() => _withdrawConcentration = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyAppetiteIncrease'),
-                  value: _withdrawAppetite,
-                  min: 0,
-                  max: 3,
-                  onChanged: (v) => setState(() => _withdrawAppetite = v),
-                ),
-                SurveySectionHeader(
-                  title: context.t('weeklyTriggerExposure'),
-                  icon: Icons.warning_amber_outlined,
-                ),
-                _intSlider(
-                  label: context.t('triggerCoffee'),
-                  value: _triggerCoffeeDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) => setState(() => _triggerCoffeeDays = v),
-                ),
-                _intSlider(
-                  label: context.t('triggerMeal'),
-                  value: _triggerMealDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) => setState(() => _triggerMealDays = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyVehicleUse'),
-                  value: _triggerDrivingDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) => setState(() => _triggerDrivingDays = v),
-                ),
-                _intSlider(
-                  label: context.t('triggerStress'),
-                  value: _triggerStressDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) => setState(() => _triggerStressDays = v),
-                ),
-                _intSlider(
-                  label: context.t('triggerPhone'),
-                  value: _triggerPhoneDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) => setState(() => _triggerPhoneDays = v),
-                ),
-                _intSlider(
-                  label: context.t('triggerSocial'),
-                  value: _triggerSocialDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) => setState(() => _triggerSocialDays = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyAlcoholTrigger'),
-                  value: _triggerAlcoholDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) => setState(() => _triggerAlcoholDays = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyAlcoholDays'),
-                  value: _alcoholDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) => setState(() => _alcoholDays = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklySocialSmokingDays'),
-                  value: _socialSmokingContextDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) =>
-                      setState(() => _socialSmokingContextDays = v),
-                ),
-                SurveySectionHeader(
-                  title: context.t('weeklyMedicationUse'),
-                  icon: Icons.medication_outlined,
-                ),
-                DropdownButtonFormField<String>(
-                  initialValue: _medicationUse,
-                  decoration: InputDecoration(
-                    labelText: context.t('weeklyMedicationUse'),
-                    border: OutlineInputBorder(),
+                  DropdownMenuItem(
+                    value: 'same',
+                    child: Text(context.t('weeklySame')),
                   ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'none',
-                      child: Text(context.t('weeklyNone')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'irregular',
-                      child: Text(context.t('weeklyIrregular')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'regular',
-                      child: Text(context.t('weeklyRegular')),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _medicationUse = value ?? 'regular'),
-                ),
-                SwitchListTile(
-                  title: Text(context.t('weeklySideEffectsExperienced')),
-                  value: _sideEffects,
-                  onChanged: (v) => setState(() => _sideEffects = v),
-                ),
-                SwitchListTile(
-                  title: Text(context.t('weeklyUsedCounseling')),
-                  value: _usedCounselingOrQuitline,
-                  onChanged: (v) =>
-                      setState(() => _usedCounselingOrQuitline = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyMedicationAdherence'),
-                  value: _medicationAdherence,
-                  min: 0,
-                  max: 10,
-                  onChanged: (v) => setState(() => _medicationAdherence = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyFamilySupport'),
-                  value: _familySupport,
-                  min: 0,
-                  max: 10,
-                  onChanged: (v) => setState(() => _familySupport = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklySelfEfficacy'),
-                  value: _selfEfficacy,
-                  min: 0,
-                  max: 10,
-                  onChanged: (v) => setState(() => _selfEfficacy = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyMotivation'),
-                  value: _motivation,
-                  min: 0,
-                  max: 10,
-                  onChanged: (v) => setState(() => _motivation = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyTaskCompletion'),
-                  value: _weeklyCompletionRate,
-                  min: 0,
-                  max: 10,
-                  onChanged: (v) => setState(() => _weeklyCompletionRate = v),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _dailyTaskAdherenceLevel,
-                  decoration: InputDecoration(
-                    labelText: context.t('weeklyTaskAdherence'),
-                    border: OutlineInputBorder(),
+                  DropdownMenuItem(
+                    value: 'increased',
+                    child: Text(context.t('weeklyIncrease')),
                   ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'az',
-                      child: Text(context.t('few')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'orta',
-                      child: Text(context.t('stressMedium')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'cok',
-                      child: Text(context.t('veryHigh')),
-                    ),
-                  ],
-                  onChanged: (value) => setState(
-                    () => _dailyTaskAdherenceLevel = value ?? 'orta',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  initialValue: _commandBurdenLevel,
-                  decoration: InputDecoration(
-                    labelText: context.t('weeklyCommandBurden'),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'az',
-                      child: Text(context.t('few')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'orta',
-                      child: Text(context.t('stressMedium')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'cok',
-                      child: Text(context.t('veryHigh')),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _commandBurdenLevel = value ?? 'orta'),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<int>(
-                  initialValue: _dailyBreathTestTarget,
-                  decoration: InputDecoration(
-                    labelText: context.t('weeklyDailyBreathTarget'),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 1,
-                      child: Text(context.t('weeklyBreathOnceMandatory')),
-                    ),
-                    DropdownMenuItem(
-                      value: 2,
-                      child: Text(context.t('weeklyBreathTwice')),
-                    ),
-                    DropdownMenuItem(
-                      value: 3,
-                      child: Text(context.t('weeklyBreathThree')),
-                    ),
-                    DropdownMenuItem(
-                      value: 4,
-                      child: Text(context.t('weeklyBreathFour')),
-                    ),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _dailyBreathTestTarget = value ?? 1),
-                ),
-                const SizedBox(height: 8),
-                DropdownButtonFormField<int>(
-                  initialValue: _mmrcGrade,
-                  decoration: InputDecoration(
-                    labelText: context.t('weeklyMmrcGrade'),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 1,
-                      child: Text(context.t('weeklyMmrc1')),
-                    ),
-                    DropdownMenuItem(
-                      value: 2,
-                      child: Text(context.t('weeklyMmrc2')),
-                    ),
-                    DropdownMenuItem(
-                      value: 3,
-                      child: Text(context.t('weeklyMmrc3')),
-                    ),
-                    DropdownMenuItem(
-                      value: 4,
-                      child: Text(context.t('weeklyMmrc4')),
-                    ),
-                    DropdownMenuItem(
-                      value: 5,
-                      child: Text(context.t('weeklyMmrc5')),
-                    ),
-                  ],
-                  onChanged: (value) => setState(() => _mmrcGrade = value ?? 2),
-                ),
-                SurveySectionHeader(
-                  title: context.t('weeklyRespiratoryBurden'),
-                  icon: Icons.air_outlined,
-                ),
-                _intSlider(
-                  label: context.t('weeklyCough'),
-                  value: _catCough,
-                  min: 0,
-                  max: 5,
-                  onChanged: (v) => setState(() => _catCough = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyPhlegm'),
-                  value: _catPhlegm,
-                  min: 0,
-                  max: 5,
-                  onChanged: (v) => setState(() => _catPhlegm = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyChestTightness'),
-                  value: _catChestTightness,
-                  min: 0,
-                  max: 5,
-                  onChanged: (v) => setState(() => _catChestTightness = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyBreathlessnessStairs'),
-                  value: _catBreathlessnessStairs,
-                  min: 0,
-                  max: 5,
-                  onChanged: (v) =>
-                      setState(() => _catBreathlessnessStairs = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyActivityLimitation'),
-                  value: _catActivityLimitation,
-                  min: 0,
-                  max: 5,
-                  onChanged: (v) => setState(() => _catActivityLimitation = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyConfidenceLeavingHome'),
-                  value: _catConfidenceLeavingHome,
-                  min: 0,
-                  max: 5,
-                  onChanged: (v) =>
-                      setState(() => _catConfidenceLeavingHome = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklySleepQualityResp'),
-                  value: _catSleepQualityResp,
-                  min: 0,
-                  max: 5,
-                  onChanged: (v) => setState(() => _catSleepQualityResp = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyEnergyLevelResp'),
-                  value: _catEnergyLevelResp,
-                  min: 0,
-                  max: 5,
-                  onChanged: (v) => setState(() => _catEnergyLevelResp = v),
-                ),
-                SurveySectionHeader(
-                  title: context.t('weeklyWarningSigns'),
-                  icon: Icons.report_problem_outlined,
-                ),
-                _intSlider(
-                  label: context.t('weeklyNightBreathlessness'),
-                  value: _warningNightBreathlessnessDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) =>
-                      setState(() => _warningNightBreathlessnessDays = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklySputumIncrease'),
-                  value: _warningSputumIncreaseDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) =>
-                      setState(() => _warningSputumIncreaseDays = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklySputumColorChange'),
-                  value: _warningSputumColorChangeDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) =>
-                      setState(() => _warningSputumColorChangeDays = v),
-                ),
-                _intSlider(
-                  label: context.t('weeklyWheeze'),
-                  value: _warningWheezeDays,
-                  min: 0,
-                  max: 7,
-                  onChanged: (v) => setState(() => _warningWheezeDays = v),
-                ),
+                ],
+                onChanged: (value) =>
+                    setState(() => _deltaVsLastWeek = value ?? 'same'),
+              ),
+              const SizedBox(height: 12),
+              _intSlider(
+                label: context.t('weeklyLapseCount'),
+                value: _lapseCount,
+                min: 0,
+                max: 10,
+                onChanged: (v) => setState(() => _lapseCount = v),
+              ),
+              // One craving question, about the worst moment. There used to
+              // be two — an average and a peak — and only the peak was ever
+              // scored.
+              _intSlider(
+                label: context.t('weeklyCravingPeak'),
+                value: _cravingPeak,
+                min: 0,
+                max: 10,
+                onChanged: (v) => setState(() => _cravingPeak = v),
+              ),
+              SurveySectionHeader(
+                title: context.t('weeklyWithdrawalSymptoms'),
+                icon: Icons.mood_bad_outlined,
+              ),
+              Text(
+                context.t('weeklyWithdrawalHint'),
+                style: const TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+              _multiSelectChips(
+                keys: withdrawalSymptomKeys,
+                selected: _withdrawalSymptoms,
+                labelKeyPrefix: 'weeklyWithdrawal_',
+              ),
+              SurveySectionHeader(
+                title: context.t('weeklyTriggerExposure'),
+                icon: Icons.local_fire_department_outlined,
+              ),
+              Text(
+                context.t('weeklyTriggerHint'),
+                style: const TextStyle(fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+              _multiSelectChips(
+                keys: triggerKeys,
+                selected: _triggers,
+                labelKeyPrefix: 'weeklyTrigger_',
+              ),
+              SurveySectionHeader(
+                title: context.t('weeklyOutlookTitle'),
+                icon: Icons.psychology_outlined,
+              ),
+              _intSlider(
+                label: context.t('weeklyMotivation'),
+                value: _motivation,
+                min: 0,
+                max: 10,
+                onChanged: (v) => setState(() => _motivation = v),
+              ),
+              _intSlider(
+                label: context.t('weeklySelfEfficacy'),
+                value: _selfEfficacy,
+                min: 0,
+                max: 10,
+                onChanged: (v) => setState(() => _selfEfficacy = v),
+              ),
+              const SizedBox(height: 10),
+              _buildRespiratoryCard(),
+              const SizedBox(height: 12),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   initialValue: _lunchTime,
@@ -1651,12 +1333,6 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                     ],
                   ],
                 ],
-              ] else ...[
-                const SizedBox(height: 10),
-                Text(context.t('weeklyQuickModeInfo')),
-                const SizedBox(height: 10),
-                _buildQuickRespiratoryMiniCard(),
-              ],
               SurveySectionHeader(
                 title: context.t('durationBarrierTitle'),
                 icon: Icons.timer_outlined,
@@ -1748,6 +1424,15 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                     final level = savedRecord.riskLevel;
                     final latestUserName = await _resolveLatestUserName(
                       unnamedUserLabel,
+                    );
+                    if (!mounted) return;
+                    if (!context.mounted) return;
+
+                    // Before the share offer: the user should see what their
+                    // answers did before being asked to broadcast it.
+                    await _showWhatChanged(
+                      score: score,
+                      evaluation: _lastEvaluation,
                     );
                     if (!mounted) return;
                     if (!context.mounted) return;
