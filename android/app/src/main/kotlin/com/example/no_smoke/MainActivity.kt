@@ -401,9 +401,32 @@ class MainActivity : FlutterActivity() {
 									SmokedLogOverlayService.KEY_NOTIF_ACTION,
 									call.argument<String>("actionLabel"),
 								)
+								.putString(
+									SmokedLogOverlayService.KEY_MENU_TITLE,
+									call.argument<String>("menuTitle"),
+								)
+								.putString(
+									SmokedLogOverlayService.KEY_MENU_SOS,
+									call.argument<String>("menuSosLabel"),
+								)
+								.putString(
+									SmokedLogOverlayService.KEY_MENU_OPEN,
+									call.argument<String>("menuOpenLabel"),
+								)
+								.putString(
+									SmokedLogOverlayService.KEY_MENU_CANCEL,
+									call.argument<String>("menuCancelLabel"),
+								)
+								// Read by SmokedLogBootReceiver, which runs before
+								// any Flutter engine exists and so cannot ask Dart.
+								.putBoolean(SmokedLogOverlayService.KEY_ENABLED, true)
 								.apply()
 							SmokedLogOverlayService.start(this)
 						} else {
+							getSharedPreferences(SmokedLogOverlayService.PREFS, MODE_PRIVATE)
+								.edit()
+								.putBoolean(SmokedLogOverlayService.KEY_ENABLED, false)
+								.apply()
 							SmokedLogOverlayService.stop(this)
 						}
 						result.success(true)
@@ -411,6 +434,10 @@ class MainActivity : FlutterActivity() {
 
 					"consumeSmokedLogEvents" -> {
 						result.success(SmokedLogStore.drain(this))
+					}
+
+					"consumeSmokedLogRoute" -> {
+						result.success(SmokedLogStore.drainRoute(this))
 					}
 
 					"consumeDeliveryDeferrals" -> {

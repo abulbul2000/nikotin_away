@@ -33,6 +33,31 @@ object SmokedLogStore {
         prefs.edit().remove(KEY_PENDING).apply()
         return items.mapNotNull { it.toLongOrNull() }.sorted()
     }
+
+    /// Where the app should land when it is opened from the button's menu.
+    ///
+    /// Same queue-and-drain shape as the presses above: the menu runs with no
+    /// Flutter engine alive, so it can only leave a note behind and start the
+    /// activity. Dart reads this once on startup and routes accordingly.
+    private const val KEY_PENDING_ROUTE = "pending_route"
+
+    const val ROUTE_SOS = "sos"
+
+    fun enqueueRoute(context: Context, route: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_PENDING_ROUTE, route)
+            .apply()
+    }
+
+    fun drainRoute(context: Context): String? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val route = prefs.getString(KEY_PENDING_ROUTE, null)
+        if (route != null) {
+            prefs.edit().remove(KEY_PENDING_ROUTE).apply()
+        }
+        return route
+    }
 }
 
 /// The lock-screen half of the quick log.

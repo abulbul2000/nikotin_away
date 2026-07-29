@@ -22,10 +22,14 @@ class _FakeButtonService extends SmokedLogButtonService {
     required String notificationTitle,
     required String notificationBody,
     required String actionLabel,
+    Map<String, String?> menuLabels = const {},
   }) async {
     enableCalled = true;
+    lastMenuLabels = menuLabels;
     return true;
   }
+
+  Map<String, String?> lastMenuLabels = const {};
 }
 
 void main() {
@@ -115,6 +119,26 @@ void main() {
     // the permission trip is a no-op and never reaches the channel — what is
     // observable here is that enabling happens only after acceptance.
     expect(service.enableCalled, isTrue);
+
+    // The choice panel is drawn by native code that has no access to the
+    // translation table, so every label it shows has to be handed over at
+    // enable time. A missing one renders as a hardcoded Turkish fallback in
+    // whatever language the user picked.
+    expect(
+      service.lastMenuLabels.keys,
+      containsAll(<String>[
+        'menuTitle',
+        'menuSosLabel',
+        'menuOpenLabel',
+        'menuCancelLabel',
+      ]),
+    );
+    expect(
+      service.lastMenuLabels.values.every(
+        (label) => label != null && label.isNotEmpty,
+      ),
+      isTrue,
+    );
   });
 
   testWidgets('declining asks for nothing and turns nothing on', (

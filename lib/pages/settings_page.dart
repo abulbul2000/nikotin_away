@@ -106,6 +106,12 @@ class _SettingsPageState extends State<SettingsPage> {
       notificationTitle: context.t('smokedLogButtonNotificationTitle'),
       notificationBody: context.t('smokedLogButtonNotificationBody'),
       actionLabel: context.t('smokedLogButtonAction'),
+      menuLabels: {
+        'menuTitle': context.t('smokedLogMenuTitle'),
+        'menuSosLabel': context.t('smokedLogMenuSos'),
+        'menuOpenLabel': context.t('smokedLogMenuOpen'),
+        'menuCancelLabel': context.t('smokedLogMenuCancel'),
+      },
     );
     if (!mounted) return;
 

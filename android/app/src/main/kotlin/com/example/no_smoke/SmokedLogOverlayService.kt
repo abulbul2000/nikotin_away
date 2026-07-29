@@ -31,6 +31,7 @@ class SmokedLogOverlayService : Service() {
     private var buttonView: SmokedLogButtonView? = null
     private var params: WindowManager.LayoutParams? = null
     private var screenReceiver: BroadcastReceiver? = null
+    private var menuView: android.view.View? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -162,9 +163,109 @@ class SmokedLogOverlayService : Service() {
         prefs().edit().putInt(KEY_X, layout.x).putInt(KEY_Y, layout.y).apply()
     }
 
+    /// Opens the choice panel rather than recording straight away.
+    ///
+    /// A three-second hold used to log a cigarette on its own. That made the
+    /// button a single-purpose control, and put the app's two most urgent
+    /// actions — admitting a cigarette and asking for help during a craving —
+    /// on completely different surfaces, one of which needs the app open.
+    /// The moment someone reaches for this button is exactly the moment they
+    /// might need either.
     private fun recordSmokedEvent() {
-        SmokedLogStore.enqueue(this)
         vibrate()
+        showChoicePanel()
+    }
+
+    private fun showChoicePanel() {
+        if (menuView != null) return
+        val wm = windowManager ?: return
+        val density = resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).toInt()
+
+        val prefs = prefs()
+        val container = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(android.graphics.Color.parseColor("#F20B1F2B"))
+            setPadding(dp(20), dp(20), dp(20), dp(20))
+            gravity = Gravity.CENTER
+        }
+
+        container.addView(
+            android.widget.TextView(this).apply {
+                text = prefs.getString(KEY_MENU_TITLE, "Ne yapmak istiyorsunuz?")
+                setTextColor(android.graphics.Color.WHITE)
+                textSize = 18f
+                gravity = Gravity.CENTER
+                setPadding(0, 0, 0, dp(16))
+            },
+        )
+
+        fun choice(label: String, onChosen: () -> Unit) =
+            android.widget.Button(this).apply {
+                text = label
+                minHeight = dp(52)
+                setPadding(dp(16), dp(10), dp(16), dp(10))
+                setOnClickListener {
+                    dismissChoicePanel()
+                    onChosen()
+                }
+            }
+
+        container.addView(
+            choice(prefs.getString(KEY_NOTIF_ACTION, "Sigara İçtim")!!) {
+                SmokedLogStore.enqueue(this)
+            },
+        )
+        container.addView(
+            choice(prefs.getString(KEY_MENU_SOS, "SOS Krizdeyim")!!) {
+                SmokedLogStore.enqueueRoute(this, SmokedLogStore.ROUTE_SOS)
+                launchApp()
+            },
+        )
+        container.addView(
+            choice(prefs.getString(KEY_MENU_OPEN, "Uygulamayı Aç")!!) {
+                launchApp()
+            },
+        )
+        container.addView(
+            choice(prefs.getString(KEY_MENU_CANCEL, "Vazgeç")!!) {},
+        )
+
+        val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+        val menuParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            overlayType,
+            // Focusable: the panel has buttons to press. Without this the
+            // touches fall through to whatever is underneath.
+            0,
+            PixelFormat.TRANSLUCENT,
+        ).apply {
+            gravity = Gravity.CENTER
+        }
+
+        runCatching {
+            wm.addView(container, menuParams)
+            menuView = container
+        }
+    }
+
+    private fun dismissChoicePanel() {
+        val view = menuView ?: return
+        runCatching { windowManager?.removeView(view) }
+        menuView = null
+    }
+
+    private fun launchApp() {
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+            ?.apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+            ?: return
+        runCatching { startActivity(intent) }
     }
 
     private fun vibrate() {
@@ -237,6 +338,19 @@ class SmokedLogOverlayService : Service() {
         const val KEY_NOTIF_TITLE = "notif_title"
         const val KEY_NOTIF_BODY = "notif_body"
         const val KEY_NOTIF_ACTION = "notif_action"
+        const val KEY_MENU_TITLE = "menu_title"
+        const val KEY_MENU_SOS = "menu_sos"
+        const val KEY_MENU_OPEN = "menu_open"
+        const val KEY_MENU_CANCEL = "menu_cancel"
+
+        /// Whether the user has the button switched on.
+        ///
+        /// Dart keeps the same preference in its own database, but the boot
+        /// receiver runs long before any Flutter engine exists — so the
+        /// answer has to be readable from native code alone. Without it the
+        /// button stayed gone after a restart until the user happened to
+        /// open the app.
+        const val KEY_ENABLED = "button_enabled"
 
         private const val SIZE_DP = 64f
         private const val DEFAULT_X_DP = 16f

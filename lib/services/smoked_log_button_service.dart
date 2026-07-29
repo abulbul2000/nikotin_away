@@ -63,6 +63,7 @@ class SmokedLogButtonService {
     required String notificationTitle,
     required String notificationBody,
     required String actionLabel,
+    Map<String, String?> menuLabels = const {},
   }) async {
     if (!_isAndroid) {
       return false;
@@ -72,6 +73,7 @@ class SmokedLogButtonService {
       notificationTitle: notificationTitle,
       notificationBody: notificationBody,
       actionLabel: actionLabel,
+      menuLabels: menuLabels,
     );
     if (!started) {
       return false;
@@ -101,6 +103,7 @@ class SmokedLogButtonService {
     required String notificationTitle,
     required String notificationBody,
     required String actionLabel,
+    Map<String, String?> menuLabels = const {},
   }) async {
     if (!_isAndroid || !await isEnabled()) {
       return;
@@ -110,6 +113,7 @@ class SmokedLogButtonService {
       notificationTitle: notificationTitle,
       notificationBody: notificationBody,
       actionLabel: actionLabel,
+      menuLabels: menuLabels,
     );
   }
 
@@ -118,6 +122,7 @@ class SmokedLogButtonService {
     String? notificationTitle,
     String? notificationBody,
     String? actionLabel,
+    Map<String, String?> menuLabels = const {},
   }) async {
     if (!_isAndroid) {
       return false;
@@ -128,10 +133,30 @@ class SmokedLogButtonService {
             'notificationTitle': notificationTitle,
             'notificationBody': notificationBody,
             'actionLabel': actionLabel,
+            ...menuLabels,
           }) ??
           false;
     } catch (_) {
       return false;
+    }
+  }
+
+  /// What the app should open on, if the user chose that from the button's
+  /// menu while the app wasn't running.
+  ///
+  /// The menu lives in a native overlay with no Flutter engine behind it, so
+  /// it can only leave a note and start the activity — same queue-and-drain
+  /// shape as the presses themselves.
+  static const String routeSos = 'sos';
+
+  Future<String?> drainPendingRoute() async {
+    if (!_isAndroid) {
+      return null;
+    }
+    try {
+      return await _channel.invokeMethod<String>('consumeSmokedLogRoute');
+    } catch (_) {
+      return null;
     }
   }
 

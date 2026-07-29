@@ -40,6 +40,12 @@ Future<bool> offerSmokedLogButton(
   final notificationTitle = context.t('smokedLogButtonNotificationTitle');
   final notificationBody = context.t('smokedLogButtonNotificationBody');
   final actionLabel = context.t('smokedLogButtonAction');
+  final menuLabels = <String, String?>{
+    'menuTitle': context.t('smokedLogMenuTitle'),
+    'menuSosLabel': context.t('smokedLogMenuSos'),
+    'menuOpenLabel': context.t('smokedLogMenuOpen'),
+    'menuCancelLabel': context.t('smokedLogMenuCancel'),
+  };
 
   if (!await DevicePermissionService.hasOverlayPermission()) {
     // Granting happens outside the app, so there is nothing to await —
@@ -52,6 +58,7 @@ Future<bool> offerSmokedLogButton(
     notificationTitle: notificationTitle,
     notificationBody: notificationBody,
     actionLabel: actionLabel,
+    menuLabels: menuLabels,
   );
 }
 

@@ -296,6 +296,7 @@ class NotificationService {
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
   static const String _sedentaryReminderChannelId = 'sedentary_reminder_channel_v1';
   static const int _sedentaryReminderNotificationId = 920001;
+  static const int _breathOverdueNotificationId = 920002;
   static const int _sleepActivityAdvisoryNotificationId = 930001;
   static const int _weeklySurveyNotificationId = 700001;
   static const int _dailyBreathReminderBaseId = 420100;
@@ -472,6 +473,12 @@ class NotificationService {
         notificationTitle: _text(code, 'smokedLogButtonNotificationTitle'),
         notificationBody: _text(code, 'smokedLogButtonNotificationBody'),
         actionLabel: _text(code, 'smokedLogButtonAction'),
+        menuLabels: {
+          'menuTitle': _text(code, 'smokedLogMenuTitle'),
+          'menuSosLabel': _text(code, 'smokedLogMenuSos'),
+          'menuOpenLabel': _text(code, 'smokedLogMenuOpen'),
+          'menuCancelLabel': _text(code, 'smokedLogMenuCancel'),
+        },
       );
     } catch (_) {
       // Best effort: the user can always toggle it again from settings.
@@ -2053,6 +2060,40 @@ class NotificationService {
           // Default vibration only (no custom pattern) -- keeps this a
           // gentle nudge rather than the insistent pattern the discipline
           // protocol's task alerts use, while still not being silent.
+          enableVibration: true,
+          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+          category: AndroidNotificationCategory.reminder,
+        ),
+        iOS: DarwinNotificationDetails(presentSound: true),
+      ),
+    );
+  }
+
+  /// Tells the user a full day has gone by with no breathing test.
+  ///
+  /// Separate from the daily reminder, which fires at a time of day whether
+  /// or not a reading was taken. This one is about the gap itself: the trend
+  /// the whole programme reports on is built from these readings, and a
+  /// missed day cannot be filled in afterwards.
+  ///
+  /// A fixed id, so re-showing it replaces the previous one rather than
+  /// stacking a fresh copy every time the app is opened.
+  static Future<void> showBreathTestOverdueNotification() async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    await _plugin.show(
+      _breathOverdueNotificationId,
+      _text(code, 'dailyBreathOverdueNotificationTitle'),
+      _text(code, 'dailyBreathOverdueNotificationBody'),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _sedentaryReminderChannelId,
+          'Hareket hatırlatıcı',
+          importance: Importance.high,
+          visibility: NotificationVisibility.private,
+          priority: Priority.high,
+          playSound: true,
+          // A nudge, not a task alert: no insistent flag and no alarm sound,
+          // because nothing here is time-critical to the minute.
           enableVibration: true,
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
           category: AndroidNotificationCategory.reminder,

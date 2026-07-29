@@ -69,8 +69,22 @@ class AppTexts {
     'smokedLogButtonNeedsOverlay':
         'Bu buton icin "diger uygulamalarin ustunde goster" izni gerekiyor.',
     'smokedLogButtonNotificationTitle': 'Nikotin Away',
-    'smokedLogButtonNotificationBody': 'Sigara ictiyseniz buradan kaydedin',
+    'smokedLogButtonNotificationBody':
+        'Yüzen butona 3 saniye basılı tutun, seçenekler açılsın',
     'smokedLogButtonAction': 'Sigara Ictim',
+    'smokedLogMenuTitle': 'Ne yapmak istiyorsun?',
+    'smokedLogMenuSos': 'SOS — Krizdeyim',
+    'smokedLogMenuOpen': 'Uygulamayı Aç',
+    'smokedLogMenuCancel': 'Vazgeç',
+    'dailyBreathPromptContent':
+        'Nefes testini şimdi yapmak ister misin? Günde bir kez yeterli.',
+    'dailyBreathOverdueContent':
+        '24 saattir nefes testi yapmadın. Bu ölçüm sonradan tamamlanamıyor — '
+        'atlanan gün grafikte boşluk olarak kalıyor.',
+    'dailyBreathLater': 'Sonra',
+    'dailyBreathOverdueNotificationTitle': 'Bugünkü nefes testin bekliyor',
+    'dailyBreathOverdueNotificationBody':
+        '24 saattir ölçüm yapılmadı. Uygulamayı açıp testi tamamla.',
     'smokedLogRecordedWithUndo': 'Sigara kaydedildi.',
     'smokedLogConsentHeading': 'Sigara Ictim butonunu acalim mi?',
     'smokedLogConsentDataTitle': 'Neler kaydedilir',
@@ -1393,8 +1407,22 @@ class AppTexts {
     'smokedLogButtonNeedsOverlay':
         'This button needs the "display over other apps" permission.',
     'smokedLogButtonNotificationTitle': 'Nikotin Away',
-    'smokedLogButtonNotificationBody': 'Tap to record a cigarette',
+    'smokedLogButtonNotificationBody':
+        'Hold the floating button for 3 seconds to open the options',
     'smokedLogButtonAction': 'I Smoked',
+    'smokedLogMenuTitle': 'What do you need?',
+    'smokedLogMenuSos': 'SOS — Craving',
+    'smokedLogMenuOpen': 'Open the app',
+    'smokedLogMenuCancel': 'Cancel',
+    'dailyBreathPromptContent':
+        'Take the breathing test now? Once a day is enough.',
+    'dailyBreathOverdueContent':
+        'There has been no breathing test for 24 hours. This reading cannot '
+        'be filled in later — a skipped day stays a gap in the chart.',
+    'dailyBreathLater': 'Later',
+    'dailyBreathOverdueNotificationTitle': 'Your breathing test is waiting',
+    'dailyBreathOverdueNotificationBody':
+        'No reading for 24 hours. Open the app and complete the test.',
     'smokedLogRecordedWithUndo': 'Cigarette recorded.',
     'smokedLogConsentHeading': 'Turn on the I Smoked button?',
     'smokedLogConsentDataTitle': 'What gets recorded',

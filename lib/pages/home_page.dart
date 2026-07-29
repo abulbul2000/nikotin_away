@@ -30,6 +30,8 @@ import '../services/location_intelligence_service.dart';
 import '../services/step_tracking_service.dart';
 import '../services/notification_service.dart';
 import '../services/protocol_violation_service.dart';
+import '../services/breath_test_gate.dart';
+import '../services/smoked_log_button_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/no_smoke_logo.dart';
 
@@ -138,8 +140,27 @@ class _HomePageState extends State<HomePage> {
     unawaited(_stepTrackingService.sampleCurrentStepsIfDue());
     unawaited(_stepTrackingService.ensureDailyProbeScheduled());
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_handlePendingQuickLogRoute());
       unawaited(_offerQuickLogButtonOnce());
     });
+  }
+
+  /// Opens whatever the floating button's menu asked for while the app was
+  /// closed.
+  ///
+  /// The menu runs in a native overlay with no Flutter engine behind it, so
+  /// choosing "SOS" there can only leave a note and start the activity — the
+  /// same queue-and-drain shape every other native→Dart path here uses.
+  /// Without this the user picked SOS mid-craving and landed on the
+  /// dashboard.
+  Future<void> _handlePendingQuickLogRoute() async {
+    final route = await SmokedLogButtonService().drainPendingRoute();
+    if (route != SmokedLogButtonService.routeSos || !mounted) {
+      return;
+    }
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const CravingSosPage()));
   }
 
   /// Offers the floating "I smoked" button to someone who was already set up
@@ -945,25 +966,55 @@ class _HomePageState extends State<HomePage> {
         _dailyBreathMandatoryShownSession) {
       return;
     }
-    if (_dailyBreathStatus == 'breathTestDoneToday') {
+    // Elapsed time since the last reading, not "is there one dated today".
+    // Someone who tested at 23:50 and opens the app at 00:10 has skipped
+    // nothing, and being handed an un-dismissable prompt twenty minutes
+    // later would read as the app losing track.
+    const gate = BreathTestGate();
+    final now = DateTime.now();
+    final lastAt = (await _storageService.loadLatestBreathRecord())
+        ?.completedAt;
+    if (!gate.shouldPrompt(lastCompletedAt: lastAt, now: now)) {
       return;
     }
+    final mayDefer = gate.canDefer(lastCompletedAt: lastAt, now: now);
+    if (!mayDefer) {
+      // Also say it outside the app. Someone who dismisses the task by
+      // closing the app has no other way of learning the reading is missing
+      // until they next open it — which is precisely the loop that lets a
+      // day go by unmeasured.
+      unawaited(NotificationService.showBreathTestOverdueNotification());
+    }
+    if (!mounted) return;
     _dailyBreathMandatoryShownSession = true;
 
     final startNow = await showDialog<bool>(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: mayDefer,
       builder: (dialogContext) {
-        // barrierDismissible: false only blocks tap-outside — it does NOT
-        // block the Android system/gesture back button, which would
-        // otherwise pop this "mandatory" dialog for free. PopScope closes
-        // that gap so the only way off this dialog is the button below.
+        // canPop follows the same rule as the "later" button. Blocking
+        // tap-outside is not enough on its own: the Android system/gesture
+        // back button would otherwise dismiss the prompt for free, which is
+        // how the previous version could be skipped without answering.
         return PopScope(
-          canPop: false,
+          canPop: mayDefer,
           child: AlertDialog(
             title: Text(context.t('dailyBreathMandatoryTitle')),
-            content: Text(context.t('dailyBreathMandatoryContent')),
+            content: Text(
+              mayDefer
+                  ? context.t('dailyBreathPromptContent')
+                  // A full day with no reading leaves a hole in the trend
+                  // that cannot be filled in afterwards, so this wording
+                  // says why there is no way out rather than just removing
+                  // the button.
+                  : context.t('dailyBreathOverdueContent'),
+            ),
             actions: [
+              if (mayDefer)
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: Text(context.t('dailyBreathLater')),
+                ),
               ElevatedButton(
                 onPressed: () => Navigator.of(dialogContext).pop(true),
                 child: Text(context.t('dailyBreathMandatoryStart')),
