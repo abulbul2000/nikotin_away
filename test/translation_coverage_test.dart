@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/core/app_texts.dart';
 import 'package:no_smoke/core/generated_language_data.dart';
@@ -78,6 +79,38 @@ void main() {
       }
     }
     expect(wrong, isEmpty, reason: 'product name differs in: $wrong');
+  });
+
+  test('translations keep every placeholder the English text has', () {
+    // Values are filled by replaceAll('{score}', ...). A translation that
+    // drops or renames a placeholder shows the user a literal {score}, and
+    // one that invents a placeholder leaves braces on screen forever.
+    final braces = RegExp(r'\{[a-zA-Z]+\}');
+    final problems = <String>[];
+
+    for (final code in supported) {
+      if (code == 'en') continue;
+      for (final entry in generatedLanguageData[code]?.entries ??
+          const <MapEntry<String, String>>[]) {
+        final english = AppTexts.textForCode('en', entry.key);
+        if (english == entry.key) continue; // not an English-defined key
+
+        final expected = braces
+            .allMatches(english)
+            .map((m) => m.group(0)!)
+            .toSet();
+        final actual = braces
+            .allMatches(entry.value)
+            .map((m) => m.group(0)!)
+            .toSet();
+
+        if (!setEquals(expected, actual)) {
+          problems.add('$code/${entry.key}: expected $expected, got $actual');
+        }
+      }
+    }
+
+    expect(problems, isEmpty, reason: 'placeholder mismatch: $problems');
   });
 
   group('coverage', () {

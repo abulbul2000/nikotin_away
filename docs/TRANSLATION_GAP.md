@@ -2,7 +2,7 @@
 
 Referans: İngilizce tabloda **1027** anahtar.
 Desteklenen dil: **39**.
-Toplam eksik giriş: **24.727**.
+Toplam eksik giriş: **24.359**.
 
 Eksik anahtar İngilizceye düşer — uygulama çalışır, ama kullanıcı
 cümlenin ortasında dil değiştirir. Çalışma anı çevirisi kaldırıldığı
@@ -23,10 +23,6 @@ için bu boşluk artık ağdan kapatılmıyor, elle kapatılacak.
 | `be` | 0 | 1027 | %0 |
 | `sr` | 0 | 1027 | %0 |
 | `hr` | 0 | 1027 | %0 |
-| `de` | 553 | 474 | %54 |
-| `ar` | 553 | 474 | %54 |
-| `fr` | 553 | 474 | %54 |
-| `es` | 553 | 474 | %54 |
 | `pt` | 553 | 474 | %54 |
 | `it` | 553 | 474 | %54 |
 | `pl` | 553 | 474 | %54 |
@@ -47,6 +43,10 @@ için bu boşluk artık ağdan kapatılmıyor, elle kapatılacak.
 | `vi` | 553 | 474 | %54 |
 | `id` | 553 | 474 | %54 |
 | `ms` | 553 | 474 | %54 |
+| `de` | 645 | 382 | %63 |
+| `ar` | 645 | 382 | %63 |
+| `fr` | 645 | 382 | %63 |
+| `es` | 645 | 382 | %63 |
 | `tr` | 1027 | 0 | %100 |
 | `en` | 1027 | 0 | %100 |
 
