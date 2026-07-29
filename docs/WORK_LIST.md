@@ -184,12 +184,17 @@
 
 ## K. İlaç sistemi
 
-- [ ] **41.** "Günde kaç kez?" sorulacak, saatler uyanık saatlere eşit dağıtılıp önerilecek
-- [ ] **42.** Hastalığa özel tavsiye her ilaç hatırlatmasına gömülecek, ayrı bildirim
-      gönderilmeyecek (`scheduleHealthConditionAdviceNotifications` kaldırılacak)
-- [ ] **43.** İpucu havuzu 10 → 150 (5 hastalık × 30)
-- [ ] **44.** İlaç kullanmayan ama hastalığı olan kullanıcıya günde 1 tavsiye bildirimi
-- [ ] **45.** Her ipucunun altına "doktorunuza danışın"
+- [x] **41.** "Günde kaç kez?" (1-6) dropdown'ı saatlerden önce soruluyor, `_suggestTimes`
+      dozları uyanık pencereye iki uçtan 1/8 içeri kaçırarak dağıtıyor, her saat
+      `showTimePicker` ile düzenlenebiliyor. 3 test.
+- [x] **42.** Tavsiye artık ilaç hatırlatmasının gövdesine ekleniyor (`💡` + uyarı satırı),
+      ayrı bildirim gönderilmiyor. `scheduleHealthConditionAdviceNotifications`
+      ilaç kullanan kullanıcıda erken dönüyor — kaldırılmadı çünkü 44 ona bağlı.
+- [ ] **43.** İpucu havuzu 10 → 150 (5 hastalık × 30) — mekanizma hazır
+      (`_healthTipPrefixByCondition` + `_healthTipsPerCondition`), metinler PARÇA 3'te
+- [x] **44.** İlaç kullanmayan ama hastalığı olan kullanıcıya günde 1 tavsiye bildirimi
+      (`_healthTipDailyCount` 3 → 1)
+- [x] **45.** Her ipucunun altına `medicationAdviceDisclaimer` ("doktorunuza danışın")
 
 ## L. Ana sayfa göstergeleri
 

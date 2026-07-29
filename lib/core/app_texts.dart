@@ -889,6 +889,12 @@ class AppTexts {
     'sosResume60': '1 saat sonra',
     'sosResume120': '2 saat sonra',
     'sosTaskPostponed': 'Gorev ertelendi. Kendine iyi bak.',
+    'medicationTimesPerDay': 'Gunde kac kez aliyorsunuz?',
+    'medicationTimesPerDayHint':
+        'Saatleri uyanik oldugunuz sureye esit dagitip oneriyoruz; her birini degistirebilirsiniz.',
+    'medicationTimeSlotLabel': '{index}. doz',
+    'medicationAdviceDisclaimer':
+        'Bu bilgi genel niteliktedir; tedavinizle ilgili kararlar icin doktorunuza danisin.',
     'taskFollowUpActionYes': 'Evet',
     'taskFollowUpActionNo': 'Hayir',
     'disciplineCommand': 'Su andan itibaren sigara icme',
@@ -1796,6 +1802,12 @@ class AppTexts {
     'sosResume60': 'In 1 hour',
     'sosResume120': 'In 2 hours',
     'sosTaskPostponed': 'Task postponed. Take care of yourself.',
+    'medicationTimesPerDay': 'How many times a day do you take it?',
+    'medicationTimesPerDayHint':
+        'We spread the times evenly across your waking hours; you can change any of them.',
+    'medicationTimeSlotLabel': 'Dose {index}',
+    'medicationAdviceDisclaimer':
+        'This is general information; talk to your doctor about anything concerning your treatment.',
     'taskActionNotNowLabel': 'Not now',
     'taskFollowUpActionYes': 'Yes',
     'taskFollowUpActionNo': 'No',

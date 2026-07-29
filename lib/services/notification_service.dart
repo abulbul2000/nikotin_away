@@ -302,18 +302,64 @@ class NotificationService {
   static const int _dailyBreathReminderMaxSlots = 6;
   static const String _healthTipChannelId = 'health_tip_channel_v2';
   static const int _healthTipBaseId = 430100;
-  static const int _healthTipDailyCount = 3;
+  /// Standalone advice notifications a day, for users who take no medication.
+  ///
+  /// Was three. Everyone with medication now gets their tip folded into a
+  /// reminder they already receive, so this path only serves people with a
+  /// condition but nothing to take — and for them one a day is a reminder,
+  /// three was nagging.
+  static const int _healthTipDailyCount = 1;
   static const String _medicationReminderChannelId =
       'medication_reminder_channel_v1';
   static const int _medicationReminderBaseId = 440100;
   static const int _medicationReminderMaxSlots = 30;
-  static const Map<String, List<String>> _healthTipKeysByCondition = {
-    'Hipertansiyon': ['healthTipHypertension1', 'healthTipHypertension2'],
-    'Astim': ['healthTipAsthma1', 'healthTipAsthma2'],
-    'Diyabet': ['healthTipDiabetes1', 'healthTipDiabetes2'],
-    'KOAH': ['healthTipCopd1', 'healthTipCopd2'],
-    'Kalp Hastaligi': ['healthTipHeartDisease1', 'healthTipHeartDisease2'],
+  /// Tip key prefixes per condition, numbered from 1 up to
+  /// [_healthTipsPerCondition].
+  ///
+  /// Held as prefixes rather than an explicit list so the pool can grow
+  /// without this map turning into hundreds of literals.
+  static const Map<String, String> _healthTipPrefixByCondition = {
+    'Hipertansiyon': 'healthTipHypertension',
+    'Astim': 'healthTipAsthma',
+    'Diyabet': 'healthTipDiabetes',
+    'KOAH': 'healthTipCopd',
+    'Kalp Hastaligi': 'healthTipHeartDisease',
   };
+
+  /// How many tips exist per condition. Missing keys fall back to the
+  /// English/Turkish text rather than showing a raw key, so a pool that has
+  /// grown ahead of the translations degrades quietly.
+  static const int _healthTipsPerCondition = 2;
+
+  /// Picks a tip for the user's conditions, rotating so the same sentence
+  /// doesn't arrive with every dose.
+  ///
+  /// [slot] is the reminder's index in the day, so consecutive doses show
+  /// different tips; the day-of-year term keeps it moving across days too.
+  /// Returns null when the user reported no conditions.
+  static Future<String?> _healthTipFor(String code, int slot) async {
+    try {
+      final conditions = await StorageService().loadHealthConditions();
+      final withTips = conditions
+          .where(_healthTipPrefixByCondition.containsKey)
+          .toList(growable: false);
+      if (withTips.isEmpty) {
+        return null;
+      }
+
+      final now = DateTime.now();
+      final dayOfYear = now.difference(DateTime(now.year)).inDays;
+      final condition = withTips[(dayOfYear + slot) % withTips.length];
+      final prefix = _healthTipPrefixByCondition[condition]!;
+      final index = ((dayOfYear + slot) % _healthTipsPerCondition) + 1;
+
+      final tip = _text(code, '$prefix$index');
+      // _text returns the key itself when nothing matches.
+      return tip == '$prefix$index' ? null : tip;
+    } catch (_) {
+      return null;
+    }
+  }
   static const int _notificationTimeoutMs = 15000;
   static const String _reservedTimesSettingKey =
       'reserved_notification_fire_times';
@@ -1567,6 +1613,14 @@ class NotificationService {
       return;
     }
 
+    // Anyone with medication already gets their tip attached to a reminder
+    // they receive anyway (see scheduleMedicationReminders). Sending this as
+    // well would say the same thing twice in one day.
+    final takesMedication = (await StorageService().loadMedications()).isNotEmpty;
+    if (takesMedication) {
+      return;
+    }
+
     final scheduleMode = await _resolveAndroidScheduleMode();
     final code = await LanguageService.loadSelectedLanguageCode();
     final now = tz.TZDateTime.now(tz.local);
@@ -1604,18 +1658,18 @@ class NotificationService {
       fireAt = await _reserveNonConflictingTime(fireAt);
 
       final condition = healthConditions[conditionCursor % healthConditions.length];
-      final tipKeys = _healthTipKeysByCondition[condition];
+      final prefix = _healthTipPrefixByCondition[condition];
       conditionCursor++;
-      if (tipKeys == null || tipKeys.isEmpty) {
+      if (prefix == null) {
         continue;
       }
-      final tipKey = tipKeys[variantCursor % tipKeys.length];
+      final tipKey = '$prefix${(variantCursor % _healthTipsPerCondition) + 1}';
       variantCursor++;
 
       await _plugin.zonedSchedule(
         _healthTipBaseId + i,
         _text(code, 'healthTipTitle'),
-        _text(code, tipKey),
+        '${_text(code, tipKey)}\n${_text(code, 'medicationAdviceDisclaimer')}',
         fireAt,
         NotificationDetails(
           android: AndroidNotificationDetails(
@@ -1673,10 +1727,20 @@ class NotificationService {
           fireAt = fireAt.add(const Duration(days: 1));
         }
 
-        final body = _text(
+        final reminder = _text(
           code,
           'medicationReminderBody',
         ).replaceAll('{name}', medication.name);
+
+        // The condition-specific tip rides along with a notification the user
+        // already receives, instead of arriving as its own. Three separate
+        // advice notifications a day was the previous design and it read as
+        // nagging; this reaches the same person at a moment they're already
+        // thinking about their health, at no extra interruption.
+        final tip = await _healthTipFor(code, slot);
+        final body = tip == null
+            ? reminder
+            : '$reminder\n\n💡 $tip\n${_text(code, 'medicationAdviceDisclaimer')}';
 
         await _plugin.zonedSchedule(
           _medicationReminderBaseId + slot,

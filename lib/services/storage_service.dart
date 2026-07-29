@@ -2605,6 +2605,24 @@ class StorageService {
   /// single map, the same way [loadBehaviorDashboard] does internally. Used
   /// wherever a risk calculation needs the user's up-to-date profile context
   /// without duplicating the merge logic (e.g. weekly survey risk scoring).
+  /// The chronic conditions the user reported in the survey.
+  ///
+  /// Used to pick which health tip rides along with a medication reminder.
+  /// Empty when nothing was reported — which the caller must treat as "say
+  /// nothing", not as a reason to fall back to generic advice.
+  Future<List<String>> loadHealthConditions() async {
+    try {
+      final profile = await loadMergedProfileContext();
+      final raw = profile['healthConditions'];
+      if (raw is List) {
+        return raw.map((e) => e.toString()).toList(growable: false);
+      }
+      return const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
   Future<Map<String, dynamic>> loadMergedProfileContext() async {
     final relevantSurveyRecords = await _loadRelevantSurveyRecords();
     final contextMap = await loadSurveyContextByRecordId();
