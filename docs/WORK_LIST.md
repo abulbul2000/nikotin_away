@@ -152,7 +152,11 @@
       mi?". **Evet = başarısız, Hayır = başarılı.** Eski followup aksiyonları yeniden
       kullanılmadı, ayrı kimlikler verildi; ters kutup 3 testle sabitlendi. "Evet" ayrıca
       gerçek sigara kaydı yazıyor, yoksa riskli saat sıralaması bu itirafları hiç görmezdi.
-- [ ] **32.** Yanıtsızlık: 3 deneme × 5 dk → başarısız (uygulama kapalıyken de)
+- [x] **32.** Zincir (3 deneme × 5 dk) ve native watchdog zaten çalışıyordu; eksik olan
+      görev satırının kapanmasıydı. Watchdog kuyruğu boşaltılırken artık failedMissed'e
+      geçiriliyor — önceden ihlal kaydı ve motor sonucu yazılıyor ama satır sonsuza dek
+      delivered kalıyordu. Geçiş sonucu kendisi yazdığı için alttaki açık kayıt atlanıyor,
+      yoksa tek kaçırılan görev iki kez cezalandırılırdı. 3 test.
 - [x] **33.** `DeliveryGateEvaluator` (native): DND kesin sinyal, oyun/video ise
       yatay + ses çalıyor + ekran 10+ dk açık sezgiseli. Engellenen görev aynı alarma
       10±3 dk sonraya yeniden kuruluyor, 90 dk üst sınırdan sonra kapı yok sayılıp

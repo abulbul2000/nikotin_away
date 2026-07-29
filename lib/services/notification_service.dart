@@ -525,13 +525,27 @@ class NotificationService {
           createdAt: createdAt,
         );
 
+        // Close the assignment row too. The watchdog runs natively while the
+        // app is dead, so this queue is the only place a fully-unanswered
+        // task is ever noticed; without this the row sat in `delivered`
+        // forever, still counting against the postpone/SOS allowances and
+        // still looking in-flight to anything that reads lifecycle state,
+        // while the violation log and the adaptive engine had both already
+        // written it off.
+        //
+        // A terminal transition writes the adaptive outcome itself, so when
+        // it succeeds the explicit record below must be skipped — otherwise
+        // one ignored task would be scored as two.
+        final closedAssignment = taskTitle != null &&
+            await _transitionTask(taskTitle, TaskLifecycleState.failedMissed);
+
         // Feeds the same "no response" event into the adaptive engine (see
         // AdaptiveTaskOutcome.missed) so difficultyLevel/streak react to it
         // exactly like any other failed task, not just the violation log.
         // Only meaningful for the canonical adaptive-plan task format --
         // other command types (coach commands, etc.) aren't tracked by the
         // adaptive engine at all, so there's nothing to record for those.
-        final adaptiveMatch = taskTitle == null
+        final adaptiveMatch = closedAssignment || taskTitle == null
             ? null
             : RegExp(
                 r'^ADAPTIVE_NO_SMOKE:(\d+)$',
@@ -881,7 +895,12 @@ class NotificationService {
   /// it. A no-op when nothing matches: tasks issued before this table existed
   /// have no row, and they should keep working through the older path rather
   /// than throwing here.
-  static Future<void> _transitionTask(
+  /// Moves the assignment row for [taskTitle] to [state].
+  ///
+  /// Returns whether a row was actually moved. Callers that also write an
+  /// adaptive outcome of their own need to know: a terminal transition
+  /// records one itself, so doing both would score the same task twice.
+  static Future<bool> _transitionTask(
     String taskTitle,
     String state, {
     int? postponeMinutes,
@@ -890,15 +909,18 @@ class NotificationService {
       final storage = StorageService();
       final task = await storage.loadLatestTaskAssignmentByTitle(taskTitle);
       if (task == null) {
-        return;
+        return false;
       }
-      await storage.transitionTaskAssignment(
+      final updated = await storage.transitionTaskAssignment(
         id: task.id,
         state: state,
         postponeMinutes: postponeMinutes,
       );
+      // Null, or already terminal before the call, means nothing moved.
+      return updated != null && updated.state == state;
     } catch (_) {
       // Best effort — never let bookkeeping swallow the user's answer.
+      return false;
     }
   }
 

@@ -222,4 +222,74 @@ void main() {
     );
     expect(resolved!.id, 'new');
   });
+
+  group('a task nobody answered', () {
+    test('is closed rather than left in flight', () async {
+      final storage = StorageService();
+      await storage.saveTaskAssignment(
+        _task(id: 'ignored', state: TaskLifecycleState.delivered),
+      );
+
+      // The native watchdog notices this while the app is dead and queues
+      // it; the drain on next launch is the only place it is ever closed.
+      // It used to record the violation and the adaptive outcome but leave
+      // the row on `delivered` forever.
+      await storage.transitionTaskAssignment(
+        id: 'ignored',
+        state: TaskLifecycleState.failedMissed,
+      );
+
+      final loaded = await storage.loadTaskAssignment('ignored');
+      expect(loaded!.state, TaskLifecycleState.failedMissed);
+      expect(loaded.isTerminal, isTrue);
+    });
+
+    test('is scored once, not once per writer', () async {
+      final storage = StorageService();
+      await storage.saveTaskAssignment(
+        _task(id: 'ignored', state: TaskLifecycleState.delivered),
+      );
+
+      await storage.transitionTaskAssignment(
+        id: 'ignored',
+        state: TaskLifecycleState.failedMissed,
+      );
+
+      // The transition writes the adaptive outcome itself. The watchdog
+      // drain also has an explicit recordAdaptiveTaskOutcome call for tasks
+      // with no assignment row; running both for the same task would score
+      // one ignored task twice and drag difficulty down harder than the
+      // user earned.
+      final events = await storage.loadRecentAdaptiveTaskEvents(limit: 50);
+      final missed = events
+          .where((event) => event.outcome == AdaptiveTaskOutcome.missed)
+          .toList();
+      expect(missed, hasLength(1));
+    });
+
+    test('drags the weekly success rate down', () async {
+      final storage = StorageService();
+      await storage.saveTaskAssignment(
+        _task(id: 'done', state: TaskLifecycleState.delivered),
+      );
+      await storage.saveTaskAssignment(
+        _task(id: 'ignored', state: TaskLifecycleState.delivered),
+      );
+
+      await storage.transitionTaskAssignment(
+        id: 'done',
+        state: TaskLifecycleState.succeeded,
+      );
+      await storage.transitionTaskAssignment(
+        id: 'ignored',
+        state: TaskLifecycleState.failedMissed,
+      );
+
+      // The weekly barrier review reads this rate. If ignoring a task cost
+      // nothing, a user who answered nothing all week would look perfect and
+      // the barrier would keep growing underneath them.
+      final rate = await storage.taskSuccessRateSince(DateTime(2026, 1, 1));
+      expect(rate, 0.5);
+    });
+  });
 }
