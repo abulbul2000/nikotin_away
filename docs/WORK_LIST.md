@@ -153,8 +153,11 @@
       kullanılmadı, ayrı kimlikler verildi; ters kutup 3 testle sabitlendi. "Evet" ayrıca
       gerçek sigara kaydı yazıyor, yoksa riskli saat sıralaması bu itirafları hiç görmezdi.
 - [ ] **32.** Yanıtsızlık: 3 deneme × 5 dk → başarısız (uygulama kapalıyken de)
-- [ ] **33.** Oyun/DND/tam ekran tespiti → kuyruk, max 90 dk, kuyrukta >2 görev birikirse
-      `expired` (öğrenmeye nötr). `AccessibilityService` **kullanılmayacak** (Play yasağı).
+- [x] **33.** `DeliveryGateEvaluator` (native): DND kesin sinyal, oyun/video ise
+      yatay + ses çalıyor + ekran 10+ dk açık sezgiseli. Engellenen görev aynı alarma
+      10±3 dk sonraya yeniden kuruluyor, 90 dk üst sınırdan sonra kapı yok sayılıp
+      teslim ediliyor. `AccessibilityService` kullanılmadı (Play yasağı — uygulamanın
+      tamamını riske atardı).
 
 ## J. Sigara İçtim butonu
 

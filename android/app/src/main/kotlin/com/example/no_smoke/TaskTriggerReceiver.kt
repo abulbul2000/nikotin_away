@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Bundle
 import android.provider.Settings
 
 /// Fires at the moment a planned task is actually due.
@@ -28,6 +29,17 @@ class TaskTriggerReceiver : BroadcastReceiver() {
         val taskTitle = intent.getStringExtra(EXTRA_TASK_TITLE).orEmpty()
         val watchdogId = intent.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty()
         if (taskTitle.isBlank() || watchdogId.isBlank()) {
+            return
+        }
+
+        // Is now a sensible moment to interrupt? If not the task is pushed
+        // back rather than dropped — see requeue below.
+        val deferredForMs = intent.getLongExtra(EXTRA_DEFERRED_FOR_MILLIS, 0L)
+        val blockedBy = DeliveryGateEvaluator.blockingReason(context)
+        if (blockedBy != DeliveryGateEvaluator.REASON_NONE &&
+            deferredForMs < MAX_TOTAL_DEFERRAL_MS
+        ) {
+            requeue(context, intent, deferredForMs, blockedBy)
             return
         }
 
@@ -64,6 +76,48 @@ class TaskTriggerReceiver : BroadcastReceiver() {
             Settings.canDrawOverlays(context)
     }
 
+    /// Pushes the task back and remembers how long it has been waiting.
+    ///
+    /// Re-arms the same alarm with the same extras, so nothing about the task
+    /// is lost — only its timing moves. Once the accumulated deferral passes
+    /// [MAX_TOTAL_DEFERRAL_MS] the gate is ignored and the task is delivered
+    /// anyway: a user who games all evening should still hear from the app
+    /// that evening, and an indefinitely-deferred task is the same as no task.
+    private fun requeue(
+        context: Context,
+        original: Intent,
+        alreadyDeferredMs: Long,
+        reason: String,
+    ) {
+        // Small jitter so a blocked task doesn't come back on a clock the
+        // user could set their watch by.
+        val jitterMs = ((Math.random() * 2 - 1) * RETRY_JITTER_MS).toLong()
+        val waitMs = (RETRY_INTERVAL_MS + jitterMs).coerceAtLeast(60_000L)
+
+        DeliveryGateStore.noteDeferral(context, reason)
+
+        val extras = Bundle(original.extras ?: Bundle()).apply {
+            putLong(EXTRA_DEFERRED_FOR_MILLIS, alreadyDeferredMs + waitMs)
+        }
+        val intent = Intent(context, TaskTriggerReceiver::class.java).apply {
+            action = ACTION_TRIGGER
+            putExtras(extras)
+        }
+        val watchdogId = original.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty()
+        val pending = PendingIntent.getBroadcast(
+            context,
+            watchdogId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            System.currentTimeMillis() + waitMs,
+            pending,
+        )
+    }
+
     companion object {
         const val ACTION_TRIGGER = "com.example.no_smoke.task.TRIGGER"
         const val EXTRA_TITLE = "extra_title"
@@ -75,6 +129,16 @@ class TaskTriggerReceiver : BroadcastReceiver() {
         const val EXTRA_WATCHDOG_ID = "extra_watchdog_id"
         const val EXTRA_TASK_TITLE = "extra_task_title"
         const val EXTRA_WATCHDOG_WINDOW_MILLIS = "extra_watchdog_window_millis"
+        const val EXTRA_DEFERRED_FOR_MILLIS = "extra_deferred_for_millis"
+
+        /// How long to wait before trying a blocked task again, and how much
+        /// random slack to add so the retry isn't on a predictable clock.
+        private const val RETRY_INTERVAL_MS = 10L * 60L * 1000L
+        private const val RETRY_JITTER_MS = 3L * 60L * 1000L
+
+        /// Past this the gate is ignored and the task goes out regardless.
+        /// A task deferred forever is the same as no task at all.
+        private const val MAX_TOTAL_DEFERRAL_MS = 90L * 60L * 1000L
 
         /// 3 retry attempts, 5 minutes apart — kept in sync with
         /// NotificationService's _unansweredReminderDelay * _maxTaskAttempts.

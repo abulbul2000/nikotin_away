@@ -413,6 +413,10 @@ class MainActivity : FlutterActivity() {
 						result.success(SmokedLogStore.drain(this))
 					}
 
+					"consumeDeliveryDeferrals" -> {
+						result.success(DeliveryGateStore.drain(this))
+					}
+
 					"dismissTaskOverlay" -> {
 						TaskOverlayService.dismiss(this)
 						result.success(true)

@@ -151,6 +151,25 @@ class AndroidWatchdogService {
     }
   }
 
+  /// Deferrals the delivery gate recorded while the app wasn't running.
+  ///
+  /// Each entry is `reason|epochMillis`. The gate runs in a broadcast
+  /// receiver with no Flutter engine behind it, so this is the only way those
+  /// events reach the database.
+  static Future<List<String>> consumeDeliveryDeferrals() async {
+    if (!_isAndroid) {
+      return const [];
+    }
+    try {
+      final raw = await _channel.invokeMethod<List<dynamic>>(
+        'consumeDeliveryDeferrals',
+      );
+      return raw?.map((e) => e.toString()).toList() ?? const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
   static Future<void> dismissTaskOverlay() async {
     if (!_isAndroid) {
       return;

@@ -69,8 +69,18 @@ class SmokedLogOverlayService : Service() {
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 when (intent.action) {
-                    Intent.ACTION_SCREEN_ON -> attachButton()
-                    Intent.ACTION_SCREEN_OFF -> detachButton()
+                    Intent.ACTION_SCREEN_ON -> {
+                        // The delivery gate needs to know how long the screen
+                        // has been on, and Android exposes no such counter.
+                        // This receiver is already listening for exactly the
+                        // right broadcasts, so it keeps the figure current.
+                        DeliveryGateEvaluator.noteScreenOn(context)
+                        attachButton()
+                    }
+                    Intent.ACTION_SCREEN_OFF -> {
+                        DeliveryGateEvaluator.noteScreenOff(context)
+                        detachButton()
+                    }
                 }
             }
         }
