@@ -192,7 +192,11 @@ class SmokedLogButtonView(
 
         /// Visible enough to find, faint enough not to compete with whatever
         /// is underneath it.
-        private const val RESTING_ALPHA = 105
+        // Resting opacity. Was 105/255 — about 40% — which the user could
+        // barely pick out against a busy wallpaper. This is a standing offer
+        // that has to be findable at a glance; the point of the drag support
+        // is that anyone bothered by it moves it rather than squints at it.
+        private const val RESTING_ALPHA = 190
         private const val ACTIVE_ALPHA = 255
 
         private val ACCENT = Color.parseColor("#00B8D4")

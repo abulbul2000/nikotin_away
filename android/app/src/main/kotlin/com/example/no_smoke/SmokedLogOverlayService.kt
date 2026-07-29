@@ -352,7 +352,9 @@ class SmokedLogOverlayService : Service() {
         /// open the app.
         const val KEY_ENABLED = "button_enabled"
 
-        private const val SIZE_DP = 64f
+        // 64dp was under the size of a standard FAB with none of its
+        // contrast, so the logo inside it was too small to read.
+        private const val SIZE_DP = 84f
         private const val DEFAULT_X_DP = 16f
         private const val DEFAULT_Y_DP = 220f
 

@@ -2007,48 +2007,15 @@ class _HomePageState extends State<HomePage> {
       if (!mounted) {
         return;
       }
-      final firstTask = context.t('firstTaskNoSmoke15');
-
-      debugPrint('[CompleteRegistration] Creating first task: $firstTask');
-      final createdAt = DateTime.now();
-      const firstTaskDelay = Duration(minutes: 10);
-      try {
-        await _storageService.saveTaskResult(
-          taskTitle: firstTask,
-          taskResult: 'created',
-          completedAt: createdAt,
-        );
-        debugPrint('[CompleteRegistration] saveTaskResult(created) ok');
-      } catch (error, stackTrace) {
-        debugPrint(
-          '[CompleteRegistration] saveTaskResult(created) failed: $error',
-        );
-        debugPrintStack(stackTrace: stackTrace);
-      }
-
-      try {
-        // Once. This used to fire the same task three times — at +10 min,
-        // +10 min 30 s and +15 min — apparently as a delivery safety net.
-        // But one call is not one notification: it schedules the alert, arms
-        // the native overlay trigger, and starts the unanswered-task retry
-        // chain (two more alerts, five minutes apart, with different wording
-        // and a different notification style). Three calls therefore meant
-        // nine notifications for a single task inside the first half hour
-        // after install, which reads as a broken app rather than a
-        // programme. The retry chain is the safety net.
-        await NotificationService.scheduleFirstTaskTriggerNotification(
-          taskDescription: firstTask,
-          delay: firstTaskDelay,
-        );
-        debugPrint(
-          '[CompleteRegistration] first task notification scheduled (10m)',
-        );
-      } catch (error, stackTrace) {
-        debugPrint(
-          '[CompleteRegistration] first task notification scheduling failed (non-blocking): $error',
-        );
-        debugPrintStack(stackTrace: stackTrace);
-      }
+      // No task at the finish line of setup.
+      //
+      // Registration used to create one and fire it ten minutes later. The
+      // user had just spent five screens answering questions; being handed a
+      // full-screen command straight afterwards reads as nagging, and it
+      // arrives before the barrier has been seeded from those answers, so it
+      // is not even the right length. The daily plan schedules the first real
+      // task at a time of day that suits the person, which is the whole point
+      // of having asked.
 
       debugPrint('[CompleteRegistration] Saving completion flag');
       try {
