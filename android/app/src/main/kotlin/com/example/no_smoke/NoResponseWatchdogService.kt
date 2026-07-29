@@ -87,14 +87,27 @@ class NoResponseWatchdogService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    /// Android requires any foreground service to show a notification for as
+    /// long as it runs — this cannot be turned off, only made as quiet as the
+    /// platform allows. The task alert with its full-screen intent is the
+    /// user-facing prompt; this exists purely so the OS does not kill the
+    /// timer counting down to it. Silent, minimum priority, marked as a
+    /// service notification (Android groups those separately from alerts and
+    /// collapses them in the shade), and worded as bookkeeping rather than as
+    /// a second thing asking for attention — a user seeing "Watchdog" and a
+    /// countdown right next to a full-screen command read it as two
+    /// unrelated things firing at once.
     private fun ensureForeground(taskTitle: String) {
         createChannelIfNeeded()
         val notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Nikotin Away Watchdog")
-            .setContentText("10 dakika yanit takibi aktif: $taskTitle")
+            .setContentTitle("Nikotin Away")
+            .setContentText("Görev yanıtı bekleniyor")
             .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setSilent(true)
+            .setShowWhen(false)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .build()
         startForeground(FOREGROUND_NOTIFICATION_ID, notification)
     }
@@ -123,12 +136,17 @@ class NoResponseWatchdogService : Service() {
         if (existing != null) {
             return
         }
+        // MIN, not LOW: on API 26+ the channel's importance overrides
+        // whatever the builder sets per-notification, and this one only
+        // exists to satisfy the foreground-service requirement, never to ask
+        // for attention on its own.
         val channel = NotificationChannel(
             FOREGROUND_CHANNEL_ID,
-            "Nikotin Away Watchdog",
-            NotificationManager.IMPORTANCE_LOW,
+            "Arka plan servisi",
+            NotificationManager.IMPORTANCE_MIN,
         ).apply {
             description = "No response 10-minute watchdog foreground service"
+            setShowBadge(false)
         }
         manager.createNotificationChannel(channel)
     }

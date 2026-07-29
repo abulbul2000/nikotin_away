@@ -2019,6 +2019,52 @@ class StorageService {
   /// the user during the day. Kept as a plain string setting (like the
   /// duration-barrier preferences) rather than an enum so old saved values
   /// never fail to parse across app versions.
+  static const _budgetDateKey = 'notification_budget_date';
+  static const _budgetSentKey = 'notification_budget_offered_sent';
+  static const _budgetLastSentKey = 'notification_budget_last_sent';
+
+  /// How many *offered* notifications have gone out today, and when anything
+  /// was last sent.
+  ///
+  /// The count resets by date rather than by a rolling window: the budget the
+  /// user chose is a daily allowance, and a rolling window would let a quiet
+  /// evening silently reopen the morning's spend.
+  Future<(int, DateTime?)> loadNotificationBudgetState({DateTime? now}) async {
+    final today = now ?? DateTime.now();
+    final todayKey = _dayKey(today);
+    final storedDate = await loadSetting(_budgetDateKey);
+    if (storedDate != todayKey) {
+      return (0, null);
+    }
+    final sent = int.tryParse(await loadSetting(_budgetSentKey) ?? '') ?? 0;
+    final lastSent = DateTime.tryParse(
+      await loadSetting(_budgetLastSentKey) ?? '',
+    );
+    return (sent, lastSent);
+  }
+
+  /// Records that a notification was sent. [countsAgainstBudget] is false for
+  /// the kinds the user is owed — they still move the spacing clock, because
+  /// two notifications a minute apart are one interruption regardless of who
+  /// sent them, but they must not consume the allowance.
+  Future<void> recordNotificationSent({
+    required bool countsAgainstBudget,
+    DateTime? at,
+  }) async {
+    final when = at ?? DateTime.now();
+    final todayKey = _dayKey(when);
+    final storedDate = await loadSetting(_budgetDateKey);
+    var sent = storedDate == todayKey
+        ? (int.tryParse(await loadSetting(_budgetSentKey) ?? '') ?? 0)
+        : 0;
+    if (countsAgainstBudget) {
+      sent += 1;
+    }
+    await saveSetting(_budgetDateKey, todayKey);
+    await saveSetting(_budgetSentKey, sent.toString());
+    await saveSetting(_budgetLastSentKey, when.toIso8601String());
+  }
+
   Future<String> loadInterventionIntensity() async {
     final raw = await loadSetting(_interventionIntensityKey);
     if (raw == 'gentle' || raw == 'strict') {

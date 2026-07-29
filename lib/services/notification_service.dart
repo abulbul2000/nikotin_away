@@ -15,6 +15,7 @@ import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
 import 'android_watchdog_service.dart';
 import 'language_service.dart';
+import 'notification_budget.dart';
 import 'phone_state_service.dart';
 import 'sleep_probe_service.dart';
 import 'smoked_log_button_service.dart';
@@ -295,6 +296,7 @@ class NotificationService {
   static const String _breathReminderChannelId = 'breath_reminder_channel_v3';
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
   static const String _sedentaryReminderChannelId = 'sedentary_reminder_channel_v1';
+  static const String _coachCommandChannelId = 'coach_command_channel_v1';
   static const int _sedentaryReminderNotificationId = 920001;
   static const int _breathOverdueNotificationId = 920002;
   static const int _sleepActivityAdvisoryNotificationId = 930001;
@@ -1704,6 +1706,15 @@ class NotificationService {
         fireAt = fireAt.add(const Duration(days: 1));
       }
       fireAt = await _reserveNonConflictingTime(fireAt);
+      if (!await _budgetAllows(
+        NotificationKind.healthTip,
+        at: fireAt,
+        lowestPendingOfferedPriority: const NotificationBudget().priorityOf(
+          NotificationKind.healthTip,
+        ),
+      )) {
+        continue;
+      }
 
       final condition = healthConditions[conditionCursor % healthConditions.length];
       final prefix = _healthTipPrefixByCondition[condition];
@@ -1934,6 +1945,11 @@ class NotificationService {
       }
       fireAt = now.add(const Duration(minutes: 1));
     }
+    // Not run through the daily budget: this fires at most once a week, so
+    // the risk of budget exhaustion pushing it into next week outweighs the
+    // benefit of coordinating with same-day notifications. The shared
+    // spacing gap still applies.
+    fireAt = await _reserveNonConflictingTime(fireAt);
 
     await _plugin.cancel(_weeklySurveyNotificationId);
     await _plugin.zonedSchedule(
@@ -2044,6 +2060,17 @@ class NotificationService {
   /// since this is a wellness suggestion the user can freely ignore, not
   /// something the discipline protocol needs an answer to.
   static Future<void> showSedentaryReminderNotification() async {
+    // Lowest priority of anything offered — if the day's budget is spoken
+    // for, this is the first thing to give way, and never at the cost of a
+    // measurement that cannot be taken again later.
+    if (!await _budgetAllows(
+      NotificationKind.sedentary,
+      lowestPendingOfferedPriority: const NotificationBudget().priorityOf(
+        NotificationKind.sedentary,
+      ),
+    )) {
+      return;
+    }
     final code = await LanguageService.loadSelectedLanguageCode();
     await _plugin.show(
       _sedentaryReminderNotificationId,
@@ -2152,6 +2179,18 @@ class NotificationService {
             .add(Duration(minutes: i * safeSpacing))
             .add(Duration(minutes: extraDelay)),
       );
+      // A coaching line is offered, not owed: it competes for the same daily
+      // slots as the health tip, the breath reminder and the sedentary
+      // nudge, and yields to any of them still waiting for one.
+      if (!await _budgetAllows(
+        NotificationKind.coachCommand,
+        at: fireAt,
+        lowestPendingOfferedPriority: const NotificationBudget().priorityOf(
+          NotificationKind.coachCommand,
+        ),
+      )) {
+        continue;
+      }
       final id =
           (DateTime.now().millisecondsSinceEpoch + 700000 + i).remainder(
             2147483647,
@@ -2159,22 +2198,23 @@ class NotificationService {
 
       await _plugin.zonedSchedule(
         id,
-        'Kisisel Komut',
+        _text(code, 'coachCommandTitle'),
         commands[i],
         fireAt,
         NotificationDetails(
           android: AndroidNotificationDetails(
-            _taskStartChannelId,
-            'Kisisel komut bildirimi',
-            importance: Importance.max,
+            // A different channel from task alerts on purpose. A coaching
+            // line is offered, a task is owed, and using the same alarm
+            // sound and full-screen intent for both made every notification
+            // in the app look and feel like the one most urgent kind.
+            _coachCommandChannelId,
+            'Koç önerisi',
+            importance: Importance.defaultImportance,
             visibility: NotificationVisibility.private,
-            priority: Priority.high,
+            priority: Priority.defaultPriority,
             playSound: true,
             enableVibration: true,
-            vibrationPattern: _taskVibrationPattern,
-            audioAttributesUsage: AudioAttributesUsage.alarm,
-            category: AndroidNotificationCategory.call,
-            fullScreenIntent: true,
+            category: AndroidNotificationCategory.reminder,
             actions: <AndroidNotificationAction>[
               AndroidNotificationAction(
                 _actionTaskDone,
@@ -2221,6 +2261,51 @@ class NotificationService {
   /// reminders (the user chose those exact times for a reason) or the
   /// immediate/urgent task-trigger alerts (those must fire on their own
   /// timing, never pushed later to dodge a reminder).
+  /// The one gate every notification passes through.
+  ///
+  /// Returns false when this one should not be sent. Fifteen schedulers used
+  /// to decide for themselves and only three consulted the shared spacing
+  /// helper, so each looked correct alone while the person holding the phone
+  /// heard from six unrelated code paths in a row. Nothing counted the total
+  /// and nothing chose what to drop once the day was full.
+  ///
+  /// Scheduled notifications are counted when they are scheduled, not when
+  /// they fire: the app may not be running at that moment, so there is no
+  /// later opportunity to ask.
+  static Future<bool> _budgetAllows(
+    NotificationKind kind, {
+    DateTime? at,
+    int lowestPendingOfferedPriority = 99,
+  }) async {
+    try {
+      const budget = NotificationBudget();
+      final storage = StorageService();
+      final when = at ?? DateTime.now();
+      final (sentToday, lastSentAt) = await storage
+          .loadNotificationBudgetState(now: when);
+      final decision = budget.decide(
+        kind: kind,
+        at: when,
+        intensity: await storage.loadInterventionIntensity(),
+        offeredSentToday: sentToday,
+        lastSentAt: lastSentAt,
+        lowestPendingOfferedPriority: lowestPendingOfferedPriority,
+      );
+      if (!decision.allowed) {
+        return false;
+      }
+      await storage.recordNotificationSent(
+        countsAgainstBudget:
+            budget.classOf(kind) == NotificationClass.offered,
+        at: when,
+      );
+      return true;
+    } catch (_) {
+      // A failure here must never silence a task the user is owed.
+      return true;
+    }
+  }
+
   static Future<tz.TZDateTime> _reserveNonConflictingTime(
     tz.TZDateTime proposed, {
     Duration minGap = const Duration(minutes: 25),
