@@ -932,6 +932,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _mood,
                 decoration: InputDecoration(
                   labelText: context.t('weeklyMood'),
@@ -959,6 +960,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _deltaVsLastWeek,
                 decoration: InputDecoration(
                   labelText: context.t('weeklyComparedLastWeek'),
@@ -1050,6 +1052,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               const SizedBox(height: 12),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _lunchTime,
                   decoration: InputDecoration(
                     labelText: context.t('weeklyLunchTime'),
@@ -1068,6 +1071,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _dinnerTime,
                   decoration: InputDecoration(
                     labelText: context.t('weeklyDinnerTime'),
@@ -1098,6 +1102,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                 if (_profileContextChanged) ...[
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _updatedWorkStart,
                     decoration: InputDecoration(
                       labelText: context.t('updatedWorkStart'),
@@ -1117,6 +1122,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _updatedWorkEnd,
                     decoration: InputDecoration(
                       labelText: context.t('updatedWorkEnd'),
@@ -1136,6 +1142,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _updatedWorkplaceSmokingRule,
                     decoration: InputDecoration(
                       labelText: context.t('updatedWorkplaceRule'),
@@ -1166,7 +1173,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                   ),
                   const SizedBox(height: 8),
                   Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: AlignmentDirectional.centerStart,
                     child: Text(
                       context.t('workDaysLabel'),
                       style: const TextStyle(fontWeight: FontWeight.w600),
@@ -1195,6 +1202,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     initialValue: _updatedWeekendSmokingPattern,
                     decoration: InputDecoration(
                       labelText: context.t('weekendPatternLabel'),
@@ -1242,6 +1250,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                   if (_updatedWorkplaceSmokingRule != 'Hayır' &&
                       _updatedHasSmokingBreaks) ...[
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _updatedBreakStart1,
                       decoration: InputDecoration(
                         labelText: context.t('break1Start'),
@@ -1261,6 +1270,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _updatedBreakEnd1,
                       decoration: InputDecoration(
                         labelText: context.t('break1End'),
@@ -1294,6 +1304,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                     ),
                     if (_updatedHasSecondBreak) ...[
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _updatedBreakStart2,
                         decoration: InputDecoration(
                           labelText: context.t('break2Start'),
@@ -1313,6 +1324,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                       ),
                       const SizedBox(height: 8),
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _updatedBreakEnd2,
                         decoration: InputDecoration(
                           labelText: context.t('break2End'),
@@ -1338,6 +1350,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                 icon: Icons.timer_outlined,
               ),
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 initialValue: _durationBarrierPreference,
                 decoration: InputDecoration(
                   labelText: context.t('durationBarrierHow'),
@@ -1370,6 +1383,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               const SizedBox(height: 12),
               if (_durationBarrierPreference != 'Istemiyorum')
                 DropdownButtonFormField<String>(
+                  isExpanded: true,
                   initialValue: _durationBarrierFrequencyPreference,
                   decoration: InputDecoration(
                     labelText: context.t('durationBarrierFrequencyHow'),

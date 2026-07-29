@@ -65,6 +65,7 @@ class ConsecutiveSmokingSection extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: consecutiveSmokingHabit,
           decoration: InputDecoration(
             labelText: context.t('chainSmokingAsk'),
@@ -90,6 +91,7 @@ class ConsecutiveSmokingSection extends StatelessWidget {
         if (_needsCount) ...[
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: consecutiveSmokingCount,
             decoration: InputDecoration(
               labelText: context.t('chainSmokingCountAsk'),

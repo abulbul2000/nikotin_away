@@ -146,6 +146,7 @@ class _CoachModePageState extends State<CoachModePage> {
                   childrenPadding: const EdgeInsets.symmetric(horizontal: 4),
                   children: [
                     DropdownButtonFormField<String>(
+                      isExpanded: true,
                       initialValue: _preference,
                       decoration: InputDecoration(
                         labelText: context.t('durationBarrierHow'),
@@ -177,6 +178,7 @@ class _CoachModePageState extends State<CoachModePage> {
                     const SizedBox(height: 12),
                     if (_preference != 'off')
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         initialValue: _frequency,
                         decoration: InputDecoration(
                           labelText: context.t('durationBarrierFrequencyHow'),

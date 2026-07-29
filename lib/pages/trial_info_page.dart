@@ -79,7 +79,7 @@ class TrialInfoPage extends StatelessWidget {
                           height: 1.45,
                           color: colorScheme.onSurface,
                         ),
-                        textAlign: TextAlign.left,
+                        textAlign: TextAlign.start,
                       ),
                     ),
                   ),

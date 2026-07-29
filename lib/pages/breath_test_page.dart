@@ -1128,7 +1128,7 @@ class _BreathTestPageState extends State<BreathTestPage>
             const SizedBox(height: 12),
             Text(
               _getInstruction(),
-              textAlign: TextAlign.left,
+              textAlign: TextAlign.start,
               style: const TextStyle(
                 fontSize: 15,
                 height: 1.6,
@@ -1138,7 +1138,7 @@ class _BreathTestPageState extends State<BreathTestPage>
             const SizedBox(height: 12),
             Text(
               context.t('breathExerciseDisclaimer'),
-              textAlign: TextAlign.left,
+              textAlign: TextAlign.start,
               style: const TextStyle(
                 fontSize: 12,
                 fontStyle: FontStyle.italic,

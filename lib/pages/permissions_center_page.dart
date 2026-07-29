@@ -257,7 +257,7 @@ class _BackgroundReliabilityCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Align(
-              alignment: Alignment.centerRight,
+              alignment: AlignmentDirectional.centerEnd,
               child: Wrap(
                 spacing: 8,
                 children: [
@@ -363,7 +363,7 @@ class _PermissionCard extends StatelessWidget {
             if (granted != true) ...[
               const SizedBox(height: 12),
               Align(
-                alignment: Alignment.centerRight,
+                alignment: AlignmentDirectional.centerEnd,
                 child: OutlinedButton(
                   onPressed: onRequest,
                   child: Text(

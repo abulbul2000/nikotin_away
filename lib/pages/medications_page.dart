@@ -245,9 +245,9 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
+      padding: EdgeInsetsDirectional.only(
+        start: 16,
+        end: 16,
         top: 16,
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
       ),
@@ -268,6 +268,7 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
           // it. Previously they had to add each time one at a time and the
           // count was only ever implied by how many they'd added.
           DropdownButtonFormField<int>(
+            isExpanded: true,
             key: const ValueKey('medication_times_per_day'),
             initialValue: _timesPerDay,
             decoration: InputDecoration(

@@ -1020,6 +1020,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           key: const ValueKey('gender_dropdown'),
           initialValue: gender,
           decoration: InputDecoration(
@@ -1044,6 +1045,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           key: const ValueKey('profession_dropdown'),
           initialValue: profession,
           decoration: InputDecoration(
@@ -1099,6 +1101,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: firstCigaretteRange,
           hint: Text(context.t('firstCigaretteWhen')),
           decoration: InputDecoration(
@@ -1134,6 +1137,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: smokeFreeRange,
           decoration: InputDecoration(
             hintText: context.t('maxSmokeFreeDuration'),
@@ -1263,6 +1267,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: workplaceSmokingRule,
           decoration: InputDecoration(
             hintText: context.t('workplaceSmoking'),
@@ -1287,7 +1292,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 10),
         Align(
-          alignment: Alignment.centerLeft,
+          alignment: AlignmentDirectional.centerStart,
           child: Text(
             context.t('workDaysLabel'),
             style: const TextStyle(fontWeight: FontWeight.w600),
@@ -1317,6 +1322,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: weekendSmokingPattern,
           decoration: InputDecoration(
             hintText: context.t('weekendPatternLabel'),
@@ -1364,6 +1370,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         if (workplaceSmokingRule != 'Hayır' && hasSmokingBreaks) ...[
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: breakStart1,
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
@@ -1383,6 +1390,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
+            isExpanded: true,
             initialValue: breakEnd1,
             decoration: InputDecoration(
               border: const OutlineInputBorder(),
@@ -1417,6 +1425,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           if (hasSecondBreak) ...[
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: breakStart2,
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
@@ -1438,6 +1447,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: breakEnd2,
               decoration: InputDecoration(
                 border: const OutlineInputBorder(),
@@ -1500,7 +1510,11 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         ),
         if (otherHealthCondition)
           Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+            padding: const EdgeInsetsDirectional.only(
+              start: 16,
+              end: 16,
+              bottom: 8,
+            ),
             child: TextField(
               controller: otherHealthConditionController,
               decoration: InputDecoration(
@@ -1524,7 +1538,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: TextButton.icon(
                 onPressed: () =>
                     setState(() => medicationDrafts.add(_MedicationDraft())),
@@ -1624,6 +1638,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         const SizedBox(height: 20),
         sectionTitle(context.t('stressTitle')),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: stressLevel,
           decoration: InputDecoration(
             hintText: context.t('stressTitle'),
@@ -1657,6 +1672,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
+          isExpanded: true,
           initialValue: interventionIntensity,
           decoration: InputDecoration(
             hintText: context.t('interventionIntensityTitle'),
