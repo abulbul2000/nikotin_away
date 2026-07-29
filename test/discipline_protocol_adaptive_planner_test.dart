@@ -30,6 +30,82 @@ void main() {
       expect(plan.baseDurationMinutes, 30);
     });
 
+    test('no task starts inside another one\'s window', () {
+      // The gap between tasks was a fixed 45 minutes regardless of how long
+      // each one ran. The barrier grows about 15% a week, so at 90 minutes a
+      // second task could be issued half an hour into the first one's
+      // window: two full-screen alerts, two confirmation prompts and two
+      // overlapping watchdogs for one stretch of time.
+      for (var seed = 0; seed < 25; seed++) {
+        final service = DisciplineProtocolService(random: Random(seed));
+        final plan = service.buildDailyAdaptivePlan(
+          now: DateTime(2026, 7, 16, 8, 0),
+          sleepAt: DateTime(2026, 7, 16, 23, 0),
+          riskyHours: const ['10:00-12:00', '18:00-21:00'],
+          barrierMinutes: 90,
+          targetTaskCount: 8,
+          state: AdaptiveTaskState.initial(),
+          hourlyProfiles: _flatProfile(),
+        );
+
+        final starts = plan.items.map((item) => item.scheduledAt).toList()
+          ..sort((a, b) => a.compareTo(b));
+        for (var i = 1; i < starts.length; i++) {
+          final gap = starts[i].difference(starts[i - 1]).inMinutes;
+          expect(
+            gap,
+            greaterThanOrEqualTo(90),
+            reason: 'seed $seed: tasks $gap min apart on a 90 min barrier',
+          );
+        }
+      }
+    });
+
+    test('a long barrier still fills the day rather than thinning out', () {
+      final service = DisciplineProtocolService(random: Random(11));
+      final plan = service.buildDailyAdaptivePlan(
+        now: DateTime(2026, 7, 16, 8, 0),
+        sleepAt: DateTime(2026, 7, 16, 23, 0),
+        riskyHours: const ['10:00-12:00', '18:00-21:00'],
+        barrierMinutes: 90,
+        targetTaskCount: 6,
+        state: AdaptiveTaskState.initial(),
+        hourlyProfiles: _flatProfile(),
+      );
+
+      // 15 waking hours at 90 minutes apart leaves room for the full count.
+      // Spacing tasks properly must not quietly turn a daily rhythm into two
+      // contacts a day — the 4–8 range is a promise about how the programme
+      // feels.
+      expect(plan.items, hasLength(6));
+    });
+
+    test('a barrier too long for the day yields fewer tasks, not overlaps', () {
+      final service = DisciplineProtocolService(random: Random(5));
+      final plan = service.buildDailyAdaptivePlan(
+        now: DateTime(2026, 7, 16, 18, 0),
+        sleepAt: DateTime(2026, 7, 16, 23, 0),
+        riskyHours: const ['18:00-21:00'],
+        barrierMinutes: 120,
+        targetTaskCount: 8,
+        state: AdaptiveTaskState.initial(),
+        hourlyProfiles: _flatProfile(),
+      );
+
+      // Five hours cannot hold eight two-hour commitments. Asking anyway
+      // would mean telling someone to begin a fresh stretch while still
+      // inside the last one.
+      expect(plan.items.length, lessThan(8));
+      final starts = plan.items.map((item) => item.scheduledAt).toList()
+        ..sort((a, b) => a.compareTo(b));
+      for (var i = 1; i < starts.length; i++) {
+        expect(
+          starts[i].difference(starts[i - 1]).inMinutes,
+          greaterThanOrEqualTo(120),
+        );
+      }
+    });
+
     test('every task stands for the same weekly commitment', () {
       final service = DisciplineProtocolService(random: Random(3));
 

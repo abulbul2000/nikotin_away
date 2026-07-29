@@ -127,7 +127,12 @@
       `generateUnpredictableMoments`). Molalar bilerek **açık** bırakılıyor — dumansız bir iş
       yerinde mola tam da dışarı çıkılan an. Pencere yetmezse görev sayısı düşürülüyor,
       mesaiye zorlanmıyor.
-- [ ] **24.** Uzun bariyerde kontrol görevleri (4–8 teması korumak için)
+- [x] **24.** Altında gerçek bir hata vardı: görev aralığı bariyerden bağımsız sabit
+      45 dakikaydı, yani 90 dakikalık bariyerde ikinci görev birincinin penceresi
+      sürerken başlıyordu. Aralık artık en az bariyer kadar. Yedek yerleştirici de
+      bariyere ve mesaiye saygılı hale getirildi, yoksa doğru aralık 4-8 bandını
+      düşürecekti. Gün gerçekten yetmiyorsa görev sayısı düşüyor — üst üste binmiyor.
+      3 test. **Ayrı bir "kontrol görevi" türü eklenmedi** — ne yapacağı ürün kararı.
 - [x] **25.** `loadCurrentBarrierMinutes` ilk çağrıda anketten tohumluyor, 7 gün sonra
       gerçek kayıtlarla yeniden değerlendiriyor. Günlük değil haftalık: tek kötü gün gürültü,
       ayrıca hedefi hafta ortasında oynatmak kullanıcının onu tutturup tutturamayacağını
