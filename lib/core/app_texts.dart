@@ -102,6 +102,12 @@ class AppTexts {
         'Gorev ekraninin baska uygulamalarin ustunde acilabilmesi icin gerekli. Verilmezse gorev yine gelir, ama sadece bildirim olarak.',
     'permissionOemDescription':
         'Bu telefonda bazi bildirim ayarlari ureticinin kendi izin ekraninda duruyor. Oradan "arka planda calisma" ve "kilit ekraninda goster" seceneklerini acabilirsiniz.',
+    'permissionSetupOptionalHeading': 'İsteğe bağlı özellikler için izinler',
+    'permissionSetupOptionalHint':
+        'Bunlar olmadan da uygulama çalışır. Vermek, ilgili özelliği otomatik açmaz — yalnızca Ayarlar\'dan açtığında izin sormasına gerek kalmaz.',
+    'permissionHealthTitle': 'Sağlık Verisi (Health Connect)',
+    'permissionHealthDescription':
+        'Giyilebilir Zekası açıksa, saatinin/bilekliğinin nabız ve uyku verisini okur. Yalnızca cihazında kalır, hiçbir yere gönderilmez.',
     'permissionSetupContinueAnyway': 'Simdilik devam et',
     'permissionSetupOptionalNote':
         'Izinleri daha sonra Ayarlar bolumunden de duzenleyebilirsiniz.',
@@ -1441,6 +1447,16 @@ class AppTexts {
         'Lets the task screen open over other apps. Without it tasks still arrive, just as a notification.',
     'permissionOemDescription':
         'This phone keeps some notification settings in the manufacturer\'s own permission screen. That\'s where "run in background" and "show on lock screen" live.',
+    'permissionSetupOptionalHeading': 'Permissions for optional features',
+    'permissionSetupOptionalHint':
+        'The app works without these. Granting one does not switch the '
+        'feature on by itself — it just means Settings won\'t need to ask '
+        'again when you do.',
+    'permissionHealthTitle': 'Health Data (Health Connect)',
+    'permissionHealthDescription':
+        'If Wearable Intelligence is on, reads heart rate and sleep data '
+        'from your watch or band. Stays on your device, never sent '
+        'anywhere.',
     'permissionSetupContinueAnyway': 'Continue for now',
     'permissionSetupOptionalNote':
         'You can change these later from Settings.',

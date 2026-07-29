@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../core/app_texts.dart';
 import '../services/device_permission_service.dart';
+import '../services/health_connect_service.dart';
 import '../services/notification_service.dart';
 import '../services/permission_service.dart';
 
@@ -29,16 +31,30 @@ class PermissionSetupPage extends StatefulWidget {
 class _PermissionItem {
   final String titleKey;
   final String descriptionKey;
+
+  /// Shown alongside the description in the "why" dialog, for the items that
+  /// have a separate "Neden:" line. Null when the description already says
+  /// everything worth saying.
+  final String? purposeKey;
   final IconData icon;
   final Future<bool> Function() isGranted;
   final Future<void> Function() request;
 
+  /// Whether the task system cannot work without this one. Only the
+  /// required items count toward "everything is granted" and toward the
+  /// continue button's wording — the optional ones (microphone, location,
+  /// activity recognition, Health Connect) back features the user may never
+  /// switch on at all, so withholding them is not something to nag about.
+  final bool required;
+
   const _PermissionItem({
     required this.titleKey,
     required this.descriptionKey,
+    this.purposeKey,
     required this.icon,
     required this.isGranted,
     required this.request,
+    this.required = true,
   });
 }
 
@@ -74,6 +90,61 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
         request: () async {
           await DevicePermissionService.requestOverlayPermission();
         },
+      ),
+      // Below this point: permissions the *optional* features need. Each one
+      // used to be requested only when the user switched that feature on, in
+      // a different screen at a different moment — which is a large part of
+      // why permissions felt scattered across the app. Granting one here
+      // only grants it; it never switches the feature on by itself, so the
+      // toggle in Settings still decides whether Sleep Intelligence, Location
+      // Intelligence etc. actually run.
+      _PermissionItem(
+        titleKey: 'permissionMicrophoneTitle',
+        descriptionKey: 'permissionMicrophoneDescription',
+        purposeKey: 'permissionMicrophonePurpose',
+        icon: Icons.mic_none_outlined,
+        isGranted: () async => (await ph.Permission.microphone.status).isGranted,
+        request: () async {
+          await ph.Permission.microphone.request();
+        },
+        required: false,
+      ),
+      _PermissionItem(
+        titleKey: 'permissionLocationTitle',
+        descriptionKey: 'permissionLocationDescription',
+        purposeKey: 'permissionLocationPurpose',
+        icon: Icons.place_outlined,
+        isGranted: () async => (await ph.Permission.locationAlways.status).isGranted,
+        request: () async {
+          // Foreground first, then background — the order Android requires.
+          final foreground = await ph.Permission.locationWhenInUse.request();
+          if (foreground.isGranted) {
+            await ph.Permission.locationAlways.request();
+          }
+        },
+        required: false,
+      ),
+      _PermissionItem(
+        titleKey: 'permissionActivityTitle',
+        descriptionKey: 'permissionActivityDescription',
+        purposeKey: 'permissionActivityPurpose',
+        icon: Icons.directions_walk_outlined,
+        isGranted: () async =>
+            (await ph.Permission.activityRecognition.status).isGranted,
+        request: () async {
+          await ph.Permission.activityRecognition.request();
+        },
+        required: false,
+      ),
+      _PermissionItem(
+        titleKey: 'permissionHealthTitle',
+        descriptionKey: 'permissionHealthDescription',
+        icon: Icons.favorite_border,
+        isGranted: () => HealthConnectService().hasPermissions(),
+        request: () async {
+          await HealthConnectService().requestPermissions();
+        },
+        required: false,
       ),
     ];
     unawaitedRefresh();
@@ -138,8 +209,18 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
     }
   }
 
-  bool get _allGranted =>
-      _items.every((item) => _granted[item.titleKey] == true);
+  String _fullDescription(_PermissionItem item) {
+    final description = context.t(item.descriptionKey);
+    final purposeKey = item.purposeKey;
+    if (purposeKey == null) {
+      return description;
+    }
+    return '$description\n\n${context.t(purposeKey)}';
+  }
+
+  bool get _allGranted => _items
+      .where((item) => item.required)
+      .every((item) => _granted[item.titleKey] == true);
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +236,7 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 20),
-                for (final item in _items) ...[
+                for (final item in _items.where((item) => item.required)) ...[
                   _buildRow(
                     icon: item.icon,
                     title: context.t(item.titleKey),
@@ -175,6 +256,27 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
                     granted: null,
                     onRequest: _openOemEditor,
                   ),
+                const SizedBox(height: 24),
+                Text(
+                  context.t('permissionSetupOptionalHeading'),
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  context.t('permissionSetupOptionalHint'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 12),
+                for (final item in _items.where((item) => !item.required)) ...[
+                  _buildRow(
+                    icon: item.icon,
+                    title: context.t(item.titleKey),
+                    description: _fullDescription(item),
+                    granted: _granted[item.titleKey] == true,
+                    onRequest: () => _handleRequest(item),
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 const SizedBox(height: 28),
                 FilledButton(
                   key: const ValueKey('permission_setup_continue'),
@@ -221,16 +323,36 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: theme.textTheme.titleSmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: theme.textTheme.bodySmall,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: theme.textTheme.titleSmall,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Why-this-permission, on demand rather than always on
+                      // the row: the full explanation is a paragraph, and a
+                      // paragraph under every row is what made this screen
+                      // feel crowded before it even had anything to grant.
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: () => _showWhyDialog(
+                          title: title,
+                          description: description,
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4),
+                          child: Icon(
+                            Icons.info_outline,
+                            size: 18,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   if (granted != true) ...[
                     const SizedBox(height: 10),
@@ -244,6 +366,25 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _showWhyDialog({
+    required String title,
+    required String description,
+  }) {
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(description),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.t('doneShort')),
+          ),
+        ],
       ),
     );
   }
