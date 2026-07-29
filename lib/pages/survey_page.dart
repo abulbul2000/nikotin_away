@@ -11,7 +11,6 @@ import '../services/device_permission_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/permission_service.dart';
-import '../services/smoked_log_button_service.dart';
 import '../widgets/consecutive_smoking_section.dart';
 import '../widgets/no_smoke_logo.dart';
 import '../widgets/packs_per_day_section.dart';
@@ -461,29 +460,8 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
   ///
   /// Declining is free: the button stays off and nothing asks again.
   Future<void> _offerQuickLogButton() async {
-    final service = SmokedLogButtonService();
-    if (await service.hasEverConsented()) {
-      return;
-    }
-    if (!await DevicePermissionService.hasOverlayPermission()) {
-      // Without the permission the button cannot be drawn, and enable()
-      // would refuse anyway. Settings still offers it later.
-      return;
-    }
     if (!mounted) return;
-
-    final accepted = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const SmokedLogConsentPage()),
-    );
-    if (accepted != true || !mounted) {
-      return;
-    }
-
-    await service.enable(
-      notificationTitle: context.t('smokedLogButtonNotificationTitle'),
-      notificationBody: context.t('smokedLogButtonNotificationBody'),
-      actionLabel: context.t('smokedLogButtonAction'),
-    );
+    await offerSmokedLogButton(context);
   }
 
   Future<void> _saveInitialProfileSnapshot(String recordId) async {

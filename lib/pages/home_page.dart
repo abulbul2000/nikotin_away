@@ -13,6 +13,7 @@ import '../models/user_profile_snapshot.dart';
 import '../pages/achievements_page.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
+import '../pages/smoked_log_consent_page.dart';
 import '../pages/health_metrics_page.dart';
 import '../pages/mandatory_task_page.dart';
 import '../pages/personal_progress_page.dart';
@@ -136,6 +137,26 @@ class _HomePageState extends State<HomePage> {
     unawaited(LocationIntelligenceService().sampleCurrentLocationIfDue());
     unawaited(_stepTrackingService.sampleCurrentStepsIfDue());
     unawaited(_stepTrackingService.ensureDailyProbeScheduled());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_offerQuickLogButtonOnce());
+    });
+  }
+
+  /// Offers the floating "I smoked" button to someone who was already set up
+  /// before it existed.
+  ///
+  /// Setup offers it now, but that flow only runs once and never again for
+  /// an existing install — so everyone who had the app before the button
+  /// shipped would only ever find it by scrolling through settings. It is
+  /// the app's only source of ground truth about when the user actually
+  /// smokes, which is what the barrier length and the risky-hour ranking are
+  /// both computed from, so leaving it undiscovered costs the programme its
+  /// aim.
+  ///
+  /// Asked once. Declining is remembered and nothing asks again.
+  Future<void> _offerQuickLogButtonOnce() async {
+    if (!mounted) return;
+    await offerSmokedLogButton(context);
   }
 
   @override

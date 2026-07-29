@@ -1,6 +1,59 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
+import '../services/device_permission_service.dart';
+import '../services/smoked_log_button_service.dart';
+
+/// Introduces the quick-log button and turns it on if the user agrees.
+///
+/// Explains first, then asks for the permission the button needs. The order
+/// matters: "allow this app to draw over other apps" means nothing on its
+/// own, and asking for it cold is how a permission gets refused. It used to
+/// be the other way round — the offer checked for the permission and gave up
+/// silently when it was missing, so the one feature that tells the app when
+/// the user actually smokes was never even mentioned to most people.
+///
+/// Returns true when the button ended up enabled.
+/// [service] is injectable so the ordering above can be tested. Widget tests
+/// run in a fake-async zone where a real SQLite read never resolves, and the
+/// first thing this does is read a setting — so without the seam the whole
+/// flow is unreachable from a test.
+Future<bool> offerSmokedLogButton(
+  BuildContext context, {
+  SmokedLogButtonService? service,
+}) async {
+  final buttonService = service ?? SmokedLogButtonService();
+  if (await buttonService.hasEverConsented()) {
+    return false;
+  }
+  if (!context.mounted) return false;
+
+  final accepted = await Navigator.of(context).push<bool>(
+    MaterialPageRoute(builder: (_) => const SmokedLogConsentPage()),
+  );
+  if (accepted != true || !context.mounted) {
+    return false;
+  }
+
+  // Read before the permission trip: the system screen takes the user out of
+  // the app, and this BuildContext must not be touched afterwards.
+  final notificationTitle = context.t('smokedLogButtonNotificationTitle');
+  final notificationBody = context.t('smokedLogButtonNotificationBody');
+  final actionLabel = context.t('smokedLogButtonAction');
+
+  if (!await DevicePermissionService.hasOverlayPermission()) {
+    // Granting happens outside the app, so there is nothing to await —
+    // enable() reports honestly if the button still can't be drawn, and the
+    // switch in settings stays available either way.
+    await DevicePermissionService.requestOverlayPermission();
+  }
+
+  return buttonService.enable(
+    notificationTitle: notificationTitle,
+    notificationBody: notificationBody,
+    actionLabel: actionLabel,
+  );
+}
 
 /// Shown once, before the quick-log button is switched on for the first time.
 ///
