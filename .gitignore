@@ -46,3 +46,4 @@ app.*.map.json
 
 downloads/apk_share/
 *.apk
+.codegraphy/*

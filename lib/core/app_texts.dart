@@ -109,6 +109,7 @@ class AppTexts {
     'notifKindBreathTest': 'Nefes testi hatırlatıcısı',
     'notifKindWeeklySurvey': 'Haftalık anket hatırlatıcısı',
     'notifKindHealthTip': 'Sağlık ipuçları',
+    'dailyHealthTipCountLabel': 'Günde kaç sağlık ipucu?',
     'notifKindCoachCommand': 'Mentör önerileri',
     'notifKindSedentary': 'Hareketsizlik hatırlatıcısı',
     'permissionSetupOptionalHeading': 'İsteğe bağlı özellikler için izinler',
@@ -117,6 +118,11 @@ class AppTexts {
     'permissionHealthTitle': 'Sağlık Verisi (Health Connect)',
     'permissionHealthDescription':
         'Giyilebilir Zekası açıksa, saatinin/bilekliğinin nabız ve uyku verisini okur. Yalnızca cihazında kalır, hiçbir yere gönderilmez.',
+    'permissionUsageAccessTitle': 'Uygulama Kullanım Erişimi',
+    'permissionUsageAccessDescription':
+        'Hangi uygulamanın ekranda olduğunu (yalnızca isim, içerik değil) okuyarak sağlık tavsiyesi ve görev pencerelerinin telefon görüşmesi, oyun, video ya da sosyal medya sırasında açılmasını engeller.',
+    'permissionUsageAccessPurpose':
+        'Neden: Bu izin verilmezse uygulama yine de ekranın açık kalma süresi ve ses çalma durumu gibi ipuçlarıyla tahmin yapmaya çalışır, ama bu izinle çok daha isabetli olur.',
     'permissionSetupContinueAnyway': 'Simdilik devam et',
     'permissionSetupOptionalNote':
         'Izinleri daha sonra Ayarlar bolumunden de duzenleyebilirsiniz.',
@@ -206,9 +212,23 @@ class AppTexts {
     'breathRestInstruction':
       'Kısa dinlenme: Normal nefes alın.\nSonraki denemeye hazırlanın.',
     'breathActiveInstruction':
-      '1. Dik oturun ve rahatlayın.\n2. Daireye dokunup burnunuzdan derin bir nefes alın, 2 saniye tutun.\n3. Nefesinizi tek seferde, kontrollü şekilde verin.\n4. Verme işlemi bitince daireye tekrar dokunun.\n\n3 deneme yapılacak, en iyi skor kaydedilir.',
+      '1. Dik oturun ve rahatlayın.\n2. Daireye dokunup burnunuzdan ciğerlerinizi tamamen dolduracak şekilde derin bir nefes alın, kısa bir süre tutun.\n3. Nefesinizi ANİDEN ve olabildiğince güçlü, tek seferde verin.\n4. Verme işlemi bitince daireye tekrar dokunun.\n\n3 deneme yapılacak, en iyi skor kaydedilir.',
     'breathExerciseDisclaimer':
-      'Bu bir tibbi tani araci degildir; farkindalik ve rahatlama icin basit bir nefes egzersizidir.',
+      'Bu bir tibbi tani araci degildir; sonuclar tahminidir ve gercek spirometri olcumunun yerini tutmaz. Saglikla ilgili bir endiseniz varsa doktorunuza danisin.',
+    'breathSpirometryResultTitle': 'Nefes Testi Sonucu',
+    'breathSpirometrySummaryTitle': 'Spirometri Tarzı Özet',
+    'breathFev1FvcRatioLabel': 'FEV1/FVC Oranı',
+    'breathPeakFlowIndexLabel': 'Tepe Akış Endeksi',
+    'breathFlowCurveSectionTitle': 'Akış-Zaman Eğrisi',
+    'breathEstimatedValueSuffix': '(tahmini)',
+    'breathRatioBandNormalRange': 'Normal aralıkta izleniyor.',
+    'breathRatioBandMonitor': 'İzlemeye devam edilmesi öneriliyor.',
+    'breathPeakFlowBandNormalRange': 'Normal aralıkta izleniyor.',
+    'breathPeakFlowBandMonitor': 'İzlemeye devam edilmesi öneriliyor.',
+    'breathSpirometryNotEquivalentWarning':
+      'Bu değerler bir tahmindir; kalibre edilmemiştir ve gerçek spirometriye eşdeğer değildir.',
+    'breathSpirometryEstimateDisclaimer':
+      'Bu bir tıbbi tanı aracı değildir. Sağlıkla ilgili bir endişeniz varsa doktorunuza danışın.',
     'micRationaleTitle': 'Mikrofon izni',
     'micRationaleMessage':
       'Nefes verme suresini otomatik olcmek icin mikrofonu kullanabiliriz. Ses hicbir zaman kaydedilmez veya saklanmaz; yalnizca anlik ses seviyesi olculur. Izin vermezsen testi elle (dokunarak) bitirebilirsin.',
@@ -217,15 +237,15 @@ class AppTexts {
     'tapCircleToFinish': 'Bitirince daireye dokunun',
     'breathListeningHint': 'Dinleniyor... nefesinizi verin, otomatik algılanacak',
     'breathStepSitRelax': 'Dik oturun ve rahatlayın.',
-    'breathStepDeepBreath': 'Derin bir nefes alın.',
-    'breathStepHold': '5 saniye nefesinizi tutun ve başlata basın.',
+    'breathStepDeepBreath': 'Ciğerlerinizi tamamen doldurana kadar derin nefes alın.',
+    'breathStepHold': 'Kısa bir süre nefesinizi tutun ve başlata basın.',
     'breathStepExhale':
-      'Nefesinizi mikrofona doğru güçlüce ve tamamen bitene kadar üfleyin.',
+      'Mikrofona doğru ANİDEN ve olabildiğince güçlü üfleyin — yavaş değil, tek seferde patlar gibi.',
     'breathStepExhaleFinishHint': 'Nefesiniz bitince tamama basın.',
     'breathStepOkAction': 'Tamam',
     'breathStepPressOkVoiceSuffix': 'Tamama basın.',
     'breathAutoNextAttemptInstruction':
-      'Dik oturun ve rahatlayın. Derin bir nefes alın. Beş saniye tutun. Sonra nefesinizi mikrofona doğru güçlüce ve tamamen bitene kadar üfleyin. Nefesiniz bitince tamama basın.',
+      'Dik oturun ve rahatlayın. Ciğerlerinizi tamamen doldurana kadar derin nefes alın. Kısa bir süre tutun. Sonra mikrofona doğru aniden ve olabildiğince güçlü üfleyin. Nefesiniz bitince tamama basın.',
     'disciplineDisclosureTitle': 'Nasil destek oluyoruz?',
     'disciplineDisclosureMessage':
       'Nikotin Away, seni sigarayi birakma surecinde desteklemek icin bazı arka plan mekanizmalari kullanir:\n\n'
@@ -748,6 +768,12 @@ class AppTexts {
       'Tansiyonunu düşüren şey tek bir büyük karar değil, üst üste gelen küçük ertelemeler.',
     'healthTipHypertension30':
       'Bugünün hedefini tutturduysan, bunu yarın da yapabilirsin. Kanıtı sensin.',
+    'healthTipHypertension31':
+      'Tansiyon ilacını sabah aç karnına almadan önce sigarayı ertelemek, ikisinin birlikte çalışmasına yardım eder.',
+    'healthTipHypertension32':
+      'Baş ağrısı ve baş dönmesi bazen yüksek tansiyonun habercisidir; sigara bunu daha da kötüleştirir. Şimdi dinlen.',
+    'healthTipHypertension33':
+      'Gece geç saatte sigara, sabah tansiyon ölçümünü yükseltir. Bu akşamki sigarayı atlamak yarın fark yaratır.',
     'healthTipAsthma3':
       'Duman, hava yollarını saatlerce hassas bırakır. Şimdi içmezsen gece daha rahat nefes alırsın.',
     'healthTipAsthma4':
@@ -804,6 +830,12 @@ class AppTexts {
       'Bugünkü hedefin altında kalmak, bu gece daha az uyanmak demek.',
     'healthTipAsthma30':
       'Hava yolların iyileşmeyi hemen başlatır. Bir günün bile karşılığı var.',
+    'healthTipAsthma31':
+      'Soğuk hava ve sigara dumanı birlikte hava yollarını daha çok daraltır. Kalın bir eşarpla nefes al, sigarayı erteleyebilirsin.',
+    'healthTipAsthma32':
+      'Öksürük krizinden hemen sonra sigara istemek yaygındır ama tam da o an akciğerlerinin en çok dinlenmeye ihtiyacı olan an.',
+    'healthTipAsthma33':
+      'Nefes darlığı geceleri artıyorsa, akşamki son sigarayı atlamak uyku kalitesini doğrudan etkiler.',
     'healthTipDiabetes3':
       'Sigara, insülinin işini zorlaştırır. Şimdi içmemek, bugünkü şekerini daha öngörülebilir kılar.',
     'healthTipDiabetes4':
@@ -860,6 +892,12 @@ class AppTexts {
       'Azaltmak, bırakmanın küçük hâli değil; kendi başına kazanç.',
     'healthTipDiabetes30':
       'Bir haftadır hedefinin altındaysan, bunu vücudun çoktan hissediyor.',
+    'healthTipDiabetes31':
+      'Sigara, ayaklarındaki küçük damarları daraltır; diyabette bu iyileşmeyi zaten yavaşlatıyor. Bir sigara daha eksiltmek yardımcı olur.',
+    'healthTipDiabetes32':
+      'Kan şekerin düşükken sigara isteği artabilir. Önce bir şeyler ye, istek genelde onunla birlikte azalır.',
+    'healthTipDiabetes33':
+      'Düzenli ölçüm yapıyorsan, sigarasız geçen günlerdeki farkı zamanla kendin göreceksin.',
     'healthTipCopd3':
       'KOAH\'ta her sigara, kaybedilen kapasitenin üstüne biner. Bugünkü erteleme kalıcı bir kazanç.',
     'healthTipCopd4':
@@ -916,6 +954,12 @@ class AppTexts {
       'Nefes darlığı arttığında ilk yapılacak şey durmak, ikinci şey yavaş nefes vermek.',
     'healthTipCopd30':
       'Azaltarak gitmek de bir yol. Akciğerlerin her adımı sayıyor.',
+    'healthTipCopd31':
+      'Sabah balgam söktürme zorluğu genelde gece içilen son sigaralardan gelir. Onları erteleyerek başla.',
+    'healthTipCopd32':
+      'Merdiven çıkarken nefesin daraldıysa, şu an sigara değil dinlenme zamanı.',
+    'healthTipCopd33':
+      'KOAH ilaçların sigarayla birlikte daha az işe yarar. İlacı aldığın saatte sigarayı atlamak, ilacın gerçekten çalışmasını sağlar.',
     'healthTipHeartDisease3':
       'Sigara, kalbinin oksijen ihtiyacını artırırken damarları daraltır. Şu an içmemek ikisini de düzeltir.',
     'healthTipHeartDisease4':
@@ -972,6 +1016,12 @@ class AppTexts {
       'Damarların esnekliğini geri kazanabilir. Bu, azalttığın her gün biraz daha olur.',
     'healthTipHeartDisease30':
       'Kalbin bugüne kadar durmadan çalıştı. Bugün ona bir sigara borcun yok.',
+    'healthTipHeartDisease31':
+      'Göğsünde baskı hissettiğinde sigara değil, oturup yavaş nefes almak kalbini rahatlatır.',
+    'healthTipHeartDisease32':
+      'Sigara sonrası kalp atışındaki hızlanma dakikalarca sürer. O dakikaları hiç yaşamamayı seçebilirsin.',
+    'healthTipHeartDisease33':
+      'Kalp ilaçlarını düzenli alıyorsan, sigarayı azaltmak onların etkisini güçlendirir, zayıflatmaz.',
     'menuReports': 'Raporlar',
     'reportsTitle': 'Raporlar',
     'reportsWeeklyTab': 'Haftalik',
@@ -1465,6 +1515,7 @@ class AppTexts {
     'notifKindBreathTest': 'Breath test reminder',
     'notifKindWeeklySurvey': 'Weekly survey reminder',
     'notifKindHealthTip': 'Health tips',
+    'dailyHealthTipCountLabel': 'How many health tips per day?',
     'notifKindCoachCommand': 'Coaching suggestions',
     'notifKindSedentary': 'Sedentary reminder',
     'permissionSetupOptionalHeading': 'Permissions for optional features',
@@ -1477,6 +1528,16 @@ class AppTexts {
         'If Wearable Intelligence is on, reads heart rate and sleep data '
         'from your watch or band. Stays on your device, never sent '
         'anywhere.',
+    'permissionUsageAccessTitle': 'App Usage Access',
+    'permissionUsageAccessDescription':
+        'Reads which app is on screen (name only, never its content) so '
+        'health-tip and task overlays skip a moment when you\'re on a call, '
+        'gaming, watching a video or on social media instead of '
+        'interrupting it.',
+    'permissionUsageAccessPurpose':
+        'Why: without this the app still guesses using free signals like '
+        'how long the screen has been on and whether audio is playing, but '
+        'this permission makes that guess far more accurate.',
     'permissionSetupContinueAnyway': 'Continue for now',
     'permissionSetupOptionalNote':
         'You can change these later from Settings.',
@@ -1566,9 +1627,23 @@ class AppTexts {
     'breathRestInstruction':
       'Short rest: Breathe normally.\nPrepare for the next attempt.',
     'breathActiveInstruction':
-      '1. Sit upright and relax.\n2. Tap the circle, take a deep breath through your nose, and hold for 2 seconds.\n3. Exhale in one controlled breath.\n4. Tap the circle again when you\'re done.\n\n3 attempts will be performed, best score is saved.',
+      '1. Sit upright and relax.\n2. Tap the circle, breathe in deeply through your nose until your lungs are full, and hold briefly.\n3. Blow out SUDDENLY and as hard as you can, in one burst.\n4. Tap the circle again when you\'re done.\n\n3 attempts will be performed, best score is saved.',
     'breathExerciseDisclaimer':
-      'This is not a medical diagnostic tool; it is a simple breathing exercise for awareness and relaxation.',
+      'This is not a medical diagnostic tool; results are estimates and do not replace a real spirometry measurement. If you have a health concern, consult your doctor.',
+    'breathSpirometryResultTitle': 'Breath Test Result',
+    'breathSpirometrySummaryTitle': 'Spirometry-Style Summary',
+    'breathFev1FvcRatioLabel': 'FEV1/FVC Ratio',
+    'breathPeakFlowIndexLabel': 'Peak Flow Index',
+    'breathFlowCurveSectionTitle': 'Flow-Time Curve',
+    'breathEstimatedValueSuffix': '(estimated)',
+    'breathRatioBandNormalRange': 'Tracking within the normal range.',
+    'breathRatioBandMonitor': 'Continued monitoring is recommended.',
+    'breathPeakFlowBandNormalRange': 'Tracking within the normal range.',
+    'breathPeakFlowBandMonitor': 'Continued monitoring is recommended.',
+    'breathSpirometryNotEquivalentWarning':
+      'These values are an estimate; they are uncalibrated and are not equivalent to real spirometry.',
+    'breathSpirometryEstimateDisclaimer':
+      'This is not a medical diagnostic tool. If you have a health concern, consult your doctor.',
     'micRationaleTitle': 'Microphone permission',
     'micRationaleMessage':
       'We can use the microphone to automatically time your exhale. Audio is never recorded or stored — only the momentary sound level is measured. If you decline, you can still finish the test manually by tapping.',
@@ -1577,15 +1652,15 @@ class AppTexts {
     'tapCircleToFinish': 'Tap the circle when you\'re done',
     'breathListeningHint': 'Listening... exhale, it will be detected automatically',
     'breathStepSitRelax': 'Sit upright and relax.',
-    'breathStepDeepBreath': 'Take a deep breath.',
-    'breathStepHold': 'Hold your breath for 5 seconds and press Start.',
+    'breathStepDeepBreath': 'Breathe in deeply until your lungs are completely full.',
+    'breathStepHold': 'Hold your breath briefly and press Start.',
     'breathStepExhale':
-      'Blow forcefully into the microphone until your breath is fully out.',
+      'Blow into the microphone SUDDENLY and as hard as you can — not slow, like a burst.',
     'breathStepExhaleFinishHint': 'Press OK when your breath is done.',
     'breathStepOkAction': 'OK',
     'breathStepPressOkVoiceSuffix': 'Press OK.',
     'breathAutoNextAttemptInstruction':
-      'Sit upright and relax. Take a deep breath. Hold for five seconds. Then blow forcefully into the microphone until your breath is fully out. Press OK when your breath is done.',
+      'Sit upright and relax. Breathe in deeply until your lungs are completely full. Hold briefly. Then blow into the microphone suddenly and as hard as you can. Press OK when your breath is done.',
     'disciplineDisclosureTitle': 'How do we support you?',
     'disciplineDisclosureMessage':
       'Nikotin Away uses a few background mechanisms to support you through quitting:\n\n'
@@ -2007,6 +2082,12 @@ class AppTexts {
       'What lowers your blood pressure isn\'t one big decision but small delays stacked together.',
     'healthTipHypertension30':
       'If you hit today\'s target, you can do it tomorrow too. You\'re the proof.',
+    'healthTipHypertension31':
+      'Delaying a cigarette before your morning blood-pressure pill on an empty stomach helps them work together.',
+    'healthTipHypertension32':
+      'A headache or dizziness can be a sign your pressure is running high — smoking makes it worse. Rest first.',
+    'healthTipHypertension33':
+      'A late-night cigarette shows up in tomorrow morning\'s reading. Skipping tonight\'s makes a difference by morning.',
     'healthTipAsthma3':
       'Smoke leaves your airways irritable for hours. Skipping this one means easier breathing tonight.',
     'healthTipAsthma4':
@@ -2063,6 +2144,12 @@ class AppTexts {
       'Staying under today\'s target means waking less tonight.',
     'healthTipAsthma30':
       'Your airways start recovering immediately. Even one day pays back.',
+    'healthTipAsthma31':
+      'Cold air and smoke together narrow your airways more than either alone. Wrap up warm and let this one pass.',
+    'healthTipAsthma32':
+      'Wanting a cigarette right after a coughing fit is common — but that\'s exactly when your lungs need rest most.',
+    'healthTipAsthma33':
+      'If breathlessness gets worse at night, skipping the last evening cigarette directly improves your sleep.',
     'healthTipDiabetes3':
       'Smoking makes insulin\'s job harder. Skipping this one keeps today\'s numbers more predictable.',
     'healthTipDiabetes4':
@@ -2119,6 +2206,12 @@ class AppTexts {
       'Cutting down isn\'t a lesser version of quitting — it\'s a gain in itself.',
     'healthTipDiabetes30':
       'If you\'ve been under target for a week, your body already feels it.',
+    'healthTipDiabetes31':
+      'Smoking narrows the small vessels in your feet, and diabetes already slows healing there. One fewer cigarette helps.',
+    'healthTipDiabetes32':
+      'Low blood sugar can make cravings feel stronger. Eat something first — the urge usually settles with it.',
+    'healthTipDiabetes33':
+      'If you track your readings regularly, you\'ll see the difference smoke-free days make over time.',
     'healthTipCopd3':
       'With COPD every cigarette adds to capacity already lost. Today\'s delay is a lasting gain.',
     'healthTipCopd4':
@@ -2175,6 +2268,12 @@ class AppTexts {
       'When breathlessness rises, the first thing is to stop and the second is to breathe out slowly.',
     'healthTipCopd30':
       'Cutting down is a route too. Your lungs count every step of it.',
+    'healthTipCopd31':
+      'Morning difficulty clearing phlegm usually traces back to the last cigarettes the night before. Start by skipping those.',
+    'healthTipCopd32':
+      'Breathless on the stairs? That\'s a signal to rest, not to smoke.',
+    'healthTipCopd33':
+      'Your COPD medicine works less well alongside smoking. Skipping a cigarette around your dose lets it actually work.',
     'healthTipHeartDisease3':
       'Smoking raises your heart\'s oxygen demand while narrowing the vessels. Skipping this fixes both.',
     'healthTipHeartDisease4':
@@ -2231,6 +2330,12 @@ class AppTexts {
       'Your arteries can regain flexibility. It happens a little more with every day you cut down.',
     'healthTipHeartDisease30':
       'Your heart hasn\'t stopped once. You don\'t owe it a cigarette today.',
+    'healthTipHeartDisease31':
+      'Feeling pressure in your chest calls for sitting down and resting, not a cigarette.',
+    'healthTipHeartDisease32':
+      'The jump in heart rate after smoking lasts several minutes. You can choose to skip that entirely.',
+    'healthTipHeartDisease33':
+      'If you take heart medication regularly, cutting down makes it work harder for you, not against it.',
     'menuReports': 'Reports',
     'reportsTitle': 'Reports',
     'reportsWeeklyTab': 'Weekly',

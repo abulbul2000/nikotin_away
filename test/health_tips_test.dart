@@ -15,7 +15,7 @@ const tipPrefixes = <String, String>{
 /// Must match NotificationService._healthTipsPerCondition. A pool declared
 /// larger than the texts that exist doesn't crash — the tip is dropped from
 /// the reminder — so nothing but a test notices.
-const tipsPerCondition = 30;
+const tipsPerCondition = 33;
 
 void main() {
   test('every declared tip exists in Turkish and English', () {
@@ -34,9 +34,9 @@ void main() {
     expect(missing, isEmpty, reason: 'missing tip texts: $missing');
   });
 
-  test('the pool is 150 tips — five conditions of thirty', () {
+  test('the pool is 165 tips — five conditions of thirty-three', () {
     expect(tipPrefixes, hasLength(5));
-    expect(tipPrefixes.length * tipsPerCondition, 150);
+    expect(tipPrefixes.length * tipsPerCondition, 165);
   });
 
   test('no tip is duplicated within a condition', () {

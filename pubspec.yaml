@@ -37,7 +37,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.3.0
-  flutter_local_notifications: ^17.2.3
+  flutter_local_notifications: ^17.2.4
   timezone: ^0.9.4
   sqflite: ^2.4.1
   sqflite_common_ffi: ^2.1.0
@@ -45,8 +45,8 @@ dependencies:
   path_provider: ^2.0.0
   path_provider_platform_interface: ^2.0.0
   flutter_svg: ^2.0.10
-  permission_handler: ^11.3.1
-  noise_meter: ^5.0.2
+  permission_handler: ^12.0.3
+  noise_meter: ^5.1.0
   pdf: ^3.11.3
   printing: ^5.15.0
   geolocator: ^14.0.3
@@ -58,6 +58,7 @@ dependencies:
   firebase_crashlytics: ^5.2.6
   firebase_storage: ^13.4.5
   cryptography: ^2.9.0
+  http: ^1.2.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

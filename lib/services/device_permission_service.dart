@@ -124,4 +124,35 @@ class DevicePermissionService {
       return false;
     }
   }
+
+  /// "Usage access" -- lets the delivery gate see which app is in the
+  /// foreground, so health-tip and task overlays skip a moment when the user
+  /// is on a call, watching a video, playing a game or on social media
+  /// instead of interrupting it. Optional: without it the app still falls
+  /// back to its permission-free heuristics (Do Not Disturb, in-call state,
+  /// landscape+audio immersion).
+  static Future<bool> hasUsageAccessPermission() async {
+    if (!_isAndroid) {
+      return false;
+    }
+    try {
+      return await _channel.invokeMethod<bool>('hasUsageAccessPermission') ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<bool> requestUsageAccessPermission() async {
+    if (!_isAndroid) {
+      return false;
+    }
+    try {
+      return await _channel
+              .invokeMethod<bool>('requestUsageAccessPermission') ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
 }

@@ -19,6 +19,52 @@ class BreathAcousticAnalysis {
   });
 }
 
+/// One point on the downsampled energy-time curve shown on the spirometry
+/// result screen — [cumulativeEnergyIntegral] is the running trapezoidal
+/// integral up to this point, used to shade the FEV1 (first-second) region
+/// under the curve.
+class BreathFlowCurvePoint {
+  final int millisecondsSinceOnset;
+  final double energy;
+  final double cumulativeEnergyIntegral;
+
+  const BreathFlowCurvePoint({
+    required this.millisecondsSinceOnset,
+    required this.energy,
+    required this.cumulativeEnergyIntegral,
+  });
+}
+
+/// Spirometry-style estimates derived from a forceful exhale's acoustic
+/// energy-time curve.
+///
+/// These are energy-time-integral *analogues* of FEV1/FVC/PEF, not
+/// volumetric measurements — a phone microphone has no calibrated
+/// relationship between energy and airflow (distance to mic, case
+/// muffling, and ambient noise all shift the reading). [fev1FvcRatioPercent]
+/// is the one value that stays meaningful despite that: it's a ratio of two
+/// integrals from the *same* recording, so a per-attempt scaling error
+/// cancels out. The absolute integrals and [peakFlowIndex] are shown only
+/// as 0-100 indices, never as fake liters/second — see
+/// breath_spirometry_result_page.dart.
+class SpirometryEstimate {
+  final double fev1EnergyIntegral;
+  final double fvcEnergyIntegral;
+  final double fev1FvcRatioPercent;
+  final double peakFlowIndex;
+  final int peakFlowAtMs;
+  final List<BreathFlowCurvePoint> curve;
+
+  const SpirometryEstimate({
+    required this.fev1EnergyIntegral,
+    required this.fvcEnergyIntegral,
+    required this.fev1FvcRatioPercent,
+    required this.peakFlowIndex,
+    required this.peakFlowAtMs,
+    required this.curve,
+  });
+}
+
 /// Detects the exhale portion of a breath-test attempt from a stream of
 /// energy samples and derives real intensity/stability metrics from it —
 /// replacing the previous proxy (`estimateBlowIntensity`/
@@ -236,5 +282,128 @@ class BreathAcousticEngine {
       blowIntensity: intensity,
       blowStability: stability,
     );
+  }
+
+  /// Reference point for [peakFlowIndex] — same conservative, documented
+  /// approximate choice as [analyze]'s `referenceLoudExhaleEnergy`, kept as
+  /// a separate constant since peak (instantaneous) energy and mean energy
+  /// aren't the same quantity and shouldn't share a reference by accident.
+  static const double _referencePeakExhaleEnergy = 0.35;
+
+  /// How many points the [SpirometryEstimate.curve] is downsampled to for
+  /// the result screen's flow-time chart — enough to look like a curve,
+  /// small enough to stay cheap to store/redraw.
+  static const int _curveTargetPointCount = 50;
+
+  /// Point in the exhale (relative to onset) FEV1 is read at, mirroring
+  /// real spirometry's "volume exhaled in the first second" — here, energy
+  /// integrated over the first second instead of volume.
+  static const int _fev1WindowMs = 1000;
+
+  /// Derives spirometry-style estimates from the exhale segment already
+  /// found by [analyze] (or by a caller re-using its own onset/offset).
+  /// Returns null if the exhale is too short to integrate meaningfully
+  /// (fewer than 2 samples in range) rather than dividing by near-zero.
+  SpirometryEstimate? estimateSpirometry(
+    List<BreathAcousticSample> samples,
+    int onsetMs,
+    int offsetMs,
+  ) {
+    final exhaleSamples = samples
+        .where(
+          (s) =>
+              s.millisecondsSinceStart >= onsetMs &&
+              s.millisecondsSinceStart <= offsetMs,
+        )
+        .toList()
+      ..sort((a, b) => a.millisecondsSinceStart.compareTo(b.millisecondsSinceStart));
+    if (exhaleSamples.length < 2) {
+      return null;
+    }
+
+    // Trapezoidal running integral of energy over time, re-zeroed to the
+    // exhale's onset — robust to the uneven sample spacing real microphone
+    // chunk delivery produces (unlike a plain sum, which would implicitly
+    // assume even spacing).
+    final curve = <BreathFlowCurvePoint>[];
+    var cumulative = 0.0;
+    var peakEnergy = exhaleSamples.first.rmsEnergy;
+    var peakAtMs = 0;
+    double? fev1Integral;
+
+    for (var i = 0; i < exhaleSamples.length; i++) {
+      final sample = exhaleSamples[i];
+      final relativeMs = sample.millisecondsSinceStart - onsetMs;
+
+      if (i > 0) {
+        final prev = exhaleSamples[i - 1];
+        final dtSeconds = (sample.millisecondsSinceStart -
+                prev.millisecondsSinceStart) /
+            1000.0;
+        final avgEnergy = (sample.rmsEnergy + prev.rmsEnergy) / 2.0;
+        cumulative += avgEnergy * dtSeconds;
+
+        // FEV1 point falls between this sample and the previous one —
+        // interpolate the integral at exactly 1000ms rather than snapping
+        // to whichever sample happens to be nearest, since a forceful
+        // exhale can be short enough that samples are sparse relative to
+        // the 1-second window.
+        final prevRelativeMs = prev.millisecondsSinceStart - onsetMs;
+        if (fev1Integral == null &&
+            prevRelativeMs < _fev1WindowMs &&
+            relativeMs >= _fev1WindowMs) {
+          final span = relativeMs - prevRelativeMs;
+          final fraction = span <= 0
+              ? 1.0
+              : (_fev1WindowMs - prevRelativeMs) / span;
+          final integralAtPrev = cumulative - (avgEnergy * dtSeconds);
+          fev1Integral =
+              integralAtPrev + (cumulative - integralAtPrev) * fraction;
+        }
+      }
+
+      if (sample.rmsEnergy > peakEnergy) {
+        peakEnergy = sample.rmsEnergy;
+        peakAtMs = relativeMs;
+      }
+
+      curve.add(BreathFlowCurvePoint(
+        millisecondsSinceOnset: relativeMs,
+        energy: sample.rmsEnergy,
+        cumulativeEnergyIntegral: cumulative,
+      ));
+    }
+
+    final fvcIntegral = cumulative;
+    // The whole exhale finished inside the first second — FEV1 and FVC
+    // are the same reading, a ratio near 100% (matches real spirometry:
+    // someone who empties their lungs within a second has a high ratio).
+    final resolvedFev1 = fev1Integral ?? fvcIntegral;
+    final ratio = fvcIntegral <= 0
+        ? 0.0
+        : ((resolvedFev1 / fvcIntegral) * 100).clamp(0, 100).toDouble();
+    final peakFlowIndex =
+        ((peakEnergy / _referencePeakExhaleEnergy) * 100).clamp(0, 100).toDouble();
+
+    return SpirometryEstimate(
+      fev1EnergyIntegral: resolvedFev1,
+      fvcEnergyIntegral: fvcIntegral,
+      fev1FvcRatioPercent: ratio,
+      peakFlowIndex: peakFlowIndex,
+      peakFlowAtMs: peakAtMs,
+      curve: _downsample(curve),
+    );
+  }
+
+  List<BreathFlowCurvePoint> _downsample(List<BreathFlowCurvePoint> curve) {
+    if (curve.length <= _curveTargetPointCount) {
+      return curve;
+    }
+    final step = curve.length / _curveTargetPointCount;
+    final result = <BreathFlowCurvePoint>[];
+    for (var i = 0; i < _curveTargetPointCount; i++) {
+      result.add(curve[(i * step).floor()]);
+    }
+    return result;
   }
 }

@@ -13,6 +13,13 @@ class RiskResultPage extends StatelessWidget {
   final int inhaleTestSeconds;
   final UserBehaviorProfile? behaviorProfile;
 
+  /// True when this result followed a breath test attempt (even one without
+  /// a full acoustic reading, which is why it landed here instead of
+  /// BreathSpirometryResultPage) — shows the doctor-consultation disclaimer
+  /// that only makes sense in a breathing-test context, not for the other
+  /// survey flows that also land on this shared page.
+  final bool showBreathDisclaimer;
+
   const RiskResultPage({
     super.key,
     required this.name,
@@ -22,6 +29,7 @@ class RiskResultPage extends StatelessWidget {
     this.exhaleTestSeconds = 0,
     this.inhaleTestSeconds = 0,
     this.behaviorProfile,
+    this.showBreathDisclaimer = false,
   });
 
   Color getRiskColor() {
@@ -187,6 +195,21 @@ class RiskResultPage extends StatelessWidget {
                 ),
               ),
             ),
+            if (showBreathDisclaimer) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  context.t('breathSpirometryEstimateDisclaimer'),
+                  style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic),
+                ),
+              ),
+            ],
             const SizedBox(height: 30),
             SizedBox(
               width: double.infinity,

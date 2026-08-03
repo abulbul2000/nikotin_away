@@ -55,13 +55,31 @@ class NoSmokeApp extends StatefulWidget {
   State<NoSmokeApp> createState() => _NoSmokeAppState();
 }
 
-class _NoSmokeAppState extends State<NoSmokeApp> {
+class _NoSmokeAppState extends State<NoSmokeApp> with WidgetsBindingObserver {
   late Locale _locale;
 
   @override
   void initState() {
     super.initState();
     _locale = widget.initialLocale;
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // A reminder overlay's "Open" button launches the app and queues a
+    // route natively (see ReminderOverlayStore) rather than navigating
+    // itself — resuming is the only moment that queued route can be picked
+    // up and acted on.
+    if (state == AppLifecycleState.resumed) {
+      unawaited(NotificationService.syncOverlayStateFromNative());
+    }
   }
 
   void setLocale(Locale locale) {

@@ -13,6 +13,7 @@ import '../models/medication.dart';
 import '../models/task_assignment.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
+import '../pages/weekly_survey_page.dart';
 import 'android_watchdog_service.dart';
 import 'language_service.dart';
 import 'notification_budget.dart';
@@ -70,6 +71,12 @@ class NotificationService {
   static const String _actionFollowUpDone = 'followup_done';
   static const String _actionFollowUpLater = 'followup_later';
   static const String _actionSmokedNo = 'smoked_no';
+
+  /// "Tamam" / "Ertele" on a medication reminder. Only these two — no
+  /// decline/SOS, unlike the task-trigger notification.
+  static const String _actionMedicationTaken = 'medication_taken';
+  static const String _actionMedicationPostpone = 'medication_postpone';
+  static const Duration _medicationPostponeDelay = Duration(minutes: 15);
 
   static const String _postponeChannelId = 'task_postpone_channel_v1';
   static const String _taskConfirmChannelId = 'task_confirm_channel_v1';
@@ -305,13 +312,26 @@ class NotificationService {
   static const int _dailyBreathReminderMaxSlots = 6;
   static const String _healthTipChannelId = 'health_tip_channel_v2';
   static const int _healthTipBaseId = 430100;
-  /// Standalone advice notifications a day, for users who take no medication.
-  ///
-  /// Was three. Everyone with medication now gets their tip folded into a
-  /// reminder they already receive, so this path only serves people with a
-  /// condition but nothing to take — and for them one a day is a reminder,
-  /// three was nagging.
-  static const int _healthTipDailyCount = 1;
+  /// Upper bound for [scheduleHealthConditionAdviceNotifications] — mirrors
+  /// the range NotificationKindsCard's picker offers. The actual per-day
+  /// count (default 3) comes from [StorageService.loadDailyHealthTipCount].
+  static const int _healthTipDailyCountMax = 5;
+
+  /// The native health-tip-overlay alarm (AndroidWatchdogService.
+  /// scheduleHealthTipTrigger) is shared by health tips, breath-test
+  /// reminders and the weekly survey reminder — each caller needs its own
+  /// slot range so cancelling/rescheduling one never clobbers another's
+  /// alarm. Health tips own 0..[_healthTipDailyCountMax]-1 (see above).
+  static const int _breathOverlaySlotBase = 10;
+  static const int _weeklySurveyOverlaySlot = 20;
+
+  /// Ids HealthTipTriggerReceiver caches a reminder's fields under, so its
+  /// "Postpone" button can reschedule without Dart. Suffixed with the slot
+  /// index for breath reminders, which can have more than one per day.
+  static const String _reminderIdBreathTest = 'breath_test_';
+  static const String _reminderIdWeeklySurvey = 'weekly_survey';
+  static const String _routeBreathTest = 'breathTest';
+  static const String _routeWeeklySurvey = 'weeklySurvey';
   static const String _medicationReminderChannelId =
       'medication_reminder_channel_v1';
   static const int _medicationReminderBaseId = 440100;
@@ -332,7 +352,7 @@ class NotificationService {
   /// How many tips exist per condition. Missing keys fall back to the
   /// English/Turkish text rather than showing a raw key, so a pool that has
   /// grown ahead of the translations degrades quietly.
-  static const int _healthTipsPerCondition = 30;
+  static const int _healthTipsPerCondition = 33;
 
   /// Picks a tip for the user's conditions, rotating so the same sentence
   /// doesn't arrive with every dose.
@@ -457,7 +477,7 @@ class NotificationService {
     );
 
     await _syncWatchdogViolationsFromNative();
-    await _syncTaskOverlayOutcomesFromNative();
+    await syncOverlayStateFromNative();
     await _syncSleepActivityFromNative();
     await _syncSmokedLogEventsFromNative();
     await _restoreSmokedLogButton(code);
@@ -653,6 +673,43 @@ class NotificationService {
       ),
       payload: jsonEncode({'type': _typeHealthTip}),
     );
+  }
+
+  /// Call on app start and every resume: picks up a route a reminder
+  /// overlay's "Open" button queued (see ReminderOverlayStore) and navigates
+  /// there, then syncs any mandatory-task overlay outcomes the same way.
+  static Future<void> syncOverlayStateFromNative() async {
+    await _syncReminderOverlayRouteFromNative();
+    await _syncTaskOverlayOutcomesFromNative();
+  }
+
+  static Future<void> _syncReminderOverlayRouteFromNative() async {
+    try {
+      final route = await AndroidWatchdogService.consumeReminderOverlayRoute();
+      if (route == null || route.isEmpty) {
+        return;
+      }
+      final context = _navigatorKey?.currentContext;
+      if (context == null) {
+        return;
+      }
+      switch (route) {
+        case _routeBreathTest:
+          final hasOnboarded = await StorageService().hasCompletedInitialSurvey();
+          if (!hasOnboarded) {
+            return;
+          }
+          // ignore: use_build_context_synchronously
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const BreathTestPage()));
+        case _routeWeeklySurvey:
+          // ignore: use_build_context_synchronously
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const WeeklySurveyPage()));
+      }
+    } catch (_) {
+      // Keep notification flow resilient even if route sync fails.
+    }
   }
 
   static Future<void> _syncTaskOverlayOutcomesFromNative() async {
@@ -855,6 +912,15 @@ class NotificationService {
     }
 
     if (type == _typeWeeklySurvey) {
+      return;
+    }
+
+    if (type == _typeMedicationReminder) {
+      unawaited(_handleMedicationReminderAction(
+        actionId: response.actionId ?? '',
+        medicationId: payload['medicationId'] ?? '',
+        medicationName: payload['medicationName'] ?? '',
+      ));
       return;
     }
 
@@ -1084,6 +1150,106 @@ class NotificationService {
         delay: const Duration(minutes: 10),
       );
     }
+  }
+
+  /// "Tamam" logs the dose as taken. "Ertele" logs the postponement and
+  /// re-fires the same reminder [_medicationPostponeDelay] later as a
+  /// one-off notification — the original daily-recurring notification (see
+  /// `matchDateTimeComponents` in [scheduleMedicationReminders]) is left
+  /// alone so tomorrow's dose still arrives on schedule.
+  static Future<void> _handleMedicationReminderAction({
+    required String actionId,
+    required String medicationId,
+    required String medicationName,
+  }) async {
+    if (medicationId.isEmpty) {
+      return;
+    }
+    _ensureIsolateReady();
+    final storage = StorageService();
+
+    if (actionId == _actionMedicationTaken) {
+      await storage.logMedicationDoseOutcome(
+        medicationId: medicationId,
+        outcome: 'taken',
+      );
+      return;
+    }
+
+    if (actionId == _actionMedicationPostpone) {
+      await storage.logMedicationDoseOutcome(
+        medicationId: medicationId,
+        outcome: 'postponed',
+      );
+      await _scheduleMedicationPostponeReminder(
+        medicationId: medicationId,
+        medicationName: medicationName,
+      );
+    }
+  }
+
+  static Future<void> _scheduleMedicationPostponeReminder({
+    required String medicationId,
+    required String medicationName,
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final fireAt = tz.TZDateTime.now(
+      tz.local,
+    ).add(_medicationPostponeDelay);
+    final body = _text(
+      code,
+      'medicationReminderBody',
+    ).replaceAll('{name}', medicationName);
+
+    await _plugin.zonedSchedule(
+      // Outside the recurring-slot id range so it can't collide with, or
+      // get cancelled by, the daily reminders scheduleMedicationReminders
+      // manages.
+      _medicationReminderBaseId +
+          _medicationReminderMaxSlots +
+          (medicationId.hashCode.abs() % 10000),
+      _text(code, 'medicationReminderTitle'),
+      body,
+      fireAt,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _medicationReminderChannelId,
+          'Ilac hatirlatmasi',
+          importance: Importance.max,
+          visibility: NotificationVisibility.private,
+          priority: Priority.high,
+          playSound: true,
+          enableVibration: true,
+          vibrationPattern: _taskVibrationPattern,
+          fullScreenIntent: true,
+          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+          category: AndroidNotificationCategory.reminder,
+          actions: <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              _actionMedicationTaken,
+              _text(code, 'taskActionDoneLabel'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionMedicationPostpone,
+              _text(code, 'taskActionNotNowLabel'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+          ],
+        ),
+        iOS: const DarwinNotificationDetails(presentSound: true),
+      ),
+      androidScheduleMode: await _resolveAndroidScheduleMode(),
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: jsonEncode({
+        'type': _typeMedicationReminder,
+        'medicationId': medicationId,
+        'medicationName': medicationName,
+      }),
+    );
   }
 
   static Map<String, String>? _decodePayload(String? raw) {
@@ -1322,22 +1488,6 @@ class NotificationService {
       watchdogId: watchdogId,
       dueAt: dueAt,
     );
-    await AndroidWatchdogService.showTaskOverlay(
-      title: _text(code, 'disciplineCommand'),
-      body: adjustedDescription,
-      doneLabel: _text(code, 'taskActionDoneLabel'),
-      // Blank when the allowance is spent, so the overlay shows exactly the
-      // same answers the notification does.
-      postponeLabel: allowance.$1 < maxPostponesPerTask
-          ? _text(code, 'taskActionNotNowLabel')
-          : '',
-      declineLabel: _text(code, 'taskActionDeclineLabel'),
-      sosLabel: allowance.$2 < maxSosPerTask
-          ? _text(code, 'taskActionSosLabel')
-          : '',
-      watchdogId: watchdogId,
-      taskTitle: taskTitle,
-    );
 
     final reminderAt = tz.TZDateTime.now(
       tz.local,
@@ -1548,6 +1698,9 @@ class NotificationService {
 
     for (var i = 0; i < _dailyBreathReminderMaxSlots; i++) {
       await _plugin.cancel(_dailyBreathReminderBaseId + i);
+      await AndroidWatchdogService.cancelHealthTipTrigger(
+        _breathOverlaySlotBase + i,
+      );
     }
 
     for (var i = 0; i < count; i++) {
@@ -1605,6 +1758,22 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: jsonEncode({'type': _typeBreath}),
       );
+
+      // Also arms a native alarm that shows the same reminder as an
+      // Open/Postpone overlay over whatever app is in the foreground — the
+      // notification alone only surfaces if the user is on the lock screen
+      // or taps it. "Open" launches straight into BreathTestPage; "Postpone"
+      // re-arms itself an hour out, entirely on the native side.
+      await AndroidWatchdogService.scheduleReminderOverlayTrigger(
+        slot: _breathOverlaySlotBase + i,
+        reminderId: '$_reminderIdBreathTest$i',
+        title: _text(code, 'breathReminderTitle'),
+        body: body,
+        route: _routeBreathTest,
+        openLabel: _text(code, 'taskActionDoneLabel'),
+        postponeLabel: _text(code, 'taskActionNotNowLabel'),
+        triggerAt: fireAt,
+      );
     }
 
     if (safeMinimum <= count) {
@@ -1656,8 +1825,9 @@ class NotificationService {
     required String wakeTime,
     required String sleepTime,
   }) async {
-    for (var i = 0; i < _healthTipDailyCount; i++) {
+    for (var i = 0; i < _healthTipDailyCountMax; i++) {
       await _plugin.cancel(_healthTipBaseId + i);
+      await AndroidWatchdogService.cancelHealthTipTrigger(i);
     }
     if (healthConditions.isEmpty) {
       return;
@@ -1670,6 +1840,9 @@ class NotificationService {
     if (takesMedication) {
       return;
     }
+
+    final dailyCount = (await StorageService().loadDailyHealthTipCount())
+        .clamp(1, _healthTipDailyCountMax);
 
     final scheduleMode = await _resolveAndroidScheduleMode();
     final code = await LanguageService.loadSelectedLanguageCode();
@@ -1696,11 +1869,11 @@ class NotificationService {
     }
 
     final windowMinutes = sleepAt.difference(wakeAt).inMinutes;
-    final intervalMinutes = windowMinutes ~/ (_healthTipDailyCount + 1);
+    final intervalMinutes = windowMinutes ~/ (dailyCount + 1);
 
     var conditionCursor = 0;
     var variantCursor = 0;
-    for (var i = 0; i < _healthTipDailyCount; i++) {
+    for (var i = 0; i < dailyCount; i++) {
       var fireAt = wakeAt.add(Duration(minutes: intervalMinutes * (i + 1)));
       if (!fireAt.isAfter(now)) {
         fireAt = fireAt.add(const Duration(days: 1));
@@ -1751,6 +1924,17 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: jsonEncode({'type': _typeHealthTip}),
+      );
+
+      // Also arms a native alarm that shows the same tip as an info overlay
+      // over whatever app is in the foreground at fireAt — the notification
+      // alone only surfaces if the user is on the lock screen or taps it.
+      await AndroidWatchdogService.scheduleHealthTipTrigger(
+        slot: i,
+        title: _text(code, 'healthTipTitle'),
+        body: '${_text(code, tipKey)}\n${_text(code, 'medicationAdviceDisclaimer')}',
+        dismissLabel: _text(code, 'taskActionDoneLabel'),
+        triggerAt: fireAt,
       );
     }
   }
@@ -1819,6 +2003,20 @@ class NotificationService {
               fullScreenIntent: true,
               audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
               category: AndroidNotificationCategory.reminder,
+              actions: <AndroidNotificationAction>[
+                AndroidNotificationAction(
+                  _actionMedicationTaken,
+                  _text(code, 'taskActionDoneLabel'),
+                  showsUserInterface: false,
+                  cancelNotification: true,
+                ),
+                AndroidNotificationAction(
+                  _actionMedicationPostpone,
+                  _text(code, 'taskActionNotNowLabel'),
+                  showsUserInterface: false,
+                  cancelNotification: true,
+                ),
+              ],
             ),
             iOS: const DarwinNotificationDetails(presentSound: true),
           ),
@@ -1829,6 +2027,7 @@ class NotificationService {
           payload: jsonEncode({
             'type': _typeMedicationReminder,
             'medicationId': medication.id,
+            'medicationName': medication.name,
           }),
         );
         slot++;
@@ -1977,10 +2176,24 @@ class NotificationService {
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: jsonEncode({'type': _typeWeeklySurvey}),
     );
+
+    // Also arms a native alarm that shows the same reminder as an
+    // Open/Postpone overlay over whatever app is in the foreground.
+    await AndroidWatchdogService.scheduleReminderOverlayTrigger(
+      slot: _weeklySurveyOverlaySlot,
+      reminderId: _reminderIdWeeklySurvey,
+      title: _text(code, 'weeklySurveyReminderTitle'),
+      body: _text(code, 'weeklySurveyReminderBody'),
+      route: _routeWeeklySurvey,
+      openLabel: _text(code, 'taskActionDoneLabel'),
+      postponeLabel: _text(code, 'taskActionNotNowLabel'),
+      triggerAt: fireAt,
+    );
   }
 
   static Future<void> cancelWeeklySurveyReminder() async {
     await _plugin.cancel(_weeklySurveyNotificationId);
+    await AndroidWatchdogService.cancelHealthTipTrigger(_weeklySurveyOverlaySlot);
   }
 
   static Future<void> showTaskTimerStartedNotification({

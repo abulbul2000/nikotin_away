@@ -22,6 +22,7 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
 /// stays on its loading state forever.
 class _FakeStorageService extends StorageService {
   final Map<String, bool> _state = {};
+  int _dailyHealthTipCount = 3;
 
   @override
   Future<bool> isNotificationKindEnabled(String kindName) async {
@@ -34,6 +35,14 @@ class _FakeStorageService extends StorageService {
     bool enabled,
   ) async {
     _state[kindName] = enabled;
+  }
+
+  @override
+  Future<int> loadDailyHealthTipCount() async => _dailyHealthTipCount;
+
+  @override
+  Future<void> setDailyHealthTipCount(int value) async {
+    _dailyHealthTipCount = value;
   }
 }
 

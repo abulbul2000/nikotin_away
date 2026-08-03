@@ -39,7 +39,12 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
     NotificationKind.sedentary,
   ];
 
+  /// Matches NotificationService's _healthTipDailyCountMax — the picker
+  /// can't offer more than the native side is willing to schedule.
+  static const _maxDailyHealthTips = 5;
+
   final Map<NotificationKind, bool> _enabled = {};
+  int _dailyHealthTipCount = 3;
   bool _loading = true;
 
   @override
@@ -55,11 +60,13 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
         kind.name,
       );
     }
+    final dailyCount = await _storageService.loadDailyHealthTipCount();
     if (!mounted) return;
     setState(() {
       _enabled
         ..clear()
         ..addAll(results);
+      _dailyHealthTipCount = dailyCount.clamp(1, _maxDailyHealthTips);
       _loading = false;
     });
   }
@@ -67,6 +74,11 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
   Future<void> _toggle(NotificationKind kind, bool value) async {
     setState(() => _enabled[kind] = value);
     await _storageService.setNotificationKindEnabled(kind.name, value);
+  }
+
+  Future<void> _setDailyHealthTipCount(int value) async {
+    setState(() => _dailyHealthTipCount = value);
+    await _storageService.setDailyHealthTipCount(value);
   }
 
   String _titleKey(NotificationKind kind) {
@@ -113,7 +125,7 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
               style: TextStyle(color: Colors.white.withValues(alpha: 0.65)),
             ),
             const SizedBox(height: 8),
-            for (final kind in _offeredKinds)
+            for (final kind in _offeredKinds) ...[
               SwitchListTile(
                 key: ValueKey('notification_kind_${kind.name}'),
                 contentPadding: EdgeInsets.zero,
@@ -121,6 +133,36 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
                 value: _enabled[kind] ?? true,
                 onChanged: (value) => _toggle(kind, value),
               ),
+              if (kind == NotificationKind.healthTip &&
+                  (_enabled[kind] ?? true))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          context.t('dailyHealthTipCountLabel'),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      DropdownButton<int>(
+                        key: const ValueKey('daily_health_tip_count'),
+                        value: _dailyHealthTipCount,
+                        items: [
+                          for (var n = 1; n <= _maxDailyHealthTips; n++)
+                            DropdownMenuItem(value: n, child: Text('$n')),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            _setDailyHealthTipCount(value);
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           ],
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/engines/breath_acoustic_engine.dart';
 import 'package:no_smoke/engines/breath_test_engine.dart';
 import 'package:no_smoke/models/breath_test_result.dart';
 
@@ -75,5 +76,66 @@ void main() {
       expect(trend.riskAdjustment, 5);
       expect(trend.trendLast7, 'worsening');
     });
+  });
+
+  group('buildResult with spirometry', () {
+    final engine = BreathTestEngine();
+
+    const spirometry = SpirometryEstimate(
+      fev1EnergyIntegral: 0.18,
+      fvcEnergyIntegral: 0.2,
+      fev1FvcRatioPercent: 90,
+      peakFlowIndex: 75,
+      peakFlowAtMs: 200,
+      curve: [],
+    );
+
+    BreathTestResult build({SpirometryEstimate? spirometry}) {
+      return engine.buildResult(
+        id: 'b',
+        createdAt: DateTime(2026, 1, 1),
+        holdDuration: 20,
+        blowDuration: 6,
+        blowIntensity: 0.6,
+        blowStability: 0.6,
+        spirometry: spirometry,
+      );
+    }
+
+    test('populates spirometry fields when an estimate is passed', () {
+      final result = build(spirometry: spirometry);
+
+      expect(result.fev1EnergyIntegral, 0.18);
+      expect(result.fvcEnergyIntegral, 0.2);
+      expect(result.fev1FvcRatioPercent, 90);
+      expect(result.peakFlowIndex, 75);
+      expect(result.peakFlowAtMs, 200);
+    });
+
+    test('leaves spirometry fields null when no estimate is passed', () {
+      final result = build();
+
+      expect(result.fev1EnergyIntegral, isNull);
+      expect(result.fvcEnergyIntegral, isNull);
+      expect(result.fev1FvcRatioPercent, isNull);
+      expect(result.peakFlowIndex, isNull);
+      expect(result.peakFlowAtMs, isNull);
+    });
+
+    test(
+      'breathScore/riskContribution are identical whether or not spirometry '
+      'is passed — spirometry is presentation-only and must never silently '
+      'enter the risk formula',
+      () {
+        final withSpirometry = build(spirometry: spirometry);
+        final withoutSpirometry = build();
+
+        expect(withSpirometry.breathScore, withoutSpirometry.breathScore);
+        expect(
+          withSpirometry.riskContribution,
+          withoutSpirometry.riskContribution,
+        );
+      },
+    );
   });
 }

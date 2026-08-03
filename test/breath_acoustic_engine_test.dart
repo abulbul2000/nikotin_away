@@ -323,4 +323,128 @@ void main() {
       );
     });
   });
+
+  group('estimateSpirometry', () {
+    final engine = BreathAcousticEngine();
+
+    List<BreathAcousticSample> constantExhale({
+      required int durationMs,
+      double energy = 0.2,
+      int stepMs = 20,
+    }) {
+      final samples = <BreathAcousticSample>[];
+      var t = 0;
+      while (t <= durationMs) {
+        samples.add(
+          BreathAcousticSample(millisecondsSinceStart: t, rmsEnergy: energy),
+        );
+        t += stepMs;
+      }
+      return samples;
+    }
+
+    test('returns null for fewer than 2 samples in the exhale window', () {
+      final samples = [
+        const BreathAcousticSample(millisecondsSinceStart: 0, rmsEnergy: 0.2),
+      ];
+      expect(engine.estimateSpirometry(samples, 0, 0), isNull);
+    });
+
+    test(
+      'FEV1/FVC integral matches the closed-form value for constant energy',
+      () {
+        final samples = constantExhale(durationMs: 2000, energy: 0.2);
+        final estimate = engine.estimateSpirometry(samples, 0, 2000)!;
+
+        // Closed-form: energy * duration(seconds).
+        expect(estimate.fvcEnergyIntegral, closeTo(0.2 * 2.0, 0.01));
+        expect(estimate.fev1EnergyIntegral, closeTo(0.2 * 1.0, 0.01));
+      },
+    );
+
+    test(
+      'a short, entirely front-loaded exhale has a ratio near 100%',
+      () {
+        // Whole exhale finishes inside the first second.
+        final samples = constantExhale(durationMs: 600, energy: 0.2);
+        final estimate = engine.estimateSpirometry(samples, 0, 600)!;
+
+        expect(estimate.fev1FvcRatioPercent, closeTo(100, 0.5));
+      },
+    );
+
+    test(
+      'a long, tapering exhale has a lower ratio than a short sharp one',
+      () {
+        final sharp = constantExhale(durationMs: 800, energy: 0.3);
+        final sharpEstimate = engine.estimateSpirometry(sharp, 0, 800)!;
+
+        // Energy tapers off well past the first second — most of the
+        // integral accumulates after t=1000ms.
+        final tapering = <BreathAcousticSample>[
+          ...constantExhale(durationMs: 1000, energy: 0.3),
+          ...List.generate(
+            100,
+            (i) => BreathAcousticSample(
+              millisecondsSinceStart: 1020 + (i * 20),
+              rmsEnergy: 0.25,
+            ),
+          ),
+        ];
+        final taperingEstimate =
+            engine.estimateSpirometry(tapering, 0, tapering.last.millisecondsSinceStart)!;
+
+        expect(
+          taperingEstimate.fev1FvcRatioPercent,
+          lessThan(sharpEstimate.fev1FvcRatioPercent),
+        );
+      },
+    );
+
+    test('guards against divide-by-zero for a near-zero-duration exhale', () {
+      final samples = [
+        const BreathAcousticSample(millisecondsSinceStart: 0, rmsEnergy: 0.0),
+        const BreathAcousticSample(millisecondsSinceStart: 1, rmsEnergy: 0.0),
+      ];
+      final estimate = engine.estimateSpirometry(samples, 0, 1)!;
+      expect(estimate.fev1FvcRatioPercent, 0.0);
+      expect(estimate.fev1FvcRatioPercent.isNaN, isFalse);
+    });
+
+    test('interpolates the FEV1 point between two straddling samples', () {
+      // Samples land at 900ms and 1100ms — the 1000ms mark is interpolated,
+      // not snapped to either one.
+      final samples = [
+        const BreathAcousticSample(millisecondsSinceStart: 0, rmsEnergy: 0.2),
+        const BreathAcousticSample(millisecondsSinceStart: 900, rmsEnergy: 0.2),
+        const BreathAcousticSample(millisecondsSinceStart: 1100, rmsEnergy: 0.2),
+        const BreathAcousticSample(millisecondsSinceStart: 2000, rmsEnergy: 0.2),
+      ];
+      final estimate = engine.estimateSpirometry(samples, 0, 2000)!;
+
+      // Constant energy throughout -> integral at 1000ms should be close to
+      // energy * 1.0s regardless of where samples happen to land.
+      expect(estimate.fev1EnergyIntegral, closeTo(0.2 * 1.0, 0.02));
+    });
+
+    test('finds peak energy and its time within the exhale window', () {
+      final samples = [
+        const BreathAcousticSample(millisecondsSinceStart: 0, rmsEnergy: 0.1),
+        const BreathAcousticSample(millisecondsSinceStart: 300, rmsEnergy: 0.5),
+        const BreathAcousticSample(millisecondsSinceStart: 600, rmsEnergy: 0.2),
+      ];
+      final estimate = engine.estimateSpirometry(samples, 0, 600)!;
+
+      expect(estimate.peakFlowAtMs, 300);
+      expect(estimate.peakFlowIndex, greaterThan(0));
+    });
+
+    test('downsamples a long curve to the target point count', () {
+      final samples = constantExhale(durationMs: 6000, energy: 0.2, stepMs: 10);
+      final estimate = engine.estimateSpirometry(samples, 0, 6000)!;
+
+      expect(estimate.curve.length, lessThanOrEqualTo(50));
+      expect(estimate.curve, isNotEmpty);
+    });
+  });
 }

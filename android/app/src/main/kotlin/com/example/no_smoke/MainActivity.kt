@@ -319,31 +319,6 @@ class MainActivity : FlutterActivity() {
 						result.success(mapped)
 					}
 
-					"showTaskOverlay" -> {
-						val title = call.argument<String>("title").orEmpty()
-						val body = call.argument<String>("body").orEmpty()
-						val doneLabel = call.argument<String>("doneLabel").orEmpty()
-						val declineLabel = call.argument<String>("declineLabel").orEmpty()
-						val watchdogId = call.argument<String>("watchdogId").orEmpty()
-						val taskTitle = call.argument<String>("taskTitle").orEmpty()
-						if (hasOverlayPermission() && title.isNotBlank() && watchdogId.isNotBlank()) {
-							TaskOverlayService.show(
-								context = this,
-								title = title,
-								body = body,
-								acceptLabel = doneLabel,
-								postponeLabel = call.argument<String>("postponeLabel").orEmpty(),
-								declineLabel = declineLabel,
-								sosLabel = call.argument<String>("sosLabel").orEmpty(),
-								watchdogId = watchdogId,
-								taskTitle = taskTitle,
-							)
-							result.success(true)
-						} else {
-							result.success(false)
-						}
-					}
-
 					"scheduleTaskTrigger" -> {
 						val watchdogId = call.argument<String>("watchdogId").orEmpty()
 						val taskTitle = call.argument<String>("taskTitle").orEmpty()
@@ -375,6 +350,69 @@ class MainActivity : FlutterActivity() {
 							TaskTriggerReceiver.cancel(this, watchdogId)
 						}
 						result.success(true)
+					}
+
+					"scheduleHealthTipTrigger" -> {
+						val slot = call.argument<Number>("slot")?.toInt() ?: -1
+						val body = call.argument<String>("body").orEmpty()
+						val triggerAtMillis = call.argument<Number>("triggerAtMillis")?.toLong() ?: 0L
+						if (slot < 0 || body.isBlank() || triggerAtMillis <= 0L) {
+							result.error("invalid_args", "slot/body/triggerAtMillis required", null)
+							return@setMethodCallHandler
+						}
+						HealthTipTriggerReceiver.schedule(
+							context = this,
+							slot = slot,
+							title = call.argument<String>("title").orEmpty(),
+							body = body,
+							dismissLabel = call.argument<String>("dismissLabel").orEmpty(),
+							triggerAtMillis = triggerAtMillis,
+						)
+						result.success(true)
+					}
+
+					"cancelHealthTipTrigger" -> {
+						val slot = call.argument<Number>("slot")?.toInt() ?: -1
+						if (slot >= 0) {
+							HealthTipTriggerReceiver.cancel(this, slot)
+						}
+						result.success(true)
+					}
+
+					"hasUsageAccessPermission" -> {
+						result.success(hasUsageAccessPermission())
+					}
+
+					"requestUsageAccessPermission" -> {
+						result.success(requestUsageAccessPermission())
+					}
+
+					"scheduleReminderOverlayTrigger" -> {
+						val slot = call.argument<Number>("slot")?.toInt() ?: -1
+						val reminderId = call.argument<String>("reminderId").orEmpty()
+						val body = call.argument<String>("body").orEmpty()
+						val route = call.argument<String>("route").orEmpty()
+						val triggerAtMillis = call.argument<Number>("triggerAtMillis")?.toLong() ?: 0L
+						if (slot < 0 || reminderId.isBlank() || body.isBlank() || route.isBlank() || triggerAtMillis <= 0L) {
+							result.error("invalid_args", "slot/reminderId/body/route/triggerAtMillis required", null)
+							return@setMethodCallHandler
+						}
+						HealthTipTriggerReceiver.scheduleReminder(
+							context = this,
+							slot = slot,
+							reminderId = reminderId,
+							title = call.argument<String>("title").orEmpty(),
+							body = body,
+							route = route,
+							openLabel = call.argument<String>("openLabel").orEmpty(),
+							postponeLabel = call.argument<String>("postponeLabel").orEmpty(),
+							triggerAtMillis = triggerAtMillis,
+						)
+						result.success(true)
+					}
+
+					"consumeReminderOverlayRoute" -> {
+						result.success(ReminderOverlayStore.drainRoute(this))
 					}
 
 					"setSmokedLogButtonEnabled" -> {
@@ -442,11 +480,6 @@ class MainActivity : FlutterActivity() {
 
 					"consumeDeliveryDeferrals" -> {
 						result.success(DeliveryGateStore.drain(this))
-					}
-
-					"dismissTaskOverlay" -> {
-						TaskOverlayService.dismiss(this)
-						result.success(true)
 					}
 
 					"consumeTaskOverlayOutcomes" -> {
@@ -626,6 +659,37 @@ class MainActivity : FlutterActivity() {
 				Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
 				Uri.parse("package:$packageName"),
 			).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+			startActivity(intent)
+			true
+		} catch (e: ActivityNotFoundException) {
+			false
+		}
+	}
+
+	// "Usage access" -- lets DeliveryGateEvaluator see which app is in the
+	// foreground, so health-tip and task overlays skip a moment when the user
+	// is watching a video or playing a game rather than interrupting it. Not a
+	// runtime-dialog permission (like overlay above): AppOpsManager is the
+	// only way to read the grant, and the dedicated Settings screen is the
+	// only way to change it.
+	private fun hasUsageAccessPermission(): Boolean {
+		return try {
+			val appOps = getSystemService(APP_OPS_SERVICE) as android.app.AppOpsManager
+			val mode = appOps.checkOpNoThrow(
+				android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+				android.os.Process.myUid(),
+				packageName,
+			)
+			mode == android.app.AppOpsManager.MODE_ALLOWED
+		} catch (e: Exception) {
+			false
+		}
+	}
+
+	private fun requestUsageAccessPermission(): Boolean {
+		return try {
+			val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
+				.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 			startActivity(intent)
 			true
 		} catch (e: ActivityNotFoundException) {

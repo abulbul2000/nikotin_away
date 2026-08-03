@@ -2,6 +2,7 @@ import 'dart:math';
 
 import '../models/breath_test_result.dart';
 import '../models/breath_trend_analysis.dart';
+import 'breath_acoustic_engine.dart';
 
 class BreathTestEngine {
   int holdRisk(double holdDuration) {
@@ -128,6 +129,14 @@ class BreathTestEngine {
     );
   }
 
+  /// [spirometry], when present, is copied onto the result as presentation
+  /// fields only — it never enters [breathScore]/[riskContribution] below.
+  /// These estimates come from an uncalibrated acoustic proxy (see
+  /// SpirometryEstimate's doc comment); folding them into the same formula
+  /// that drives real coaching decisions (MentorEngine) would let mic
+  /// distance/case muffling/ambient noise silently swing the actual risk
+  /// score under a professional-looking label. [spirometry] is null when no
+  /// full acoustic reading was available for the attempt.
   BreathTestResult buildResult({
     required String id,
     required DateTime createdAt,
@@ -135,6 +144,7 @@ class BreathTestEngine {
     required double blowDuration,
     required double blowIntensity,
     required double blowStability,
+    SpirometryEstimate? spirometry,
   }) {
     final computedHoldRisk = holdRisk(holdDuration);
     final computedBlowRisk = blowDurationRisk(blowDuration);
@@ -161,6 +171,11 @@ class BreathTestEngine {
       stabilityRisk: computedStabilityRisk,
       breathScore: score,
       riskContribution: score * 0.20,
+      fev1EnergyIntegral: spirometry?.fev1EnergyIntegral,
+      fvcEnergyIntegral: spirometry?.fvcEnergyIntegral,
+      fev1FvcRatioPercent: spirometry?.fev1FvcRatioPercent,
+      peakFlowIndex: spirometry?.peakFlowIndex,
+      peakFlowAtMs: spirometry?.peakFlowAtMs,
     );
   }
 

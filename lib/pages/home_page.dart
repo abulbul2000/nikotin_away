@@ -829,8 +829,7 @@ class _HomePageState extends State<HomePage> {
       unawaited(_notifyNewTasks());
       unawaited(_scheduleCoachCommandNotificationsIfNeeded());
       unawaited(_scheduleDurationBarrierNotificationsIfNeeded());
-      unawaited(_presentPendingFollowUpIfNeeded());
-      unawaited(_presentMandatoryTaskIfNeeded());
+      unawaited(_presentDueScreensInOrder());
       unawaited(_storageService.refreshWearableRiskSignal());
       unawaited(_scheduleSedentaryReminderIfNeeded());
       await _ensureMentorMessageCadence();
@@ -1428,6 +1427,22 @@ class _HomePageState extends State<HomePage> {
   static const Duration _mandatoryPostponeRetryDelay = Duration(minutes: 10);
   static const int _maxMandatoryPostponeRetries = 5;
 
+  /// Runs the two screen-presenting gates ([_presentPendingFollowUpIfNeeded],
+  /// [_presentMandatoryTaskIfNeeded]) one after the other instead of as
+  /// separate `unawaited()` calls from `_loadHomeMetrics`. Firing them in
+  /// parallel let both `Navigator.push` a full-screen page independently —
+  /// the direct cause of two task prompts landing on top of each other on
+  /// the same app open. Awaiting the follow-up gate first also means the
+  /// mandatory gate always sees its resolved state (`_taskStates` updated,
+  /// `_pendingFollowUps` cleared) rather than racing it.
+  Future<void> _presentDueScreensInOrder() async {
+    await _presentPendingFollowUpIfNeeded();
+    if (!mounted) {
+      return;
+    }
+    await _presentMandatoryTaskIfNeeded();
+  }
+
   /// Forces an answer for the oldest due follow-up (its scheduledAt has
   /// already passed) via [TaskOutcomeConfirmPage] — replaces relying on an
   /// in-memory Timer ([_scheduleLocalFollowUp]/`_askTaskOutcome`), which
@@ -1504,9 +1519,9 @@ class _HomePageState extends State<HomePage> {
     await _loadHomeMetrics();
     await _restorePendingFollowUps();
 
-    // Chain through any further overdue follow-ups one at a time, instead
-    // of only ever resolving one per app open.
-    unawaited(_presentPendingFollowUpIfNeeded());
+    // _loadHomeMetrics already re-enters _presentDueScreensInOrder, which
+    // chains through any further overdue follow-ups before moving on to the
+    // mandatory gate — no separate re-trigger needed here.
   }
 
   Future<void> _presentMandatoryTaskIfNeeded({bool isRetry = false}) async {

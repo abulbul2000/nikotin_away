@@ -146,6 +146,17 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
         },
         required: false,
       ),
+      _PermissionItem(
+        titleKey: 'permissionUsageAccessTitle',
+        descriptionKey: 'permissionUsageAccessDescription',
+        purposeKey: 'permissionUsageAccessPurpose',
+        icon: Icons.apps_outlined,
+        isGranted: DevicePermissionService.hasUsageAccessPermission,
+        request: () async {
+          await DevicePermissionService.requestUsageAccessPermission();
+        },
+        required: false,
+      ),
     ];
     unawaitedRefresh();
   }

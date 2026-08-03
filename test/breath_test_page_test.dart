@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/engines/breath_acoustic_engine.dart';
 import 'package:no_smoke/models/breath_test_result.dart';
 import 'package:no_smoke/models/survey_record.dart';
 import 'package:no_smoke/pages/breath_test_page.dart';
@@ -29,6 +30,7 @@ class _FakeBreathTestService extends BreathTestService {
     required double blowDuration,
     required double blowStability,
     required double blowIntensity,
+    SpirometryEstimate? spirometry,
     DateTime? completedAt,
     String title = 'Nefes Testi',
   }) async {
@@ -129,12 +131,12 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
 
-    // The 5-second hold countdown elapses, then prompts "press Start".
-    // Deliberately exactly 5s (not 6+): the prompt starts its own 1s
-    // retry-reset grace window right as the countdown hits zero, so
-    // pumping past 6s total risks the retry timer firing before the
-    // test gets a chance to tap the button.
-    await tester.pump(const Duration(seconds: 5));
+    // The 3-second hold countdown elapses, then prompts "press Start".
+    // Deliberately exactly 3s (not more): the prompt starts its own retry-
+    // reset grace window right as the countdown hits zero, so pumping past
+    // that total risks the retry timer firing before the test gets a
+    // chance to tap the button.
+    await tester.pump(const Duration(seconds: 3));
 
     // Tap 4: confirm the hold (-> "exhale" active step directly; this is
     // when the visible counting and the give-up clock actually start).
@@ -175,7 +177,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 350));
 
       // hold countdown elapses and prompts "press Start"
-      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(seconds: 3));
 
       // confirm the hold -> exhale
       await tester.ensureVisible(circleFinder);
@@ -241,13 +243,15 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 350));
 
-      // Let the 5-second hold countdown elapse -> prompts "Başlata basın".
-      await tester.pump(const Duration(seconds: 5));
+      // Let the 3-second hold countdown elapse -> prompts "Başlata basın".
+      await tester.pump(const Duration(seconds: 3));
       expect(holdStartButtonFinder, findsOneWidget);
 
       // Deliberately don't tap it — let the full retry grace period pass
       // instead. The prompt should give up and restart the countdown
       // rather than leaving the attempt stuck on the prompt forever.
+      // The grace period itself (_holdRetryGrace) is unrelated to the hold
+      // countdown length and stays 5s.
       await tester.pump(const Duration(seconds: 5));
       expect(
         holdStartButtonFinder,
@@ -257,7 +261,7 @@ void main() {
       );
 
       // Second cycle: let it elapse again and this time actually tap it.
-      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(seconds: 3));
       expect(holdStartButtonFinder, findsOneWidget);
       await tester.ensureVisible(holdStartButtonFinder);
       await tester.tap(holdStartButtonFinder);

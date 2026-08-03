@@ -73,6 +73,16 @@
       üflemenin aşamayacağı yere çıkarıyordu. 4 yeni motor testi bunu sabitliyor.
 - [x] **7.** Üç deneme de aynı akışı yaşıyor: otur → derin nefes → tut → üfle. Denemeler arası
       otomatik başlama korundu, sadece atlanan adımlar geri geldi.
+- [x] **8.** Spirometri tarzı protokol: hold süresi 5→3sn, üfleme "yavaş/kontrollü"den
+      "ani/güçlü zorlu ekspirasyon"a değişti. `BreathAcousticEngine.estimateSpirometry()` ile
+      FEV1/FVC oranı ve tepe akış endeksi (yüzde/endeks, sahte litre yok) tahmin ediliyor,
+      yeni `BreathSpirometryResultPage`'de akış-zaman eğrisiyle gösteriliyor. Mevcut
+      `breathScore`/risk formülüne bilerek karıştırılmadı (kalibrasyonsuz sinyal).
+      **Not:** `behavior_engine.dart`'daki `calculateBreathTrendFromRecords`
+      (`exhaleTestSeconds`/`inhaleTestSeconds` üzerinden) protokole dokunulmadan bırakıldı,
+      ama "uzun üfleme = iyi" varsayımı artık geçerli olmayabilir (steady blow yerine forceful
+      exhale) — gerçek kullanım verisiyle threshold'ların (`_breathRiskAdjustmentFromRecords`)
+      gözden geçirilmesi gerekebilir.
 
 ## E. Logo ve tema
 

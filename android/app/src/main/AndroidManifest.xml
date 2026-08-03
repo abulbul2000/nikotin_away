@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.no_smoke">
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -16,6 +17,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Lets DeliveryGateEvaluator check which app is in the foreground, so
+         health-tip and task overlays don't interrupt a call, a game, a video
+         or social media. Not a runtime permission — granted only via the
+         dedicated Settings screen (see requestUsageAccessPermission). -->
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
     <!-- Confirms the quick-log button's press-and-hold completed, without the
          user having to keep watching the screen. -->
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -105,6 +112,11 @@
 
         <receiver
             android:name=".TaskTriggerReceiver"
+            android:enabled="true"
+            android:exported="false" />
+
+        <receiver
+            android:name=".HealthTipTriggerReceiver"
             android:enabled="true"
             android:exported="false" />
 

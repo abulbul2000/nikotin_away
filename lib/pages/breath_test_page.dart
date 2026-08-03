@@ -14,6 +14,7 @@ import '../services/breath_voice_guide_service.dart';
 import '../services/permission_service.dart';
 import '../services/storage_service.dart';
 import '../services/tts_voice_selector.dart';
+import 'breath_spirometry_result_page.dart';
 import 'home_page.dart';
 import 'risk_result_page.dart';
 import 'weekly_survey_page.dart';
@@ -78,6 +79,12 @@ class _BreathTestPageState extends State<BreathTestPage>
   int _currentTest = 1;
   final List<int> _attemptSeconds = <int>[];
   final List<BreathAcousticSample> _currentAttemptSamples = [];
+  // The most recent attempt's spirometry estimate — only one attempt's
+  // energy-time curve is ever shown on the result screen (averaging curves
+  // across attempts would produce a shape that never actually happened), so
+  // this simply gets overwritten by whichever attempt finishes last rather
+  // than accumulating a list like _attemptAcousticResults does.
+  SpirometryEstimate? _lastSpirometryEstimate;
   // One entry per completed attempt; null means the microphone wasn't
   // available or no exhale could be confidently detected for that attempt —
   // _navigateToResult falls back to the timing-based proxy unless every
@@ -92,7 +99,11 @@ class _BreathTestPageState extends State<BreathTestPage>
   bool _acousticListeningActive = false;
   bool _autoFinishing = false;
   _AttemptStep _step = _AttemptStep.notStarted;
-  static const int _holdCountdownSeconds = 5;
+  // Real spirometry uses a brief pause between maximal inhale and forceful
+  // exhale, not a long held breath — shortened from 5s. Still long enough
+  // to give BreathAcousticEngine's calibration (15 samples minimum) a quiet
+  // window and let the TTS echo guard's tail clear before exhale starts.
+  static const int _holdCountdownSeconds = 3;
   int _holdCountdownSecondsLeft = _holdCountdownSeconds;
   bool _holdWaitingForStartTap = false;
 
@@ -682,6 +693,16 @@ class _BreathTestPageState extends State<BreathTestPage>
     _attemptAcousticResults.add(
       (acoustic != null && acoustic.exhaleDetected) ? acoustic : null,
     );
+    if (acoustic != null &&
+        acoustic.exhaleDetected &&
+        acoustic.holdDurationMs != null &&
+        acoustic.blowDurationMs != null) {
+      _lastSpirometryEstimate = _breathAcousticEngine.estimateSpirometry(
+        _currentAttemptSamples,
+        acoustic.holdDurationMs!,
+        acoustic.holdDurationMs! + acoustic.blowDurationMs!,
+      );
+    }
 
     if (_attemptSeconds.length >= 3) {
       unawaited(_navigateToResult());
@@ -816,6 +837,7 @@ class _BreathTestPageState extends State<BreathTestPage>
         );
       }
 
+      final spirometry = hasFullAcousticReading ? _lastSpirometryEstimate : null;
       final processed = await _breathTestService.processBreathTest(
         name: widget.name,
         packsPerDay: widget.packsPerDay,
@@ -823,6 +845,7 @@ class _BreathTestPageState extends State<BreathTestPage>
         blowDuration: averageSeconds.toDouble(),
         blowStability: blowStability,
         blowIntensity: blowIntensity,
+        spirometry: spirometry,
         title: context.t('breathTestRecordTitle'),
       );
 
@@ -840,6 +863,21 @@ class _BreathTestPageState extends State<BreathTestPage>
         return;
       }
 
+      if (spirometry != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BreathSpirometryResultPage(
+              name: widget.name,
+              riskScore: processed.finalRiskScore,
+              riskLevel: processed.finalRiskLevel,
+              spirometry: spirometry,
+            ),
+          ),
+        );
+        return;
+      }
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -850,6 +888,7 @@ class _BreathTestPageState extends State<BreathTestPage>
             packsPerDay: widget.packsPerDay,
             exhaleTestSeconds: bestSeconds,
             inhaleTestSeconds: averageSeconds,
+            showBreathDisclaimer: true,
           ),
         ),
       );
@@ -990,221 +1029,219 @@ class _BreathTestPageState extends State<BreathTestPage>
               ? _holdCountdownSecondsLeft
               : _stopwatch.elapsed.inSeconds - _exhaleStartElapsedSeconds);
 
+    // Two clear regions instead of a scrolling stack of separate cards: a
+    // big, centered breathing animation on top (the thing to look at and
+    // breathe along with) and instruction text + the step's action button
+    // below it (the thing to read and act on). SafeArea + a minimum-height
+    // scroll fallback keeps this from overflowing on short screens without
+    // reintroducing the old scattered card layout on tall ones.
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
         title: Text(context.t('breathTestPageTitle')),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              // Progress Indicator - Visual dots showing test progress
-              _buildProgressIndicator(),
-              const SizedBox(height: 32),
-
-              // Instruction Card with professional styling — animates in
-              // as each new step (sit & relax / deep breath / exhale)
-              // replaces the previous one, instead of jumping instantly.
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 320),
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.08),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 12),
+                      _buildProgressIndicator(),
+                      Expanded(
+                        flex: 6,
+                        child: Center(
+                          child: _buildBreathingCircle(
+                            currentSeconds,
+                            constraints.maxWidth,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        flex: 4,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Expanded(
+                                child: Center(
+                                  child: _buildInstructionText(context),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildStepActionButton(context),
+                              const SizedBox(height: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: (_step == _AttemptStep.notStarted && !_isResting)
-                    ? const SizedBox.shrink(key: ValueKey('no_instruction'))
-                    : _buildInstructionCard(
-                        context,
-                        key: ValueKey('${_isResting}_$_step'),
-                      ),
               ),
-              const SizedBox(height: 32),
-
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: _buildTimerDisplay(currentSeconds),
-              ),
-              const SizedBox(height: 20),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
-
   Widget _buildProgressIndicator() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (index) {
-        final testNumber = index + 1;
-        final isCompleted = testNumber < _currentTest;
-        final isCurrent = testNumber == _currentTest;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (index) {
+          final testNumber = index + 1;
+          final isCompleted = testNumber < _currentTest;
+          final isCurrent = testNumber == _currentTest;
 
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Column(
-              children: [
-                Container(
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isCompleted
-                        ? AppTheme.brandPrimary
-                        : isCurrent
-                        ? const Color(0xFF132238)
-                        : const Color(0xFF132238),
-                    border: isCurrent
-                        ? Border.all(color: AppTheme.brandPrimary, width: 2)
-                        : null,
-                    boxShadow: isCurrent
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.brandPrimary.withValues(
-                                alpha: 0.4,
-                              ),
-                              blurRadius: 12,
-                              spreadRadius: 2,
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Container(
+                height: 8,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  color: isCompleted || isCurrent
+                      ? AppTheme.brandPrimary
+                      : const Color(0xFF132238),
+                  boxShadow: isCurrent
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.brandPrimary.withValues(
+                              alpha: 0.4,
                             ),
-                          ]
-                        : const [],
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : const [],
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  /// Talimat metni + disclaimer — artık ayrı bir Card/grafik taşımıyor,
+  /// grafik üstteki nefes dairesine taşındı. Adım değişince fade+slide ile
+  /// geçiş yapmaya devam eder.
+  Widget _buildInstructionText(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 320),
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.08),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        ),
+      ),
+      child: (_step == _AttemptStep.notStarted && !_isResting)
+          ? const SizedBox.shrink(key: ValueKey('no_instruction'))
+          : Column(
+              key: ValueKey('${_isResting}_$_step'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _getInstruction(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    height: 1.5,
+                    color: Colors.white,
                   ),
-                  child: Center(
-                    child: isCompleted
-                        ? const Icon(Icons.check, color: Colors.black, size: 28)
-                        : null,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  context.t('breathExerciseDisclaimer'),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic,
+                    color: Colors.white54,
                   ),
                 ),
               ],
             ),
-          ),
-        );
-      }),
     );
   }
 
-  Widget _buildInstructionCard(BuildContext context, {required Key key}) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // Sit-relax / deep-breath / exhale get a bigger, literal illustration
-    // instead of a small generic Material icon — a seated figure (slouched
-    // vs. sitting up straight) and a phone-with-mic guide respectively, so
-    // what to physically do is obvious without reading or listening.
-    final Widget graphic = !_isResting && _step == _AttemptStep.sitRelax
-        ? _buildSeatedFigureGraphic(upright: false)
-        : !_isResting && _step == _AttemptStep.deepBreath
-        ? _buildSeatedFigureGraphic(upright: true)
-        : !_isResting && _step == _AttemptStep.exhale
-        ? _buildPhoneMicGraphic()
-        : Icon(
-            _isResting
-                ? Icons.psychology
-                : switch (_step) {
-                    _AttemptStep.holding => Icons.timer_outlined,
-                    _AttemptStep.notStarted => Icons.info,
-                    _ => Icons.info,
-                  },
-            color: AppTheme.brandPrimary,
-            size: 24,
-          );
-    return Card(
-      key: key,
-      color: colorScheme.surfaceContainerHighest,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            graphic,
-            const SizedBox(height: 12),
-            Text(
-              _getInstruction(),
-              textAlign: TextAlign.start,
-              style: const TextStyle(
-                fontSize: 15,
-                height: 1.6,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              context.t('breathExerciseDisclaimer'),
-              textAlign: TextAlign.start,
-              style: const TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.white54,
-              ),
-            ),
-          ],
-        ),
+  /// Adımın aksiyonunu üstlenen büyük buton — daha önce ana dairenin
+  /// kendisine tıklanarak yapılıyordu, artık ayrı ve görünür bir buton.
+  /// `key` testlerde (`breath_test_page_test.dart`) daireye tıklamak için
+  /// kullanılıyordu, aynı anahtar aynı davranışla buraya taşındı.
+  Widget _buildStepActionButton(BuildContext context) {
+    final VoidCallback? onPressed = switch (_step) {
+      _ when _isResting => null,
+      _AttemptStep.exhale => _handleBreathPressed,
+      _AttemptStep.notStarted => _startCurrentTest,
+      _AttemptStep.sitRelax => _advanceFromSitRelax,
+      _AttemptStep.deepBreath => _advanceFromDeepBreath,
+      _AttemptStep.holding when _holdWaitingForStartTap => _handleHoldStartTap,
+      // The hold countdown itself is fixed — nothing to tap until it
+      // finishes and _holdWaitingForStartTap flips true above.
+      _AttemptStep.holding => null,
+    };
+
+    if (_isResting) {
+      return const SizedBox(height: 56);
+    }
+
+    final label = switch (_step) {
+      _AttemptStep.notStarted => context.t('start'),
+      _AttemptStep.holding when _holdWaitingForStartTap =>
+        context.t('start'),
+      _ => context.t('breathStepOkAction'),
+    };
+
+    final isHoldStartPrompt =
+        _step == _AttemptStep.holding && _holdWaitingForStartTap;
+
+    // breath_timer_circle stays on the button itself across every step
+    // (matches the old InkWell, which never changed keys) — tests tap this
+    // one key throughout the whole flow. breath_hold_start_button wraps the
+    // same tappable button (via KeyedSubtree, since a widget can only carry
+    // one key of its own) whenever the hold prompt is showing, so tapping
+    // that key hits the real button rather than a zero-size marker.
+    final button = FilledButton(
+      key: const ValueKey('breath_timer_circle'),
+      onPressed: onPressed,
+      child: Text(
+        label.toUpperCase(),
+        style: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 1),
       ),
     );
-  }
 
-  /// A slouched figure for sit-relax, sitting up straight for deep-breath —
-  /// the same posture change the instruction text asks for, shown instead
-  /// of just described. Breathes gently in place via _stepBreathController,
-  /// the same controller already driving the timer circle for these steps.
-  // A real Material figure glyph reads as an actual person at a glance;
-  // the earlier hand-drawn stick figure came out looking abstract/geometric
-  // rather than human. Recline for the relax step, an upright meditative
-  // pose for the deep-breath step, matching what each step asks the user to
-  // physically do.
-  Widget _buildSeatedFigureGraphic({required bool upright}) {
     return SizedBox(
-      width: 64,
-      height: 64,
-      child: AnimatedBuilder(
-        animation: _stepBreathController,
-        builder: (context, child) {
-          final breathe = _stepBreathController.value;
-          return Transform.scale(
-            scale: 0.94 + (breathe * 0.06),
-            child: Icon(
-              upright
-                  ? Icons.self_improvement
-                  : Icons.airline_seat_recline_extra,
-              size: 60,
-              color: AppTheme.brandPrimary,
-            ),
-          );
-        },
-      ),
+      width: double.infinity,
+      height: 56,
+      child: isHoldStartPrompt
+          ? KeyedSubtree(
+              key: const ValueKey('breath_hold_start_button'),
+              child: button,
+            )
+          : button,
     );
   }
 
-  /// A phone outline with the microphone location highlighted and small
-  /// chevrons animating downward toward it — shows exactly where to blow
-  /// instead of just saying "into the microphone".
-  Widget _buildPhoneMicGraphic() {
-    return SizedBox(
-      width: 56,
-      height: 64,
-      child: AnimatedBuilder(
-        animation: _exhaleWaveController,
-        builder: (context, child) {
-          return CustomPaint(
-            painter: _PhoneMicPainter(
-              color: AppTheme.brandPrimary,
-              pulse: _exhaleWaveController.value,
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTimerDisplay(int seconds) {
+  /// Büyük, ekranın çoğunu kaplayan ortalanmış nefes animasyonu — artık
+  /// tıklanabilir değil (aksiyon `_buildStepActionButton`'a taşındı),
+  /// sadece o anki adımı görsel olarak anlatır. Tüm scale/opacity geçişleri
+  /// `Curves.easeInOutSine` ile yumuşatılmış — doğal nefes ritmine yakın,
+  /// önceki lineer okumaların "acemi" hissinin yerini alıyor.
+  Widget _buildBreathingCircle(int seconds, double availableWidth) {
     final isResting = _isResting;
     final isIdle = !_isRunning && !isResting;
     final isSitRelax = _step == _AttemptStep.sitRelax;
@@ -1215,228 +1252,177 @@ class _BreathTestPageState extends State<BreathTestPage>
     final accentColor = isResting
         ? const Color(0xFFFFB74D)
         : AppTheme.brandPrimary;
+    final diameter = availableWidth <= 0
+        ? 260.0
+        : (availableWidth * 0.72).clamp(200.0, 300.0);
 
-    final circle = AnimatedBuilder(
-      animation: Listenable.merge([
-        _pulseController,
-        _exhaleShrinkController,
-        _stepBreathController,
-        _exhaleWaveController,
-      ]),
-      builder: (context, child) {
-        // A slow, continuous scale+glow pulse while an attempt is running —
-        // not paced to any fixed inhale/hold/exhale timing (the test is
-        // open-ended), just a calming "still breathing, still holding"
-        // visual anchor. Static (no pulse) when idle or resting. Kept
-        // deliberately muted (low alpha throughout) rather than a bold
-        // solid-fill circle. Held off during sitRelax/deepBreath, which
-        // drive their own bigger breathing animation instead (see below),
-        // and during the hold countdown itself — held breath, no motion —
-        // so the "held still" moment reads as visually distinct from the
-        // steps either side of it.
-        final ambientPulseActive =
-            _isRunning &&
-            !isSitRelax &&
-            !isDeepBreath &&
-            !(_step == _AttemptStep.holding && !isHoldWaitingForTap);
-        final pulse = ambientPulseActive ? _pulseController.value : 0.0;
-        var scale = 1.0 + (pulse * 0.04);
-        final glowAlpha = isIdle ? 0.0 : 0.08 + (pulse * 0.14);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedBuilder(
+          animation: Listenable.merge([
+            _pulseController,
+            _exhaleShrinkController,
+            _stepBreathController,
+            _exhaleWaveController,
+          ]),
+          builder: (context, child) {
+            double eased(Animation<double> controller) =>
+                Curves.easeInOutSine.transform(controller.value);
 
-        // Sit-relax / deep-breath: a slow grow-shrink loop the user can
-        // visually breathe along with — these two steps otherwise had no
-        // animation at all. Deep-breath uses a much wider range to read as
-        // one deliberate, bigger breath rather than sit-relax's gentle
-        // resting rhythm.
-        if (isSitRelax) {
-          scale = 0.92 + (_stepBreathController.value * 0.08);
-        } else if (isDeepBreath) {
-          scale = 0.80 + (_stepBreathController.value * 0.28);
-        }
+            // A slow, continuous scale+glow pulse while an attempt is
+            // running — not paced to any fixed inhale/hold/exhale timing
+            // (the test is open-ended), just a calming "still breathing,
+            // still holding" visual anchor. Static (no pulse) when idle or
+            // resting. Held off during sitRelax/deepBreath, which drive
+            // their own bigger breathing animation instead (see below), and
+            // during the hold countdown itself — held breath, no motion —
+            // so the "held still" moment reads as visually distinct from
+            // the steps either side of it.
+            final ambientPulseActive =
+                _isRunning &&
+                !isSitRelax &&
+                !isDeepBreath &&
+                !(_step == _AttemptStep.holding && !isHoldWaitingForTap);
+            final pulse = ambientPulseActive ? eased(_pulseController) : 0.0;
+            var scale = 1.0 + (pulse * 0.04);
+            final glowAlpha = isIdle ? 0.0 : 0.08 + (pulse * 0.14);
 
-        // While actively exhaling, an inner disc slowly shrinks — a visual
-        // echo of the breath itself running out, on top of (not instead
-        // of) the numeric seconds count.
-        final exhaleShrinkScale = 1.0 - (_exhaleShrinkController.value * 0.85);
+            // Sit-relax / deep-breath: a slow grow-shrink loop the user can
+            // visually breathe along with. Deep-breath uses a much wider
+            // range to read as one deliberate, bigger breath rather than
+            // sit-relax's gentle resting rhythm.
+            if (isSitRelax) {
+              scale = 0.90 + (eased(_stepBreathController) * 0.10);
+            } else if (isDeepBreath) {
+              scale = 0.78 + (eased(_stepBreathController) * 0.30);
+            }
 
-        return Transform.scale(
-          scale: scale,
-          child: Container(
-            width: 220,
-            height: 220,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF132238),
-              border: Border.all(
-                color: accentColor.withValues(alpha: isIdle ? 0.35 : 0.55),
-                width: 2,
-              ),
-              boxShadow: glowAlpha > 0
-                  ? [
-                      BoxShadow(
-                        color: accentColor.withValues(alpha: glowAlpha),
-                        blurRadius: 24,
-                        spreadRadius: 3,
-                      ),
-                    ]
-                  : const [],
-            ),
-            child: Center(
-              child: Stack(
-                alignment: Alignment.center,
-                clipBehavior: Clip.none,
-                children: [
-                  // Outward "wind" rings while exhaling — three staggered
-                  // rings expanding from the mic icon toward the edge and
-                  // fading out, echoing air actually moving out of frame.
-                  if (isExhaling)
-                    ..._exhaleWindRings(accentColor),
-                  if (isExhaling)
-                    Transform.scale(
-                      scale: exhaleShrinkScale.clamp(0.12, 1.0),
-                      child: Container(
-                        width: 196,
-                        height: 196,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: accentColor.withValues(alpha: 0.28),
-                          border: Border.all(
-                            color: accentColor.withValues(alpha: 0.9),
-                            width: 3,
+            // While actively exhaling, an inner disc slowly shrinks — a
+            // visual echo of the breath itself running out, on top of (not
+            // instead of) the numeric seconds count.
+            final exhaleShrinkScale =
+                1.0 - (eased(_exhaleShrinkController) * 0.85);
+
+            return Transform.scale(
+              scale: scale,
+              child: Container(
+                width: diameter,
+                height: diameter,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      accentColor.withValues(alpha: isIdle ? 0.16 : 0.26),
+                      const Color(0xFF132238),
+                    ],
+                    stops: const [0.0, 1.0],
+                  ),
+                  border: Border.all(
+                    color: accentColor.withValues(
+                      alpha: isIdle ? 0.35 : 0.55,
+                    ),
+                    width: 2,
+                  ),
+                  boxShadow: glowAlpha > 0
+                      ? [
+                          BoxShadow(
+                            color: accentColor.withValues(alpha: glowAlpha),
+                            blurRadius: 28,
+                            spreadRadius: 4,
+                          ),
+                        ]
+                      : const [],
+                ),
+                child: Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Outward "wind" rings while exhaling — three
+                      // staggered rings expanding toward the edge and
+                      // fading out, echoing air actually moving out of
+                      // frame.
+                      if (isExhaling) ..._exhaleWindRings(accentColor),
+                      if (isExhaling)
+                        Transform.scale(
+                          scale: exhaleShrinkScale.clamp(0.12, 1.0),
+                          child: Container(
+                            width: diameter * 0.89,
+                            height: diameter * 0.89,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: accentColor.withValues(alpha: 0.28),
+                              border: Border.all(
+                                color: accentColor.withValues(alpha: 0.9),
+                                width: 3,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  if (isIdle)
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                      if (isExhaling)
+                        // The phone/mic guide from the old instruction card,
+                        // now centered inside the breathing circle itself
+                        // instead of a separate small card graphic.
+                        SizedBox(
+                          width: diameter * 0.24,
+                          height: diameter * 0.28,
+                          child: CustomPaint(
+                            painter: _PhoneMicPainter(
+                              color: accentColor,
+                              pulse: eased(_exhaleWaveController),
+                            ),
+                          ),
+                        )
+                      else if (isIdle)
                         Icon(
                           Icons.play_arrow,
                           color: accentColor.withValues(alpha: 0.8),
-                          size: 36,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          context.t('start').toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1,
-                            color: accentColor.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    )
-                  else if (isSitRelax || isDeepBreath)
-                    // Same tap-to-continue convention as the rest of this
-                    // circle — an icon that breathes with the animation
-                    // plus the merged "next" label, no separate button.
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isSitRelax
-                              ? Icons.self_improvement
-                              : Icons.air_rounded,
-                          color: accentColor.withValues(alpha: 0.85),
                           size: 40,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          context.t('breathStepOkAction').toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1,
-                            color: accentColor.withValues(alpha: 0.7),
+                        )
+                      else if (isSitRelax || isDeepBreath)
+                        // A simple nested-circle breathing indicator instead
+                        // of a stock Material figure icon — the inner disc
+                        // grows/shrinks with the same controller already
+                        // driving the outer circle's scale, so what's asked
+                        // for in the instruction text ("nefes alın") is
+                        // shown, not just described.
+                        Transform.scale(
+                          scale: isSitRelax
+                              ? 0.6 + (eased(_stepBreathController) * 0.25)
+                              : 0.45 + (eased(_stepBreathController) * 0.45),
+                          child: Container(
+                            width: diameter * 0.4,
+                            height: diameter * 0.4,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: accentColor.withValues(alpha: 0.22),
+                              border: Border.all(
+                                color: accentColor.withValues(alpha: 0.75),
+                                width: 2,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    )
-                  else if (isExhaling || isHoldWaitingForTap)
-                    // The seconds counter and the finish/start action are
-                    // the same tappable circle here — both labels kept
-                    // semi-transparent so the number and the word stay
-                    // readable together instead of one hiding the other.
-                    Column(
-                      key: isExhaling
-                          ? null
-                          : const ValueKey('breath_hold_start_button'),
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isExhaling)
-                          Icon(
-                            Icons.mic_none_rounded,
-                            color: accentColor.withValues(alpha: 0.55),
-                            size: 22,
-                          ),
+                        )
+                      else
                         Text(
                           seconds.toString().padLeft(2, '0'),
                           style: TextStyle(
-                            fontSize: 48,
+                            fontSize: diameter * 0.22,
                             fontWeight: FontWeight.w600,
                             fontFamily: 'monospace',
-                            color: accentColor.withValues(alpha: 0.55),
+                            color: accentColor.withValues(
+                              alpha: isExhaling ? 0.55 : 0.85,
+                            ),
                             letterSpacing: 2,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          context
-                              .t(isExhaling ? 'breathStepOkAction' : 'start')
-                              .toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1,
-                            color: accentColor.withValues(alpha: 0.55),
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    Text(
-                      seconds.toString().padLeft(2, '0'),
-                      style: TextStyle(
-                        fontSize: 56,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'monospace',
-                        color: accentColor.withValues(alpha: 0.85),
-                        letterSpacing: 2,
-                      ),
-                    ),
-                ],
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-        );
-      },
-    );
-
-    return Column(
-      children: [
-        Material(
-          color: Colors.transparent,
-          shape: const CircleBorder(),
-          child: InkWell(
-            key: const ValueKey('breath_timer_circle'),
-            customBorder: const CircleBorder(),
-            onTap: switch (_step) {
-              _ when isResting => null,
-              _AttemptStep.exhale => _handleBreathPressed,
-              _AttemptStep.notStarted => _startCurrentTest,
-              _AttemptStep.sitRelax => _advanceFromSitRelax,
-              _AttemptStep.deepBreath => _advanceFromDeepBreath,
-              _AttemptStep.holding when _holdWaitingForStartTap =>
-                _handleHoldStartTap,
-              // The 5-second countdown itself is fixed — nothing to tap
-              // until it finishes and _holdWaitingForStartTap flips true
-              // above.
-              _AttemptStep.holding => null,
-            },
-            child: circle,
-          ),
+            );
+          },
         ),
         const SizedBox(height: 14),
         Text(

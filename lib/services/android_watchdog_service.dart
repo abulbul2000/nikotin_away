@@ -55,43 +55,6 @@ class AndroidWatchdogService {
         .toList();
   }
 
-  /// Draws the task prompt as a system overlay over whatever app is in the
-  /// foreground (requires "display over other apps"; no-ops to `false` if
-  /// that permission hasn't been granted). Complements, doesn't replace, the
-  /// task notification -- callers should fire both.
-  static Future<bool> showTaskOverlay({
-    required String title,
-    required String body,
-    required String doneLabel,
-    /// Blank hides the button — postpone and SOS are each capped at two uses
-    /// per task, and a button whose answer is "no, not any more" is worse
-    /// than no button.
-    required String postponeLabel,
-    required String declineLabel,
-    required String sosLabel,
-    required String watchdogId,
-    required String taskTitle,
-  }) async {
-    if (!_isAndroid) {
-      return false;
-    }
-    try {
-      return await _channel.invokeMethod<bool>('showTaskOverlay', {
-            'title': title,
-            'body': body,
-            'doneLabel': doneLabel,
-            'postponeLabel': postponeLabel,
-            'declineLabel': declineLabel,
-            'sosLabel': sosLabel,
-            'watchdogId': watchdogId,
-            'taskTitle': taskTitle,
-          }) ??
-          false;
-    } catch (_) {
-      return false;
-    }
-  }
-
   /// Arms a native alarm for the moment [triggerAt] arrives, which then shows
   /// the task overlay and starts that task's watchdog.
   ///
@@ -170,14 +133,90 @@ class AndroidWatchdogService {
     }
   }
 
-  static Future<void> dismissTaskOverlay() async {
+  /// Arms a native alarm that shows a health tip as an info overlay at
+  /// [triggerAt], on top of whatever app is in the foreground — mirrors
+  /// [scheduleTaskTrigger] but for read-only content with no watchdog or
+  /// outcome to report back.
+  static Future<void> scheduleHealthTipTrigger({
+    required int slot,
+    required String title,
+    required String body,
+    required String dismissLabel,
+    required DateTime triggerAt,
+  }) async {
     if (!_isAndroid) {
       return;
     }
     try {
-      await _channel.invokeMethod('dismissTaskOverlay');
+      await _channel.invokeMethod('scheduleHealthTipTrigger', {
+        'slot': slot,
+        'title': title,
+        'body': body,
+        'dismissLabel': dismissLabel,
+        'triggerAtMillis': triggerAt.millisecondsSinceEpoch,
+      });
+    } catch (_) {
+      // Best-effort: the scheduled notification is still the user-facing
+      // prompt, so a failed alarm degrades rather than losing the tip.
+    }
+  }
+
+  static Future<void> cancelHealthTipTrigger(int slot) async {
+    if (!_isAndroid) {
+      return;
+    }
+    try {
+      await _channel.invokeMethod('cancelHealthTipTrigger', {'slot': slot});
     } catch (_) {
       // Best-effort.
+    }
+  }
+
+  /// Arms a native alarm that shows a reminder (breath test, weekly survey)
+  /// as an Open/Postpone overlay at [triggerAt]. "Open" launches the app and
+  /// leaves [route] for [consumeReminderOverlayRoute] to pick up on resume;
+  /// "Postpone" re-arms itself an hour out entirely on the native side, so it
+  /// still works even if Dart never runs again before the hour is up.
+  static Future<void> scheduleReminderOverlayTrigger({
+    required int slot,
+    required String reminderId,
+    required String title,
+    required String body,
+    required String route,
+    required String openLabel,
+    required String postponeLabel,
+    required DateTime triggerAt,
+  }) async {
+    if (!_isAndroid) {
+      return;
+    }
+    try {
+      await _channel.invokeMethod('scheduleReminderOverlayTrigger', {
+        'slot': slot,
+        'reminderId': reminderId,
+        'title': title,
+        'body': body,
+        'route': route,
+        'openLabel': openLabel,
+        'postponeLabel': postponeLabel,
+        'triggerAtMillis': triggerAt.millisecondsSinceEpoch,
+      });
+    } catch (_) {
+      // Best-effort: the scheduled notification is still the user-facing
+      // prompt, so a failed alarm degrades rather than losing the reminder.
+    }
+  }
+
+  /// The route (if any) a reminder overlay's "Open" button queued while the
+  /// app wasn't running to navigate directly.
+  static Future<String?> consumeReminderOverlayRoute() async {
+    if (!_isAndroid) {
+      return null;
+    }
+    try {
+      return await _channel.invokeMethod<String>('consumeReminderOverlayRoute');
+    } catch (_) {
+      return null;
     }
   }
 

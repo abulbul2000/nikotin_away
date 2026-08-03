@@ -115,7 +115,12 @@ class StorageService {
       // at, for the risky-hour ranking.
       // 23: task_assignments — the live lifecycle of an issued task, which
       // the append-only adaptive_task_events log was never shaped to hold.
-      version: 23,
+      // 24: medication_dose_log — the taken/postponed answer to a
+      // medication reminder notification.
+      // 25: breath_test_results.{fev1EnergyIntegral,fvcEnergyIntegral,
+      // fev1FvcRatioPercent,peakFlowIndex,peakFlowAtMs} — spirometry-style
+      // presentation estimates from the forceful-exhale protocol.
+      version: 25,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -158,6 +163,7 @@ class StorageService {
         await _ensureStepCounterTable(db);
         await _ensureConsentEventsTable(db);
         await _ensureMedicationsTable(db);
+        await _ensureMedicationDoseLogTable(db);
         await _ensureIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -188,6 +194,7 @@ class StorageService {
         await _ensureStepCounterTable(db);
         await _ensureConsentEventsTable(db);
         await _ensureMedicationsTable(db);
+        await _ensureMedicationDoseLogTable(db);
         if (oldVersion < 9) {
           await _ensureIndexes(db);
         }
@@ -308,6 +315,40 @@ class StorageService {
   Future<void> deleteMedication(String id) async {
     final db = await database;
     await db.delete(_medicationsTable, where: 'id = ?', whereArgs: [id]);
+  }
+
+  static const _medicationDoseLogTable = 'medication_dose_log';
+
+  /// Append-only: each row is one answer to one reminder (taken or
+  /// postponed), not a mutable per-medication flag — a day with two doses
+  /// of the same medication needs both answers kept separately.
+  Future<void> _ensureMedicationDoseLogTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_medicationDoseLogTable (
+        id TEXT PRIMARY KEY,
+        medicationId TEXT NOT NULL,
+        outcome TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+  }
+
+  /// Records the answer to a medication reminder notification ('taken' or
+  /// 'postponed'). Fire-and-forget from the background notification-action
+  /// isolate, same as the task-assignment log.
+  Future<void> logMedicationDoseOutcome({
+    required String medicationId,
+    required String outcome,
+    DateTime? at,
+  }) async {
+    final db = await database;
+    final when = at ?? DateTime.now();
+    await db.insert(_medicationDoseLogTable, {
+      'id': 'dose_${medicationId}_${when.microsecondsSinceEpoch}',
+      'medicationId': medicationId,
+      'outcome': outcome,
+      'createdAt': when.toIso8601String(),
+    });
   }
 
   static const _wearableRiskAdjustmentKey = 'wearable_risk_adjustment';
@@ -759,6 +800,39 @@ class StorageService {
       _breathTestResultsTable,
       'riskContribution',
       'REAL NOT NULL DEFAULT 0',
+    );
+    // Spirometry-style estimates (see BreathAcousticEngine.estimateSpirometry)
+    // — nullable, unlike the columns above: rows saved before this existed,
+    // and attempts with no full acoustic reading, legitimately have none.
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'fev1EnergyIntegral',
+      'REAL',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'fvcEnergyIntegral',
+      'REAL',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'fev1FvcRatioPercent',
+      'REAL',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'peakFlowIndex',
+      'REAL',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'peakFlowAtMs',
+      'INTEGER',
     );
   }
 
@@ -2085,6 +2159,20 @@ class StorageService {
       'notification_kind_enabled_$kindName',
       enabled ? '1' : '0',
     );
+  }
+
+  /// How many health-condition tips the user wants per day.
+  ///
+  /// Defaults to 3 — up from the previous hardcoded 1 — for someone who has
+  /// never opened the setting. Clamped to 1-5 wherever it's used since the
+  /// picker only offers that range.
+  Future<int> loadDailyHealthTipCount() async {
+    final raw = await loadSetting('daily_health_tip_count');
+    return int.tryParse(raw ?? '') ?? 3;
+  }
+
+  Future<void> setDailyHealthTipCount(int value) async {
+    await saveSetting('daily_health_tip_count', value.toString());
   }
 
   Future<String> loadInterventionIntensity() async {

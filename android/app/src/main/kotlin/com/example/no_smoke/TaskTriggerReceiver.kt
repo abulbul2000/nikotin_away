@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 
 /// Fires at the moment a planned task is actually due.
 ///
@@ -52,28 +51,11 @@ class TaskTriggerReceiver : BroadcastReceiver() {
             System.currentTimeMillis() + watchdogWindowMillis,
         )
 
-        // Best effort: without the "display over other apps" permission the
-        // scheduled notification (with its full-screen intent) is still the
-        // user-facing prompt, so a missing overlay degrades rather than
-        // losing the task.
-        if (canDrawOverlays(context)) {
-            TaskOverlayService.show(
-                context = context,
-                title = intent.getStringExtra(EXTRA_TITLE).orEmpty(),
-                body = intent.getStringExtra(EXTRA_BODY).orEmpty(),
-                acceptLabel = intent.getStringExtra(EXTRA_DONE_LABEL).orEmpty(),
-                postponeLabel = intent.getStringExtra(EXTRA_POSTPONE_LABEL).orEmpty(),
-                declineLabel = intent.getStringExtra(EXTRA_DECLINE_LABEL).orEmpty(),
-                sosLabel = intent.getStringExtra(EXTRA_SOS_LABEL).orEmpty(),
-                watchdogId = watchdogId,
-                taskTitle = taskTitle,
-            )
-        }
-    }
-
-    private fun canDrawOverlays(context: Context): Boolean {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
-            Settings.canDrawOverlays(context)
+        // The native full-screen overlay (phone-call-style Ertele/Kabul Et)
+        // is intentionally not shown here anymore — the scheduled
+        // notification's full-screen intent already surfaces
+        // MandatoryTaskPage in Dart, and showing both stacked two
+        // differently-styled task prompts on top of each other.
     }
 
     /// Pushes the task back and remembers how long it has been waiting.
