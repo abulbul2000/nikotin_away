@@ -11,6 +11,8 @@ import '../engines/mentor_message_builder.dart';
 import '../models/adaptive_plan.dart';
 import '../models/adaptive_task_models.dart';
 import '../models/behavior_dashboard.dart';
+import '../models/breath_noise_baseline.dart';
+import '../models/breath_progress_record.dart';
 import '../models/breath_test_result.dart';
 import '../models/mentor_message.dart';
 import '../models/protocol_violation.dart';
@@ -53,6 +55,8 @@ class StorageService {
   static const _locationVisitEventsTable = 'location_visit_events';
   static const _stepCounterSamplesTable = 'step_counter_samples';
   static const _breathTestResultsTable = 'breath_test_results';
+  static const _breathProgressRecordsTable = 'breath_progress_records';
+  static const _breathNoiseBaselinesTable = 'breath_noise_baselines';
   static const _behaviorSnapshotTable = 'behavior_snapshots';
   static const _taskFollowUpTable = 'task_followups';
   static const _protocolViolationTable = 'protocol_violations';
@@ -120,7 +124,13 @@ class StorageService {
       // 25: breath_test_results.{fev1EnergyIntegral,fvcEnergyIntegral,
       // fev1FvcRatioPercent,peakFlowIndex,peakFlowAtMs} — spirometry-style
       // presentation estimates from the forceful-exhale protocol.
-      version: 25,
+      // 26: breath_progress_records — the user-facing score/duration/
+      // stability/intensity record BreathTrendEngine summarizes, kept
+      // separate from breath_test_results (the risk-engine's own internal
+      // representation). breath_noise_baselines — per-attempt ambient noise
+      // baseline readings BreathNoiseEngine uses to compute each device's
+      // own relative reference level.
+      version: 26,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -148,6 +158,8 @@ class StorageService {
         await _ensureLanguageHistoryTable(db);
         await _ensureSensorUsageTable(db);
         await _ensureBreathTestResultsTable(db);
+        await _ensureBreathProgressRecordsTable(db);
+        await _ensureBreathNoiseBaselinesTable(db);
         await _ensureBehaviorSnapshotTable(db);
         await _ensureTaskFollowUpTable(db);
         await _ensureProtocolViolationTable(db);
@@ -179,6 +191,8 @@ class StorageService {
         await _ensureLanguageHistoryTable(db);
         await _ensureSensorUsageTable(db);
         await _ensureBreathTestResultsTable(db);
+        await _ensureBreathProgressRecordsTable(db);
+        await _ensureBreathNoiseBaselinesTable(db);
         await _ensureBehaviorSnapshotTable(db);
         await _ensureTaskFollowUpTable(db);
         await _ensureProtocolViolationTable(db);
@@ -836,6 +850,38 @@ class StorageService {
     );
   }
 
+  /// User-facing breath test record (score/duration/stability/intensity +
+  /// noisy-environment flag) that BreathTrendEngine.summarize consumes —
+  /// deliberately separate from [_breathTestResultsTable], which is the
+  /// risk engine's own internal representation (holdRisk/blowRisk/etc.).
+  Future<void> _ensureBreathProgressRecordsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_breathProgressRecordsTable (
+        id TEXT PRIMARY KEY,
+        completedAt TEXT NOT NULL,
+        breathScore REAL NOT NULL,
+        blowDurationSeconds REAL NOT NULL,
+        blowStability REAL NOT NULL,
+        blowIntensity REAL NOT NULL,
+        isNoisyEnvironment INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+  }
+
+  /// Ambient noise readings BreathNoiseEngine.computeReferenceLevel uses to
+  /// derive each device's own relative noise reference (median of the most
+  /// recent readings) — see BreathNoiseEngine's doc comment for why a fixed
+  /// dB threshold doesn't work across devices.
+  Future<void> _ensureBreathNoiseBaselinesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_breathNoiseBaselinesTable (
+        id TEXT PRIMARY KEY,
+        measuredAt TEXT NOT NULL,
+        level REAL NOT NULL
+      )
+    ''');
+  }
+
   Future<void> _ensureBehaviorSnapshotTable(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $_behaviorSnapshotTable (
@@ -1313,6 +1359,67 @@ class StorageService {
       return null;
     }
     return rows.last;
+  }
+
+  Future<void> saveBreathProgressRecord(BreathProgressRecord record) async {
+    final db = await database;
+    final json = record.toJson();
+    json['isNoisyEnvironment'] = record.isNoisyEnvironment ? 1 : 0;
+    await db.insert(
+      _breathProgressRecordsTable,
+      json,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Chronological (ASC) order — BreathTrendEngine.summarize expects
+  /// records sorted oldest-first (see StepTrendEngine/breath engines'
+  /// convention) and re-sorts defensively anyway, but returning them
+  /// already sorted keeps every caller's expectations consistent.
+  Future<List<BreathProgressRecord>> loadBreathProgressRecords({
+    int limit = 500,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      _breathProgressRecordsTable,
+      orderBy: 'completedAt DESC',
+      limit: limit,
+    );
+    final records = rows
+        .map(
+          (row) => BreathProgressRecord.fromJson({
+            ...row,
+            'isNoisyEnvironment': row['isNoisyEnvironment'] == 1,
+          }),
+        )
+        .toList();
+    return records.reversed.toList();
+  }
+
+  Future<void> saveBreathNoiseBaseline(BreathNoiseBaseline baseline) async {
+    final db = await database;
+    await db.insert(_breathNoiseBaselinesTable, {
+      'id': 'noise_${baseline.measuredAt.microsecondsSinceEpoch}',
+      ...baseline.toJson(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// Most recent [limit] baseline readings (chronological order) —
+  /// BreathNoiseEngine.computeReferenceLevel only needs the most recent
+  /// referenceSampleCount of these, but re-selects that window itself so
+  /// this can return a slightly larger history without coupling the two.
+  Future<List<BreathNoiseBaseline>> loadRecentBreathNoiseBaselines({
+    int limit = 20,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      _breathNoiseBaselinesTable,
+      orderBy: 'measuredAt DESC',
+      limit: limit,
+    );
+    final baselines =
+        rows.map((row) => BreathNoiseBaseline.fromJson(row)).toList();
+    return baselines.reversed.toList();
   }
 
   Future<void> saveSetting(
@@ -4418,6 +4525,8 @@ class StorageService {
       await txn.delete(_languageHistoryTable);
       await txn.delete(_sensorUsageTable);
       await txn.delete(_breathTestResultsTable);
+      await txn.delete(_breathProgressRecordsTable);
+      await txn.delete(_breathNoiseBaselinesTable);
       await txn.delete(_behaviorSnapshotTable);
       await txn.delete(_taskFollowUpTable);
       await txn.delete(_protocolViolationTable);

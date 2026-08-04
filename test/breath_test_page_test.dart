@@ -78,8 +78,9 @@ void main() {
     PathProviderPlatform.instance = _FakePathProviderPlatform();
   });
 
-  testWidgets('completing 3 attempts routes to RiskResultPage and calls service once',
-      (tester) async {
+  testWidgets('completing all 3 required attempts (each user-paced through '
+      'sit-relax/deep-breath, auto-paced through the hold countdown) routes '
+      'to RiskResultPage and calls service once', (tester) async {
     final fakeService = _FakeBreathTestService();
 
     await tester.pumpWidget(
@@ -103,184 +104,105 @@ void main() {
 
     final circleFinder = find.byKey(const ValueKey('breath_timer_circle'));
 
-    // Attempt 1: the only one requiring any taps to begin — every
-    // attempt after this one auto-starts at the end of its preceding
-    // rest interval (see the "auto-starts attempt 2/3" test below), since
-    // by then the voice guide has already explained everything.
-
-    // Tap 1: start the attempt (-> "sit and relax" step). No
-    // pumpAndSettle from here through the deep-breath step: the breathing
-    // circle animation now repeats indefinitely on both of these steps, so
-    // settling would never terminate.
-    await tester.ensureVisible(circleFinder);
-    await tester.tap(circleFinder);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-
-    // Tap 2: same circle, now on "sit and relax" (-> "take a deep breath"
-    // step).
-    await tester.ensureVisible(circleFinder);
-    await tester.tap(circleFinder);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-
-    // Tap 3: same circle, now on "take a deep breath" (-> "holding" step;
-    // this is when the stopwatch and mic listening actually start).
-    await tester.ensureVisible(circleFinder);
-    await tester.tap(circleFinder);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-
-    // The 3-second hold countdown elapses, then prompts "press Start".
-    // Deliberately exactly 3s (not more): the prompt starts its own retry-
-    // reset grace window right as the countdown hits zero, so pumping past
-    // that total risks the retry timer firing before the test gets a
-    // chance to tap the button.
-    await tester.pump(const Duration(seconds: 3));
-
-    // Tap 4: confirm the hold (-> "exhale" active step directly; this is
-    // when the visible counting and the give-up clock actually start).
-    // No pumpAndSettle: the pulse animation has been repeating since the
-    // hold began and won't stop until the attempt finishes. The "Başlat"
-    // prompt is the same tappable circle as the seconds counter now, not a
-    // separate button.
-    await tester.ensureVisible(circleFinder);
-    await tester.tap(circleFinder);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-
-    // Tap 5: finish the attempt manually (no real mic in the test
-    // environment, so acoustic auto-detection never fires here).
+    // Tap 1: starts attempt 1 (-> "sit and relax" step).
     await tester.ensureVisible(circleFinder);
     await tester.tap(circleFinder);
     await tester.pump();
 
-    // Attempts 2 and 3: still no tap to *begin* them — the rest interval's
-    // 20s countdown starts the next attempt on its own. From there they run
-    // the same sit-relax → deep-breath → hold → exhale sequence attempt 1
-    // does, so that all three measure the same thing and the step visuals
-    // and instructions appear every time (they used to jump straight to the
-    // exhale, skipping both).
-    for (var i = 0; i < 2; i += 1) {
-      await tester.pump(const Duration(seconds: 21));
+    // sit-relax -> deep-breath: user taps "Devam" themselves, no waiting.
+    await tester.ensureVisible(circleFinder);
+    await tester.tap(circleFinder);
+    await tester.pump();
 
-      // sit-relax -> deep-breath
-      await tester.ensureVisible(circleFinder);
-      await tester.tap(circleFinder);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
+    // deep-breath -> holding: user taps "Devam" again; this is when the
+    // stopwatch and mic listening actually start.
+    await tester.ensureVisible(circleFinder);
+    await tester.tap(circleFinder);
+    await tester.pump();
 
-      // deep-breath -> hold
-      await tester.ensureVisible(circleFinder);
-      await tester.tap(circleFinder);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
-
-      // hold countdown elapses and prompts "press Start"
-      await tester.pump(const Duration(seconds: 3));
-
-      // confirm the hold -> exhale
-      await tester.ensureVisible(circleFinder);
-      await tester.tap(circleFinder);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
-
-      // finish the attempt manually
-      await tester.ensureVisible(circleFinder);
-      await tester.tap(circleFinder);
-      await tester.pump();
+    // The 3-second hold countdown elapses on its own and auto-advances
+    // straight into exhale — no tap needed.
+    for (var s = 0; s < 3; s += 1) {
+      await tester.pump(const Duration(seconds: 1));
     }
+    await tester.pump(const Duration(milliseconds: 50));
 
-    await tester.pumpAndSettle();
+    // Finish attempt 1 manually (no real mic in the test environment, so
+    // acoustic auto-detection never fires here). This starts the 20s rest
+    // interval leading into attempt 2.
+    await tester.ensureVisible(circleFinder);
+    await tester.tap(circleFinder);
+    await tester.pump();
+
+    // Attempts 2 and 3: each is preceded by a 20s rest interval which, once
+    // elapsed, auto-starts the next attempt (_beginAutoMeasuredAttempt) with
+    // no tap needed — it still walks through sit-relax/deep-breath/hold/
+    // exhale exactly like attempt 1 did, just without the initial start tap.
+    for (var attempt = 2; attempt <= 3; attempt += 1) {
+      for (var s = 0; s < 20; s += 1) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // sit-relax -> deep-breath -> holding: user taps Devam twice.
+      await tester.ensureVisible(circleFinder);
+      await tester.tap(circleFinder);
+      await tester.pump();
+      await tester.ensureVisible(circleFinder);
+      await tester.tap(circleFinder);
+      await tester.pump();
+
+      for (var s = 0; s < 3; s += 1) {
+        await tester.pump(const Duration(seconds: 1));
+      }
+      await tester.pump(const Duration(milliseconds: 50));
+
+      await tester.ensureVisible(circleFinder);
+      await tester.tap(circleFinder);
+      if (attempt == 3) {
+        await tester.pumpAndSettle();
+      } else {
+        await tester.pump();
+      }
+    }
 
     expect(fakeService.callCount, 1);
     expect(find.byType(RiskResultPage), findsOneWidget);
   });
 
-  testWidgets(
-    'hold step retries cleanly if "Başlat" is not tapped in time, and still completes',
-    (tester) async {
-      final fakeService = _FakeBreathTestService();
+  testWidgets('backgrounding the app mid-attempt discards it and shows a '
+      'snackbar rather than silently keeping stale state', (tester) async {
+    final fakeService = _FakeBreathTestService();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          locale: const Locale('tr'),
-          supportedLocales: const [Locale('tr'), Locale('en')],
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          home: BreathTestPage(
-            name: 'Ada',
-            packsPerDay: '1 paket',
-            breathTestService: fakeService,
-          ),
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('tr'),
+        supportedLocales: const [Locale('tr'), Locale('en')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: BreathTestPage(
+          name: 'Ada',
+          packsPerDay: '1 paket',
+          breathTestService: fakeService,
         ),
-      );
+      ),
+    );
 
-      await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
 
-      final circleFinder = find.byKey(const ValueKey('breath_timer_circle'));
-      final holdStartButtonFinder = find.byKey(
-        const ValueKey('breath_hold_start_button'),
-      );
+    final circleFinder = find.byKey(const ValueKey('breath_timer_circle'));
+    await tester.ensureVisible(circleFinder);
+    await tester.tap(circleFinder);
+    await tester.pump();
 
-      // No pumpAndSettle through sit-relax/deep-breath: the breathing
-      // circle animation repeats indefinitely on both steps.
-      await tester.ensureVisible(circleFinder);
-      await tester.tap(circleFinder);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
 
-      await tester.ensureVisible(circleFinder);
-      await tester.tap(circleFinder);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
-
-      await tester.ensureVisible(circleFinder);
-      await tester.tap(circleFinder);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
-
-      // Let the 3-second hold countdown elapse -> prompts "Başlata basın".
-      await tester.pump(const Duration(seconds: 3));
-      expect(holdStartButtonFinder, findsOneWidget);
-
-      // Deliberately don't tap it — let the full retry grace period pass
-      // instead. The prompt should give up and restart the countdown
-      // rather than leaving the attempt stuck on the prompt forever.
-      // The grace period itself (_holdRetryGrace) is unrelated to the hold
-      // countdown length and stays 5s.
-      await tester.pump(const Duration(seconds: 5));
-      expect(
-        holdStartButtonFinder,
-        findsNothing,
-        reason: 'a missed hold-start tap should reset back to counting down, '
-            'not get stuck showing the prompt indefinitely',
-      );
-
-      // Second cycle: let it elapse again and this time actually tap it.
-      await tester.pump(const Duration(seconds: 3));
-      expect(holdStartButtonFinder, findsOneWidget);
-      await tester.ensureVisible(holdStartButtonFinder);
-      await tester.tap(holdStartButtonFinder);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 350));
-
-      // Finish manually (no real mic in the test environment) and confirm
-      // the retry cycle didn't leave the page in a broken state — a
-      // single attempt still completes and reaches the rest interval.
-      await tester.ensureVisible(circleFinder);
-      await tester.tap(circleFinder);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-
-      // Confirms the retry cycle didn't leave anything broken: no
-      // exceptions, and still on the breath test flow (rest interval)
-      // rather than any error screen.
-      expect(tester.takeException(), isNull);
-      expect(find.byType(BreathTestPage), findsOneWidget);
-    },
-  );
+    expect(find.byType(SnackBar), findsOneWidget);
+  });
 }

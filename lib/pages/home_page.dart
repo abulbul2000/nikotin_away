@@ -11,6 +11,7 @@ import '../models/reduction_progress.dart';
 import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import '../pages/achievements_page.dart';
+import '../pages/breath_analysis_page.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
 import '../pages/smoked_log_consent_page.dart';
@@ -1103,6 +1104,13 @@ class _HomePageState extends State<HomePage> {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const PersonalProgressPage()),
+    );
+  }
+
+  Future<void> _openBreathAnalysisScreen() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const BreathAnalysisPage()),
     );
   }
 
@@ -2666,6 +2674,14 @@ class _HomePageState extends State<HomePage> {
                     onPressed: _openPersonalProgressScreen,
                     icon: const Icon(Icons.insights),
                     label: Text(context.t('menuPersonalProgress')),
+                  ),
+                ),
+                SizedBox(
+                  width: 160,
+                  child: OutlinedButton.icon(
+                    onPressed: _openBreathAnalysisScreen,
+                    icon: const Icon(Icons.show_chart),
+                    label: Text(context.t('breathAnalysisPageTitle')),
                   ),
                 ),
                 SizedBox(

@@ -59,6 +59,7 @@ dependencies:
   firebase_storage: ^13.4.5
   cryptography: ^2.9.0
   http: ^1.2.1
+  fl_chart: ^0.69.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

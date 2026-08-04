@@ -6,14 +6,18 @@ import 'package:flutter/services.dart' show SystemSound, SystemSoundType;
 import '../core/app_texts.dart';
 import '../core/app_theme.dart';
 import '../engines/breath_acoustic_engine.dart';
+import '../engines/breath_feedback_engine.dart';
 import '../engines/breath_test_engine.dart';
+import '../engines/breath_trend_engine.dart';
 import '../models/breath_acoustic_sample.dart';
+import '../models/breath_attempt_feedback.dart';
+import '../models/breath_progress_record.dart';
+import '../models/noise_check_result.dart';
 import '../services/breath_audio_service.dart';
+import '../services/breath_noise_check_service.dart';
 import '../services/breath_test_service.dart';
-import '../services/breath_voice_guide_service.dart';
 import '../services/permission_service.dart';
 import '../services/storage_service.dart';
-import '../services/tts_voice_selector.dart';
 import 'breath_spirometry_result_page.dart';
 import 'home_page.dart';
 import 'risk_result_page.dart';
@@ -26,7 +30,7 @@ class BreathTestPage extends StatefulWidget {
   final bool askWeeklySurveyOnComplete;
   final BreathTestService? breathTestService;
   final BreathAudioService? breathAudioService;
-  final BreathVoiceGuideService? breathVoiceGuideService;
+  final BreathNoiseCheckService? breathNoiseCheckService;
 
   const BreathTestPage({
     super.key,
@@ -36,24 +40,24 @@ class BreathTestPage extends StatefulWidget {
     this.askWeeklySurveyOnComplete = false,
     this.breathTestService,
     this.breathAudioService,
-    this.breathVoiceGuideService,
+    this.breathNoiseCheckService,
   });
 
   @override
   State<BreathTestPage> createState() => _BreathTestPageState();
 }
 
-/// Each attempt walks through these in order: read/hear "sit and relax",
-/// tap OK; read/hear "take a deep breath", tap OK (this is when the hold
+/// Each attempt walks through these in order: read "sit and relax", tap
+/// Devam; read "take a deep breath", tap Devam (this is when the hold
 /// actually begins — the stopwatch and mic both start here, listening
 /// through the quiet hold for a clean calibration baseline); a fixed
-/// 5-second "hold" countdown runs on its own, no tap needed; then
-/// read/hear "exhale now" and the mic auto-detects the exhale (or the user
+/// 3-second "hold" countdown runs on its own, no tap needed, and advances
+/// straight into exhale; then the mic auto-detects the exhale (or the user
 /// taps the circle/OK button manually if it doesn't). Steps 1-2 are
-/// user-paced (a fixed timer can't know whether someone actually finished
-/// reading/hearing them yet); the hold step is deliberately timer-paced
-/// instead, since "hold for 5 seconds" is a specific duration, not a
-/// read-at-your-own-pace instruction.
+/// user-paced (the user reads at their own speed and taps Devam when
+/// ready); the hold step is deliberately timer-paced instead, since "hold
+/// for 3 seconds" is a specific duration, not a read-at-your-own-pace
+/// instruction.
 enum _AttemptStep { notStarted, sitRelax, deepBreath, holding, exhale }
 
 class _BreathTestPageState extends State<BreathTestPage>
@@ -68,13 +72,25 @@ class _BreathTestPageState extends State<BreathTestPage>
   // granularity; the app-lifecycle check above is the meaningful guard.)
   static const int _maxPlausibleSeconds = 120;
 
+  // Test skoru 3 denemenin ortancası olarak hesaplanıyor (bkz.
+  // BreathTrendEngine) — tek deneme şansa çok bağlı, ortanca daha dürüst.
+  // Bu da rest-interval gate'in ve progress indicator'ın saydığı sayı.
+  static const int _requiredAttemptCount = 3;
+
   final Stopwatch _stopwatch = Stopwatch();
   final BreathTestEngine _breathTestEngine = BreathTestEngine();
   final BreathAcousticEngine _breathAcousticEngine = BreathAcousticEngine();
   late final BreathTestService _breathTestService;
   late final BreathAudioService _breathAudioService;
-  late final BreathVoiceGuideService _breathVoiceGuideService;
-  bool _voiceLanguageReady = false;
+  late final BreathNoiseCheckService _breathNoiseCheckService;
+  final BreathTrendEngine _breathTrendEngine = BreathTrendEngine();
+  final BreathFeedbackEngine _breathFeedbackEngine = BreathFeedbackEngine();
+  // Scores (BreathTrendEngine.computeScore) of completed attempts this
+  // session, in order — used so BreathFeedbackEngine can tell attempt N
+  // apart from attempt N-1 ("stronger than your last one"). Not persisted;
+  // only meaningful within a single test run.
+  final List<double> _attemptScores = [];
+  BreathAttemptFeedback? _lastAttemptFeedback;
   Timer? _timer;
   int _currentTest = 1;
   final List<int> _attemptSeconds = <int>[];
@@ -90,47 +106,28 @@ class _BreathTestPageState extends State<BreathTestPage>
   // _navigateToResult falls back to the timing-based proxy unless every
   // attempt has a real reading.
   final List<BreathAcousticAnalysis?> _attemptAcousticResults = [];
+  // One entry per completed attempt — true when either the pre-test ambient
+  // check or the mid-attempt pre-exhale check flagged this attempt as noisy
+  // (NoiseLevel.loud). Never blocks the attempt; only excludes it from
+  // BreathTrendEngine's trend statistics and flags it in the progress chart.
+  final List<bool> _attemptNoiseFlags = [];
+  bool _currentAttemptIsNoisy = false;
+  Timer? _noiseCheckTimer;
   bool _isResting = false;
   int _restSecondsLeft = 0;
-  bool _restCountdownDone = false;
-  bool _restInstructionAnnounced = false;
   bool _isRunning = false;
   bool _wasBackgroundedDuringAttempt = false;
   bool _acousticListeningActive = false;
   bool _autoFinishing = false;
   _AttemptStep _step = _AttemptStep.notStarted;
   // Real spirometry uses a brief pause between maximal inhale and forceful
-  // exhale, not a long held breath — shortened from 5s. Still long enough
-  // to give BreathAcousticEngine's calibration (15 samples minimum) a quiet
-  // window and let the TTS echo guard's tail clear before exhale starts.
+  // exhale, not a long held breath. Long enough to give
+  // BreathAcousticEngine's calibration (15 samples minimum) a quiet window.
   static const int _holdCountdownSeconds = 3;
   int _holdCountdownSecondsLeft = _holdCountdownSeconds;
-  bool _holdWaitingForStartTap = false;
 
-  /// When the "Başlat" prompt appeared, on the same clock as
-  /// [BreathAcousticSample.millisecondsSinceStart]. Only samples from this
-  /// point on may start an exhale — the quieter hold before it is what the
-  /// noise floor is measured from, and must not be mistaken for a blow.
-  int? _holdPromptAtMs;
   int _exhaleStartElapsedSeconds = 0;
-  Timer? _holdRetryTimer;
-  // Long enough for the user to actually hear "Başlata basın" and react to
-  // it — 1 second (an earlier value) wasn't: the TTS phrase itself takes
-  // most of that window to finish speaking, so the retry kept firing
-  // before anyone had a real chance to tap, and the hold step just looped.
-  static const Duration _holdRetryGrace = Duration(seconds: 5);
   Timer? _acousticGiveUpTimer;
-  bool _ttsSpeaking = false;
-  Timer? _ttsGraceTimer;
-
-  // The phone's own speaker leaks into its mic, so whatever the voice guide
-  // is saying would otherwise get analyzed as real signal (and did, before
-  // this existed — the "Şimdi nefesinizi verin" cue was getting picked up
-  // as the calibration baseline itself, making the threshold impossibly
-  // high for the real exhale that followed). This grace period keeps
-  // ignoring samples briefly after speech ends too, since the tail/echo
-  // doesn't cut off instantly.
-  static const Duration _ttsEchoGrace = Duration(milliseconds: 350);
 
   // Mic sensitivity/AGC behavior varies a lot across phones — if an exhale
   // genuinely hasn't been detected within this long, something about this
@@ -187,42 +184,9 @@ class _BreathTestPageState extends State<BreathTestPage>
     super.initState();
     _breathTestService = widget.breathTestService ?? BreathTestService();
     _breathAudioService = widget.breathAudioService ?? BreathAudioService();
-    _breathVoiceGuideService =
-        widget.breathVoiceGuideService ?? BreathVoiceGuideService();
-    _breathVoiceGuideService.onSpeakingStateChanged = _handleTtsSpeakingChanged;
+    _breathNoiseCheckService =
+        widget.breathNoiseCheckService ?? BreathNoiseCheckService();
     WidgetsBinding.instance.addObserver(this);
-  }
-
-  void _handleTtsSpeakingChanged(bool speaking) {
-    _ttsGraceTimer?.cancel();
-    if (speaking) {
-      _ttsSpeaking = true;
-      return;
-    }
-    _ttsGraceTimer = Timer(_ttsEchoGrace, () {
-      _ttsSpeaking = false;
-      // If the rest countdown already hit zero while this was still
-      // talking, this is what actually kicks off the next attempt.
-      _maybeBeginNextAttemptAutomatically();
-    });
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_voiceLanguageReady) {
-      _voiceLanguageReady = true;
-      final languageCode = Localizations.localeOf(context).languageCode;
-      unawaited(_setUpVoiceLanguage(languageCode));
-    }
-  }
-
-  Future<void> _setUpVoiceLanguage(String languageCode) async {
-    final storedGender = await StorageService().loadSetting('gender');
-    await _breathVoiceGuideService.setLanguage(
-      languageCode,
-      preferredGender: ttsGenderHintFor(storedGender),
-    );
   }
 
   @override
@@ -230,14 +194,12 @@ class _BreathTestPageState extends State<BreathTestPage>
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _acousticGiveUpTimer?.cancel();
-    _holdRetryTimer?.cancel();
-    _ttsGraceTimer?.cancel();
+    _noiseCheckTimer?.cancel();
     _pulseController.dispose();
     _exhaleShrinkController.dispose();
     _stepBreathController.dispose();
     _exhaleWaveController.dispose();
     _breathAudioService.dispose();
-    _breathVoiceGuideService.dispose();
     super.dispose();
   }
 
@@ -265,13 +227,12 @@ class _BreathTestPageState extends State<BreathTestPage>
       ..reset();
     _timer?.cancel();
     _acousticGiveUpTimer?.cancel();
-    _holdRetryTimer?.cancel();
+    _noiseCheckTimer?.cancel();
     _pulseController.stop();
     _exhaleShrinkController.reset();
     _exhaleWaveController.stop();
     _stepBreathController.stop();
     unawaited(_breathAudioService.stopListening());
-    unawaited(_breathVoiceGuideService.stop());
     _currentAttemptSamples.clear();
     _acousticListeningActive = false;
     if (!mounted) {
@@ -280,28 +241,14 @@ class _BreathTestPageState extends State<BreathTestPage>
     setState(() {
       _isRunning = false;
       _step = _AttemptStep.notStarted;
-      _holdWaitingForStartTap = false;
     });
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Speaks a step's instruction text. When [appendPressOk] is set, adds
-  /// "press OK" as its own spoken sentence afterward — the on-screen text
-  /// stays just the instruction itself (the button is visible), but a
-  /// spoken cue benefits from explicitly saying what to do next since
-  /// the user may not be looking at the screen.
-  Future<void> _speakStep(String textKey, {bool appendPressOk = false}) {
-    final text = appendPressOk
-        ? '${context.t(textKey)} ${context.t('breathStepPressOkVoiceSuffix')}'
-        : context.t(textKey);
-    return _breathVoiceGuideService.speak(text);
-  }
-
-  /// Step 1 of 4: begins an attempt. Just shows/speaks the "sit and relax"
-  /// cue — nothing is measured yet, the user advances with the OK button
-  /// once they're ready.
+  /// Step 1 of 4: begins an attempt — nothing is measured yet during this
+  /// step, the user just reads the instruction and taps Devam when ready.
   ///
   /// The microphone permission is requested right here — the first moment
   /// the user is actually looking at the breath-test screen and can see
@@ -315,30 +262,103 @@ class _BreathTestPageState extends State<BreathTestPage>
     }
     SystemSound.play(SystemSoundType.click);
     _autoFinishing = false;
+    _currentAttemptIsNoisy = false;
     setState(() {
       _isRunning = true;
       _step = _AttemptStep.sitRelax;
     });
     _stepBreathController.repeat(reverse: true);
-    unawaited(_speakStep('breathStepSitRelax', appendPressOk: true));
     unawaited(_prepareMicrophoneForAttempt());
+    _scheduleAmbientNoiseCheck();
   }
 
-  /// Sequenced (not fired in parallel with the rationale dialog): starting
-  /// the recorder only after permission is actually settled avoids racing
-  /// a just-granted permission against the recorder's own startup latency.
-  ///
-  /// Still kicked off from sit-relax so the recorder is warm by the time
-  /// anything is measured — its first samples after start are unreliable. It
-  /// used to be started this early for a second reason too: to hand attempt 1
-  /// a longer calibration window, on the theory that it auto-detected worse
-  /// than attempts 2/3 because it had fewer samples. That was the wrong read.
-  /// The extra samples were the *inhale* the user had just been told to take,
-  /// and the noise floor is measured from the front of the buffer — so a
-  /// longer window meant a louder baseline and a threshold no real blow could
-  /// clear. What fixes attempt 1 is [_startHoldCountdown] clearing the buffer,
-  /// keeping only the hold; warming the recorder here stays worth doing on its
-  /// own. See the searchFromMs tests in breath_acoustic_engine_test.dart.
+  // Product spec: listen to the room for 2-3s before the attempt actually
+  // starts. Sit-relax is the one stretch of an attempt where the user is
+  // deliberately not breathing hard yet (unlike deep-breath or the hold),
+  // which makes it the honest ambient window — so this reads from whatever
+  // _currentAttemptSamples has accumulated since the mic started in
+  // _prepareMicrophoneForAttempt, rather than opening a second concurrent
+  // recording session (BreathAudioService only supports one at a time).
+  static const Duration _ambientNoiseCheckWindow = Duration(
+    milliseconds: 2500,
+  );
+
+  void _scheduleAmbientNoiseCheck() {
+    _noiseCheckTimer?.cancel();
+    _noiseCheckTimer = Timer(_ambientNoiseCheckWindow, () {
+      unawaited(_runAmbientNoiseCheck());
+    });
+  }
+
+  Future<void> _runAmbientNoiseCheck() async {
+    if (!mounted || _step != _AttemptStep.sitRelax) {
+      // Already moved on (the user tapped Devam quickly, or the attempt
+      // was discarded) — the sit-relax window this check relies on being
+      // quiet no longer applies, so skip rather than evaluate stale
+      // samples.
+      return;
+    }
+    if (_currentAttemptSamples.isEmpty) {
+      // Mic never started (permission denied/platform error) — nothing to
+      // check, same as any other best-effort acoustic feature on this page.
+      return;
+    }
+
+    final result = await _breathNoiseCheckService.evaluatePreTestSamples(
+      List.of(_currentAttemptSamples),
+    );
+    if (!mounted || _step != _AttemptStep.sitRelax) {
+      return;
+    }
+
+    if (result.level == NoiseLevel.quiet) {
+      return;
+    }
+
+    if (result.shouldMarkRecordAsNoisy) {
+      _currentAttemptIsNoisy = true;
+    }
+
+    final keepGoing = await _showNoiseWarningDialog(result);
+    if (!mounted || _step != _AttemptStep.sitRelax) {
+      return;
+    }
+    if (keepGoing == false) {
+      _discardCurrentAttempt(context.t('breathNoiseRetry'));
+    }
+  }
+
+  /// Returns true (continue anyway) or false (retry — discards the attempt
+  /// so the user can tap start again in a quieter spot). Never blocks: both
+  /// buttons let the user proceed one way or the other, per the product
+  /// spec's "asla testi engelleme" rule.
+  Future<bool?> _showNoiseWarningDialog(NoiseCheckResult result) {
+    final isLoud = result.level == NoiseLevel.loud;
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          context.t(isLoud ? 'breathNoiseLoudTitle' : 'breathNoiseWarningTitle'),
+        ),
+        content: Text(
+          context.t(
+            isLoud ? 'breathNoiseLoudMessage' : 'breathNoiseWarningMessage',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('breathNoiseRetry')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('breathNoiseContinueAnyway')),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _prepareMicrophoneForAttempt() async {
     await _ensureMicrophonePermissionWithRationale();
     if (!mounted || _step == _AttemptStep.notStarted) {
@@ -382,22 +402,21 @@ class _BreathTestPageState extends State<BreathTestPage>
     }
   }
 
-  /// Step 1 -> Step 2: still nothing measured yet — just moves from "sit
-  /// and relax" to "take a deep breath".
+  /// Step 1 -> Step 2: user tapped Devam on the sit-relax instruction —
+  /// still nothing measured yet, just moves to "take a deep breath".
   void _advanceFromSitRelax() {
     if (_step != _AttemptStep.sitRelax) {
       return;
     }
-    SystemSound.play(SystemSoundType.click);
     setState(() {
       _step = _AttemptStep.deepBreath;
     });
-    unawaited(_speakStep('breathStepDeepBreath', appendPressOk: true));
   }
 
-  /// Step 2 -> Step 3: this is the real start of the timed measurement —
-  /// the user has just taken their breath and is now holding it. The mic
-  /// itself has already been listening since sit-relax (see
+  /// Step 2 -> Step 3: user tapped Devam on the deep-breath instruction —
+  /// this is the real start of the timed measurement, since the user has
+  /// just taken their breath and is now holding it. The mic itself has
+  /// already been listening since sit-relax (see
   /// _prepareMicrophoneForAttempt) and deliberately isn't restarted here:
   /// restarting would wipe the calibration samples collected during
   /// sit-relax/deep-breath, throwing away the exact head start this was
@@ -406,17 +425,14 @@ class _BreathTestPageState extends State<BreathTestPage>
     if (_step != _AttemptStep.deepBreath) {
       return;
     }
-    SystemSound.play(SystemSoundType.click);
     _stopwatch.reset();
     _stopwatch.start();
     _pulseController.repeat(reverse: true);
     _stepBreathController.stop();
     setState(() {
       _step = _AttemptStep.holding;
-      _holdWaitingForStartTap = false;
       _holdCountdownSecondsLeft = _holdCountdownSeconds;
     });
-    unawaited(_speakStep('breathStepHold'));
     _startHoldCountdown();
   }
 
@@ -427,11 +443,8 @@ class _BreathTestPageState extends State<BreathTestPage>
     // the noise floor was measured off it (so the threshold sat far above any
     // real exhale, and detection never fired) or it was itself read as an
     // exhale onset. The hold is the one stretch where the user is
-    // deliberately silent, which makes it the honest baseline. Samples during
-    // the spoken instruction are already discarded by _handleAcousticSample's
-    // _ttsSpeaking guard, so what accumulates from here is just the hold.
+    // deliberately silent, which makes it the honest baseline.
     _currentAttemptSamples.clear();
-    _holdPromptAtMs = null;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
@@ -443,73 +456,28 @@ class _BreathTestPageState extends State<BreathTestPage>
       });
       if (_holdCountdownSecondsLeft <= 0) {
         timer.cancel();
-        _promptHoldStartTap();
+        _advanceToExhale();
       }
     });
   }
 
-  /// The 5-second hold has elapsed. Rather than silently auto-advancing,
-  /// this reveals the "Başlat" button and asks the user to actively
-  /// confirm they're ready to exhale — if they don't tap within
-  /// [_holdRetryGrace], the hold likely wasn't real (app backgrounded,
-  /// phone set down, etc.), so the countdown resets and tries again rather
-  /// than barreling into the exhale step with nobody there. The
-  /// instruction text itself ("hold for 5 seconds and press Start") was
-  /// already said in full up front — nothing new to say here, the button
-  /// appearing is cue enough.
-  void _promptHoldStartTap() {
+  /// The hold countdown has elapsed — moves straight into the exhale step,
+  /// no tap required (the hold's fixed duration already told the user
+  /// exactly when this would happen).
+  void _advanceToExhale() {
     if (!mounted || _step != _AttemptStep.holding) {
       return;
     }
-    setState(() {
-      _holdWaitingForStartTap = true;
-    });
-    _holdPromptAtMs = _currentAttemptSamples.isEmpty
-        ? 0
-        : _currentAttemptSamples.last.millisecondsSinceStart;
-    _holdRetryTimer?.cancel();
-    _holdRetryTimer = Timer(_holdRetryGrace, () {
-      if (!mounted ||
-          _step != _AttemptStep.holding ||
-          !_holdWaitingForStartTap) {
-        return;
-      }
-      // Restart the measurement clock too, not just the on-screen
-      // countdown — otherwise a retried hold would silently add the
-      // abandoned first attempt's dead time into the saved
-      // holdDuration/blowDuration, inflating the score with time the
-      // user wasn't actually holding/exhaling for.
-      _stopwatch
-        ..reset()
-        ..start();
-      // Same reasoning for the acoustic samples: the abandoned attempt's
-      // calibration window is stale once we've restarted, so a fresh
-      // baseline needs fresh samples, not ones mixed in from before.
-      _currentAttemptSamples.clear();
-      setState(() {
-        _holdWaitingForStartTap = false;
-        _holdCountdownSecondsLeft = _holdCountdownSeconds;
-      });
-      unawaited(_speakStep('breathStepHold'));
-      _startHoldCountdown();
-    });
-  }
-
-  /// The "Başlat" tap that confirms the hold and moves straight into the
-  /// exhale: the blow instruction is spoken/shown, the circle starts
-  /// counting, and the give-up safety-net clock (see
-  /// [_acousticGiveUpAfter]) begins — no extra "press OK" checkpoint in
-  /// between (there was one; it just made the user tap twice in a row for
-  /// no benefit, since "press Start" already *was* their confirmation).
-  void _handleHoldStartTap() {
-    if (_step != _AttemptStep.holding || !_holdWaitingForStartTap) {
-      return;
-    }
-    SystemSound.play(SystemSoundType.click);
-    _holdRetryTimer?.cancel();
+    // The hold's samples (up to this exact moment) are the one genuinely
+    // quiet stretch during the actual measurement — a mid-attempt "did
+    // someone start talking" check, mirroring the pre-test ambient check
+    // above but without persisting a new baseline from it (see
+    // BreathNoiseCheckService.evaluateDuringAttempt's doc comment for why).
+    // Fire-and-forget: by the time exhale detection/finish runs, this will
+    // long since have resolved into _currentAttemptIsNoisy.
+    unawaited(_checkNoiseDuringHold(List.of(_currentAttemptSamples)));
     setState(() {
       _step = _AttemptStep.exhale;
-      _holdWaitingForStartTap = false;
       // The stopwatch itself keeps running continuously from the start of
       // the hold (holdDuration/blowDuration are still derived from that
       // one unbroken measurement, unchanged) — this is purely what's put
@@ -522,11 +490,6 @@ class _BreathTestPageState extends State<BreathTestPage>
       ..stop()
       ..forward(from: 0);
     _exhaleWaveController.repeat();
-    unawaited(
-      _breathVoiceGuideService.speak(
-        '${context.t('breathStepExhale')} ${context.t('breathStepExhaleFinishHint')}',
-      ),
-    );
 
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -539,6 +502,27 @@ class _BreathTestPageState extends State<BreathTestPage>
       _acousticGiveUpTimer?.cancel();
       _acousticGiveUpTimer = Timer(_acousticGiveUpAfter, _giveUpOnAcoustic);
     }
+  }
+
+  /// Evaluates the hold's quiet-window samples against the device's noise
+  /// reference and flags the in-progress attempt if it comes back loud
+  /// (someone started talking, a door slammed, etc.) — silent otherwise, on
+  /// the same "never block the test" rule the pre-test check follows. Never
+  /// shows a dialog here (unlike the pre-test check): interrupting mid-hold
+  /// would be far more disruptive than just quietly marking the record.
+  Future<void> _checkNoiseDuringHold(
+    List<BreathAcousticSample> holdSamples,
+  ) async {
+    if (holdSamples.isEmpty) {
+      return;
+    }
+    final result = await _breathNoiseCheckService.evaluateDuringAttempt(
+      holdSamples,
+    );
+    if (!mounted || !result.shouldMarkRecordAsNoisy) {
+      return;
+    }
+    _currentAttemptIsNoisy = true;
   }
 
   /// Best-effort: if the microphone isn't available (permission denied,
@@ -602,27 +586,10 @@ class _BreathTestPageState extends State<BreathTestPage>
         _step == _AttemptStep.holding ||
         _step == _AttemptStep.exhale ||
         _isResting;
-    if (!isCollectingStep || _autoFinishing || _ttsSpeaking) {
+    if (!isCollectingStep || _autoFinishing) {
       return;
     }
     _currentAttemptSamples.add(sample);
-
-    // Once the hold countdown has finished and the "Başlat" button is
-    // showing, the user is free to exhale whenever they're ready — if they
-    // just start blowing instead of tapping first, that's a real exhale
-    // onset the mic can already see, so treat it as an implicit tap rather
-    // than waiting for one that isn't coming. The button stays available
-    // for anyone who prefers to tap; this only adds a second way in.
-    if (_step == _AttemptStep.holding && _holdWaitingForStartTap) {
-      final earlyOnsetMs = _breathAcousticEngine.findExhaleOnsetMs(
-        _currentAttemptSamples,
-        searchFromMs: _holdPromptAtMs,
-      );
-      if (earlyOnsetMs != null) {
-        _handleHoldStartTap();
-      }
-      return;
-    }
 
     if (_step != _AttemptStep.exhale) {
       // Still just building the calibration baseline (hold countdown or
@@ -663,13 +630,11 @@ class _BreathTestPageState extends State<BreathTestPage>
     _stopwatch.stop();
     _timer?.cancel();
     _acousticGiveUpTimer?.cancel();
-    _holdRetryTimer?.cancel();
     _pulseController.stop();
     _exhaleShrinkController.reset();
     _exhaleWaveController.stop();
     _stepBreathController.stop();
     unawaited(_breathAudioService.stopListening());
-    unawaited(_breathVoiceGuideService.stop());
     _acousticListeningActive = false;
 
     if (seconds > _maxPlausibleSeconds) {
@@ -693,6 +658,8 @@ class _BreathTestPageState extends State<BreathTestPage>
     _attemptAcousticResults.add(
       (acoustic != null && acoustic.exhaleDetected) ? acoustic : null,
     );
+    _attemptNoiseFlags.add(_currentAttemptIsNoisy);
+    _currentAttemptIsNoisy = false;
     if (acoustic != null &&
         acoustic.exhaleDetected &&
         acoustic.holdDurationMs != null &&
@@ -704,7 +671,13 @@ class _BreathTestPageState extends State<BreathTestPage>
       );
     }
 
-    if (_attemptSeconds.length >= 3) {
+    _recordAttemptFeedback(
+      seconds: seconds,
+      stability: acoustic?.blowStability,
+      intensity: acoustic?.blowIntensity,
+    );
+
+    if (_attemptSeconds.length >= _requiredAttemptCount) {
       unawaited(_navigateToResult());
       return;
     }
@@ -712,27 +685,51 @@ class _BreathTestPageState extends State<BreathTestPage>
     _startRestInterval();
   }
 
-  /// How long into the 20s rest window (counting down from there) the
-  /// combined "here's everything for the next attempt" announcement
-  /// starts. Not an exact science — TTS duration isn't known ahead of
-  /// time — so [_maybeBeginNextAttemptAutomatically] treats "the rest
-  /// countdown reached zero" and "the announcement finished speaking" as
-  /// two independent conditions and only starts once *both* are true,
-  /// rather than assuming this lead time lines them up perfectly.
-  static const int _restInstructionLeadSeconds = 15;
+  /// Ürünün istediği "gerçek zamanlı geri bildirim" — her denemenin hemen
+  /// ardından, kısa ve cesaretlendirici bir öneri (bkz. BreathFeedbackEngine).
+  /// Akustik okuma yoksa (mikrofon yoktu/algılama başarısız oldu)
+  /// stability/intensity için BreathTestEngine'in aynı zayıf-sinyal
+  /// tahminleri kullanılır — bu, _saveBreathProgressRecord'un zaten
+  /// kullandığı fallback ile aynı mantık.
+  void _recordAttemptFeedback({
+    required int seconds,
+    double? stability,
+    double? intensity,
+  }) {
+    final resolvedStability =
+        stability ?? _breathTestEngine.estimateBlowStabilityFromAttempts(_attemptSeconds);
+    final resolvedIntensity = intensity ??
+        _breathTestEngine.estimateBlowIntensity(
+          holdDuration: seconds.toDouble(),
+          blowDuration: seconds.toDouble(),
+        );
+    final score = _breathTrendEngine.computeScore(
+      blowDurationSeconds: seconds.toDouble(),
+      blowStability: resolvedStability,
+      blowIntensity: resolvedIntensity,
+    );
+    final previousScore = _attemptScores.isEmpty ? null : _attemptScores.last;
+    _attemptScores.add(score);
+
+    _lastAttemptFeedback = _breathFeedbackEngine.buildFeedback(
+      blowDurationSeconds: seconds.toDouble(),
+      blowStability: resolvedStability,
+      blowIntensity: resolvedIntensity,
+      currentScore: score,
+      previousScore: previousScore,
+    );
+  }
 
   void _startRestInterval() {
     _timer?.cancel();
-    _restCountdownDone = false;
     setState(() {
       _isResting = true;
-      _restInstructionAnnounced = false;
       _restSecondsLeft = 20;
     });
 
     // Mic listens through the entire rest period — plenty of genuine
-    // quiet time for calibration well before the combined instruction
-    // (muted like any other speech) or the next attempt's exhale begins.
+    // quiet time for calibration well before the next attempt's exhale
+    // begins.
     unawaited(_startAcousticListeningForAttempt());
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -744,34 +741,19 @@ class _BreathTestPageState extends State<BreathTestPage>
         _restSecondsLeft -= 1;
       });
 
-      if (_restSecondsLeft == _restInstructionLeadSeconds) {
-        setState(() {
-          _restInstructionAnnounced = true;
-        });
-        unawaited(
-          _breathVoiceGuideService.speak(
-            context.t('breathAutoNextAttemptInstruction'),
-          ),
-        );
-      }
-
       if (_restSecondsLeft <= 0) {
         timer.cancel();
-        _restCountdownDone = true;
-        _maybeBeginNextAttemptAutomatically();
+        _beginNextAttemptAfterRest();
       }
     });
   }
 
-  /// Starts the next attempt's exhale measurement the instant both the
-  /// rest countdown has reached zero *and* the combined instruction has
-  /// finished being spoken — whichever of the two actually finishes last.
-  /// No "BAŞLA"/OK taps in between: only the very first attempt needs a
-  /// deliberate tap to begin (there's no preceding rest period to have
-  /// already announced everything during), every attempt after that was
-  /// already fully explained while the user was resting.
-  void _maybeBeginNextAttemptAutomatically() {
-    if (!mounted || !_restCountdownDone || _ttsSpeaking || _isRunning) {
+  /// Starts the next attempt the instant the rest countdown reaches zero —
+  /// no tap needed. Only the very first attempt needs a deliberate tap to
+  /// begin; every attempt after that starts on its own once the rest
+  /// period is over, same as before.
+  void _beginNextAttemptAfterRest() {
+    if (!mounted || _isRunning) {
       return;
     }
     setState(() {
@@ -791,14 +773,77 @@ class _BreathTestPageState extends State<BreathTestPage>
   /// only thing still special about attempt 1 is that a tap starts it; the
   /// rest interval starts these on its own.
   void _beginAutoMeasuredAttempt() {
-    SystemSound.play(SystemSoundType.click);
     _autoFinishing = false;
     setState(() {
       _isRunning = true;
       _step = _AttemptStep.sitRelax;
     });
     _stepBreathController.repeat(reverse: true);
-    unawaited(_speakStep('breathStepSitRelax', appendPressOk: true));
+  }
+
+  /// Builds the user-facing [BreathProgressRecord] BreathTrendEngine
+  /// consumes for the progress/analysis page, and persists it — separate
+  /// from [_breathTestService.processBreathTest] above, which saves the
+  /// risk engine's own internal [BreathTestResult] representation.
+  ///
+  /// Per-attempt score uses [BreathTrendEngine.computeScore] on each
+  /// attempt's own duration/stability/intensity, then takes the *median*
+  /// across all 3 attempts (not the best) — a single lucky attempt
+  /// shouldn't set the recorded score. The record's duration/stability/
+  /// intensity fields are taken from whichever attempt produced the median
+  /// score, so they describe one real attempt rather than an average that
+  /// never actually happened.
+  Future<void> _saveBreathProgressRecord() async {
+    if (_attemptSeconds.isEmpty) {
+      return;
+    }
+    final attempts = <({double score, int seconds, double stability, double intensity})>[];
+    for (var i = 0; i < _attemptSeconds.length; i++) {
+      final acoustic = i < _attemptAcousticResults.length
+          ? _attemptAcousticResults[i]
+          : null;
+      final stability = (acoustic != null && acoustic.exhaleDetected)
+          ? acoustic.blowStability!
+          : _breathTestEngine.estimateBlowStabilityFromAttempts(_attemptSeconds);
+      final intensity = (acoustic != null && acoustic.exhaleDetected)
+          ? acoustic.blowIntensity!
+          : _breathTestEngine.estimateBlowIntensity(
+              holdDuration: _attemptSeconds[i].toDouble(),
+              blowDuration: _attemptSeconds[i].toDouble(),
+            );
+      final score = _breathTrendEngine.computeScore(
+        blowDurationSeconds: _attemptSeconds[i].toDouble(),
+        blowStability: stability,
+        blowIntensity: intensity,
+      );
+      attempts.add((
+        score: score,
+        seconds: _attemptSeconds[i],
+        stability: stability,
+        intensity: intensity,
+      ));
+    }
+
+    final sortedByScore = [...attempts]..sort((a, b) => a.score.compareTo(b.score));
+    final medianAttempt = sortedByScore[sortedByScore.length ~/ 2];
+    final medianScore = _breathTrendEngine.medianOfAttemptScores(
+      attempts.map((a) => a.score).toList(),
+    );
+
+    final isNoisy = _attemptNoiseFlags.any((flagged) => flagged);
+    final now = DateTime.now();
+
+    await StorageService().saveBreathProgressRecord(
+      BreathProgressRecord(
+        id: 'breath_progress_${now.microsecondsSinceEpoch}',
+        completedAt: now,
+        breathScore: medianScore,
+        blowDurationSeconds: medianAttempt.seconds.toDouble(),
+        blowStability: medianAttempt.stability,
+        blowIntensity: medianAttempt.intensity,
+        isNoisyEnvironment: isNoisy,
+      ),
+    );
   }
 
   Future<void> _navigateToResult() async {
@@ -848,6 +893,8 @@ class _BreathTestPageState extends State<BreathTestPage>
         spirometry: spirometry,
         title: context.t('breathTestRecordTitle'),
       );
+
+      unawaited(_saveBreathProgressRecord());
 
       if (!mounted) {
         return;
@@ -998,11 +1045,22 @@ class _BreathTestPageState extends State<BreathTestPage>
     );
   }
 
+  // Rest interval starts at 20s and counts down — the first
+  // _feedbackDisplaySeconds of it show the just-finished attempt's
+  // BreathFeedbackEngine message instead of the rest instruction, then it
+  // switches over. Kept short: this is a quick between-attempts nudge, not
+  // something the user needs to read carefully.
+  static const int _feedbackDisplaySeconds = 2;
+
   String _getInstruction() {
     if (_isResting) {
-      return _restInstructionAnnounced
-          ? context.t('breathAutoNextAttemptInstruction')
-          : context.t('breathRestInstruction');
+      final feedback = _lastAttemptFeedback;
+      final showingFeedback = feedback != null &&
+          _restSecondsLeft > 20 - _feedbackDisplaySeconds;
+      if (showingFeedback) {
+        return context.t(feedback.messageKey);
+      }
+      return context.t('breathAutoNextAttemptInstruction');
     }
     switch (_step) {
       case _AttemptStep.notStarted:
@@ -1012,9 +1070,6 @@ class _BreathTestPageState extends State<BreathTestPage>
       case _AttemptStep.deepBreath:
         return context.t('breathStepDeepBreath');
       case _AttemptStep.holding:
-        // Single combined instruction throughout the whole hold step
-        // (counting down and waiting-for-tap alike) — not two different
-        // texts swapped mid-way.
         return context.t('breathStepHold');
       case _AttemptStep.exhale:
         return '${context.t('breathStepExhale')} ${context.t('breathStepExhaleFinishHint')}';
@@ -1052,7 +1107,13 @@ class _BreathTestPageState extends State<BreathTestPage>
                       const SizedBox(height: 12),
                       _buildProgressIndicator(),
                       Expanded(
-                        flex: 6,
+                        // notStarted has nothing below the circle anymore —
+                        // "BAŞLA" moved inside it and there's no instruction
+                        // text yet, so give it the whole remaining height
+                        // instead of the usual 6:4 split, which otherwise
+                        // left the circle sitting high with a dead empty
+                        // region underneath instead of centered on screen.
+                        flex: _step == _AttemptStep.notStarted ? 10 : 6,
                         child: Center(
                           child: _buildBreathingCircle(
                             currentSeconds,
@@ -1060,27 +1121,28 @@ class _BreathTestPageState extends State<BreathTestPage>
                           ),
                         ),
                       ),
-                      Expanded(
-                        flex: 4,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                child: Center(
-                                  child: _buildInstructionText(context),
+                      if (_step != _AttemptStep.notStarted)
+                        Expanded(
+                          flex: 4,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Expanded(
+                                  child: Center(
+                                    child: _buildInstructionText(context),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              _buildStepActionButton(context),
-                              const SizedBox(height: 16),
-                            ],
+                                const SizedBox(height: 16),
+                                _buildStepActionButton(context),
+                                const SizedBox(height: 16),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -1178,43 +1240,41 @@ class _BreathTestPageState extends State<BreathTestPage>
     );
   }
 
-  /// Adımın aksiyonunu üstlenen büyük buton — daha önce ana dairenin
-  /// kendisine tıklanarak yapılıyordu, artık ayrı ve görünür bir buton.
-  /// `key` testlerde (`breath_test_page_test.dart`) daireye tıklamak için
-  /// kullanılıyordu, aynı anahtar aynı davranışla buraya taşındı.
+  /// Adımın aksiyonunu üstlenen büyük buton. sitRelax/deepBreath kullanıcının
+  /// kendi hızında "Devam" tuşuyla ilerler; holding sabit sayaçla otomatik
+  /// exhale'e geçer (tıklanacak bir şey yok); exhale'i elle bitirme her zaman
+  /// görünür kalır — otomatik algılama çalışmazsa her zaman var olan
+  /// elle-bitirme yolu. notStarted (ilk giriş) burada ayrıca render edilmiyor
+  /// — o durumda "BAŞLA" tıklaması nefes dairesinin kendisine taşındı (bkz.
+  /// [_buildBreathingCircle]), tek bir tıklanabilir alan olsun diye; ayrı bir
+  /// buton burada tekrar göstermek çift kontrol yaratırdı.
   Widget _buildStepActionButton(BuildContext context) {
+    if (_step == _AttemptStep.notStarted) {
+      return const SizedBox(height: 56);
+    }
+
     final VoidCallback? onPressed = switch (_step) {
       _ when _isResting => null,
       _AttemptStep.exhale => _handleBreathPressed,
       _AttemptStep.notStarted => _startCurrentTest,
       _AttemptStep.sitRelax => _advanceFromSitRelax,
       _AttemptStep.deepBreath => _advanceFromDeepBreath,
-      _AttemptStep.holding when _holdWaitingForStartTap => _handleHoldStartTap,
-      // The hold countdown itself is fixed — nothing to tap until it
-      // finishes and _holdWaitingForStartTap flips true above.
+      // The hold countdown itself is fixed — nothing to tap, it advances
+      // to exhale on its own once it reaches zero.
       _AttemptStep.holding => null,
     };
 
-    if (_isResting) {
+    if (_isResting || _step == _AttemptStep.holding) {
       return const SizedBox(height: 56);
     }
 
     final label = switch (_step) {
       _AttemptStep.notStarted => context.t('start'),
-      _AttemptStep.holding when _holdWaitingForStartTap =>
-        context.t('start'),
       _ => context.t('breathStepOkAction'),
     };
 
-    final isHoldStartPrompt =
-        _step == _AttemptStep.holding && _holdWaitingForStartTap;
-
-    // breath_timer_circle stays on the button itself across every step
-    // (matches the old InkWell, which never changed keys) — tests tap this
-    // one key throughout the whole flow. breath_hold_start_button wraps the
-    // same tappable button (via KeyedSubtree, since a widget can only carry
-    // one key of its own) whenever the hold prompt is showing, so tapping
-    // that key hits the real button rather than a zero-size marker.
+    // breath_timer_circle stays on the button itself across every step —
+    // tests tap this one key throughout the whole flow.
     final button = FilledButton(
       key: const ValueKey('breath_timer_circle'),
       onPressed: onPressed,
@@ -1224,16 +1284,7 @@ class _BreathTestPageState extends State<BreathTestPage>
       ),
     );
 
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: isHoldStartPrompt
-          ? KeyedSubtree(
-              key: const ValueKey('breath_hold_start_button'),
-              child: button,
-            )
-          : button,
-    );
+    return SizedBox(width: double.infinity, height: 56, child: button);
   }
 
   /// Büyük, ekranın çoğunu kaplayan ortalanmış nefes animasyonu — artık
@@ -1247,8 +1298,6 @@ class _BreathTestPageState extends State<BreathTestPage>
     final isSitRelax = _step == _AttemptStep.sitRelax;
     final isDeepBreath = _step == _AttemptStep.deepBreath;
     final isExhaling = _step == _AttemptStep.exhale;
-    final isHoldWaitingForTap =
-        _step == _AttemptStep.holding && _holdWaitingForStartTap;
     final accentColor = isResting
         ? const Color(0xFFFFB74D)
         : AppTheme.brandPrimary;
@@ -1283,7 +1332,7 @@ class _BreathTestPageState extends State<BreathTestPage>
                 _isRunning &&
                 !isSitRelax &&
                 !isDeepBreath &&
-                !(_step == _AttemptStep.holding && !isHoldWaitingForTap);
+                _step != _AttemptStep.holding;
             final pulse = ambientPulseActive ? eased(_pulseController) : 0.0;
             var scale = 1.0 + (pulse * 0.04);
             final glowAlpha = isIdle ? 0.0 : 0.08 + (pulse * 0.14);
@@ -1304,124 +1353,150 @@ class _BreathTestPageState extends State<BreathTestPage>
             final exhaleShrinkScale =
                 1.0 - (eased(_exhaleShrinkController) * 0.85);
 
-            return Transform.scale(
-              scale: scale,
-              child: Container(
-                width: diameter,
-                height: diameter,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      accentColor.withValues(alpha: isIdle ? 0.16 : 0.26),
-                      const Color(0xFF132238),
-                    ],
-                    stops: const [0.0, 1.0],
-                  ),
-                  border: Border.all(
-                    color: accentColor.withValues(
-                      alpha: isIdle ? 0.35 : 0.55,
+            final circleContent = Center(
+              child: Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  // Outward "wind" rings while exhaling — three
+                  // staggered rings expanding toward the edge and
+                  // fading out, echoing air actually moving out of
+                  // frame.
+                  if (isExhaling) ..._exhaleWindRings(accentColor),
+                  if (isExhaling)
+                    Transform.scale(
+                      scale: exhaleShrinkScale.clamp(0.12, 1.0),
+                      child: Container(
+                        width: diameter * 0.89,
+                        height: diameter * 0.89,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: accentColor.withValues(alpha: 0.28),
+                          border: Border.all(
+                            color: accentColor.withValues(alpha: 0.9),
+                            width: 3,
+                          ),
+                        ),
+                      ),
                     ),
-                    width: 2,
-                  ),
-                  boxShadow: glowAlpha > 0
-                      ? [
-                          BoxShadow(
-                            color: accentColor.withValues(alpha: glowAlpha),
-                            blurRadius: 28,
-                            spreadRadius: 4,
-                          ),
-                        ]
-                      : const [],
-                ),
-                child: Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    clipBehavior: Clip.none,
-                    children: [
-                      // Outward "wind" rings while exhaling — three
-                      // staggered rings expanding toward the edge and
-                      // fading out, echoing air actually moving out of
-                      // frame.
-                      if (isExhaling) ..._exhaleWindRings(accentColor),
-                      if (isExhaling)
-                        Transform.scale(
-                          scale: exhaleShrinkScale.clamp(0.12, 1.0),
-                          child: Container(
-                            width: diameter * 0.89,
-                            height: diameter * 0.89,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: accentColor.withValues(alpha: 0.28),
-                              border: Border.all(
-                                color: accentColor.withValues(alpha: 0.9),
-                                width: 3,
-                              ),
-                            ),
+                  if (isExhaling)
+                    // The phone/mic guide from the old instruction card,
+                    // now centered inside the breathing circle itself
+                    // instead of a separate small card graphic.
+                    SizedBox(
+                      width: diameter * 0.24,
+                      height: diameter * 0.28,
+                      child: CustomPaint(
+                        painter: _PhoneMicPainter(
+                          color: accentColor,
+                          pulse: eased(_exhaleWaveController),
+                        ),
+                      ),
+                    )
+                  else if (isIdle)
+                    // "BAŞLA" now lives inside the circle itself — the
+                    // whole circle is the tappable start control (see the
+                    // InkWell wrapper below), so there is exactly one
+                    // control to start a test rather than a separate
+                    // button underneath duplicating it.
+                    Text(
+                      context.t('start').toUpperCase(),
+                      style: TextStyle(
+                        fontSize: diameter * 0.11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1,
+                        color: accentColor.withValues(alpha: 0.95),
+                      ),
+                    )
+                  else if (isSitRelax || isDeepBreath)
+                    // A simple nested-circle breathing indicator instead
+                    // of a stock Material figure icon — the inner disc
+                    // grows/shrinks with the same controller already
+                    // driving the outer circle's scale, so what's asked
+                    // for in the instruction text ("nefes alın") is
+                    // shown, not just described.
+                    Transform.scale(
+                      scale: isSitRelax
+                          ? 0.6 + (eased(_stepBreathController) * 0.25)
+                          : 0.45 + (eased(_stepBreathController) * 0.45),
+                      child: Container(
+                        width: diameter * 0.4,
+                        height: diameter * 0.4,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: accentColor.withValues(alpha: 0.22),
+                          border: Border.all(
+                            color: accentColor.withValues(alpha: 0.75),
+                            width: 2,
                           ),
                         ),
-                      if (isExhaling)
-                        // The phone/mic guide from the old instruction card,
-                        // now centered inside the breathing circle itself
-                        // instead of a separate small card graphic.
-                        SizedBox(
-                          width: diameter * 0.24,
-                          height: diameter * 0.28,
-                          child: CustomPaint(
-                            painter: _PhoneMicPainter(
-                              color: accentColor,
-                              pulse: eased(_exhaleWaveController),
-                            ),
-                          ),
-                        )
-                      else if (isIdle)
-                        Icon(
-                          Icons.play_arrow,
-                          color: accentColor.withValues(alpha: 0.8),
-                          size: 40,
-                        )
-                      else if (isSitRelax || isDeepBreath)
-                        // A simple nested-circle breathing indicator instead
-                        // of a stock Material figure icon — the inner disc
-                        // grows/shrinks with the same controller already
-                        // driving the outer circle's scale, so what's asked
-                        // for in the instruction text ("nefes alın") is
-                        // shown, not just described.
-                        Transform.scale(
-                          scale: isSitRelax
-                              ? 0.6 + (eased(_stepBreathController) * 0.25)
-                              : 0.45 + (eased(_stepBreathController) * 0.45),
-                          child: Container(
-                            width: diameter * 0.4,
-                            height: diameter * 0.4,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: accentColor.withValues(alpha: 0.22),
-                              border: Border.all(
-                                color: accentColor.withValues(alpha: 0.75),
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        Text(
-                          seconds.toString().padLeft(2, '0'),
-                          style: TextStyle(
-                            fontSize: diameter * 0.22,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'monospace',
-                            color: accentColor.withValues(
-                              alpha: isExhaling ? 0.55 : 0.85,
-                            ),
-                            letterSpacing: 2,
-                          ),
+                      ),
+                    )
+                  else
+                    Text(
+                      seconds.toString().padLeft(2, '0'),
+                      style: TextStyle(
+                        fontSize: diameter * 0.22,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'monospace',
+                        color: accentColor.withValues(
+                          alpha: isExhaling ? 0.55 : 0.85,
                         ),
-                    ],
-                  ),
-                ),
+                        letterSpacing: 2,
+                      ),
+                    ),
+                ],
               ),
             );
+
+            final circleDecoration = BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  accentColor.withValues(alpha: isIdle ? 0.16 : 0.26),
+                  const Color(0xFF132238),
+                ],
+                stops: const [0.0, 1.0],
+              ),
+              border: Border.all(
+                color: accentColor.withValues(alpha: isIdle ? 0.35 : 0.55),
+                width: 2,
+              ),
+              boxShadow: glowAlpha > 0
+                  ? [
+                      BoxShadow(
+                        color: accentColor.withValues(alpha: glowAlpha),
+                        blurRadius: 28,
+                        spreadRadius: 4,
+                      ),
+                    ]
+                  : const [],
+            );
+
+            final circle = isIdle
+                ? Material(
+                    key: const ValueKey('breath_timer_circle'),
+                    color: Colors.transparent,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _startCurrentTest,
+                      child: Container(
+                        width: diameter,
+                        height: diameter,
+                        decoration: circleDecoration,
+                        child: circleContent,
+                      ),
+                    ),
+                  )
+                : Container(
+                    width: diameter,
+                    height: diameter,
+                    decoration: circleDecoration,
+                    child: circleContent,
+                  );
+
+            return Transform.scale(scale: scale, child: circle);
           },
         ),
         const SizedBox(height: 14),
