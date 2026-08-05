@@ -196,7 +196,7 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
                                     outcome: AdaptiveTaskOutcome.success,
                                     scheduledAt: scheduledAt,
                                   ),
-                                  child: const Text('Basardim'),
+                                  child: Text(context.t('taskFollowUpMarkSuccess')),
                                 ),
                                 OutlinedButton(
                                   onPressed: () => _saveOutcome(
@@ -205,11 +205,11 @@ class _TaskFollowUpPageState extends State<TaskFollowUpPage> {
                                     outcome: AdaptiveTaskOutcome.smoked,
                                     scheduledAt: scheduledAt,
                                   ),
-                                  child: const Text('Sigara ictim'),
+                                  child: Text(context.t('taskFollowUpMarkSmoked')),
                                 ),
                                 TextButton(
                                   onPressed: () => _deferAgain(id, taskTitle),
-                                  child: const Text('Ertele'),
+                                  child: Text(context.t('taskFollowUpDefer')),
                                 ),
                               ],
                             ),

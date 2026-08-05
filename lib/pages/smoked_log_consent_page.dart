@@ -45,6 +45,8 @@ Future<bool> offerSmokedLogButton(
     'menuSosLabel': context.t('smokedLogMenuSos'),
     'menuOpenLabel': context.t('smokedLogMenuOpen'),
     'menuCancelLabel': context.t('smokedLogMenuCancel'),
+    'channelName': context.t('channelNameSmokedLogQuickAction'),
+    'channelDescription': context.t('channelDescriptionSmokedLogQuickAction'),
   };
 
   if (!await DevicePermissionService.hasOverlayPermission()) {

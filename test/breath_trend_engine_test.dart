@@ -90,7 +90,7 @@ void main() {
     final engine = BreathTrendEngine();
 
     test('empty record list returns BreathProgressSummary.empty()', () {
-      final summary = engine.summarize(const []);
+      final summary = engine.summarize(const [], languageCode: 'tr');
       expect(summary.hasData, isFalse);
       expect(summary.totalTestCount, 0);
       expect(summary.insightMessage, '');
@@ -106,7 +106,7 @@ void main() {
         ),
       );
 
-      final summary = engine.summarize(records);
+      final summary = engine.summarize(records, languageCode: 'tr');
       expect(summary.hasEnoughDataForTrend, isFalse);
       expect(summary.scoreChangeFirstWeekVsLastWeekPercent, isNull);
       expect(summary.insightMessage, isNotEmpty);
@@ -135,7 +135,7 @@ void main() {
         ),
       ];
 
-      final summary = engine.summarize(records);
+      final summary = engine.summarize(records, languageCode: 'tr');
       expect(summary.hasEnoughDataForTrend, isTrue);
       expect(
         summary.direction,
@@ -163,7 +163,7 @@ void main() {
         ),
       ];
 
-      final summary = engine.summarize(records);
+      final summary = engine.summarize(records, languageCode: 'tr');
       expect(summary.direction, BreathProgressDirection.stable);
     });
 
@@ -186,7 +186,7 @@ void main() {
         ),
       ];
 
-      final summary = engine.summarize(records);
+      final summary = engine.summarize(records, languageCode: 'tr');
       expect(summary.direction, BreathProgressDirection.decline);
       expect(summary.insightMessage, contains('doktor'));
       // No blaming/alarming language.
@@ -207,7 +207,7 @@ void main() {
         ),
       ];
 
-      final summary = engine.summarize(records);
+      final summary = engine.summarize(records, languageCode: 'tr');
       // Only the clean (90) record should count toward the best score and
       // the 7-day window average — the noisy 10 must not drag it down.
       expect(summary.bestScore, 90);
@@ -225,7 +225,7 @@ void main() {
         ),
       ];
 
-      final summary = engine.summarize(records);
+      final summary = engine.summarize(records, languageCode: 'tr');
       final noisyPoint = summary.chartPoints.firstWhere(
         (p) => p.date == DateTime(2026, 1, 1),
       );
@@ -247,7 +247,7 @@ void main() {
         ),
       );
 
-      final summary = engine.summarize(records);
+      final summary = engine.summarize(records, languageCode: 'tr');
       expect(summary.chartPoints.length, 10);
       // First 6 days (index 0-5) have fewer than 7 days of history.
       for (var i = 0; i < 6; i++) {

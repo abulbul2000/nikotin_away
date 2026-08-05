@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_texts.dart';
 import '../models/savings_snapshot.dart';
 import '../services/savings_service.dart';
 import '../widgets/load_error_view.dart';
@@ -57,7 +58,7 @@ class _SavingsPageState extends State<SavingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Tasarruf')),
+      appBar: AppBar(title: Text(context.t('savingsPageTitle'))),
       body: FutureBuilder<SavingsSnapshot>(
         future: _future,
         builder: (context, snapshot) {
@@ -84,26 +85,28 @@ class _SavingsPageState extends State<SavingsPage> {
                 childAspectRatio: 1.3,
                 children: [
                   StatisticCard(
-                    label: 'Biriken para',
+                    label: context.t('savingsMoneySaved'),
                     value: '${s.moneySaved.toStringAsFixed(0)} ₺',
                     icon: Icons.savings_outlined,
                   ),
                   StatisticCard(
-                    label: 'İçilmeyen sigara',
+                    label: context.t('savingsCigarettesNotSmoked'),
                     value: '${s.cigarettesNotSmoked}',
                     icon: Icons.smoke_free,
                   ),
                   StatisticCard(
-                    label: 'Kazanılan yaşam süresi',
-                    value: '$hours saat',
+                    label: context.t('savingsLifeTimeRegained'),
+                    value: context
+                        .t('savingsHoursUnit')
+                        .replaceAll('{hours}', '$hours'),
                     icon: Icons.favorite_outline,
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              const Text(
-                'Paket fiyatı (₺)',
-                style: TextStyle(color: Colors.white70, fontSize: 13),
+              Text(
+                context.t('savingsPackPriceLabel'),
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
               ),
               const SizedBox(height: 8),
               Row(
@@ -114,13 +117,15 @@ class _SavingsPageState extends State<SavingsPage> {
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: const InputDecoration(hintText: 'Örn: 80'),
+                      decoration: InputDecoration(
+                        hintText: context.t('savingsPackPriceHint'),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
                     onPressed: _updatePrice,
-                    child: const Text('Kaydet'),
+                    child: Text(context.t('savingsSaveButton')),
                   ),
                 ],
               ),

@@ -7,6 +7,7 @@ import '../engines/breath_trend_engine.dart';
 import '../models/breath_badge.dart';
 import '../models/breath_progress_summary.dart';
 import '../services/breath_badge_service.dart';
+import '../services/language_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/load_error_view.dart';
 import 'breath_test_page.dart';
@@ -40,7 +41,8 @@ class _BreathAnalysisPageState extends State<BreathAnalysisPage> {
 
   Future<_AnalysisData> _loadData() async {
     final records = await _storageService.loadBreathProgressRecords();
-    final summary = _trendEngine.summarize(records);
+    final languageCode = await LanguageService.loadSelectedLanguageCode();
+    final summary = _trendEngine.summarize(records, languageCode: languageCode);
     // Badges are (re-)evaluated on every load, not only right after a test —
     // this is the one place users actually look at their breath-test
     // history, so it's the natural point to surface a newly-earned badge

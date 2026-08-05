@@ -1561,13 +1561,27 @@ class _HomePageState extends State<HomePage> {
     // Due follow-ups are handled by _presentPendingFollowUpIfNeeded (asks
     // "did it succeed", not "start this task") — only genuinely new tasks
     // reach this gate.
+    //
+    // A "new" task is not necessarily a due one: the daily plan is built in
+    // full the moment registration completes, so its first item can carry a
+    // scheduledAt hours in the future. Without checking that against now,
+    // finishing the onboarding survey landed the user straight on this
+    // fake-call-style screen for a task that was never meant to fire yet.
+    final now = DateTime.now();
     String? taskTitle;
     if ((taskTitle ?? '').isEmpty) {
       for (final task in _todaysTasks) {
-        if ((_taskStates[task] ?? 'new') == 'new') {
-          taskTitle = task;
-          break;
+        if ((_taskStates[task] ?? 'new') != 'new') {
+          continue;
         }
+        final planItem = _adaptivePlanItems
+            .where((item) => item.taskTitle == task)
+            .firstOrNull;
+        if (planItem != null && planItem.scheduledAt.isAfter(now)) {
+          continue;
+        }
+        taskTitle = task;
+        break;
       }
     }
 
@@ -1998,7 +2012,8 @@ class _HomePageState extends State<HomePage> {
       final isValid = await _validateRegistrationInputs();
       if (!isValid) {
         debugPrint('[CompleteRegistration] Validation failed');
-        _showRegistrationError('Lütfen eksik alanları doldurun.');
+        if (!mounted) return;
+        _showRegistrationError(context.t('registrationMissingFields'));
         return;
       }
 
@@ -2010,7 +2025,8 @@ class _HomePageState extends State<HomePage> {
       } catch (error, stackTrace) {
         debugPrint('[CompleteRegistration] Profile creation failed: $error');
         debugPrintStack(stackTrace: stackTrace);
-        _showRegistrationError('Profil oluşturulamadı. Lütfen tekrar deneyin.');
+        if (!mounted) return;
+        _showRegistrationError(context.t('registrationProfileCreationFailed'));
         return;
       }
 
@@ -2022,9 +2038,8 @@ class _HomePageState extends State<HomePage> {
           '[CompleteRegistration] loadBehaviorDashboard failed: $error',
         );
         debugPrintStack(stackTrace: stackTrace);
-        _showRegistrationError(
-          'Risk analizi oluşturulamadı. Lütfen tekrar deneyin.',
-        );
+        if (!mounted) return;
+        _showRegistrationError(context.t('registrationRiskAnalysisFailed'));
         return;
       }
       if (!mounted) {
@@ -2049,9 +2064,8 @@ class _HomePageState extends State<HomePage> {
           '[CompleteRegistration] save registration flags failed: $error',
         );
         debugPrintStack(stackTrace: stackTrace);
-        _showRegistrationError(
-          'Kayıt bayrağı kaydedilemedi. Lütfen tekrar deneyin.',
-        );
+        if (!mounted) return;
+        _showRegistrationError(context.t('registrationFlagSaveFailed'));
         return;
       }
       debugPrint('[CompleteRegistration] Refreshing Home metrics');
@@ -2575,7 +2589,10 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 6),
             Text('${context.t('predictedRiskTime')}: $_predictedRiskWindow'),
             const SizedBox(height: 6),
-            Text('${context.t('predictedTrigger')}: $_predictedTrigger'),
+            Text(
+              '${context.t('predictedTrigger')}: '
+              '${AppTexts.localizeCanonicalText(context, _predictedTrigger)}',
+            ),
             const SizedBox(height: 6),
             Text(
               '${context.t('predictionConfidence')}: %$_predictionConfidence',

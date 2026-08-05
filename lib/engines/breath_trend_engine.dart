@@ -1,3 +1,4 @@
+import '../core/app_texts.dart';
 import '../models/breath_progress_record.dart';
 import '../models/breath_progress_summary.dart';
 
@@ -29,11 +30,6 @@ class BreathTrendEngine {
   static const double _gradualImprovementThresholdPercent = 3;
   static const double _declineThresholdPercent = -3;
 
-  static const String _notEnoughTestsMessage =
-      'İlerlemeni görmek için birkaç test daha yap.';
-  static const String _notEnoughSpanMessage =
-      'İlerlemeni karşılaştırmak için biraz daha zamana yayılmış testler '
-      'gerekiyor.';
 
   /// 0-100 arası tek bir "Nefes Skoru". Süre/tutarlılık/güç bileşenlerinin
   /// ağırlıklı ortalaması — her bileşen kendi doğal ölçeğinden önce 0-1
@@ -73,7 +69,10 @@ class BreathTrendEngine {
     return (sorted[mid - 1] + sorted[mid]) / 2;
   }
 
-  BreathProgressSummary summarize(List<BreathProgressRecord> records) {
+  BreathProgressSummary summarize(
+    List<BreathProgressRecord> records, {
+    required String languageCode,
+  }) {
     if (records.isEmpty) {
       return BreathProgressSummary.empty();
     }
@@ -99,12 +98,16 @@ class BreathTrendEngine {
       weekOverWeekChange = _firstWeekVsLastWeekChangePercent(clean);
       if (weekOverWeekChange != null) {
         direction = _resolveDirection(weekOverWeekChange);
-        insight = _buildInsightMessage(direction, weekOverWeekChange);
+        insight = _buildInsightMessage(
+          direction,
+          weekOverWeekChange,
+          languageCode,
+        );
       } else {
-        insight = _notEnoughSpanMessage;
+        insight = AppTexts.textForCode(languageCode, 'breathInsightNotEnoughSpan');
       }
     } else {
-      insight = _notEnoughTestsMessage;
+      insight = AppTexts.textForCode(languageCode, 'breathInsightNotEnoughTests');
     }
 
     final bestRecord = clean.isEmpty
@@ -217,21 +220,23 @@ class BreathTrendEngine {
   String _buildInsightMessage(
     BreathProgressDirection direction,
     double changePercent,
+    String languageCode,
   ) {
     final rounded = changePercent.abs().round();
     switch (direction) {
       case BreathProgressDirection.significantImprovement:
-        return 'Belirgin iyileşme — üfleme skorun %$rounded arttı.';
+        return AppTexts.textForCode(languageCode, 'breathInsightSignificantImprovement')
+            .replaceAll('{percent}', '$rounded');
       case BreathProgressDirection.gradualImprovement:
-        return 'Yavaş ama istikrarlı bir ilerleme var — %$rounded artış.';
+        return AppTexts.textForCode(languageCode, 'breathInsightGradualImprovement')
+            .replaceAll('{percent}', '$rounded');
       case BreathProgressDirection.stable:
-        return 'Sabit seyrediyor, önemli bir değişim yok.';
+        return AppTexts.textForCode(languageCode, 'breathInsightStable');
       case BreathProgressDirection.decline:
         // Kasıtlı olarak sakin bir ton — düşüş hastalık, uyku eksikliği
         // veya stres gibi çok şeyden kaynaklanabilir. Alarm verme,
         // suçlama.
-        return 'Bu hafta biraz düşük görünüyor — hasta veya yorgunsan bu '
-            'normal olabilir. Solunum şikayetin varsa doktoruna danış.';
+        return AppTexts.textForCode(languageCode, 'breathInsightDecline');
     }
   }
 

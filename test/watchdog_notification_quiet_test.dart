@@ -27,15 +27,14 @@ void main() {
 
   test('the old alarming wording is gone from the notification text', () {
     final source = file.readAsStringSync();
-    // Only the strings actually shown to the user, not code comments that
-    // reference the old wording while explaining why it changed.
+    // The body text is Dart-supplied and locale-aware now (see
+    // WatchdogStore.loadLocalizedText), not a literal in this file, so check
+    // the title literal plus the English fallback string for the old wording.
     final title = RegExp(r'setContentTitle\("([^"]*)"\)').firstMatch(source);
-    final body = RegExp(r'setContentText\("([^"]*)"\)').firstMatch(source);
     expect(title, isNotNull);
-    expect(body, isNotNull);
     // "Nikotin Away Watchdog" / "10 dakika yanit takibi aktif" read as a
     // second countdown competing with the task alert it exists to support.
     expect(title!.group(1), isNot(contains('Watchdog')));
-    expect(body!.group(1), isNot(contains('10 dakika')));
+    expect(source, isNot(contains('10 dakika yanit takibi aktif')));
   });
 }

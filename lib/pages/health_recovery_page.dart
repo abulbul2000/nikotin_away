@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_texts.dart';
 import '../core/app_theme.dart';
 import '../models/health_milestone.dart';
 import '../services/health_recovery_service.dart';
@@ -15,7 +16,7 @@ class HealthRecoveryPage extends StatelessWidget {
     final reachedIds = progress.reached.map((m) => m.titleKey).toSet();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sağlık İyileşme Süreci')),
+      appBar: AppBar(title: Text(context.t('healthRecoveryPageTitle'))),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: HealthMilestone.timeline.length,
@@ -40,7 +41,7 @@ class HealthRecoveryPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _labelFor(milestone),
+                            context.t(milestone.titleKey),
                             style: TextStyle(
                               color: reached ? Colors.white : Colors.white54,
                               fontWeight: FontWeight.bold,
@@ -49,7 +50,7 @@ class HealthRecoveryPage extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            _descriptionFor(milestone),
+                            context.t(milestone.descriptionKey),
                             style: const TextStyle(
                               color: Colors.white54,
                               fontSize: 12,
@@ -85,38 +86,4 @@ class HealthRecoveryPage extends StatelessWidget {
     );
   }
 
-  // NOTE: Replace with context.t(milestone.titleKey) once entries are
-  // added to app_texts.dart / generated_language_data.dart.
-  String _labelFor(HealthMilestone m) => _fallbackTitles[m.titleKey] ?? m.titleKey;
-
-  String _descriptionFor(HealthMilestone m) =>
-      _fallbackDescriptions[m.descriptionKey] ?? m.descriptionKey;
-
-  static const _fallbackTitles = {
-    'recoveryMin20Title': '20 dakika',
-    'recoveryHour12Title': '12 saat',
-    'recoveryDay1Title': '24 saat',
-    'recoveryDay2Title': '48 saat',
-    'recoveryDay3Title': '72 saat',
-    'recoveryWeek2Title': '2 hafta',
-    'recoveryMonth1Title': '1 ay',
-    'recoveryMonth9Title': '9 ay',
-    'recoveryYear1Title': '1 yıl',
-    'recoveryYear5Title': '5 yıl',
-    'recoveryYear10Title': '10 yıl',
-  };
-
-  static const _fallbackDescriptions = {
-    'recoveryMin20Desc': 'Nabız ve kan basıncı normale dönmeye başlar.',
-    'recoveryHour12Desc': 'Kandaki karbonmonoksit seviyesi normale düşer.',
-    'recoveryDay1Desc': 'Kalp krizi riski azalmaya başlar.',
-    'recoveryDay2Desc': 'Tat ve koku alma duyusu belirgin şekilde iyileşir.',
-    'recoveryDay3Desc': 'Nefes almak kolaylaşır, enerji seviyesi artar.',
-    'recoveryWeek2Desc': 'Kan dolaşımı ve akciğer fonksiyonu iyileşir.',
-    'recoveryMonth1Desc': 'Öksürük ve nefes darlığı belirgin azalır.',
-    'recoveryMonth9Desc': 'Akciğerlerdeki silyalar yeniden işlev kazanır.',
-    'recoveryYear1Desc': 'Koroner kalp hastalığı riski yarı yarıya azalır.',
-    'recoveryYear5Desc': 'İnme riski, hiç içmemiş biri seviyesine yaklaşır.',
-    'recoveryYear10Desc': 'Akciğer kanseri riski yaklaşık yarıya iner.',
-  };
 }

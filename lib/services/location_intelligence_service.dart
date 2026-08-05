@@ -1,9 +1,11 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../core/app_texts.dart';
 import '../engines/place_clustering_engine.dart';
 import '../models/significant_place.dart';
 import 'geofencing_service.dart';
+import 'language_service.dart';
 import 'storage_service.dart';
 
 /// Orchestrates the opt-in Location Intelligence feature: permission flow
@@ -173,9 +175,10 @@ class LocationIntelligenceService {
       return;
     }
 
+    final code = await LanguageService.loadSelectedLanguageCode();
     final title =
         await _storageService.loadSetting('location_notification_title') ??
-        'Nikotin Away';
+        AppTexts.textForCode(code, 'appName');
     final body =
         await _storageService.loadSetting('location_notification_body') ??
         '';
@@ -183,6 +186,11 @@ class LocationIntelligenceService {
       places: resolvedPlaces,
       notificationTitle: title,
       notificationBody: body,
+      channelName: AppTexts.textForCode(code, 'channelNameLocationReminder'),
+      channelDescription: AppTexts.textForCode(
+        code,
+        'channelDescriptionLocationReminder',
+      ),
     );
   }
 }

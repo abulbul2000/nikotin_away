@@ -121,7 +121,15 @@ class MainActivity : FlutterActivity() {
 						val places = call.argument<List<Map<String, Any>>>("places") ?: emptyList()
 						val notificationTitle = call.argument<String>("notificationTitle").orEmpty()
 						val notificationBody = call.argument<String>("notificationBody").orEmpty()
-						registerGeofences(places, notificationTitle, notificationBody)
+						val channelName = call.argument<String>("channelName").orEmpty()
+						val channelDescription = call.argument<String>("channelDescription").orEmpty()
+						registerGeofences(
+							places,
+							notificationTitle,
+							notificationBody,
+							channelName,
+							channelDescription,
+						)
 						result.success(true)
 					}
 
@@ -291,7 +299,17 @@ class MainActivity : FlutterActivity() {
 							result.error("invalid_args", "taskTitle/watchdogId/dueAtMillis required", null)
 							return@setMethodCallHandler
 						}
-						NoResponseWatchdogService.start(this, taskTitle, watchdogId, dueAtMillis)
+						NoResponseWatchdogService.start(
+							context = this,
+							taskTitle = taskTitle,
+							watchdogId = watchdogId,
+							dueAtMillis = dueAtMillis,
+							foregroundBody = call.argument<String>("foregroundBody").orEmpty(),
+							violationTitle = call.argument<String>("violationTitle").orEmpty(),
+							violationBody = call.argument<String>("violationBody").orEmpty(),
+							foregroundChannelName = call.argument<String>("foregroundChannelName").orEmpty(),
+							violationChannelName = call.argument<String>("violationChannelName").orEmpty(),
+						)
 						result.success(true)
 					}
 
@@ -455,6 +473,14 @@ class MainActivity : FlutterActivity() {
 									SmokedLogOverlayService.KEY_MENU_CANCEL,
 									call.argument<String>("menuCancelLabel"),
 								)
+								.putString(
+									SmokedLogOverlayService.KEY_CHANNEL_NAME,
+									call.argument<String>("channelName"),
+								)
+								.putString(
+									SmokedLogOverlayService.KEY_CHANNEL_DESCRIPTION,
+									call.argument<String>("channelDescription"),
+								)
 								// Read by SmokedLogBootReceiver, which runs before
 								// any Flutter engine exists and so cannot ask Dart.
 								.putBoolean(SmokedLogOverlayService.KEY_ENABLED, true)
@@ -480,6 +506,16 @@ class MainActivity : FlutterActivity() {
 
 					"consumeDeliveryDeferrals" -> {
 						result.success(DeliveryGateStore.drain(this))
+					}
+
+					"setTaskOverlayChannelInfo" -> {
+						TaskOverlayStore.saveChannelInfo(
+							this,
+							channelName = call.argument<String>("channelName").orEmpty(),
+							channelDescription = call.argument<String>("channelDescription").orEmpty(),
+							foregroundBody = call.argument<String>("foregroundBody").orEmpty(),
+						)
+						result.success(true)
 					}
 
 					"consumeTaskOverlayOutcomes" -> {
@@ -726,6 +762,8 @@ class MainActivity : FlutterActivity() {
 		places: List<Map<String, Any>>,
 		notificationTitle: String,
 		notificationBody: String,
+		channelName: String,
+		channelDescription: String,
 	) {
 		if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
 				!= PackageManager.PERMISSION_GRANTED &&
@@ -736,6 +774,7 @@ class MainActivity : FlutterActivity() {
 		}
 
 		GeofenceStore.saveNotificationText(this, notificationTitle, notificationBody)
+		GeofenceStore.saveChannelInfo(this, channelName, channelDescription)
 
 		val geofencingClient = LocationServices.getGeofencingClient(this)
 		val pendingIntent = geofencePendingIntent()

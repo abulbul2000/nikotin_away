@@ -51,6 +51,14 @@ class NoResponseWatchdogService : Service() {
                             acknowledged = false,
                         ),
                     )
+                    WatchdogStore.saveLocalizedText(
+                        context = this,
+                        foregroundBody = intent.getStringExtra(EXTRA_FOREGROUND_BODY).orEmpty(),
+                        violationTitle = intent.getStringExtra(EXTRA_VIOLATION_TITLE).orEmpty(),
+                        violationBody = intent.getStringExtra(EXTRA_VIOLATION_BODY).orEmpty(),
+                        foregroundChannelName = intent.getStringExtra(EXTRA_FOREGROUND_CHANNEL_NAME).orEmpty(),
+                        violationChannelName = intent.getStringExtra(EXTRA_VIOLATION_CHANNEL_NAME).orEmpty(),
+                    )
                     scheduleAlarmBackup(watchdogId, dueAtMillis)
                     ensureForeground(taskTitle)
                     handler.removeCallbacks(checker)
@@ -98,11 +106,12 @@ class NoResponseWatchdogService : Service() {
     /// countdown right next to a full-screen command read it as two
     /// unrelated things firing at once.
     private fun ensureForeground(taskTitle: String) {
-        createChannelIfNeeded()
+        val texts = WatchdogStore.loadLocalizedText(this)
+        createChannelIfNeeded(texts.foregroundChannelName)
         val notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("Nikotin Away")
-            .setContentText("Görev yanıtı bekleniyor")
+            .setContentText(texts.foregroundBody)
             .setOngoing(true)
             .setSilent(true)
             .setShowWhen(false)
@@ -127,7 +136,7 @@ class NoResponseWatchdogService : Service() {
         alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dueAtMillis, pending)
     }
 
-    private fun createChannelIfNeeded() {
+    private fun createChannelIfNeeded(channelName: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return
         }
@@ -142,7 +151,7 @@ class NoResponseWatchdogService : Service() {
         // for attention on its own.
         val channel = NotificationChannel(
             FOREGROUND_CHANNEL_ID,
-            "Arka plan servisi",
+            channelName.ifBlank { "Background service" },
             NotificationManager.IMPORTANCE_MIN,
         ).apply {
             description = "No response 10-minute watchdog foreground service"
@@ -157,17 +166,37 @@ class NoResponseWatchdogService : Service() {
         const val EXTRA_TASK_TITLE = "extra_task_title"
         const val EXTRA_WATCHDOG_ID = "extra_watchdog_id"
         const val EXTRA_DUE_AT_MILLIS = "extra_due_at_millis"
+        const val EXTRA_FOREGROUND_BODY = "extra_foreground_body"
+        const val EXTRA_VIOLATION_TITLE = "extra_violation_title"
+        const val EXTRA_VIOLATION_BODY = "extra_violation_body"
+        const val EXTRA_FOREGROUND_CHANNEL_NAME = "extra_foreground_channel_name"
+        const val EXTRA_VIOLATION_CHANNEL_NAME = "extra_violation_channel_name"
 
         const val FOREGROUND_CHANNEL_ID = "watchdog_foreground_channel"
         const val VIOLATION_CHANNEL_ID = "watchdog_violation_channel"
         const val FOREGROUND_NOTIFICATION_ID = 73001
 
-        fun start(context: Context, taskTitle: String, watchdogId: String, dueAtMillis: Long) {
+        fun start(
+            context: Context,
+            taskTitle: String,
+            watchdogId: String,
+            dueAtMillis: Long,
+            foregroundBody: String,
+            violationTitle: String,
+            violationBody: String,
+            foregroundChannelName: String,
+            violationChannelName: String,
+        ) {
             val intent = Intent(context, NoResponseWatchdogService::class.java).apply {
                 action = ACTION_START
                 putExtra(EXTRA_TASK_TITLE, taskTitle)
                 putExtra(EXTRA_WATCHDOG_ID, watchdogId)
                 putExtra(EXTRA_DUE_AT_MILLIS, dueAtMillis)
+                putExtra(EXTRA_FOREGROUND_BODY, foregroundBody)
+                putExtra(EXTRA_VIOLATION_TITLE, violationTitle)
+                putExtra(EXTRA_VIOLATION_BODY, violationBody)
+                putExtra(EXTRA_FOREGROUND_CHANNEL_NAME, foregroundChannelName)
+                putExtra(EXTRA_VIOLATION_CHANNEL_NAME, violationChannelName)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
@@ -193,6 +222,14 @@ data class WatchdogState(
     val acknowledged: Boolean,
 )
 
+data class WatchdogLocalizedText(
+    val foregroundBody: String,
+    val violationTitle: String,
+    val violationBody: String,
+    val foregroundChannelName: String,
+    val violationChannelName: String,
+)
+
 object WatchdogStore {
     private const val PREFS = "no_smoke_watchdog"
     private const val KEY_ID = "active_id"
@@ -200,6 +237,11 @@ object WatchdogStore {
     private const val KEY_DUE_AT = "active_due_at"
     private const val KEY_ACK = "active_ack"
     private const val KEY_VIOLATIONS = "queued_violations"
+    private const val KEY_TEXT_FOREGROUND_BODY = "text_foreground_body"
+    private const val KEY_TEXT_VIOLATION_TITLE = "text_violation_title"
+    private const val KEY_TEXT_VIOLATION_BODY = "text_violation_body"
+    private const val KEY_TEXT_FOREGROUND_CHANNEL = "text_foreground_channel"
+    private const val KEY_TEXT_VIOLATION_CHANNEL = "text_violation_channel"
 
     fun saveActive(context: Context, state: WatchdogState) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -209,6 +251,43 @@ object WatchdogStore {
             .putLong(KEY_DUE_AT, state.dueAtMillis)
             .putBoolean(KEY_ACK, state.acknowledged)
             .apply()
+    }
+
+    // Same fallback contract as every other native surface fed by Dart
+    // (SmokedLogOverlayService, TaskTriggerReceiver): missing text falls back
+    // to English, never to hardcoded Turkish -- see docs/TRANSLATION_GAP.md.
+    fun saveLocalizedText(
+        context: Context,
+        foregroundBody: String,
+        violationTitle: String,
+        violationBody: String,
+        foregroundChannelName: String,
+        violationChannelName: String,
+    ) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_TEXT_FOREGROUND_BODY, foregroundBody)
+            .putString(KEY_TEXT_VIOLATION_TITLE, violationTitle)
+            .putString(KEY_TEXT_VIOLATION_BODY, violationBody)
+            .putString(KEY_TEXT_FOREGROUND_CHANNEL, foregroundChannelName)
+            .putString(KEY_TEXT_VIOLATION_CHANNEL, violationChannelName)
+            .apply()
+    }
+
+    fun loadLocalizedText(context: Context): WatchdogLocalizedText {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return WatchdogLocalizedText(
+            foregroundBody = prefs.getString(KEY_TEXT_FOREGROUND_BODY, null)
+                ?.takeIf { it.isNotBlank() } ?: "Waiting for task response",
+            violationTitle = prefs.getString(KEY_TEXT_VIOLATION_TITLE, null)
+                ?.takeIf { it.isNotBlank() } ?: "Nikotin Away Violation",
+            violationBody = prefs.getString(KEY_TEXT_VIOLATION_BODY, null)
+                ?.takeIf { it.isNotBlank() } ?: "No response for 10 minutes. Task violation recorded: {taskTitle}",
+            foregroundChannelName = prefs.getString(KEY_TEXT_FOREGROUND_CHANNEL, null)
+                ?.takeIf { it.isNotBlank() } ?: "Background service",
+            violationChannelName = prefs.getString(KEY_TEXT_VIOLATION_CHANNEL, null)
+                ?.takeIf { it.isNotBlank() } ?: "Nikotin Away Violation Alerts",
+        )
     }
 
     fun markAcknowledged(context: Context) {
@@ -257,7 +336,8 @@ object WatchdogStore {
 
 object WatchdogViolationNotifier {
     fun triggerNoResponseViolation(context: Context, state: WatchdogState) {
-        createViolationChannelIfNeeded(context)
+        val texts = WatchdogStore.loadLocalizedText(context)
+        createViolationChannelIfNeeded(context, texts.violationChannelName)
 
         val inserted = NativeViolationStore.tryInsertNoResponseViolation(context, state)
         if (!inserted) {
@@ -268,8 +348,8 @@ object WatchdogViolationNotifier {
         val id = state.watchdogId.hashCode().let { if (it < 0) -it else it }
         val notification = NotificationCompat.Builder(context, NoResponseWatchdogService.VIOLATION_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Nikotin Away Ihlal")
-            .setContentText("10 dakika yanit yok. Gorev ihlali kaydedildi: ${state.taskTitle}")
+            .setContentTitle(texts.violationTitle)
+            .setContentText(texts.violationBody.replace("{taskTitle}", state.taskTitle))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setAutoCancel(true)
             .build()
@@ -277,7 +357,7 @@ object WatchdogViolationNotifier {
         NotificationManagerCompat.from(context).notify(id, notification)
     }
 
-    private fun createViolationChannelIfNeeded(context: Context) {
+    private fun createViolationChannelIfNeeded(context: Context, channelName: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return
         }
@@ -288,10 +368,10 @@ object WatchdogViolationNotifier {
         }
         val channel = NotificationChannel(
             NoResponseWatchdogService.VIOLATION_CHANNEL_ID,
-            "Nikotin Away Ihlal Uyarilari",
+            channelName.ifBlank { "Nikotin Away Violation Alerts" },
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "10 dakika yanitsiz gorev ihlali"
+            description = "10-minute unanswered task violation"
         }
         manager.createNotificationChannel(channel)
     }

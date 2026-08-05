@@ -139,8 +139,8 @@ class SurveyReviewPage extends StatelessWidget {
   }
 
   Widget _buildPackMetric() {
-    final display = previousRecord == null
-        ? 'firstEvaluation'
+    final change = previousRecord == null
+        ? null
         : '${previousRecord!.packsPerDay} -> ${currentRecord.packsPerDay}';
     return Card(
       child: ListTile(
@@ -148,7 +148,7 @@ class SurveyReviewPage extends StatelessWidget {
           builder: (context) => Text(context.t('packChangeDaily')),
         ),
         trailing: Builder(
-          builder: (context) => Text(display == 'firstEvaluation' ? context.t('firstEvaluation') : display),
+          builder: (context) => Text(change ?? context.t('firstEvaluation')),
         ),
       ),
     );

@@ -192,7 +192,7 @@ class SmokedLogOverlayService : Service() {
 
         container.addView(
             android.widget.TextView(this).apply {
-                text = prefs.getString(KEY_MENU_TITLE, "Ne yapmak istiyorsunuz?")
+                text = prefs.getString(KEY_MENU_TITLE, "What would you like to do?")
                 setTextColor(android.graphics.Color.WHITE)
                 textSize = 18f
                 gravity = Gravity.CENTER
@@ -212,23 +212,23 @@ class SmokedLogOverlayService : Service() {
             }
 
         container.addView(
-            choice(prefs.getString(KEY_NOTIF_ACTION, "Sigara İçtim")!!) {
+            choice(prefs.getString(KEY_NOTIF_ACTION, "I Smoked")!!) {
                 SmokedLogStore.enqueue(this)
             },
         )
         container.addView(
-            choice(prefs.getString(KEY_MENU_SOS, "SOS Krizdeyim")!!) {
+            choice(prefs.getString(KEY_MENU_SOS, "SOS I'm in Crisis")!!) {
                 SmokedLogStore.enqueueRoute(this, SmokedLogStore.ROUTE_SOS)
                 launchApp()
             },
         )
         container.addView(
-            choice(prefs.getString(KEY_MENU_OPEN, "Uygulamayı Aç")!!) {
+            choice(prefs.getString(KEY_MENU_OPEN, "Open App")!!) {
                 launchApp()
             },
         )
         container.addView(
-            choice(prefs.getString(KEY_MENU_CANCEL, "Vazgeç")!!) {},
+            choice(prefs.getString(KEY_MENU_CANCEL, "Cancel")!!) {},
         )
 
         val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -289,10 +289,13 @@ class SmokedLogOverlayService : Service() {
             manager.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    "Nikotin Away Hizli Kayit",
+                    prefs().getString(KEY_CHANNEL_NAME, "Nikotin Away Quick Log"),
                     NotificationManager.IMPORTANCE_MIN,
                 ).apply {
-                    description = "Sigara ictim butonu ekranda dururken aktif"
+                    description = prefs().getString(
+                        KEY_CHANNEL_DESCRIPTION,
+                        "Active while the \"I Smoked\" button is on screen",
+                    )
                     setShowBadge(false)
                 },
             )
@@ -315,10 +318,10 @@ class SmokedLogOverlayService : Service() {
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_edit)
             .setContentTitle(prefs().getString(KEY_NOTIF_TITLE, "Nikotin Away"))
-            .setContentText(prefs().getString(KEY_NOTIF_BODY, "Sigara ictiyseniz kaydedin"))
+            .setContentText(prefs().getString(KEY_NOTIF_BODY, "Log it if you smoked"))
             .addAction(
                 0,
-                prefs().getString(KEY_NOTIF_ACTION, "Sigara Ictim"),
+                prefs().getString(KEY_NOTIF_ACTION, "I Smoked"),
                 pending,
             )
             .setOngoing(true)
@@ -342,6 +345,8 @@ class SmokedLogOverlayService : Service() {
         const val KEY_MENU_SOS = "menu_sos"
         const val KEY_MENU_OPEN = "menu_open"
         const val KEY_MENU_CANCEL = "menu_cancel"
+        const val KEY_CHANNEL_NAME = "channel_name"
+        const val KEY_CHANNEL_DESCRIPTION = "channel_description"
 
         /// Whether the user has the button switched on.
         ///
@@ -353,8 +358,9 @@ class SmokedLogOverlayService : Service() {
         const val KEY_ENABLED = "button_enabled"
 
         // 64dp was under the size of a standard FAB with none of its
-        // contrast, so the logo inside it was too small to read.
-        private const val SIZE_DP = 84f
+        // contrast, so the logo inside it was too small to read. 84dp was
+        // still easy to lose against a busy wallpaper.
+        private const val SIZE_DP = 112f
         private const val DEFAULT_X_DP = 16f
         private const val DEFAULT_Y_DP = 220f
 

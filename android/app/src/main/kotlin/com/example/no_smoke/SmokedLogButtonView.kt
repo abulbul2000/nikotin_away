@@ -190,13 +190,12 @@ class SmokedLogButtonView(
         const val HOLD_DURATION_MS = 3000L
         private const val CONFIRM_HOLD_MS = 800L
 
-        /// Visible enough to find, faint enough not to compete with whatever
-        /// is underneath it.
-        // Resting opacity. Was 105/255 — about 40% — which the user could
-        // barely pick out against a busy wallpaper. This is a standing offer
-        // that has to be findable at a glance; the point of the drag support
-        // is that anyone bothered by it moves it rather than squints at it.
-        private const val RESTING_ALPHA = 190
+        /// Findable at a glance, full stop.
+        // Resting opacity. Was 105/255 (~40%), then 190/255 (~75%) — still
+        // lost against a busy wallpaper. This is a standing offer; the point
+        // of the drag support is that anyone bothered by it moves it rather
+        // than the button making itself harder to see.
+        private const val RESTING_ALPHA = 255
         private const val ACTIVE_ALPHA = 255
 
         private val ACCENT = Color.parseColor("#00B8D4")

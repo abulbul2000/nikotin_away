@@ -10,6 +10,9 @@ class PredictionEngine {
 		required List<SensorUsageEvent> sensorEvents,
 	}) {
 		final nextRiskWindow = riskyHours.isNotEmpty ? riskyHours.first : '20:00-22:00';
+		// Canonical (non-localized) values -- callers must run this through
+		// AppTexts.localizeCanonicalText before showing it, same as every
+		// other trigger/pack-count value stored in this app.
 		var nextRiskTrigger = riskyTriggers.isNotEmpty ? riskyTriggers.first : 'Stres';
 
 		if (sensorEvents.isNotEmpty) {
@@ -18,7 +21,7 @@ class PredictionEngine {
 					recent.map((item) => item.mealSoundLikelihood).reduce((a, b) => a + b) /
 					recent.length;
 			if (recentMealLikelihood >= 0.65) {
-				nextRiskTrigger = 'Meal context';
+				nextRiskTrigger = 'Yemek Sonrasi';
 			}
 		}
 

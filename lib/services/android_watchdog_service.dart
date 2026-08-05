@@ -17,6 +17,11 @@ class AndroidWatchdogService {
     required String taskTitle,
     required String watchdogId,
     required DateTime dueAt,
+    required String foregroundBody,
+    required String violationTitle,
+    required String violationBody,
+    required String foregroundChannelName,
+    required String violationChannelName,
   }) async {
     if (!_isAndroid) {
       return;
@@ -25,7 +30,34 @@ class AndroidWatchdogService {
       'taskTitle': taskTitle,
       'watchdogId': watchdogId,
       'dueAtMillis': dueAt.millisecondsSinceEpoch,
+      'foregroundBody': foregroundBody,
+      'violationTitle': violationTitle,
+      'violationBody': violationBody,
+      'foregroundChannelName': foregroundChannelName,
+      'violationChannelName': violationChannelName,
     });
+  }
+
+  /// The mandatory-task overlay's foreground-service notification is a
+  /// fixed, locale-only string (not tied to any one task), so it's pushed
+  /// once here rather than on every showOverlay/showInfoOverlay call.
+  static Future<void> setTaskOverlayChannelInfo({
+    required String channelName,
+    required String channelDescription,
+    required String foregroundBody,
+  }) async {
+    if (!_isAndroid) {
+      return;
+    }
+    try {
+      await _channel.invokeMethod('setTaskOverlayChannelInfo', {
+        'channelName': channelName,
+        'channelDescription': channelDescription,
+        'foregroundBody': foregroundBody,
+      });
+    } catch (_) {
+      // Best-effort: falls back to the service's own English defaults.
+    }
   }
 
   static Future<void> acknowledgeWatchdog(String watchdogId) async {

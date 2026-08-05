@@ -78,23 +78,23 @@ class TaskOverlayService : Service() {
     }
 
     private fun ensureForeground() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
-            return
-        }
-        val manager = getSystemService(NotificationManager::class.java)
-        if (manager.getNotificationChannel(CHANNEL_ID) == null) {
-            manager.createNotificationChannel(
-                NotificationChannel(
-                    CHANNEL_ID,
-                    "Nikotin Away Gorev Ekrani",
-                    NotificationManager.IMPORTANCE_LOW,
-                ).apply { description = "Zorunlu gorev ekrani gosterilirken aktif" },
-            )
+        val texts = TaskOverlayStore.loadChannelInfo(this)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(NotificationManager::class.java)
+            if (manager.getNotificationChannel(CHANNEL_ID) == null) {
+                manager.createNotificationChannel(
+                    NotificationChannel(
+                        CHANNEL_ID,
+                        texts.channelName,
+                        NotificationManager.IMPORTANCE_LOW,
+                    ).apply { description = texts.channelDescription },
+                )
+            }
         }
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("Nikotin Away")
-            .setContentText("Gorev ekrani gosteriliyor")
+            .setContentText(texts.foregroundBody)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
@@ -501,6 +501,40 @@ class TaskOverlayService : Service() {
             }
             context.startService(intent)
         }
+    }
+}
+
+data class TaskOverlayChannelInfo(
+    val channelName: String,
+    val channelDescription: String,
+    val foregroundBody: String,
+)
+
+object TaskOverlayStore {
+    private const val PREFS = "no_smoke_task_overlay"
+    private const val KEY_CHANNEL_NAME = "channel_name"
+    private const val KEY_CHANNEL_DESCRIPTION = "channel_description"
+    private const val KEY_FOREGROUND_BODY = "foreground_body"
+
+    fun saveChannelInfo(context: Context, channelName: String, channelDescription: String, foregroundBody: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_CHANNEL_NAME, channelName)
+            .putString(KEY_CHANNEL_DESCRIPTION, channelDescription)
+            .putString(KEY_FOREGROUND_BODY, foregroundBody)
+            .apply()
+    }
+
+    fun loadChannelInfo(context: Context): TaskOverlayChannelInfo {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return TaskOverlayChannelInfo(
+            channelName = prefs.getString(KEY_CHANNEL_NAME, null)
+                ?.takeIf { it.isNotBlank() } ?: "Nikotin Away Task Screen",
+            channelDescription = prefs.getString(KEY_CHANNEL_DESCRIPTION, null)
+                ?.takeIf { it.isNotBlank() } ?: "Active while the mandatory task screen is showing",
+            foregroundBody = prefs.getString(KEY_FOREGROUND_BODY, null)
+                ?.takeIf { it.isNotBlank() } ?: "Task screen showing",
+        )
     }
 }
 

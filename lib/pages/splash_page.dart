@@ -141,7 +141,7 @@ class _SplashPageState extends State<SplashPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: const [
-                NoSmokeLogo(size: 180, showLabel: true),
+                NoSmokeLogo(size: 220, showLabel: true, showTagline: true),
               ],
             ),
           ),

@@ -907,7 +907,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                   border: Border.all(color: Colors.orange.shade200),
                 ),
                 child: Text(
-                  'Bu bolum tani testi degildir. KOAH tanisi icin spirometri ve doktor degerlendirmesi gerekir. Sonuclar takip amaclidir.',
+                  context.t('copdDisclaimerNotDiagnostic'),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -917,8 +917,8 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              const SurveySectionHeader(
-                title: 'Genel Durum',
+              SurveySectionHeader(
+                title: context.t('weeklySurveyGeneralStatus'),
                 icon: Icons.smoking_rooms,
                 withTopSpacing: false,
               ),

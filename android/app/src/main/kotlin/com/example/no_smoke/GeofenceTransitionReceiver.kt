@@ -51,7 +51,8 @@ class GeofenceTransitionReceiver : BroadcastReceiver() {
     }
 
     private fun showArrivalNotification(context: Context) {
-        createChannelIfNeeded(context)
+        val (channelName, channelDescription) = GeofenceStore.readChannelInfo(context)
+        createChannelIfNeeded(context, channelName, channelDescription)
         val title = GeofenceStore.readNotificationTitle(context) ?: return
         val body = GeofenceStore.readNotificationBody(context) ?: ""
 
@@ -66,7 +67,7 @@ class GeofenceTransitionReceiver : BroadcastReceiver() {
         NotificationManagerCompat.from(context).notify(NOTIFICATION_ID, notification)
     }
 
-    private fun createChannelIfNeeded(context: Context) {
+    private fun createChannelIfNeeded(context: Context, channelName: String, channelDescription: String) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return
         }
@@ -76,10 +77,12 @@ class GeofenceTransitionReceiver : BroadcastReceiver() {
         }
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Nikotin Away Konum Hatirlatici",
+            channelName.ifBlank { "Nikotin Away Location Reminder" },
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
-            description = "Sik gidilen bir yere varildiginda gosterilen hatirlatma"
+            description = channelDescription.ifBlank {
+                "Reminder shown on arrival at a frequently visited place"
+            }
         }
         manager.createNotificationChannel(channel)
     }
@@ -97,6 +100,8 @@ object GeofenceStore {
     private const val PREFS = "no_smoke_geofencing"
     private const val KEY_TITLE = "notification_title"
     private const val KEY_BODY = "notification_body"
+    private const val KEY_CHANNEL_NAME = "channel_name"
+    private const val KEY_CHANNEL_DESCRIPTION = "channel_description"
     private const val TABLE = "location_visit_events"
     private const val RETENTION_DAYS = 60
 
@@ -114,6 +119,22 @@ object GeofenceStore {
 
     fun readNotificationBody(context: Context): String? {
         return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_BODY, null)
+    }
+
+    fun saveChannelInfo(context: Context, name: String, description: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_CHANNEL_NAME, name)
+            .putString(KEY_CHANNEL_DESCRIPTION, description)
+            .apply()
+    }
+
+    fun readChannelInfo(context: Context): Pair<String, String> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return Pair(
+            prefs.getString(KEY_CHANNEL_NAME, null).orEmpty(),
+            prefs.getString(KEY_CHANNEL_DESCRIPTION, null).orEmpty(),
+        )
     }
 
     fun insertVisitEvent(context: Context, placeId: String, transitionType: String) {

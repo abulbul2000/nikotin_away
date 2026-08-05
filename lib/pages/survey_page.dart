@@ -56,6 +56,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
   String? breakStart2;
   String? breakEnd2;
   String weekendSmokingPattern = 'Ayni';
+  String? schoolType;
   String packOption = '1 paketten az';
   String? consecutiveSmokingHabit;
   String? consecutiveSmokingCount;
@@ -76,8 +77,8 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
 
   static const List<String> professionOptions = [
     'Ücretli',
-    'Esnaf',
     'Serbest Çalışıyor',
+    'Öğrenci',
     'Diğer',
   ];
 
@@ -136,6 +137,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
   ];
 
   String get _resolvedPacksPerDay => packOption;
+
+  bool get _isStudent => profession == 'Öğrenci';
+  bool get _isUniversityStudent => _isStudent && schoolType == 'Universite';
 
   String _professionLabel(String value, BuildContext context) {
     switch (value) {
@@ -1160,7 +1164,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           isExpanded: true,
           initialValue: smokeFreeRange,
           decoration: InputDecoration(
-            hintText: context.t('maxSmokeFreeDuration'),
+            labelText: context.t('maxSmokeFreeDuration'),
             border: OutlineInputBorder(),
           ),
           items: [
@@ -1267,8 +1271,39 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             });
           },
         ),
+        if (_isStudent) ...[
+          DropdownButtonFormField<String>(
+            isExpanded: true,
+            key: const ValueKey('school_type_dropdown'),
+            initialValue: schoolType,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(),
+            ),
+            hint: Text(context.t('schoolTypeLabel')),
+            items: [
+              DropdownMenuItem(
+                value: 'Lise',
+                child: Text(context.t('schoolTypeHighSchool')),
+              ),
+              DropdownMenuItem(
+                value: 'Universite',
+                child: Text(context.t('schoolTypeUniversity')),
+              ),
+            ],
+            onChanged: (value) {
+              setState(() {
+                schoolType = value;
+              });
+            },
+          ),
+          const SizedBox(height: 10),
+        ],
         _buildTimePickerRow(
-          label: context.t('workStart'),
+          label: _isStudent
+              ? (_isUniversityStudent
+                  ? context.t('firstLectureStart')
+                  : context.t('schoolStart'))
+              : context.t('workStart'),
           currentValue: workStartTime,
           onChanged: (value) {
             setState(() {
@@ -1277,7 +1312,11 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           },
         ),
         _buildTimePickerRow(
-          label: context.t('workEnd'),
+          label: _isStudent
+              ? (_isUniversityStudent
+                  ? context.t('lastLectureEnd')
+                  : context.t('schoolEnd'))
+              : context.t('workEnd'),
           currentValue: workEndTime,
           onChanged: (value) {
             setState(() {
@@ -1290,7 +1329,11 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           isExpanded: true,
           initialValue: workplaceSmokingRule,
           decoration: InputDecoration(
-            hintText: context.t('workplaceSmoking'),
+            labelText: _isStudent
+                ? (_isUniversityStudent
+                    ? context.t('campusSmoking')
+                    : context.t('schoolSmoking'))
+                : context.t('workplaceSmoking'),
             border: OutlineInputBorder(),
           ),
           items: [
@@ -1298,7 +1341,11 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             DropdownMenuItem(value: 'Hayır', child: Text(context.t('no'))),
             DropdownMenuItem(
               value: 'Sadece molalarda',
-              child: Text(context.t('onlyBreaks')),
+              child: Text(
+                _isStudent
+                    ? context.t('onlyBreaksBetweenLectures')
+                    : context.t('onlyBreaks'),
+              ),
             ),
           ],
           onChanged: (value) {
@@ -1345,7 +1392,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           isExpanded: true,
           initialValue: weekendSmokingPattern,
           decoration: InputDecoration(
-            hintText: context.t('weekendPatternLabel'),
+            labelText: context.t('weekendPatternLabel'),
             border: const OutlineInputBorder(),
           ),
           items: [
@@ -1648,6 +1695,11 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(
+          context.t('triggerTitleHint'),
+          style: TextStyle(fontSize: 13, color: Theme.of(context).hintColor),
+        ),
+        const SizedBox(height: 8),
         triggerTile(context.t('triggerCoffee'), 'coffee'),
         triggerTile(context.t('triggerMeal'), 'meal'),
         triggerTile(context.t('triggerDriving'), 'driving'),
@@ -1661,7 +1713,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           isExpanded: true,
           initialValue: stressLevel,
           decoration: InputDecoration(
-            hintText: context.t('stressTitle'),
+            labelText: context.t('stressTitle'),
             border: OutlineInputBorder(),
           ),
           items: [
@@ -1695,7 +1747,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           isExpanded: true,
           initialValue: interventionIntensity,
           decoration: InputDecoration(
-            hintText: context.t('interventionIntensityTitle'),
+            labelText: context.t('interventionIntensityTitle'),
             border: OutlineInputBorder(),
           ),
           items: [
@@ -1790,6 +1842,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           child: SurveyWizard(
             finishLabel: context.t('continue'),
             nextLabel: context.t('continue'),
+            backLabel: context.t('back'),
             steps: [
               SurveyStep(
                 title: context.t('initialSurvey'),

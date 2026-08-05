@@ -21,6 +21,8 @@ class GeofencingService {
     required List<SignificantPlace> places,
     required String notificationTitle,
     required String notificationBody,
+    required String channelName,
+    required String channelDescription,
   }) async {
     try {
       await _channel
@@ -36,6 +38,8 @@ class GeofencingService {
                 .toList(),
             'notificationTitle': notificationTitle,
             'notificationBody': notificationBody,
+            'channelName': channelName,
+            'channelDescription': channelDescription,
           })
           .timeout(_callTimeout);
     } catch (_) {

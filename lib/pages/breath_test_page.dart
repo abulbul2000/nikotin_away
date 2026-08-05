@@ -948,11 +948,7 @@ class _BreathTestPageState extends State<BreathTestPage>
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Nefes testi sonucu kaydedilemedi. Lutfen tekrar deneyin.',
-            ),
-          ),
+          SnackBar(content: Text(context.t('breathTestSaveFailed'))),
         );
     }
   }

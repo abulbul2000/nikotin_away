@@ -177,7 +177,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _postponeChannelId,
-          'Gorev erteleme secimi',
+          _text(code, 'channelNamePostponeChoice'),
           importance: Importance.high,
           priority: Priority.high,
           // Quiet: the user just answered a loud prompt, and a second alarm
@@ -240,7 +240,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _taskConfirmChannelId,
-          'Gorev sonu onayi',
+          _text(code, 'channelNameTaskConfirm'),
           importance: Importance.max,
           priority: Priority.high,
           playSound: true,
@@ -481,6 +481,11 @@ class NotificationService {
     await _syncSleepActivityFromNative();
     await _syncSmokedLogEventsFromNative();
     await _restoreSmokedLogButton(code);
+    await AndroidWatchdogService.setTaskOverlayChannelInfo(
+      channelName: _text(code, 'taskOverlayChannelName'),
+      channelDescription: _text(code, 'taskOverlayChannelDescription'),
+      foregroundBody: _text(code, 'taskOverlayForegroundBody'),
+    );
   }
 
   /// Puts the floating button back after a reboot or a process death.
@@ -500,6 +505,11 @@ class NotificationService {
           'menuSosLabel': _text(code, 'smokedLogMenuSos'),
           'menuOpenLabel': _text(code, 'smokedLogMenuOpen'),
           'menuCancelLabel': _text(code, 'smokedLogMenuCancel'),
+          'channelName': _text(code, 'channelNameSmokedLogQuickAction'),
+          'channelDescription': _text(
+            code,
+            'channelDescriptionSmokedLogQuickAction',
+          ),
         },
       );
     } catch (_) {
@@ -660,7 +670,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _healthTipChannelId,
-          'Saglik tavsiyesi',
+          _text(code, 'channelNameHealthTip'),
           importance: Importance.defaultImportance,
           visibility: NotificationVisibility.private,
           priority: Priority.defaultPriority,
@@ -1214,7 +1224,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _medicationReminderChannelId,
-          'Ilac hatirlatmasi',
+          _text(code, 'channelNameMedicationReminder'),
           importance: Importance.max,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
@@ -1355,7 +1365,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _taskEscalationChannelId,
-          'Gorev guncelleme hatirlatici',
+          _text(code, 'channelNameTaskUpdateReminder'),
           importance: Importance.max,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
@@ -1443,7 +1453,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _taskStartChannelId,
-          'İlk görev tetikleme',
+          _text(code, 'channelNameFirstTaskTrigger'),
           importance: Importance.max,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
@@ -1487,6 +1497,11 @@ class NotificationService {
       taskTitle: taskTitle,
       watchdogId: watchdogId,
       dueAt: dueAt,
+      foregroundBody: _text(code, 'watchdogForegroundBody'),
+      violationTitle: _text(code, 'watchdogViolationTitle'),
+      violationBody: _text(code, 'watchdogViolationBody'),
+      foregroundChannelName: _text(code, 'watchdogForegroundChannel'),
+      violationChannelName: _text(code, 'watchdogViolationChannel'),
     );
 
     final reminderAt = tz.TZDateTime.now(
@@ -1535,7 +1550,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _taskStartChannelId,
-          'İlk görev tetikleme',
+          _text(code, 'channelNameFirstTaskTrigger'),
           importance: Importance.max,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
@@ -1740,7 +1755,7 @@ class NotificationService {
         NotificationDetails(
           android: AndroidNotificationDetails(
             _breathReminderChannelId,
-            'Nefes testi hatırlatıcı',
+            _text(code, 'channelNameBreathTestReminder'),
             importance: Importance.max,
             visibility: NotificationVisibility.private,
             priority: Priority.high,
@@ -1793,7 +1808,7 @@ class NotificationService {
         NotificationDetails(
           android: AndroidNotificationDetails(
             _breathReminderChannelId,
-            'Nefes testi hatırlatıcı',
+            _text(code, 'channelNameBreathTestReminder'),
             importance: Importance.max,
             visibility: NotificationVisibility.private,
             priority: Priority.high,
@@ -1906,7 +1921,7 @@ class NotificationService {
         NotificationDetails(
           android: AndroidNotificationDetails(
             _healthTipChannelId,
-            'Saglik tavsiyesi',
+            _text(code, 'channelNameHealthTip'),
             importance: Importance.max,
             visibility: NotificationVisibility.private,
             priority: Priority.high,
@@ -1993,7 +2008,7 @@ class NotificationService {
           NotificationDetails(
             android: AndroidNotificationDetails(
               _medicationReminderChannelId,
-              'Ilac hatirlatmasi',
+              _text(code, 'channelNameMedicationReminder'),
               importance: Importance.max,
               visibility: NotificationVisibility.private,
               priority: Priority.high,
@@ -2077,7 +2092,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _taskFollowUpChannelId,
-          'Görev takip hatırlatıcı',
+          _text(code, 'channelNameTaskFollowUpReminder'),
           importance: Importance.max,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
@@ -2159,7 +2174,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _weeklySurveyChannelId,
-          'Haftalik anket hatirlatici',
+          _text(code, 'channelNameWeeklySurveyReminder'),
           importance: Importance.max,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
@@ -2209,7 +2224,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _taskStartChannelId,
-          'Task timer start',
+          _text(code, 'channelNameTaskTimerStart'),
           importance: Importance.max,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
@@ -2240,9 +2255,8 @@ class NotificationService {
       code,
       duration.inMinutes,
     );
-    final instruction = code == 'tr'
-        ? 'Lütfen önümüzdeki $durationText boyunca sigara içmeyin. Elinizde sigara varsa hemen söndürün.'
-        : 'Please do not smoke for the next $durationText. If you have a cigarette in your hand, put it out now.';
+    final instruction = _text(code, 'barrierStartedInstruction')
+        .replaceAll('{duration}', durationText);
     await _plugin.show(
       id,
       _text(code, 'barrierStartedTitle'),
@@ -2250,7 +2264,7 @@ class NotificationService {
       NotificationDetails(
         android: AndroidNotificationDetails(
           _taskStartChannelId,
-          'Duration barrier call',
+          _text(code, 'channelNameDurationBarrierCall'),
           importance: Importance.max,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
@@ -2289,10 +2303,10 @@ class NotificationService {
       _sedentaryReminderNotificationId,
       _text(code, 'sedentaryReminderTitle'),
       _text(code, 'sedentaryReminderBody'),
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           _sedentaryReminderChannelId,
-          'Hareket hatırlatıcı',
+          _text(code, 'channelNameMovementReminder'),
           importance: Importance.high,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
@@ -2304,7 +2318,7 @@ class NotificationService {
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
           category: AndroidNotificationCategory.reminder,
         ),
-        iOS: DarwinNotificationDetails(presentSound: true),
+        iOS: const DarwinNotificationDetails(presentSound: true),
       ),
     );
   }
@@ -2324,10 +2338,10 @@ class NotificationService {
       _breathOverdueNotificationId,
       _text(code, 'dailyBreathOverdueNotificationTitle'),
       _text(code, 'dailyBreathOverdueNotificationBody'),
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           _sedentaryReminderChannelId,
-          'Hareket hatırlatıcı',
+          _text(code, 'channelNameMovementReminder'),
           importance: Importance.high,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
@@ -2338,7 +2352,7 @@ class NotificationService {
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
           category: AndroidNotificationCategory.reminder,
         ),
-        iOS: DarwinNotificationDetails(presentSound: true),
+        iOS: const DarwinNotificationDetails(presentSound: true),
       ),
     );
   }
@@ -2421,7 +2435,7 @@ class NotificationService {
             // sound and full-screen intent for both made every notification
             // in the app look and feel like the one most urgent kind.
             _coachCommandChannelId,
-            'Koç önerisi',
+            _text(code, 'channelNameCoachSuggestion'),
             importance: Importance.defaultImportance,
             visibility: NotificationVisibility.private,
             priority: Priority.defaultPriority,
