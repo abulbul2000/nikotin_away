@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../core/mentor_command_codes.dart';
 import '../core/text_utils.dart';
 import '../models/survey_record.dart';
 
@@ -57,19 +58,19 @@ class MentorEngine {
 		final hints = <String>[];
 
 		if (riskScore >= 80) {
-			hints.add('Yuksek risk donemindesiniz: ilk sigarayi mutlaka erteleyin.');
+			hints.add(MentorCommandCodes.hintHighRisk);
 		} else if (riskScore >= 60) {
-			hints.add('Orta-yuksek risk: tetikleyici aninda nefes + su rutini uygulayin.');
+			hints.add(MentorCommandCodes.hintMedRisk);
 		} else {
-			hints.add('Ritmi koruyun: bugun en az bir gorevi tamamlama hedefi koyun.');
+			hints.add(MentorCommandCodes.hintLowRisk);
 		}
 
 		if ((predictedWindow ?? '').isNotEmpty) {
-			hints.add('En riskli pencere: ${predictedWindow!}. Bu saatten once hazirlik yapin.');
+			hints.add('${MentorCommandCodes.hintWindowPrefix}:${predictedWindow!}');
 		}
 
 		if ((predictedTrigger ?? '').isNotEmpty) {
-			hints.add('Tahmini tetikleyici: ${predictedTrigger!}. Alternatif davranis belirleyin.');
+			hints.add('${MentorCommandCodes.hintTriggerPrefix}:${predictedTrigger!}');
 		}
 
 		return hints.take(3).toList();
@@ -91,35 +92,35 @@ class MentorEngine {
 		final riskBand = _riskBand(riskScore);
 		final burdenLevel = _commandBurdenLevel(weeklyPayload);
 
-		commands.add('KADEMELI: ${_progressiveReductionCommand(riskScore)}');
+		commands.add(_progressiveReductionCommand(riskScore));
 		commands.addAll(_riskDaypartCommands(riskBand: riskBand, dayPart: dayPart));
 		commands.addAll(_weeklyPersonalizedCommands(weeklyPayload));
 
 		if (breathTrend == 'Declining') {
-			commands.add('NEFES: Bugun 2 nefes testi yap, her testten sonra 2 dakika yavas nefes uygula.');
+			commands.add(MentorCommandCodes.breathDeclining);
 		} else if (breathTrend == 'Improving') {
-			commands.add('NEFES: Kazanimi koru, risk saatinden once 1 nefes rutini tamamla.');
+			commands.add(MentorCommandCodes.breathImproving);
 		} else {
-			commands.add('NEFES: Kriz aninda 2 dakika nefes + 1 bardak su uygula.');
+			commands.add(MentorCommandCodes.breathStable);
 		}
 
 		if (smokingTrend == 'Increasing' || consecutiveTrend == 'trendDeclining') {
-			commands.add('TAKIP: Bugun toplam adedi dunun en az 2 altinda tamamla.');
+			commands.add(MentorCommandCodes.trackReduceToday);
 		} else {
-			commands.add('TAKIP: Bugun secilen gorevlerin en az 3 tanesini tamamlandi isaretle.');
+			commands.add(MentorCommandCodes.trackCompleteThree);
 		}
 
 		if ((predictedWindow ?? '').isNotEmpty) {
-			commands.add('HAZIRLIK: ${predictedWindow!} oncesinde su + sakiz + kisa yuruyus planini hazirla.');
+			commands.add('${MentorCommandCodes.prepWindowPrefix}:${predictedWindow!}');
 		}
 		if ((predictedTrigger ?? '').isNotEmpty) {
-			commands.add('TETIKLEYICI: ${predictedTrigger!} aninda 3 dakika ertele, sonra yeniden karar ver.');
+			commands.add('${MentorCommandCodes.triggerDelayPrefix}:${predictedTrigger!}');
 		}
 		if (riskyHours.isNotEmpty) {
-			commands.add('ODAK: En riskli saat ${riskyHours.first} icin bildirimleri acik tut.');
+			commands.add('${MentorCommandCodes.focusRiskHourPrefix}:${riskyHours.first}');
 		}
 		if (weeklyRiskTarget > 0) {
-			commands.add('HEDEF: Haftalik risk hedefini $weeklyRiskTarget altina indir.');
+			commands.add('${MentorCommandCodes.weeklyTargetPrefix}:$weeklyRiskTarget');
 		}
 
 		final unique = <String>[];
@@ -285,12 +286,12 @@ class MentorEngine {
 				maxMinutes: minMax.$2,
 				existing: commands,
 			);
-			commands.add('Sigara içmeme süresi: Sonraki $minute dakika sigara içmeyin.');
+			commands.add('${MentorCommandCodes.adaptiveNoSmokePrefix}:$minute');
 		}
 
 		if ((predictedWindow ?? '').isNotEmpty) {
 			commands.add(
-				'Sigara içmeme süresi: ${predictedWindow!} penceresi öncesi en az ${minMax.$1} dakika sigara içmeyin.',
+				'${MentorCommandCodes.adaptiveNoSmokeWindowPrefix}:${minMax.$1}:${predictedWindow!}',
 			);
 		}
 
@@ -446,40 +447,22 @@ class MentorEngine {
 		return 'orta';
 	}
 
+	// Tone is now carried as a suffix on the canonical ID rather than a word
+	// substitution done here -- the engine no longer produces
+	// language-specific text, so the actual soft/active wording change
+	// happens in AppTexts._applyToneVariant at display time.
 	List<String> _applyBurdenStyle(List<String> commands, String burdenLevel) {
 		if (burdenLevel == 'cok') {
-			return commands.map(_softenCommandTone).toList();
+			return commands
+				.map((command) => '$command${MentorCommandCodes.toneSoftSuffix}')
+				.toList();
 		}
 		if (burdenLevel == 'az') {
-			return commands.map(_activateCommandTone).toList();
+			return commands
+				.map((command) => '$command${MentorCommandCodes.toneActiveSuffix}')
+				.toList();
 		}
 		return commands;
-	}
-
-	String _softenCommandTone(String command) {
-		var result = command
-			.replaceAll('mutlaka ', '')
-			.replaceAll('en az ', '')
-			.replaceAll('tamamla', 'dene')
-			.replaceAll('uygula', 'dene')
-			.replaceAll('kapat', 'azalt');
-		result = result.replaceAll(RegExp(r'\s+'), ' ').trim();
-		if (result.endsWith('!')) {
-			result = '${result.substring(0, result.length - 1)}.';
-		}
-		return result;
-	}
-
-	String _activateCommandTone(String command) {
-		var result = command.replaceAll('dene', 'uygula');
-		if (!result.endsWith('!')) {
-			if (result.endsWith('.')) {
-				result = '${result.substring(0, result.length - 1)}!';
-			} else {
-				result = '$result!';
-			}
-		}
-		return result;
 	}
 
 	List<String> _weeklyPersonalizedCommands(Map<String, dynamic>? weeklyPayload) {
@@ -496,16 +479,16 @@ class MentorEngine {
 		final socialDays = _toInt(trigger['social']);
 
 		if (stressDays >= 4) {
-			commands.add('TETIKLEYICI-STRES: Stres aninda 90 saniye nefes + 1 bardak su, sonra yeniden karar ver.');
+			commands.add(MentorCommandCodes.triggerStress);
 		}
 		if (coffeeDays >= 4) {
-			commands.add('TETIKLEYICI-KAHVE: Kahveyi 30 dakika geciktir, kahve ile sigarayi baglama.');
+			commands.add(MentorCommandCodes.triggerCoffee);
 		}
 		if (alcoholDays >= 2) {
-			commands.add('TETIKLEYICI-ALKOL: Alkol gunlerinde ilk teklifte sigaraya hayir de, sakiz/su alternatifi kullan.');
+			commands.add(MentorCommandCodes.triggerAlcohol);
 		}
 		if (socialDays >= 3) {
-			commands.add('TETIKLEYICI-SOSYAL: Sosyal ortama girmeden once hedefini destek kisina mesajla.');
+			commands.add(MentorCommandCodes.triggerSocial);
 		}
 
 		final lapseCount = _toInt(weeklyPayload['lapseCount']);
@@ -514,10 +497,10 @@ class MentorEngine {
 		final motivation = _toInt(weeklyPayload['motivation']);
 
 		if (lapseCount >= 2 || cravingMax >= 8) {
-			commands.add('KRIZ: Ilk istek dalgasinda 3 dakika ertele, ikinci dalgada 4D protokolunu uygula.');
+			commands.add(MentorCommandCodes.crisisProtocol);
 		}
 		if (selfEfficacy <= 4 || motivation <= 4) {
-			commands.add('DESTEK: Bugun tek hedef sec ve tamamlayinca uygulamada isaretle.');
+			commands.add(MentorCommandCodes.supportSingleGoal);
 		}
 
 		return commands;
@@ -583,93 +566,39 @@ class MentorEngine {
 
 	String _progressiveReductionCommand(int riskScore) {
 		if (riskScore >= 75) {
-			return 'Bugun hedef: duneden en az 1 sigara az, ilk sigarayi 90 dakika ertele.';
+			return MentorCommandCodes.reductionTier75;
 		}
 		if (riskScore >= 60) {
-			return 'Bugun hedef: duneden en az 2 sigara az, her sigara oncesi 10 dakika bekle.';
+			return MentorCommandCodes.reductionTier60;
 		}
 		if (riskScore >= 40) {
-			return 'Bugun hedef: duneden en az 3 sigara az, oglen sonrasi 1 sigarayi atla.';
+			return MentorCommandCodes.reductionTier40;
 		}
-		return 'Bugun hedef: mevcut azalmayi koru, riski saatlerde sigara yerine su + sakiz uygula.';
+		return MentorCommandCodes.reductionTierBase;
 	}
 
+	// riskBand/dayPart feed directly into the canonical ID now (via
+	// MentorCommandCodes.riskDaypartId) -- their string values are no
+	// longer just labels, AppTexts.localizeCanonicalTextForCode parses
+	// them back out of the ID, so _riskBand/_resolveDayPart's return
+	// values must stay 'high'/'medium'/'low' and
+	// 'morning'/'day'/'evening'/'night'.
 	List<String> _riskDaypartCommands({
 		required String riskBand,
 		required String dayPart,
 	}) {
-		if (riskBand == 'high') {
-			switch (dayPart) {
-				case 'morning':
-					return const [
-						'SABAH: Ilk sigarayi 90 dakika ertele, once 1 bardak su ic.',
-						'KRIZ: 4D protokolunu uygula (ertele-nefes-su-dikkat dagit).',
-					];
-				case 'day':
-					return const [
-						'OGLE: Yemek sonrasi 7 dakika yuruyus yap, sonra karar ver.',
-						'TETIK: Kahve ile sigarayi ayir, kahveyi 30 dakika geciktir.',
-					];
-				case 'evening':
-					return const [
-						'AKSAM: Sosyal ortamda ilk teklife hayir de, 3 dakika ertele.',
-						'DESTEK: Risk saatinden once destek kisina tek satir mesaj gonder.',
-					];
-				default:
-					return const [
-						'GECE: Bu saatten sonra sigara yok, acil kriz rutini uygula.',
-						'GEVSEME: 3 dakika yavas nefes + su ile gunu kapat.',
-					];
-			}
-		}
-
-		if (riskBand == 'medium') {
-			switch (dayPart) {
-				case 'morning':
-					return const [
-						'SABAH: Ilk sigarayi 45 dakika ertele.',
-						'RUTIN: Kahve oncesi 2 dakika nefes egzersizi yap.',
-					];
-				case 'day':
-					return const [
-						'OGLE: Her sigara oncesi 10 dakika bekle.',
-						'ATLA: Bugun ogleden sonra 1 sigarayi atla.',
-					];
-				case 'evening':
-					return const [
-						'AKSAM: Riskli saatte sakiz/su alternatifi uygula.',
-						'TAKIP: Gun sonu sayiminda hedefi kontrol et.',
-					];
-				default:
-					return const [
-						'GECE: Son sigaradan sonra su ic, tekrar sigara icme.',
-						'PLAN: Yarin ilk sigara saatini simdiden 15 dakika geciktir.',
-					];
-			}
-		}
-
-		switch (dayPart) {
-			case 'morning':
-				return const [
-					'SABAH: Ilk sigarayi en az 25 dakika ertele.',
-					'KORU: Nefes kazancini korumak icin su + nefes rutini yap.',
-				];
-			case 'day':
-				return const [
-					'OGLE: Sadece planli saatlerde karar ver, otomatik yakma yok.',
-					'KORU: Oglen sonrasi 1 sigara yerine 5 dakika yuruyus yap.',
-				];
-			case 'evening':
-				return const [
-					'AKSAM: Sosyal tetikleyicilerde 3 dakika erteleme uygula.',
-					'KORU: Gun sonu notuna bugun ise yarayan yontemi yaz.',
-				];
-			default:
-				return const [
-					'GECE: Bu saatten sonra sigarayi kapat, kriz olursa nefes uygula.',
-					'KORU: Yarin icin risk saatine tek bir onlem yaz.',
-				];
-		}
+		return [
+			MentorCommandCodes.riskDaypartId(
+				band: riskBand,
+				dayPart: dayPart,
+				index: 0,
+			),
+			MentorCommandCodes.riskDaypartId(
+				band: riskBand,
+				dayPart: dayPart,
+				index: 1,
+			),
+		];
 	}
 
 	Map<String, dynamic> optimizeActionCommands({
@@ -903,7 +832,113 @@ class MentorEngine {
 		return result;
 	}
 
+	// Canonical IDs carry their category in a prefix now, so this no longer
+	// does word-matching on translated text -- that would break for every
+	// non-Turkish user. Commands already persisted before this refactor
+	// (DB-stored task titles, previousScores keys) are still raw Turkish
+	// sentences, so those still go through the old contains()-based
+	// classifier via _legacyCategoryForCommand.
 	String _categoryForCommand(String command) {
+		final id = _stripToneSuffix(command);
+		if (_looksLikeCanonicalId(id)) {
+			return _canonicalCategoryForId(id);
+		}
+		return _legacyCategoryForCommand(id) ?? 'routine';
+	}
+
+	String _stripToneSuffix(String command) {
+		if (command.endsWith(MentorCommandCodes.toneSoftSuffix)) {
+			return command.substring(
+				0,
+				command.length - MentorCommandCodes.toneSoftSuffix.length,
+			);
+		}
+		if (command.endsWith(MentorCommandCodes.toneActiveSuffix)) {
+			return command.substring(
+				0,
+				command.length - MentorCommandCodes.toneActiveSuffix.length,
+			);
+		}
+		return command;
+	}
+
+	bool _looksLikeCanonicalId(String value) {
+		final prefix = value.split(':').first;
+		return RegExp(r'^[A-Z][A-Z0-9_]*$').hasMatch(prefix);
+	}
+
+	// Mirrors the pre-refactor contains()-based classification, applied to
+	// the ORIGINAL Turkish sentence each ID replaced -- so a command that
+	// used to fall into 'delay'/'breath'/'trigger'/'reduction' keeps landing
+	// in the same bucket, just keyed by ID instead of by scanning text.
+	// Verified by mechanically running the old classifier against every
+	// original string rather than judged by eye (several entries are
+	// non-obvious, e.g. TRIGGER_STRESS -> 'breath' because its Turkish
+	// sentence mentions "nefes" before "stres", and the old code checks
+	// 'nefes' first).
+	static const Map<String, String> _canonicalCategoryById = {
+		MentorCommandCodes.reductionTier75: 'delay',
+		MentorCommandCodes.reductionTier60: 'reduction',
+		MentorCommandCodes.reductionTier40: 'reduction',
+		MentorCommandCodes.reductionTierBase: 'reduction',
+		MentorCommandCodes.breathDeclining: 'breath',
+		MentorCommandCodes.breathImproving: 'breath',
+		MentorCommandCodes.breathStable: 'breath',
+		MentorCommandCodes.trackReduceToday: 'routine',
+		MentorCommandCodes.trackCompleteThree: 'routine',
+		MentorCommandCodes.triggerStress: 'breath',
+		MentorCommandCodes.triggerCoffee: 'trigger',
+		MentorCommandCodes.triggerAlcohol: 'trigger',
+		MentorCommandCodes.triggerSocial: 'trigger',
+		MentorCommandCodes.crisisProtocol: 'delay',
+		MentorCommandCodes.supportSingleGoal: 'reduction',
+		'RISKDAYPART_HIGH_MORNING_0': 'delay',
+		'RISKDAYPART_HIGH_MORNING_1': 'breath',
+		'RISKDAYPART_HIGH_DAY_0': 'routine',
+		'RISKDAYPART_HIGH_DAY_1': 'routine',
+		'RISKDAYPART_HIGH_EVENING_0': 'delay',
+		'RISKDAYPART_HIGH_EVENING_1': 'routine',
+		'RISKDAYPART_HIGH_NIGHT_0': 'trigger',
+		'RISKDAYPART_HIGH_NIGHT_1': 'breath',
+		'RISKDAYPART_MEDIUM_MORNING_0': 'delay',
+		'RISKDAYPART_MEDIUM_MORNING_1': 'breath',
+		'RISKDAYPART_MEDIUM_DAY_0': 'routine',
+		'RISKDAYPART_MEDIUM_DAY_1': 'routine',
+		'RISKDAYPART_MEDIUM_EVENING_0': 'trigger',
+		'RISKDAYPART_MEDIUM_EVENING_1': 'reduction',
+		'RISKDAYPART_MEDIUM_NIGHT_0': 'routine',
+		'RISKDAYPART_MEDIUM_NIGHT_1': 'routine',
+		'RISKDAYPART_LOW_MORNING_0': 'delay',
+		'RISKDAYPART_LOW_MORNING_1': 'breath',
+		'RISKDAYPART_LOW_DAY_0': 'routine',
+		'RISKDAYPART_LOW_DAY_1': 'routine',
+		'RISKDAYPART_LOW_EVENING_0': 'delay',
+		'RISKDAYPART_LOW_EVENING_1': 'routine',
+		'RISKDAYPART_LOW_NIGHT_0': 'breath',
+		'RISKDAYPART_LOW_NIGHT_1': 'routine',
+	};
+
+	String _canonicalCategoryForId(String id) {
+		final direct = _canonicalCategoryById[id];
+		if (direct != null) {
+			return direct;
+		}
+		if (id.startsWith(MentorCommandCodes.triggerDelayPrefix)) {
+			return 'delay';
+		}
+		if (id.startsWith(MentorCommandCodes.focusRiskHourPrefix)) {
+			return 'trigger';
+		}
+		if (id.startsWith(MentorCommandCodes.weeklyTargetPrefix)) {
+			return 'reduction';
+		}
+		// ADAPTIVE_NO_SMOKE*, PREP_WINDOW:*, HINT_* templates contained none
+		// of 'nefes'/'ertele'/'tetikleyici'/'kriz'/'hedef' in their original
+		// Turkish, so 'routine' matches prior behavior.
+		return 'routine';
+	}
+
+	String? _legacyCategoryForCommand(String command) {
 		final value = _normalize(command);
 		if (value.contains('nefes')) {
 			return 'breath';

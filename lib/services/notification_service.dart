@@ -2426,7 +2426,7 @@ class NotificationService {
       await _plugin.zonedSchedule(
         id,
         _text(code, 'coachCommandTitle'),
-        commands[i],
+        AppTexts.localizeCanonicalTextForCode(code, commands[i]),
         fireAt,
         NotificationDetails(
           android: AndroidNotificationDetails(

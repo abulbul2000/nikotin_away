@@ -46,7 +46,7 @@ void main() {
         sensorEvents: sensorEvents,
       );
 
-      expect(result['nextRiskTrigger'], 'Meal context');
+      expect(result['nextRiskTrigger'], 'Yemek Sonrasi');
     });
   });
 }

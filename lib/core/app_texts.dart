@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'generated_language_data.dart';
+import 'mentor_command_codes.dart';
 
 class AppTexts {
   // Turkish - Full translation
@@ -1345,6 +1346,56 @@ class AppTexts {
     'taskNoSmoke90': '90 dakika sigarasiz kal',
     'adaptiveNoSmokeTaskTemplate':
       'Onumuzdeki {duration} boyunca sigara icmeyin. Elinizde sigara varsa hemen sondurun.',
+    'adaptiveNoSmokeWindowTemplate':
+      'Onumuzdeki {duration} boyunca sigara icmeyin, {window} penceresi oncesi hazir ol.',
+    'coachReductionTier75': 'Bugun hedef: duneden en az 1 sigara az, ilk sigarayi 90 dakika ertele.',
+    'coachReductionTier60': 'Bugun hedef: duneden en az 2 sigara az, her sigara oncesi 10 dakika bekle.',
+    'coachReductionTier40': 'Bugun hedef: duneden en az 3 sigara az, oglen sonrasi 1 sigarayi atla.',
+    'coachReductionTierBase': 'Bugun hedef: mevcut azalmayi koru, riski saatlerde sigara yerine su + sakiz uygula.',
+    'coachBreathDeclining': 'NEFES: Bugun 2 nefes testi yap, her testten sonra 2 dakika yavas nefes uygula.',
+    'coachBreathImproving': 'NEFES: Kazanimi koru, risk saatinden once 1 nefes rutini tamamla.',
+    'coachBreathStable': 'NEFES: Kriz aninda 2 dakika nefes + 1 bardak su uygula.',
+    'coachTrackReduceToday': 'TAKIP: Bugun toplam adedi dunun en az 2 altinda tamamla.',
+    'coachTrackCompleteThree': 'TAKIP: Bugun secilen gorevlerin en az 3 tanesini tamamlandi isaretle.',
+    'coachPrepWindowTemplate': 'HAZIRLIK: {window} oncesinde su + sakiz + kisa yuruyus planini hazirla.',
+    'coachTriggerDelayTemplate': 'TETIKLEYICI: {trigger} aninda 3 dakika ertele, sonra yeniden karar ver.',
+    'coachFocusRiskHourTemplate': 'ODAK: En riskli saat {hour} icin bildirimleri acik tut.',
+    'coachWeeklyTargetTemplate': 'HEDEF: Haftalik risk hedefini {percent} altina indir.',
+    'coachTriggerStressCommand': 'TETIKLEYICI-STRES: Stres aninda 90 saniye nefes + 1 bardak su, sonra yeniden karar ver.',
+    'coachTriggerCoffeeCommand': 'TETIKLEYICI-KAHVE: Kahveyi 30 dakika geciktir, kahve ile sigarayi baglama.',
+    'coachTriggerAlcoholCommand': 'TETIKLEYICI-ALKOL: Alkol gunlerinde ilk teklifte sigaraya hayir de, sakiz/su alternatifi kullan.',
+    'coachTriggerSocialCommand': 'TETIKLEYICI-SOSYAL: Sosyal ortama girmeden once hedefini destek kisina mesajla.',
+    'coachCrisisProtocol': 'KRIZ: Ilk istek dalgasinda 3 dakika ertele, ikinci dalgada 4D protokolunu uygula.',
+    'coachSupportSingleGoal': 'DESTEK: Bugun tek hedef sec ve tamamlayinca uygulamada isaretle.',
+    'coachHintHighRisk': 'Yuksek risk donemindesiniz: ilk sigarayi mutlaka erteleyin.',
+    'coachHintMedRisk': 'Orta-yuksek risk: tetikleyici aninda nefes + su rutini uygulayin.',
+    'coachHintLowRisk': 'Ritmi koruyun: bugun en az bir gorevi tamamlama hedefi koyun.',
+    'coachHintWindowTemplate': 'En riskli pencere: {window}. Bu saatten once hazirlik yapin.',
+    'coachHintTriggerTemplate': 'Tahmini tetikleyici: {trigger}. Alternatif davranis belirleyin.',
+    'coachRiskDaypart_high_morning_0': 'SABAH: Ilk sigarayi 90 dakika ertele, once 1 bardak su ic.',
+    'coachRiskDaypart_high_morning_1': 'KRIZ: 4D protokolunu uygula (ertele-nefes-su-dikkat dagit).',
+    'coachRiskDaypart_high_day_0': 'OGLE: Yemek sonrasi 7 dakika yuruyus yap, sonra karar ver.',
+    'coachRiskDaypart_high_day_1': 'TETIK: Kahve ile sigarayi ayir, kahveyi 30 dakika geciktir.',
+    'coachRiskDaypart_high_evening_0': 'AKSAM: Sosyal ortamda ilk teklife hayir de, 3 dakika ertele.',
+    'coachRiskDaypart_high_evening_1': 'DESTEK: Risk saatinden once destek kisina tek satir mesaj gonder.',
+    'coachRiskDaypart_high_night_0': 'GECE: Bu saatten sonra sigara yok, acil kriz rutini uygula.',
+    'coachRiskDaypart_high_night_1': 'GEVSEME: 3 dakika yavas nefes + su ile gunu kapat.',
+    'coachRiskDaypart_medium_morning_0': 'SABAH: Ilk sigarayi 45 dakika ertele.',
+    'coachRiskDaypart_medium_morning_1': 'RUTIN: Kahve oncesi 2 dakika nefes egzersizi yap.',
+    'coachRiskDaypart_medium_day_0': 'OGLE: Her sigara oncesi 10 dakika bekle.',
+    'coachRiskDaypart_medium_day_1': 'ATLA: Bugun ogleden sonra 1 sigarayi atla.',
+    'coachRiskDaypart_medium_evening_0': 'AKSAM: Riskli saatte sakiz/su alternatifi uygula.',
+    'coachRiskDaypart_medium_evening_1': 'TAKIP: Gun sonu sayiminda hedefi kontrol et.',
+    'coachRiskDaypart_medium_night_0': 'GECE: Son sigaradan sonra su ic, tekrar sigara icme.',
+    'coachRiskDaypart_medium_night_1': 'PLAN: Yarin ilk sigara saatini simdiden 15 dakika geciktir.',
+    'coachRiskDaypart_low_morning_0': 'SABAH: Ilk sigarayi en az 25 dakika ertele.',
+    'coachRiskDaypart_low_morning_1': 'KORU: Nefes kazancini korumak icin su + nefes rutini yap.',
+    'coachRiskDaypart_low_day_0': 'OGLE: Sadece planli saatlerde karar ver, otomatik yakma yok.',
+    'coachRiskDaypart_low_day_1': 'KORU: Oglen sonrasi 1 sigara yerine 5 dakika yuruyus yap.',
+    'coachRiskDaypart_low_evening_0': 'AKSAM: Sosyal tetikleyicilerde 3 dakika erteleme uygula.',
+    'coachRiskDaypart_low_evening_1': 'KORU: Gun sonu notuna bugun ise yarayan yontemi yaz.',
+    'coachRiskDaypart_low_night_0': 'GECE: Bu saatten sonra sigarayi kapat, kriz olursa nefes uygula.',
+    'coachRiskDaypart_low_night_1': 'KORU: Yarin icin risk saatine tek bir onlem yaz.',
     'taskNoteCraving': 'Kriz anini not et',
     'taskNotNowButton': 'Simdi degil',
     'taskOutcomeNo': 'Hayir',
@@ -2861,6 +2912,56 @@ class AppTexts {
     'taskNoSmoke90': 'Stay smoke-free for 90 minutes',
     'adaptiveNoSmokeTaskTemplate':
       'Do not smoke for the next {duration}. If you have a cigarette in your hand, put it out now.',
+    'adaptiveNoSmokeWindowTemplate':
+      'Do not smoke for the next {duration}, get ready before the {window} window.',
+    'coachReductionTier75': "Today's goal: at least 1 fewer cigarette than yesterday, delay the first one by 90 minutes.",
+    'coachReductionTier60': "Today's goal: at least 2 fewer cigarettes than yesterday, wait 10 minutes before each one.",
+    'coachReductionTier40': "Today's goal: at least 3 fewer cigarettes than yesterday, skip one after midday.",
+    'coachReductionTierBase': "Today's goal: keep the current reduction, use water + gum instead of smoking during risky hours.",
+    'coachBreathDeclining': 'BREATHING: Do 2 breath tests today, follow each with 2 minutes of slow breathing.',
+    'coachBreathImproving': 'BREATHING: Keep your gains, finish one breathing routine before your risk hour.',
+    'coachBreathStable': 'BREATHING: During a crisis, do 2 minutes of breathing + 1 glass of water.',
+    'coachTrackReduceToday': 'TRACK: Finish today at least 2 below yesterday\'s total count.',
+    'coachTrackCompleteThree': 'TRACK: Mark at least 3 of today\'s chosen tasks as done.',
+    'coachPrepWindowTemplate': 'PREPARE: Before {window}, prepare water + gum + a short walk plan.',
+    'coachTriggerDelayTemplate': 'TRIGGER: Delay 3 minutes when {trigger} hits, then decide again.',
+    'coachFocusRiskHourTemplate': 'FOCUS: Keep notifications on for your riskiest hour, {hour}.',
+    'coachWeeklyTargetTemplate': 'GOAL: Bring your weekly risk target below {percent}.',
+    'coachTriggerStressCommand': 'TRIGGER-STRESS: When stressed, do 90 seconds of breathing + 1 glass of water, then decide again.',
+    'coachTriggerCoffeeCommand': 'TRIGGER-COFFEE: Delay coffee by 30 minutes, don\'t pair coffee with smoking.',
+    'coachTriggerAlcoholCommand': 'TRIGGER-ALCOHOL: On drinking days, say no to the first cigarette offer, use gum/water instead.',
+    'coachTriggerSocialCommand': 'TRIGGER-SOCIAL: Before entering a social setting, message your support person about your goal.',
+    'coachCrisisProtocol': 'CRISIS: Delay 3 minutes on the first craving wave, apply the 4D protocol on the second.',
+    'coachSupportSingleGoal': 'SUPPORT: Pick a single goal today and mark it done in the app when finished.',
+    'coachHintHighRisk': 'You are in a high-risk period: be sure to delay your first cigarette.',
+    'coachHintMedRisk': 'Medium-high risk: use the breathing + water routine the moment a trigger hits.',
+    'coachHintLowRisk': 'Keep the rhythm: set a goal to complete at least one task today.',
+    'coachHintWindowTemplate': 'Riskiest window: {window}. Prepare before this time.',
+    'coachHintTriggerTemplate': 'Predicted trigger: {trigger}. Decide on an alternative behavior.',
+    'coachRiskDaypart_high_morning_0': 'MORNING: Delay your first cigarette by 90 minutes, drink a glass of water first.',
+    'coachRiskDaypart_high_morning_1': 'CRISIS: Apply the 4D protocol (delay-breathe-water-distract).',
+    'coachRiskDaypart_high_day_0': 'MIDDAY: Take a 7-minute walk after eating, then decide.',
+    'coachRiskDaypart_high_day_1': 'TRIGGER: Separate coffee from smoking, delay coffee by 30 minutes.',
+    'coachRiskDaypart_high_evening_0': 'EVENING: Say no to the first offer in a social setting, delay 3 minutes.',
+    'coachRiskDaypart_high_evening_1': 'SUPPORT: Send your support person a one-line message before your risk hour.',
+    'coachRiskDaypart_high_night_0': 'NIGHT: No smoking after this hour, apply the emergency crisis routine.',
+    'coachRiskDaypart_high_night_1': 'UNWIND: Close the day with 3 minutes of slow breathing + water.',
+    'coachRiskDaypart_medium_morning_0': 'MORNING: Delay your first cigarette by 45 minutes.',
+    'coachRiskDaypart_medium_morning_1': 'ROUTINE: Do a 2-minute breathing exercise before coffee.',
+    'coachRiskDaypart_medium_day_0': 'MIDDAY: Wait 10 minutes before each cigarette.',
+    'coachRiskDaypart_medium_day_1': 'SKIP: Skip one cigarette this afternoon.',
+    'coachRiskDaypart_medium_evening_0': 'EVENING: Use gum/water as an alternative during your risk hour.',
+    'coachRiskDaypart_medium_evening_1': 'TRACK: Check your goal in the end-of-day count.',
+    'coachRiskDaypart_medium_night_0': 'NIGHT: Drink water after your last cigarette, don\'t smoke again.',
+    'coachRiskDaypart_medium_night_1': 'PLAN: Push tomorrow\'s first-cigarette time back by 15 minutes, starting now.',
+    'coachRiskDaypart_low_morning_0': 'MORNING: Delay your first cigarette by at least 25 minutes.',
+    'coachRiskDaypart_low_morning_1': 'PROTECT: Do a water + breathing routine to protect your breathing gains.',
+    'coachRiskDaypart_low_day_0': 'MIDDAY: Only decide at planned times, no automatic lighting up.',
+    'coachRiskDaypart_low_day_1': 'PROTECT: Take a 5-minute walk instead of a cigarette after midday.',
+    'coachRiskDaypart_low_evening_0': 'EVENING: Apply a 3-minute delay for social triggers.',
+    'coachRiskDaypart_low_evening_1': 'PROTECT: Write down what worked today in your end-of-day note.',
+    'coachRiskDaypart_low_night_0': 'NIGHT: Stop smoking after this hour, use breathing if a crisis hits.',
+    'coachRiskDaypart_low_night_1': 'PROTECT: Write down one measure for tomorrow\'s risk hour.',
     'taskNoteCraving': 'Take a note of the craving moment',
     'taskNotNowButton': 'Not now',
     'taskOutcomeNo': 'No',
@@ -3613,6 +3714,147 @@ class AppTexts {
   static String localizeCanonicalTextForCode(String code, String value) {
     final normalized = value.trim();
 
+    var toneSuffix = '';
+    var core = normalized;
+    if (core.endsWith(MentorCommandCodes.toneSoftSuffix)) {
+      toneSuffix = 'soft';
+      core = core.substring(
+        0,
+        core.length - MentorCommandCodes.toneSoftSuffix.length,
+      );
+    } else if (core.endsWith(MentorCommandCodes.toneActiveSuffix)) {
+      toneSuffix = 'active';
+      core = core.substring(
+        0,
+        core.length - MentorCommandCodes.toneActiveSuffix.length,
+      );
+    }
+
+    final resolved = _localizeCanonicalCore(code, core);
+    return toneSuffix.isEmpty
+        ? resolved
+        : _applyToneVariant(code, resolved, toneSuffix);
+  }
+
+  static String _localizeCanonicalCore(String code, String normalized) {
+    final riskDaypart = RegExp(
+      r'^RISKDAYPART_(HIGH|MEDIUM|LOW)_(MORNING|DAY|EVENING|NIGHT)_(0|1)$',
+    ).firstMatch(normalized);
+    if (riskDaypart != null) {
+      final key = 'coachRiskDaypart_'
+          '${riskDaypart.group(1)!.toLowerCase()}_'
+          '${riskDaypart.group(2)!.toLowerCase()}_'
+          '${riskDaypart.group(3)}';
+      return textForCode(code, key);
+    }
+
+    final adaptiveWindow = RegExp(
+      r'^ADAPTIVE_NO_SMOKE_WINDOW:(\d+):(.+)$',
+    ).firstMatch(normalized);
+    if (adaptiveWindow != null) {
+      final minutes = int.tryParse(adaptiveWindow.group(1) ?? '15') ?? 15;
+      final window = adaptiveWindow.group(2)!;
+      final template = textForCode(code, 'adaptiveNoSmokeWindowTemplate');
+      return template
+          .replaceAll('{duration}', formatAdaptiveDurationPhrase(code, minutes))
+          .replaceAll('{window}', window);
+    }
+
+    final prepWindow = RegExp(
+      r'^PREP_WINDOW:(.+)$',
+    ).firstMatch(normalized);
+    if (prepWindow != null) {
+      final template = textForCode(code, 'coachPrepWindowTemplate');
+      return template.replaceAll('{window}', prepWindow.group(1)!);
+    }
+
+    final triggerDelay = RegExp(
+      r'^TRIGGER_DELAY:(.+)$',
+    ).firstMatch(normalized);
+    if (triggerDelay != null) {
+      final localizedTrigger = localizeCanonicalTextForCode(
+        code,
+        triggerDelay.group(1)!,
+      );
+      final template = textForCode(code, 'coachTriggerDelayTemplate');
+      return template.replaceAll('{trigger}', localizedTrigger);
+    }
+
+    final focusRiskHour = RegExp(
+      r'^FOCUS_RISK_HOUR:(.+)$',
+    ).firstMatch(normalized);
+    if (focusRiskHour != null) {
+      final template = textForCode(code, 'coachFocusRiskHourTemplate');
+      return template.replaceAll('{hour}', focusRiskHour.group(1)!);
+    }
+
+    final weeklyTarget = RegExp(
+      r'^WEEKLY_TARGET:(\d+)$',
+    ).firstMatch(normalized);
+    if (weeklyTarget != null) {
+      final template = textForCode(code, 'coachWeeklyTargetTemplate');
+      return template.replaceAll('{percent}', weeklyTarget.group(1)!);
+    }
+
+    final hintWindow = RegExp(
+      r'^HINT_WINDOW:(.+)$',
+    ).firstMatch(normalized);
+    if (hintWindow != null) {
+      final template = textForCode(code, 'coachHintWindowTemplate');
+      return template.replaceAll('{window}', hintWindow.group(1)!);
+    }
+
+    final hintTrigger = RegExp(
+      r'^HINT_TRIGGER:(.+)$',
+    ).firstMatch(normalized);
+    if (hintTrigger != null) {
+      final localizedTrigger = localizeCanonicalTextForCode(
+        code,
+        hintTrigger.group(1)!,
+      );
+      final template = textForCode(code, 'coachHintTriggerTemplate');
+      return template.replaceAll('{trigger}', localizedTrigger);
+    }
+
+    switch (normalized) {
+      case MentorCommandCodes.reductionTier75:
+        return textForCode(code, 'coachReductionTier75');
+      case MentorCommandCodes.reductionTier60:
+        return textForCode(code, 'coachReductionTier60');
+      case MentorCommandCodes.reductionTier40:
+        return textForCode(code, 'coachReductionTier40');
+      case MentorCommandCodes.reductionTierBase:
+        return textForCode(code, 'coachReductionTierBase');
+      case MentorCommandCodes.breathDeclining:
+        return textForCode(code, 'coachBreathDeclining');
+      case MentorCommandCodes.breathImproving:
+        return textForCode(code, 'coachBreathImproving');
+      case MentorCommandCodes.breathStable:
+        return textForCode(code, 'coachBreathStable');
+      case MentorCommandCodes.trackReduceToday:
+        return textForCode(code, 'coachTrackReduceToday');
+      case MentorCommandCodes.trackCompleteThree:
+        return textForCode(code, 'coachTrackCompleteThree');
+      case MentorCommandCodes.triggerStress:
+        return textForCode(code, 'coachTriggerStressCommand');
+      case MentorCommandCodes.triggerCoffee:
+        return textForCode(code, 'coachTriggerCoffeeCommand');
+      case MentorCommandCodes.triggerAlcohol:
+        return textForCode(code, 'coachTriggerAlcoholCommand');
+      case MentorCommandCodes.triggerSocial:
+        return textForCode(code, 'coachTriggerSocialCommand');
+      case MentorCommandCodes.crisisProtocol:
+        return textForCode(code, 'coachCrisisProtocol');
+      case MentorCommandCodes.supportSingleGoal:
+        return textForCode(code, 'coachSupportSingleGoal');
+      case MentorCommandCodes.hintHighRisk:
+        return textForCode(code, 'coachHintHighRisk');
+      case MentorCommandCodes.hintMedRisk:
+        return textForCode(code, 'coachHintMedRisk');
+      case MentorCommandCodes.hintLowRisk:
+        return textForCode(code, 'coachHintLowRisk');
+    }
+
     final adaptiveCanonical = RegExp(
       r'^ADAPTIVE_NO_SMOKE:(\d+)$',
       caseSensitive: false,
@@ -3765,7 +4007,81 @@ class AppTexts {
       return '${localizeCanonicalTextForCode(code, parts[0])} - ${localizeCanonicalTextForCode(code, parts[1])}';
     }
 
-    return value;
+    return normalized;
+  }
+
+  /// Softens or sharpens a coach command's tone after translation -- the
+  /// runtime-side counterpart of MentorEngine's old `_softenCommandTone`/
+  /// `_activateCommandTone` word-replacement, which had to move here once
+  /// the engine stopped producing language-specific sentences.
+  ///
+  /// Only TR/EN get a real wording change, same precedent as
+  /// formatAdaptiveDurationPhrase (see its comment): every other language
+  /// silently keeps the neutral phrasing rather than getting a half-correct
+  /// tone transform.
+  static String _applyToneVariant(String code, String text, String tone) {
+    if (code != 'tr' && code != 'en') {
+      return text;
+    }
+    if (tone == 'soft') {
+      return code == 'tr' ? _softenTr(text) : _softenEn(text);
+    }
+    if (tone == 'active') {
+      return code == 'tr' ? _activateTr(text) : _activateEn(text);
+    }
+    return text;
+  }
+
+  static String _softenTr(String text) {
+    var result = text
+        .replaceAll('mutlaka ', '')
+        .replaceAll('en az ', '')
+        .replaceAll('tamamla', 'dene')
+        .replaceAll('uygula', 'dene')
+        .replaceAll('kapat', 'azalt');
+    result = result.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (result.endsWith('!')) {
+      result = '${result.substring(0, result.length - 1)}.';
+    }
+    return result;
+  }
+
+  static String _activateTr(String text) {
+    var result = text.replaceAll('dene', 'uygula');
+    if (!result.endsWith('!')) {
+      if (result.endsWith('.')) {
+        result = '${result.substring(0, result.length - 1)}!';
+      } else {
+        result = '$result!';
+      }
+    }
+    return result;
+  }
+
+  static String _softenEn(String text) {
+    var result = text
+        .replaceAll('be sure to ', '')
+        .replaceAll('at least ', '')
+        .replaceAll('complete', 'try')
+        .replaceAll('apply', 'try')
+        .replaceAll('close', 'ease up on');
+    result = result.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (result.endsWith('!')) {
+      result = '${result.substring(0, result.length - 1)}.';
+    }
+    return result;
+  }
+
+  static String _activateEn(String text) {
+    var result = text.replaceAll('try', 'apply');
+    if (!result.endsWith('!')) {
+      if (result.endsWith('.')) {
+        result = '${result.substring(0, result.length - 1)}!';
+      } else {
+        result = '$result!';
+      }
+    }
+    return result;
   }
 
   static String localizeCanonicalText(BuildContext context, String value) {
