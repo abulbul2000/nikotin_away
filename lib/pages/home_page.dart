@@ -2187,6 +2187,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildMentorCard(BuildContext context) {
     final message = _latestMentorMessage!;
+    final languageCode = Localizations.localeOf(context).languageCode;
     final toneColor = switch (message.tone) {
       'coach' => AppTheme.brandPrimary,
       'supportive' => Colors.amber,
@@ -2219,12 +2220,16 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
             const SizedBox(height: 10),
-            Text(message.text, style: const TextStyle(fontSize: 14, height: 1.5)),
+            Text(
+              AppTexts.localizeMentorMessage(languageCode, message.text),
+              style: const TextStyle(fontSize: 14, height: 1.5),
+            ),
             if (message.quickReplies.isNotEmpty) ...[
               const SizedBox(height: 12),
               if (answered)
                 Text(
-                  '${context.t('mentorReplySentPrefix')}: ${message.userReply}',
+                  '${context.t('mentorReplySentPrefix')}: '
+                  '${AppTexts.localizeMentorReplyCode(languageCode, message.userReply!)}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontStyle: FontStyle.italic,
@@ -2239,7 +2244,9 @@ class _HomePageState extends State<HomePage> {
                       .map(
                         (reply) => OutlinedButton(
                           onPressed: () => _replyToMentorMessage(reply),
-                          child: Text(reply),
+                          child: Text(
+                            AppTexts.localizeMentorReplyCode(languageCode, reply),
+                          ),
                         ),
                       )
                       .toList(),

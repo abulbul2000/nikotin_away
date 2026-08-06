@@ -36,17 +36,17 @@ void main() {
         id: 'm1',
         createdAt: DateTime(2026, 7, 21, 21, 0),
         type: 'daily',
-        text: 'Bugün nasıl geçti?',
+        text: 'MENTOR_DAILY_NEUTRAL_NOHOUR',
         tone: 'coach',
-        quickReplies: const ['İyiyim', 'Zorlanıyorum'],
+        quickReplies: const ['QUICK_REPLY_OK', 'QUICK_REPLY_STRUGGLING'],
         read: false,
       ),
     );
 
     final latest = await storage.loadLatestMentorMessage();
     expect(latest, isNotNull);
-    expect(latest!.text, 'Bugün nasıl geçti?');
-    expect(latest.quickReplies, ['İyiyim', 'Zorlanıyorum']);
+    expect(latest!.text, 'MENTOR_DAILY_NEUTRAL_NOHOUR');
+    expect(latest.quickReplies, ['QUICK_REPLY_OK', 'QUICK_REPLY_STRUGGLING']);
     expect(latest.read, isFalse);
   });
 
@@ -57,18 +57,18 @@ void main() {
         id: 'm2',
         createdAt: DateTime(2026, 7, 21, 21, 0),
         type: 'daily',
-        text: 'Bugün nasıl geçti?',
+        text: 'MENTOR_DAILY_NEUTRAL_NOHOUR',
         tone: 'coach',
-        quickReplies: const ['İyiyim', 'Zorlanıyorum'],
+        quickReplies: const ['QUICK_REPLY_OK', 'QUICK_REPLY_STRUGGLING'],
         read: false,
       ),
     );
 
-    await storage.replyToMentorMessage('m2', 'İyiyim');
+    await storage.replyToMentorMessage('m2', 'QUICK_REPLY_OK');
 
     final messages = await storage.loadMentorMessages();
     expect(messages.first.read, isTrue);
-    expect(messages.first.userReply, 'İyiyim');
+    expect(messages.first.userReply, 'QUICK_REPLY_OK');
   });
 
   test('loadMentorMessages returns newest first', () async {

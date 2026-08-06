@@ -1581,6 +1581,49 @@ class AppTexts {
     'recoveryYear1Desc': 'Koroner kalp hastalığı riski yarı yarıya azalır.',
     'recoveryYear5Desc': 'İnme riski, hiç içmemiş biri seviyesine yaklaşır.',
     'recoveryYear10Desc': 'Akciğer kanseri riski yaklaşık yarıya iner.',
+
+    'mentorDailyCoachHourTemplate':
+      'Bu ara gerçekten iyi gidiyorsun. Bugün özellikle {hour} aralığına dikkat et, gerisini zaten götürüyorsun.',
+    'mentorDailyCoachNoHour': 'Bu ara gerçekten iyi gidiyorsun. Bu tempoyu koruyalım.',
+    'mentorDailySupportive':
+      'Son günler senin için kolay geçmiyor gibi görünüyor, bunu görüyorum. Bugün mükemmel olması gerekmiyor — sadece bir sonraki anı atlatmaya odaklan.',
+    'mentorDailyNeutralHourTemplate': 'Bugün nasıl gidiyor? {hour} aralığında yanındayım.',
+    'mentorDailyNeutralNoHour': 'Bugün nasıl gidiyor? ',
+    'mentorBreathImprovingNote': 'Son nefes testlerin de iyiye gidiyor, bunu fark ettim — devam et.',
+    'mentorWeeklyCoachTemplate':
+      'Bu hafta gerçekten güçlüydün — {count} görevi tamamladın. Bu ivmeyi haftaya da taşıyalım.',
+    'mentorWeeklySupportive':
+      'Bu hafta zorlu geçti, farkındayım. Sayılar önemli değil şu an — önemli olan hâlâ burada olman.',
+    'mentorWeeklyNeutralTemplate':
+      'Bu haftaki risk seviyen: {level}. Detaylı bir haftalık anketle daha net bir resim çıkarabiliriz.',
+    'mentorHistImprovedTemplate':
+      'Geçen hafta {daypart} zorlanmıştın — bu hafta o saatlerde hiç kayıt yok, harika gidiyor.',
+    'mentorHistWorseningTemplate':
+      'Geçen hafta {daypart} zorlanmıştın, bu hafta da benzer görünüyor. Birlikte bu saatlere özel bir plan yapalım mı?',
+    'mentorHistSimilarTemplate':
+      'Geçen hafta {daypart} zorlanmıştın, bu hafta biraz daha iyi görünüyorsun.',
+    'mentorDayPartMorning': 'sabahları',
+    'mentorDayPartAfternoon': 'öğleden sonraları',
+    'mentorDayPartEvening': 'akşamları',
+    'mentorDayPartNight': 'geceleri',
+    'mentorReframeSuspiciousWithTitleTemplate':
+      'Az önce bir şeyler ters gitmiş gibi göründü ("{title}" sırasında). İyi misin? İstersen birlikte kısa bir nefes molası verelim.',
+    'mentorReframeSuspiciousNoTitle':
+      'Az önce bir şeyler ters gitmiş gibi göründü. İyi misin? İstersen birlikte kısa bir nefes molası verelim.',
+    'mentorReframeWillpower':
+      'Bu sefer olmadı, sorun değil — bu bir başarısızlık değil, sürecin bir parçası. Yarın yeniden deneriz.',
+    'mentorReframeDeferredStart': 'Şimdi uygun değilse anlıyorum, 10 dakika sonra tekrar hatırlatacağım.',
+    'mentorReframeFollowupDeferred': 'Tamam, biraz sonra tekrar soracağım.',
+    'mentorReframeDurationBarrier':
+      'Bu hedef sana göre biraz uzun geldi sanırım. Bir dahaki sefere daha kısa bir süreyle başlayalım — küçük adımlar da ilerlemedir.',
+    'quickReplyOk': 'İyiyim',
+    'quickReplyStruggling': 'Zorlanıyorum',
+    'quickReplyNoTalk': 'Konuşmak istemiyorum',
+    'quickReplyFillWeeklySurvey': 'Haftalık anketi doldur',
+    'quickReplyLater': 'Daha sonra',
+    'quickReplyThanks': 'Teşekkürler',
+    'quickReplyLetsTalk': 'Konuşalım',
+    'quickReplyOkAck': 'Tamam',
   };
 
   // English - Full translation
@@ -3172,6 +3215,50 @@ class AppTexts {
     'recoveryYear1Desc': 'Risk of coronary heart disease is cut in half.',
     'recoveryYear5Desc': 'Stroke risk approaches that of a non-smoker.',
     'recoveryYear10Desc': 'Lung cancer death rate is about half that of a smoker.',
+
+    'mentorDailyCoachHourTemplate':
+      "You've really been doing well lately. Pay extra attention to {hour} today — you've got the rest handled.",
+    'mentorDailyCoachNoHour': "You've really been doing well lately. Let's keep this pace up.",
+    'mentorDailySupportive':
+      "The last few days haven't been easy for you, I can see that. Today doesn't need to be perfect — just focus on getting through the next moment.",
+    'mentorDailyNeutralHourTemplate': "How's today going? I'm with you during {hour}.",
+    'mentorDailyNeutralNoHour': "How's today going? ",
+    'mentorBreathImprovingNote':
+      "I noticed your recent breath tests are improving too — keep it up.",
+    'mentorWeeklyCoachTemplate':
+      "You were really strong this week — you completed {count} tasks. Let's carry this momentum into next week.",
+    'mentorWeeklySupportive':
+      "This week was tough, I know. The numbers don't matter right now — what matters is that you're still here.",
+    'mentorWeeklyNeutralTemplate':
+      "Your risk level this week: {level}. A detailed weekly survey can give us a clearer picture.",
+    'mentorHistImprovedTemplate':
+      "You were struggling {daypart} last week — there's no record at all this week during that time, that's great.",
+    'mentorHistWorseningTemplate':
+      "You were struggling {daypart} last week, and it looks similar this week. Should we make a plan together for that time?",
+    'mentorHistSimilarTemplate':
+      "You were struggling {daypart} last week, and you look a bit better this week.",
+    'mentorDayPartMorning': 'in the mornings',
+    'mentorDayPartAfternoon': 'in the afternoons',
+    'mentorDayPartEvening': 'in the evenings',
+    'mentorDayPartNight': 'at night',
+    'mentorReframeSuspiciousWithTitleTemplate':
+      'Something seemed to go wrong just now (during "{title}"). Are you okay? We can take a short breathing break together if you want.',
+    'mentorReframeSuspiciousNoTitle':
+      'Something seemed to go wrong just now. Are you okay? We can take a short breathing break together if you want.',
+    'mentorReframeWillpower':
+      "It didn't work out this time, that's okay — this isn't a failure, it's part of the process. We'll try again tomorrow.",
+    'mentorReframeDeferredStart': "I understand if now isn't a good time, I'll remind you again in 10 minutes.",
+    'mentorReframeFollowupDeferred': "Okay, I'll ask again in a bit.",
+    'mentorReframeDurationBarrier':
+      "I think this goal was a bit long for you. Let's start with a shorter duration next time — small steps are still progress.",
+    'quickReplyOk': "I'm okay",
+    'quickReplyStruggling': "I'm struggling",
+    'quickReplyNoTalk': "I don't want to talk",
+    'quickReplyFillWeeklySurvey': 'Fill weekly survey',
+    'quickReplyLater': 'Later',
+    'quickReplyThanks': 'Thanks',
+    'quickReplyLetsTalk': "Let's talk",
+    'quickReplyOkAck': 'Okay',
   };
 
   // All 40 languages - each inherits from EN, with top keys translated
@@ -3709,6 +3796,115 @@ class AppTexts {
           : '$hours hour${hours == 1 ? '' : 's'} $remaining minute${remaining == 1 ? '' : 's'}';
     }
     return isTr ? '$minutes dakika' : '$minutes minute${minutes == 1 ? '' : 's'}';
+  }
+
+  /// Resolves a [MentorMessageBuilder]-produced canonical `text` value (a
+  /// [MentorMessageCodes.segmentSeparator]-joined list of segments, each
+  /// either a plain code or a `CODE:param` pair) into the user's language,
+  /// joining resolved segments with a blank line the same way the old
+  /// hardcoded-Turkish builder used to join its sentences with `\n\n`.
+  static String localizeMentorMessage(String code, String rawText) {
+    return rawText
+        .split(MentorMessageCodes.segmentSeparator)
+        .map((segment) => _localizeMentorSegment(code, segment))
+        .join('\n\n');
+  }
+
+  static String _localizeMentorSegment(String code, String segment) {
+    final colonIndex = segment.indexOf(':');
+    final prefix = colonIndex == -1 ? segment : segment.substring(0, colonIndex);
+    final param = colonIndex == -1 ? null : segment.substring(colonIndex + 1);
+
+    switch (prefix) {
+      case MentorMessageCodes.dailyCoachWithHour:
+        return textForCode(code, 'mentorDailyCoachHourTemplate')
+            .replaceAll('{hour}', param ?? '');
+      case MentorMessageCodes.dailyCoachNoHour:
+        return textForCode(code, 'mentorDailyCoachNoHour');
+      case MentorMessageCodes.dailySupportive:
+        return textForCode(code, 'mentorDailySupportive');
+      case MentorMessageCodes.dailyNeutralWithHour:
+        return textForCode(code, 'mentorDailyNeutralHourTemplate')
+            .replaceAll('{hour}', param ?? '');
+      case MentorMessageCodes.dailyNeutralNoHour:
+        return textForCode(code, 'mentorDailyNeutralNoHour');
+      case MentorMessageCodes.breathImprovingNote:
+        return textForCode(code, 'mentorBreathImprovingNote');
+      case MentorMessageCodes.weeklyCoachPrefix:
+        return textForCode(code, 'mentorWeeklyCoachTemplate')
+            .replaceAll('{count}', param ?? '');
+      case MentorMessageCodes.weeklySupportive:
+        return textForCode(code, 'mentorWeeklySupportive');
+      case MentorMessageCodes.weeklyNeutralPrefix:
+        return textForCode(code, 'mentorWeeklyNeutralTemplate')
+            .replaceAll('{level}', localizeCanonicalTextForCode(code, param ?? ''));
+      case MentorMessageCodes.histImprovedPrefix:
+        return textForCode(code, 'mentorHistImprovedTemplate')
+            .replaceAll('{daypart}', _dayPartLabel(code, param));
+      case MentorMessageCodes.histWorseningPrefix:
+        return textForCode(code, 'mentorHistWorseningTemplate')
+            .replaceAll('{daypart}', _dayPartLabel(code, param));
+      case MentorMessageCodes.histSimilarPrefix:
+        return textForCode(code, 'mentorHistSimilarTemplate')
+            .replaceAll('{daypart}', _dayPartLabel(code, param));
+      case MentorMessageCodes.reframeSuspiciousWithTitle:
+        return textForCode(code, 'mentorReframeSuspiciousWithTitleTemplate')
+            .replaceAll('{title}', param ?? '');
+      case MentorMessageCodes.reframeSuspiciousNoTitle:
+        return textForCode(code, 'mentorReframeSuspiciousNoTitle');
+      case MentorMessageCodes.reframeWillpower:
+        return textForCode(code, 'mentorReframeWillpower');
+      case MentorMessageCodes.reframeDeferredStart:
+        return textForCode(code, 'mentorReframeDeferredStart');
+      case MentorMessageCodes.reframeFollowupDeferred:
+        return textForCode(code, 'mentorReframeFollowupDeferred');
+      case MentorMessageCodes.reframeDurationBarrier:
+        return textForCode(code, 'mentorReframeDurationBarrier');
+      default:
+        return segment;
+    }
+  }
+
+  static String _dayPartLabel(String code, String? dayPart) {
+    switch (dayPart) {
+      case 'morning':
+        return textForCode(code, 'mentorDayPartMorning');
+      case 'afternoon':
+        return textForCode(code, 'mentorDayPartAfternoon');
+      case 'evening':
+        return textForCode(code, 'mentorDayPartEvening');
+      case 'night':
+        return textForCode(code, 'mentorDayPartNight');
+      default:
+        return dayPart ?? '';
+    }
+  }
+
+  /// Resolves a [MentorMessageBuilder] quick-reply or reframed-violation
+  /// `userReply` code (e.g. [MentorMessageCodes.quickReplyOk]) into the
+  /// user's language. Falls back to returning the code itself for anything
+  /// unrecognized, so a stale/legacy literal reply still displays as-is.
+  static String localizeMentorReplyCode(String code, String replyCode) {
+    switch (replyCode) {
+      case MentorMessageCodes.quickReplyOk:
+        return textForCode(code, 'quickReplyOk');
+      case MentorMessageCodes.quickReplyStruggling:
+        return textForCode(code, 'quickReplyStruggling');
+      case MentorMessageCodes.quickReplyNoTalk:
+        return textForCode(code, 'quickReplyNoTalk');
+      case MentorMessageCodes.quickReplyFillWeeklySurvey:
+        return textForCode(code, 'quickReplyFillWeeklySurvey');
+      case MentorMessageCodes.quickReplyLater:
+        return textForCode(code, 'quickReplyLater');
+      case MentorMessageCodes.quickReplyThanks:
+        return textForCode(code, 'quickReplyThanks');
+      case MentorMessageCodes.quickReplyLetsTalk:
+        return textForCode(code, 'quickReplyLetsTalk');
+      case MentorMessageCodes.quickReplyOkAck:
+        return textForCode(code, 'quickReplyOkAck');
+      default:
+        return replyCode;
+    }
   }
 
   static String localizeCanonicalTextForCode(String code, String value) {

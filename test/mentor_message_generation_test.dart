@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/core/mentor_command_codes.dart';
 import 'package:no_smoke/services/storage_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -66,6 +67,9 @@ void main() {
 
     final message = await storage.generateDailyMentorMessage(now: now);
 
-    expect(message.text, contains('akşamları'));
+    expect(
+      message.text,
+      contains('${MentorMessageCodes.histImprovedPrefix}:evening'),
+    );
   });
 }

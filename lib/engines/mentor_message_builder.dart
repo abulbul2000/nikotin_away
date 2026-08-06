@@ -1,3 +1,4 @@
+import '../core/mentor_command_codes.dart';
 import '../models/mentor_message.dart';
 
 /// Turns the app's existing coaching signals (risk score, risky hours,
@@ -11,6 +12,12 @@ import '../models/mentor_message.dart';
 /// neutral. This is a deliberately simple, rule-based, fully-offline
 /// implementation — see the "AI-backed replies" tier discussion for a
 /// future richer alternative gated behind the top payment tier.
+///
+/// `text`/`quickReplies`/`userReply` are all canonical IDs (see
+/// [MentorMessageCodes]), not literal strings — the result gets persisted
+/// to SQLite, so a hardcoded language choice here would be baked into the
+/// user's history forever. AppTexts.localizeMentorMessage resolves them to
+/// the user's language at display time.
 class MentorMessageBuilder {
   static const List<String> _dayParts = [
     'morning',
@@ -40,54 +47,50 @@ class MentorMessageBuilder {
     final tone = _tone(recentSuccessRate);
     final timestamp = now ?? DateTime.now();
 
-    final buffer = StringBuffer();
+    final segments = <String>[];
     switch (tone) {
       case 'coach':
-        buffer.write(
-          'Bu ara gerçekten iyi gidiyorsun. ',
+        segments.add(
+          riskyHours.isNotEmpty
+              ? '${MentorMessageCodes.dailyCoachWithHour}:${riskyHours.first}'
+              : MentorMessageCodes.dailyCoachNoHour,
         );
-        if (riskyHours.isNotEmpty) {
-          buffer.write(
-            'Bugün özellikle ${riskyHours.first} aralığına dikkat et, gerisini zaten götürüyorsun.',
-          );
-        } else {
-          buffer.write('Bu tempoyu koruyalım.');
-        }
         break;
       case 'supportive':
-        buffer.write(
-          'Son günler senin için kolay geçmiyor gibi görünüyor, bunu görüyorum. ',
-        );
-        buffer.write(
-          'Bugün mükemmel olması gerekmiyor — sadece bir sonraki anı atlatmaya odaklan.',
-        );
+        segments.add(MentorMessageCodes.dailySupportive);
         break;
       default:
-        buffer.write('Bugün nasıl gidiyor? ');
-        if (riskyHours.isNotEmpty) {
-          buffer.write('${riskyHours.first} aralığında yanındayım.');
-        }
+        segments.add(
+          riskyHours.isNotEmpty
+              ? '${MentorMessageCodes.dailyNeutralWithHour}:${riskyHours.first}'
+              : MentorMessageCodes.dailyNeutralNoHour,
+        );
     }
 
     if (breathTrend == 'improving') {
-      buffer.write(
-        ' Son nefes testlerin de iyiye gidiyor, bunu fark ettim — devam et.',
-      );
+      segments.add(MentorMessageCodes.breathImprovingNote);
     }
 
     if (historicalNote != null && historicalNote.isNotEmpty) {
-      buffer.write('\n\n$historicalNote');
+      segments.add(historicalNote);
     }
 
     final quickReplies = tone == 'supportive'
-        ? const ['İyiyim', 'Zorlanıyorum', 'Konuşmak istemiyorum']
-        : const ['İyiyim', 'Zorlanıyorum'];
+        ? const [
+            MentorMessageCodes.quickReplyOk,
+            MentorMessageCodes.quickReplyStruggling,
+            MentorMessageCodes.quickReplyNoTalk,
+          ]
+        : const [
+            MentorMessageCodes.quickReplyOk,
+            MentorMessageCodes.quickReplyStruggling,
+          ];
 
     return MentorMessage(
       id: 'mentor_daily_${timestamp.millisecondsSinceEpoch}',
       createdAt: timestamp,
       type: 'daily',
-      text: buffer.toString(),
+      text: segments.join(MentorMessageCodes.segmentSeparator),
       tone: tone,
       quickReplies: quickReplies,
       read: false,
@@ -105,35 +108,36 @@ class MentorMessageBuilder {
     final tone = _tone(recentSuccessRate);
     final timestamp = now ?? DateTime.now();
 
-    final buffer = StringBuffer();
+    final segments = <String>[];
     switch (tone) {
       case 'coach':
-        buffer.write(
-          'Bu hafta gerçekten güçlüydün — $completedTasksThisWeek görevi tamamladın. Bu ivmeyi haftaya da taşıyalım.',
+        segments.add(
+          '${MentorMessageCodes.weeklyCoachPrefix}:$completedTasksThisWeek',
         );
         break;
       case 'supportive':
-        buffer.write(
-          'Bu hafta zorlu geçti, farkındayım. Sayılar önemli değil şu an — önemli olan hâlâ burada olman.',
-        );
+        segments.add(MentorMessageCodes.weeklySupportive);
         break;
       default:
-        buffer.write(
-          'Bu haftaki risk seviyen: $weeklyRiskLevel. Detaylı bir haftalık anketle daha net bir resim çıkarabiliriz.',
+        segments.add(
+          '${MentorMessageCodes.weeklyNeutralPrefix}:$weeklyRiskLevel',
         );
     }
 
     if (historicalNote != null && historicalNote.isNotEmpty) {
-      buffer.write('\n\n$historicalNote');
+      segments.add(historicalNote);
     }
 
     return MentorMessage(
       id: 'mentor_weekly_${timestamp.millisecondsSinceEpoch}',
       createdAt: timestamp,
       type: 'weekly',
-      text: buffer.toString(),
+      text: segments.join(MentorMessageCodes.segmentSeparator),
       tone: tone,
-      quickReplies: const ['Haftalık anketi doldur', 'Daha sonra'],
+      quickReplies: const [
+        MentorMessageCodes.quickReplyFillWeeklySurvey,
+        MentorMessageCodes.quickReplyLater,
+      ],
       read: false,
     );
   }
@@ -142,6 +146,8 @@ class MentorMessageBuilder {
   /// callback by comparing which part of the day smoking events clustered
   /// in last week versus this week. Returns null when there isn't enough
   /// data yet to say anything meaningful — a quiet mentor beats a wrong one.
+  ///
+  /// Returns a canonical `MENTOR_HIST_*:dayPart` code, not literal text.
   String? buildHistoricalNote({
     required Map<String, int> lastWeekDayPartCounts,
     required Map<String, int> thisWeekDayPartCounts,
@@ -166,30 +172,14 @@ class MentorMessageBuilder {
     }
 
     final thisWeekCount = thisWeekDayPartCounts[dominantPart] ?? 0;
-    final label = _dayPartLabel(dominantPart);
 
     if (thisWeekCount == 0) {
-      return 'Geçen hafta $label zorlanmıştın — bu hafta o saatlerde hiç kayıt yok, harika gidiyor.';
+      return '${MentorMessageCodes.histImprovedPrefix}:$dominantPart';
     }
     if (thisWeekCount >= dominantCount) {
-      return 'Geçen hafta $label zorlanmıştın, bu hafta da benzer görünüyor. Birlikte bu saatlere özel bir plan yapalım mı?';
+      return '${MentorMessageCodes.histWorseningPrefix}:$dominantPart';
     }
-    return 'Geçen hafta $label zorlanmıştın, bu hafta biraz daha iyi görünüyorsun.';
-  }
-
-  String _dayPartLabel(String part) {
-    switch (part) {
-      case 'morning':
-        return 'sabahları';
-      case 'afternoon':
-        return 'öğleden sonraları';
-      case 'evening':
-        return 'akşamları';
-      case 'night':
-        return 'geceleri';
-      default:
-        return part;
-    }
+    return '${MentorMessageCodes.histSimilarPrefix}:$dominantPart';
   }
 
   /// Reframes a protocol-violation event (logged by
@@ -208,32 +198,33 @@ class MentorMessageBuilder {
 
     switch (violationType) {
       case 'suspicious_behavior':
-        text =
-            'Az önce bir şeyler ters gitmiş gibi göründü${taskTitle != null ? " (\"$taskTitle\" sırasında)" : ""}. İyi misin? İstersen birlikte kısa bir nefes molası verelim.';
+        text = taskTitle != null
+            ? '${MentorMessageCodes.reframeSuspiciousWithTitle}:$taskTitle'
+            : MentorMessageCodes.reframeSuspiciousNoTitle;
         tone = 'supportive';
-        quickReplies = const ['İyiyim', 'Konuşalım'];
+        quickReplies = const [
+          MentorMessageCodes.quickReplyOk,
+          MentorMessageCodes.quickReplyLetsTalk,
+        ];
         break;
       case 'willpower_weakness':
       case 'followup_failed':
-        text =
-            'Bu sefer olmadı, sorun değil — bu bir başarısızlık değil, sürecin bir parçası. Yarın yeniden deneriz.';
+        text = MentorMessageCodes.reframeWillpower;
         tone = 'supportive';
-        quickReplies = const ['Teşekkürler'];
+        quickReplies = const [MentorMessageCodes.quickReplyThanks];
         break;
       case 'deferred_start':
-        text =
-            'Şimdi uygun değilse anlıyorum, 10 dakika sonra tekrar hatırlatacağım.';
+        text = MentorMessageCodes.reframeDeferredStart;
         tone = 'neutral';
         break;
       case 'followup_deferred':
-        text = 'Tamam, biraz sonra tekrar soracağım.';
+        text = MentorMessageCodes.reframeFollowupDeferred;
         tone = 'neutral';
         break;
       case 'duration_barrier_failure':
-        text =
-            'Bu hedef sana göre biraz uzun geldi sanırım. Bir dahaki sefere daha kısa bir süreyle başlayalım — küçük adımlar da ilerlemedir.';
+        text = MentorMessageCodes.reframeDurationBarrier;
         tone = 'supportive';
-        quickReplies = const ['Tamam'];
+        quickReplies = const [MentorMessageCodes.quickReplyOkAck];
         break;
       default:
         return null;

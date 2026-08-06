@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/core/mentor_command_codes.dart';
 import 'package:no_smoke/engines/mentor_message_builder.dart';
 
 void main() {
@@ -12,6 +13,10 @@ void main() {
     );
     expect(message.tone, 'coach');
     expect(message.type, 'daily');
+    expect(
+      message.text,
+      '${MentorMessageCodes.dailyCoachWithHour}:20:00-22:00',
+    );
   });
 
   test('uses supportive tone and an extra quick reply when struggling', () {
@@ -21,7 +26,8 @@ void main() {
       riskyHours: const [],
     );
     expect(message.tone, 'supportive');
-    expect(message.quickReplies, contains('Konuşmak istemiyorum'));
+    expect(message.text, MentorMessageCodes.dailySupportive);
+    expect(message.quickReplies, contains(MentorMessageCodes.quickReplyNoTalk));
   });
 
   test('uses neutral tone for middling success rates', () {
@@ -31,26 +37,30 @@ void main() {
       riskyHours: const [],
     );
     expect(message.tone, 'neutral');
+    expect(message.text, MentorMessageCodes.dailyNeutralNoHour);
   });
 
-  test('appends the historical note when provided', () {
+  test('appends the historical note code when provided', () {
     final message = builder.buildDailyMessage(
       riskScore: 50,
       recentSuccessRate: 0.55,
       riskyHours: const [],
-      historicalNote: 'Geçen hafta akşamları zorlanmıştın.',
+      historicalNote: '${MentorMessageCodes.histWorseningPrefix}:evening',
     );
-    expect(message.text, contains('Geçen hafta akşamları zorlanmıştın.'));
+    expect(
+      message.text,
+      contains('${MentorMessageCodes.histWorseningPrefix}:evening'),
+    );
   });
 
-  test('mentions an improving breath trend in the daily message', () {
+  test('appends the breath-improving code for an improving breath trend', () {
     final message = builder.buildDailyMessage(
       riskScore: 50,
       recentSuccessRate: 0.55,
       riskyHours: const [],
       breathTrend: 'improving',
     );
-    expect(message.text, contains('nefes testlerin de iyiye gidiyor'));
+    expect(message.text, contains(MentorMessageCodes.breathImprovingNote));
   });
 
   test('says nothing about breath trend when stable or worsening', () {
@@ -65,8 +75,14 @@ void main() {
       riskyHours: const [],
       breathTrend: 'worsening',
     );
-    expect(stable.text, isNot(contains('nefes testlerin')));
-    expect(worsening.text, isNot(contains('nefes testlerin')));
+    expect(
+      stable.text,
+      isNot(contains(MentorMessageCodes.breathImprovingNote)),
+    );
+    expect(
+      worsening.text,
+      isNot(contains(MentorMessageCodes.breathImprovingNote)),
+    );
   });
 
   test('buildHistoricalNote returns null with too little history', () {
@@ -80,10 +96,9 @@ void main() {
   test('buildHistoricalNote flags a recurring struggle in the same day part', () {
     final note = builder.buildHistoricalNote(
       lastWeekDayPartCounts: const {'evening': 5, 'morning': 1},
-      thisWeekDayPartCounts: const {'evening': 4, 'morning': 0},
+      thisWeekDayPartCounts: const {'evening': 5, 'morning': 0},
     );
-    expect(note, isNotNull);
-    expect(note, contains('akşamları'));
+    expect(note, '${MentorMessageCodes.histWorseningPrefix}:evening');
   });
 
   test('buildHistoricalNote recognizes improvement in the flagged day part', () {
@@ -91,7 +106,7 @@ void main() {
       lastWeekDayPartCounts: const {'evening': 5},
       thisWeekDayPartCounts: const {'evening': 0},
     );
-    expect(note, contains('harika'));
+    expect(note, '${MentorMessageCodes.histImprovedPrefix}:evening');
   });
 
   test('dayPartForHour buckets hours correctly', () {
@@ -110,6 +125,30 @@ void main() {
       completedTasksThisWeek: 12,
     );
     expect(message.type, 'weekly');
-    expect(message.quickReplies, contains('Haftalık anketi doldur'));
+    expect(message.text, '${MentorMessageCodes.weeklyNeutralPrefix}:medium');
+    expect(
+      message.quickReplies,
+      contains(MentorMessageCodes.quickReplyFillWeeklySurvey),
+    );
+  });
+
+  test('buildReframedViolationMessage reframes suspicious behavior with a task title', () {
+    final message = builder.buildReframedViolationMessage(
+      violationType: 'suspicious_behavior',
+      taskTitle: '10 dakika sigarasiz kal',
+    );
+    expect(message, isNotNull);
+    expect(
+      message!.text,
+      '${MentorMessageCodes.reframeSuspiciousWithTitle}:10 dakika sigarasiz kal',
+    );
+    expect(message.tone, 'supportive');
+  });
+
+  test('buildReframedViolationMessage returns null for an unknown violation type', () {
+    final message = builder.buildReframedViolationMessage(
+      violationType: 'unknown_type',
+    );
+    expect(message, isNull);
   });
 }

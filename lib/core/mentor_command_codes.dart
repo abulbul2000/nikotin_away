@@ -55,3 +55,51 @@ abstract final class MentorCommandCodes {
     return '${riskDaypartPrefix}_${band.toUpperCase()}_${dayPart.toUpperCase()}_$index';
   }
 }
+
+/// Canonical, language-independent IDs for [MentorMessageBuilder]'s messages.
+///
+/// MentorMessageBuilder used to return hardcoded Turkish sentences directly
+/// as `MentorMessage.text`/`quickReplies`, and those get persisted to
+/// SQLite -- so unlike a widget string, a hardcoded language choice there
+/// is baked into the user's history forever, not just mis-rendered until
+/// the next locale change. It now composes these IDs instead;
+/// AppTexts.localizeMentorMessage resolves them to the user's language at
+/// *display* time, same pattern as [MentorCommandCodes] one layer up.
+///
+/// Composite messages (tone body + optional breath note + optional
+/// historical note) are joined with [segmentSeparator] into one `text`
+/// string; AppTexts splits on it and resolves each segment independently.
+abstract final class MentorMessageCodes {
+  static const segmentSeparator = '|MSEG|';
+
+  static const dailyCoachWithHour = 'MENTOR_DAILY_COACH_HOUR';
+  static const dailyCoachNoHour = 'MENTOR_DAILY_COACH_NOHOUR';
+  static const dailySupportive = 'MENTOR_DAILY_SUPPORTIVE';
+  static const dailyNeutralWithHour = 'MENTOR_DAILY_NEUTRAL_HOUR';
+  static const dailyNeutralNoHour = 'MENTOR_DAILY_NEUTRAL_NOHOUR';
+  static const breathImprovingNote = 'MENTOR_BREATH_IMPROVING_NOTE';
+
+  static const weeklyCoachPrefix = 'MENTOR_WEEKLY_COACH';
+  static const weeklySupportive = 'MENTOR_WEEKLY_SUPPORTIVE';
+  static const weeklyNeutralPrefix = 'MENTOR_WEEKLY_NEUTRAL';
+
+  static const histWorseningPrefix = 'MENTOR_HIST_WORSENING';
+  static const histImprovedPrefix = 'MENTOR_HIST_IMPROVED';
+  static const histSimilarPrefix = 'MENTOR_HIST_SIMILAR';
+
+  static const reframeSuspiciousWithTitle = 'MENTOR_REFRAME_SUSPICIOUS_TITLE';
+  static const reframeSuspiciousNoTitle = 'MENTOR_REFRAME_SUSPICIOUS_NOTITLE';
+  static const reframeWillpower = 'MENTOR_REFRAME_WILLPOWER';
+  static const reframeDeferredStart = 'MENTOR_REFRAME_DEFERRED_START';
+  static const reframeFollowupDeferred = 'MENTOR_REFRAME_FOLLOWUP_DEFERRED';
+  static const reframeDurationBarrier = 'MENTOR_REFRAME_DURATION_BARRIER';
+
+  static const quickReplyOk = 'QUICK_REPLY_OK';
+  static const quickReplyStruggling = 'QUICK_REPLY_STRUGGLING';
+  static const quickReplyNoTalk = 'QUICK_REPLY_NO_TALK';
+  static const quickReplyFillWeeklySurvey = 'QUICK_REPLY_FILL_WEEKLY_SURVEY';
+  static const quickReplyLater = 'QUICK_REPLY_LATER';
+  static const quickReplyThanks = 'QUICK_REPLY_THANKS';
+  static const quickReplyLetsTalk = 'QUICK_REPLY_LETS_TALK';
+  static const quickReplyOkAck = 'QUICK_REPLY_OK_ACK';
+}
