@@ -2484,42 +2484,28 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildQuickLinkButtons(BuildContext context) {
-    return Column(
-      children: [
-        if (_pendingFollowUps.isNotEmpty)
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const TaskFollowUpPage()),
-                );
-                if (!mounted) {
-                  return;
-                }
-                await _loadHomeMetrics();
-                await _restorePendingFollowUps();
-              },
-              child: Text(context.t('openTaskFollowUpScreen')),
-            ),
-          ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ProtocolViolationsPage(),
-                ),
-              );
-            },
-            child: Text(context.t('openViolationReportScreen')),
-          ),
-        ),
-      ],
+    // Only the pending-follow-up nudge lives here now -- the violation
+    // report link used to be duplicated here and in the categorized main
+    // menu (Takip ve Raporlar), pointing at the same ProtocolViolationsPage.
+    if (_pendingFollowUps.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TaskFollowUpPage()),
+          );
+          if (!mounted) {
+            return;
+          }
+          await _loadHomeMetrics();
+          await _restorePendingFollowUps();
+        },
+        child: Text(context.t('openTaskFollowUpScreen')),
+      ),
     );
   }
 
@@ -2660,6 +2646,20 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Widget _buildMenuSection(String titleKey, List<Widget> buttons) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          context.t(titleKey),
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: buttons),
+      ],
+    );
+  }
+
   Widget _buildMainMenuCard() {
     return Card(
       child: Padding(
@@ -2671,89 +2671,88 @@ class _HomePageState extends State<HomePage> {
               context.t('quickMenuTitle'),
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                SizedBox(
-                  width: 160,
-                  child: ElevatedButton.icon(
-                    onPressed: _openBreathTestFromMenu,
-                    icon: const Icon(Icons.air),
-                    label: Text(context.t('menuBreathTest')),
-                  ),
+            const SizedBox(height: 12),
+            _buildMenuSection('menuSectionTestsAndSurveys', [
+              SizedBox(
+                width: 160,
+                child: ElevatedButton.icon(
+                  onPressed: _openBreathTestFromMenu,
+                  icon: const Icon(Icons.air),
+                  label: Text(context.t('menuBreathTest')),
                 ),
-                SizedBox(
-                  width: 160,
-                  child: OutlinedButton.icon(
-                    onPressed: _openWeeklySurveyFromMenu,
-                    icon: const Icon(Icons.assignment),
-                    label: Text(context.t('menuWeeklySurvey')),
-                  ),
+              ),
+              SizedBox(
+                width: 160,
+                child: OutlinedButton.icon(
+                  onPressed: _openWeeklySurveyFromMenu,
+                  icon: const Icon(Icons.assignment),
+                  label: Text(context.t('menuWeeklySurvey')),
                 ),
-                SizedBox(
-                  width: 160,
-                  child: OutlinedButton.icon(
-                    onPressed: _openPersonalProgressScreen,
-                    icon: const Icon(Icons.insights),
-                    label: Text(context.t('menuPersonalProgress')),
-                  ),
+              ),
+              SizedBox(
+                width: 160,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SurveyHistoryPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.history),
+                  label: Text(context.t('menuSurveyHistory')),
                 ),
-                SizedBox(
-                  width: 160,
-                  child: OutlinedButton.icon(
-                    onPressed: _openBreathAnalysisScreen,
-                    icon: const Icon(Icons.show_chart),
-                    label: Text(context.t('breathAnalysisPageTitle')),
-                  ),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            _buildMenuSection('menuSectionTrackingAndReports', [
+              SizedBox(
+                width: 160,
+                child: OutlinedButton.icon(
+                  onPressed: _openPersonalProgressScreen,
+                  icon: const Icon(Icons.insights),
+                  label: Text(context.t('menuPersonalProgress')),
                 ),
-                SizedBox(
-                  width: 160,
-                  child: OutlinedButton.icon(
-                    onPressed: _openReports,
-                    icon: const Icon(Icons.picture_as_pdf_outlined),
-                    label: Text(context.t('menuReports')),
-                  ),
+              ),
+              SizedBox(
+                width: 160,
+                child: OutlinedButton.icon(
+                  onPressed: _openBreathAnalysisScreen,
+                  icon: const Icon(Icons.show_chart),
+                  label: Text(context.t('breathAnalysisPageTitle')),
                 ),
-                SizedBox(
-                  width: 160,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ProtocolViolationsPage(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.report_gmailerrorred),
-                    label: Text(context.t('menuViolationReport')),
-                  ),
+              ),
+              SizedBox(
+                width: 160,
+                child: OutlinedButton.icon(
+                  onPressed: _openReports,
+                  icon: const Icon(Icons.picture_as_pdf_outlined),
+                  label: Text(context.t('menuReports')),
                 ),
-                SizedBox(
-                  width: 160,
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SurveyHistoryPage(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.history),
-                    label: Text(context.t('menuSurveyHistory')),
-                  ),
+              ),
+              SizedBox(
+                width: 160,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ProtocolViolationsPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.report_gmailerrorred),
+                  label: Text(context.t('menuViolationReport')),
                 ),
-                // "Sigara İçtim" and "Günlük Değerlendirme" used to sit here.
-                // The first is being replaced by the always-available
-                // quick-log button, which reaches further than a menu entry
-                // the user has to open the app to find; the second asked at
-                // day's end which hours they had smoked, which that same
-                // button now records as it happens.
-              ],
-            ),
+              ),
+            ]),
+            // "Sigara İçtim" and "Günlük Değerlendirme" used to sit here.
+            // The first is being replaced by the always-available
+            // quick-log button, which reaches further than a menu entry
+            // the user has to open the app to find; the second asked at
+            // day's end which hours they had smoked, which that same
+            // button now records as it happens.
           ],
         ),
       ),
