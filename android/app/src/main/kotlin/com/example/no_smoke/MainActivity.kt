@@ -358,6 +358,11 @@ class MainActivity : FlutterActivity() {
 							triggerAtMillis = triggerAtMillis,
 							watchdogWindowMillis = call.argument<Number>("watchdogWindowMillis")?.toLong()
 								?: TaskTriggerReceiver.DEFAULT_WATCHDOG_WINDOW_MILLIS,
+							watchdogForegroundBody = call.argument<String>("watchdogForegroundBody").orEmpty(),
+							watchdogViolationTitle = call.argument<String>("watchdogViolationTitle").orEmpty(),
+							watchdogViolationBody = call.argument<String>("watchdogViolationBody").orEmpty(),
+							watchdogForegroundChannelName = call.argument<String>("watchdogForegroundChannelName").orEmpty(),
+							watchdogViolationChannelName = call.argument<String>("watchdogViolationChannelName").orEmpty(),
 						)
 						result.success(true)
 					}

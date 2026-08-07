@@ -1757,6 +1757,11 @@ class NotificationService {
       taskTitle: adjustedDescription,
       triggerAt: fireAt,
       watchdogWindow: _unansweredReminderDelay * _maxTaskAttempts,
+      watchdogForegroundBody: _text(code, 'watchdogForegroundBody'),
+      watchdogViolationTitle: _text(code, 'watchdogViolationTitle'),
+      watchdogViolationBody: _text(code, 'watchdogViolationBody'),
+      watchdogForegroundChannelName: _text(code, 'watchdogForegroundChannel'),
+      watchdogViolationChannelName: _text(code, 'watchdogViolationChannel'),
     );
 
     await _scheduleUnansweredTaskUpdateReminder(

@@ -110,6 +110,16 @@ class AndroidWatchdogService {
     required String taskTitle,
     required DateTime triggerAt,
     required Duration watchdogWindow,
+    /// Carried through to the native alarm's Intent extras so that when it
+    /// fires with the app dead, TaskTriggerReceiver can start
+    /// NoResponseWatchdogService with the same localized strings
+    /// [startWatchdog] would have used had the app been alive to call it
+    /// directly.
+    required String watchdogForegroundBody,
+    required String watchdogViolationTitle,
+    required String watchdogViolationBody,
+    required String watchdogForegroundChannelName,
+    required String watchdogViolationChannelName,
   }) async {
     if (!_isAndroid) {
       return;
@@ -126,6 +136,11 @@ class AndroidWatchdogService {
         'taskTitle': taskTitle,
         'triggerAtMillis': triggerAt.millisecondsSinceEpoch,
         'watchdogWindowMillis': watchdogWindow.inMilliseconds,
+        'watchdogForegroundBody': watchdogForegroundBody,
+        'watchdogViolationTitle': watchdogViolationTitle,
+        'watchdogViolationBody': watchdogViolationBody,
+        'watchdogForegroundChannelName': watchdogForegroundChannelName,
+        'watchdogViolationChannelName': watchdogViolationChannelName,
       });
     } catch (_) {
       // Best-effort: the scheduled notification is still the user-facing

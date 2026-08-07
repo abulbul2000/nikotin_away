@@ -45,10 +45,15 @@ class TaskTriggerReceiver : BroadcastReceiver() {
         val watchdogWindowMillis =
             intent.getLongExtra(EXTRA_WATCHDOG_WINDOW_MILLIS, DEFAULT_WATCHDOG_WINDOW_MILLIS)
         NoResponseWatchdogService.start(
-            context,
-            taskTitle,
-            watchdogId,
-            System.currentTimeMillis() + watchdogWindowMillis,
+            context = context,
+            taskTitle = taskTitle,
+            watchdogId = watchdogId,
+            dueAtMillis = System.currentTimeMillis() + watchdogWindowMillis,
+            foregroundBody = intent.getStringExtra(EXTRA_WATCHDOG_FOREGROUND_BODY).orEmpty(),
+            violationTitle = intent.getStringExtra(EXTRA_WATCHDOG_VIOLATION_TITLE).orEmpty(),
+            violationBody = intent.getStringExtra(EXTRA_WATCHDOG_VIOLATION_BODY).orEmpty(),
+            foregroundChannelName = intent.getStringExtra(EXTRA_WATCHDOG_FOREGROUND_CHANNEL_NAME).orEmpty(),
+            violationChannelName = intent.getStringExtra(EXTRA_WATCHDOG_VIOLATION_CHANNEL_NAME).orEmpty(),
         )
 
         // The native full-screen overlay (phone-call-style Ertele/Kabul Et)
@@ -112,6 +117,11 @@ class TaskTriggerReceiver : BroadcastReceiver() {
         const val EXTRA_TASK_TITLE = "extra_task_title"
         const val EXTRA_WATCHDOG_WINDOW_MILLIS = "extra_watchdog_window_millis"
         const val EXTRA_DEFERRED_FOR_MILLIS = "extra_deferred_for_millis"
+        const val EXTRA_WATCHDOG_FOREGROUND_BODY = "extra_watchdog_foreground_body"
+        const val EXTRA_WATCHDOG_VIOLATION_TITLE = "extra_watchdog_violation_title"
+        const val EXTRA_WATCHDOG_VIOLATION_BODY = "extra_watchdog_violation_body"
+        const val EXTRA_WATCHDOG_FOREGROUND_CHANNEL_NAME = "extra_watchdog_foreground_channel_name"
+        const val EXTRA_WATCHDOG_VIOLATION_CHANNEL_NAME = "extra_watchdog_violation_channel_name"
 
         /// How long to wait before trying a blocked task again, and how much
         /// random slack to add so the retry isn't on a predictable clock.
@@ -155,6 +165,11 @@ class TaskTriggerReceiver : BroadcastReceiver() {
             taskTitle: String,
             triggerAtMillis: Long,
             watchdogWindowMillis: Long,
+            watchdogForegroundBody: String,
+            watchdogViolationTitle: String,
+            watchdogViolationBody: String,
+            watchdogForegroundChannelName: String,
+            watchdogViolationChannelName: String,
         ) {
             val pending = pendingIntent(context, watchdogId) {
                 putExtra(EXTRA_TITLE, title)
@@ -166,6 +181,11 @@ class TaskTriggerReceiver : BroadcastReceiver() {
                 putExtra(EXTRA_WATCHDOG_ID, watchdogId)
                 putExtra(EXTRA_TASK_TITLE, taskTitle)
                 putExtra(EXTRA_WATCHDOG_WINDOW_MILLIS, watchdogWindowMillis)
+                putExtra(EXTRA_WATCHDOG_FOREGROUND_BODY, watchdogForegroundBody)
+                putExtra(EXTRA_WATCHDOG_VIOLATION_TITLE, watchdogViolationTitle)
+                putExtra(EXTRA_WATCHDOG_VIOLATION_BODY, watchdogViolationBody)
+                putExtra(EXTRA_WATCHDOG_FOREGROUND_CHANNEL_NAME, watchdogForegroundChannelName)
+                putExtra(EXTRA_WATCHDOG_VIOLATION_CHANNEL_NAME, watchdogViolationChannelName)
             }
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
