@@ -770,6 +770,36 @@ class AppTexts {
       'Dun gece {count} kez horlamaya benzer bir ses paterni tespit edildi. Detaylar icin Ayarlar > Horlama Testi\'ne bakabilirsin.',
     'snoringResultNotificationBodyClear':
       'Dun gece horlamaya benzer bir ses paterni tespit edilmedi.',
+    'coughTestTitle': 'Oksuruk Testi',
+    'coughTestIntro':
+      '30 saniye boyunca mikrofonu acik tutacagiz ve bu surede kac kez oksurdugunu sayacagiz.',
+    'coughTestInstructions':
+      'Sessiz bir ortamda basla ve normal sekilde nefes al/oksur. Ses hicbir zaman kaydedilmez veya disariya gonderilmez, sadece oksuruk sayisi hesaplanir.',
+    'coughTestStartButton': 'Testi Baslat',
+    'coughTestListening': 'Dinleniyor...',
+    'coughTestResultTitle': 'Test Sonucu',
+    'coughTestResultCount': '{count} oksuruk tespit edildi',
+    'coughTestSeverityNormal': 'Normal araliktasin.',
+    'coughTestSeverityMild': 'Hafif duzeyde oksuruk tespit edildi.',
+    'coughTestSeverityModerate': 'Orta duzeyde oksuruk tespit edildi.',
+    'coughTestSeveritySevere': 'Belirgin duzeyde oksuruk tespit edildi.',
+    'coughTestSeverityUrgent':
+      'Tekrarlayan ve belirgin duzeyde oksuruk tespit edildi.',
+    'coughTipMild':
+      'Hafif oksuruk genelde gecicidir. Bol su icmek ve dinlenmek faydali olabilir.',
+    'coughTipModerate':
+      'Oksurugun birkac gundur surmesi halinde, genel yasam tarzi onlemlerinin (bol su, dinlenme, tahris edici dumandan uzak durma) yaninda bir doktora danismani oneririz.',
+    'coughTipSevere':
+      'Belirgin duzeyde oksuruk tespit edildi. Bu durum devam ederse lutfen bir doktora danis; bu uygulama tibbi tani veya tedavi onerisi vermez.',
+    'coughTipUrgent':
+      'Son iki haftada birden fazla testte belirgin duzeyde oksuruk tespit edildi. Lutfen bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
+    'coughTestNotificationTitle': 'Oksuruk testi sonucun',
+    'coughTestRequiredForWeeklySurvey': 'Testi Yap',
+    'coughTestRequiredDialogTitle': 'Oksuruk testi gerekiyor',
+    'coughTestRequiredDialogMessage':
+      'Haftalik anketi kaydetmeden once bu hafta bir oksuruk testi yapmis olman gerekiyor. Simdi yapmak ister misin?',
+    'coughTestSkip': 'Vazgec',
+    'menuCoughTest': 'Oksuruk Testi',
     'settingsWearableIntelligenceRow': 'Bileklik Verisi (Deneysel)',
     'wearableIntelligenceTitle': 'Bileklik Verisi (Deneysel)',
     'wearableIntelligenceDescription':
@@ -2314,6 +2344,36 @@ class AppTexts {
       'A snore-like sound pattern was detected {count} times last night. See Settings > Snoring Test for details.',
     'snoringResultNotificationBodyClear':
       'No snore-like sound pattern was detected last night.',
+    'coughTestTitle': 'Cough Test',
+    'coughTestIntro':
+      'We\'ll keep the microphone on for 30 seconds and count how many times you cough.',
+    'coughTestInstructions':
+      'Start somewhere quiet and breathe/cough normally. Audio is never recorded or sent anywhere -- only the cough count is computed.',
+    'coughTestStartButton': 'Start Test',
+    'coughTestListening': 'Listening...',
+    'coughTestResultTitle': 'Test Result',
+    'coughTestResultCount': '{count} coughs detected',
+    'coughTestSeverityNormal': 'You\'re in the normal range.',
+    'coughTestSeverityMild': 'A mild level of coughing was detected.',
+    'coughTestSeverityModerate': 'A moderate level of coughing was detected.',
+    'coughTestSeveritySevere': 'A pronounced level of coughing was detected.',
+    'coughTestSeverityUrgent':
+      'Recurring, pronounced coughing was detected.',
+    'coughTipMild':
+      'Mild coughing is usually temporary. Drinking water and resting can help.',
+    'coughTipModerate':
+      'If the cough has lasted several days, alongside general lifestyle steps (fluids, rest, avoiding irritants like smoke) we recommend seeing a doctor.',
+    'coughTipSevere':
+      'A pronounced level of coughing was detected. If this continues, please see a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
+    'coughTipUrgent':
+      'A pronounced level of coughing showed up in more than one test over the last two weeks. We recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
+    'coughTestNotificationTitle': 'Your cough test result',
+    'coughTestRequiredForWeeklySurvey': 'Take the Test',
+    'coughTestRequiredDialogTitle': 'Cough test required',
+    'coughTestRequiredDialogMessage':
+      'You need to take a cough test this week before saving the weekly survey. Take it now?',
+    'coughTestSkip': 'Skip',
+    'menuCoughTest': 'Cough Test',
     'settingsWearableIntelligenceRow': 'Wearable Data (Experimental)',
     'wearableIntelligenceTitle': 'Wearable Data (Experimental)',
     'wearableIntelligenceDescription':

@@ -7,6 +7,7 @@ import '../core/app_texts.dart';
 import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import 'breath_test_page.dart';
+import 'cough_test_page.dart';
 import 'home_page.dart';
 import '../services/behavior_engine.dart';
 import '../services/storage_service.dart';
@@ -1432,6 +1433,57 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () async {
+                    final hasCoughTest = await _storageService.hasCoughTestSince(
+                      DateTime.now().subtract(const Duration(days: 7)),
+                    );
+                    if (!hasCoughTest) {
+                      if (!mounted || !context.mounted) return;
+                      final wantsToTest = await showDialog<bool>(
+                        context: context,
+                        builder: (dialogContext) => AlertDialog(
+                          title: Text(
+                            context.t('coughTestRequiredDialogTitle'),
+                          ),
+                          content: Text(
+                            context.t('coughTestRequiredDialogMessage'),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(false),
+                              child: Text(context.t('coughTestSkip')),
+                            ),
+                            FilledButton(
+                              onPressed: () =>
+                                  Navigator.of(dialogContext).pop(true),
+                              child: Text(
+                                context.t('coughTestRequiredForWeeklySurvey'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (wantsToTest != true) {
+                        return;
+                      }
+                      if (!mounted || !context.mounted) return;
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const CoughTestPage(),
+                        ),
+                      );
+                      if (!mounted || !context.mounted) return;
+                      final nowHasTest = await _storageService.hasCoughTestSince(
+                        DateTime.now().subtract(const Duration(days: 7)),
+                      );
+                      if (!nowHasTest) {
+                        // User backed out of the test without completing
+                        // it — don't save the survey out from under them.
+                        return;
+                      }
+                    }
+                    if (!mounted || !context.mounted) return;
                     final unnamedUserLabel = context.t('unnamedUser');
                     final savedRecord = await _saveWeeklySurvey();
                     final score = savedRecord.riskScore;

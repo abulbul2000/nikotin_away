@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/services/behavior_engine.dart';
 import 'package:no_smoke/models/breath_test_record.dart';
+import 'package:no_smoke/models/cough_test_record.dart';
 import 'package:no_smoke/models/survey_history.dart';
 import 'package:no_smoke/models/task_history.dart';
 import 'package:no_smoke/models/survey_record.dart';
@@ -301,6 +302,198 @@ void main() {
         );
 
         expect(hours.first, contains('16'));
+      });
+    });
+
+    group('calculateCoughRiskAdjustment', () {
+      final engine = BehaviorEngine();
+
+      CoughTestRecord record(String severityLevel) => CoughTestRecord(
+        id: 'r',
+        createdAt: DateTime(2024, 1, 1),
+        coughCount: 0,
+        testDurationSeconds: 30,
+        severityScore: 0,
+        severityLevel: severityLevel,
+      );
+
+      test('no records means no adjustment', () {
+        expect(
+          engine.calculateCoughRiskAdjustment(recentRecords: const []),
+          0,
+        );
+      });
+
+      test('a normal latest result nudges risk down slightly', () {
+        expect(
+          engine.calculateCoughRiskAdjustment(
+            recentRecords: [record('normal')],
+          ),
+          -2,
+        );
+      });
+
+      test('mild adds a small positive adjustment', () {
+        expect(
+          engine.calculateCoughRiskAdjustment(
+            recentRecords: [record('mild')],
+          ),
+          1,
+        );
+      });
+
+      test('moderate adds more than mild', () {
+        expect(
+          engine.calculateCoughRiskAdjustment(
+            recentRecords: [record('moderate')],
+          ),
+          4,
+        );
+      });
+
+      test('severe adds the most', () {
+        expect(
+          engine.calculateCoughRiskAdjustment(
+            recentRecords: [record('severe')],
+          ),
+          8,
+        );
+      });
+
+      test('only the most recent record is used', () {
+        final adjustment = engine.calculateCoughRiskAdjustment(
+          recentRecords: [record('severe'), record('normal')],
+        );
+        expect(adjustment, -2);
+      });
+    });
+
+    group('calculateSnoringRiskAdjustment', () {
+      final engine = BehaviorEngine();
+
+      test('zero probes means no adjustment', () {
+        expect(
+          engine.calculateSnoringRiskAdjustment(recentSnoreLikelyCount: 0),
+          0,
+        );
+      });
+
+      test('1-3 probes is a small adjustment', () {
+        expect(
+          engine.calculateSnoringRiskAdjustment(recentSnoreLikelyCount: 2),
+          1,
+        );
+      });
+
+      test('4-9 probes is a moderate adjustment', () {
+        expect(
+          engine.calculateSnoringRiskAdjustment(recentSnoreLikelyCount: 5),
+          3,
+        );
+      });
+
+      test('10+ probes is the largest adjustment', () {
+        expect(
+          engine.calculateSnoringRiskAdjustment(recentSnoreLikelyCount: 15),
+          6,
+        );
+      });
+    });
+
+    group('resolveCoughAdvisoryTier', () {
+      final engine = BehaviorEngine();
+
+      test('baseline severity with no conditions or history passes through', () {
+        expect(
+          engine.resolveCoughAdvisoryTier(
+            latestSeverityLevel: 'mild',
+            healthConditions: const [],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'mild',
+        );
+      });
+
+      test('normal stays normal even with a chronic condition', () {
+        // The bump only applies once the baseline is already mild+ — a
+        // clean test shouldn't get escalated just for having COPD on file.
+        expect(
+          engine.resolveCoughAdvisoryTier(
+            latestSeverityLevel: 'normal',
+            healthConditions: const ['KOAH'],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'normal',
+        );
+      });
+
+      test('a respiratory condition bumps a mild+ result up one tier', () {
+        expect(
+          engine.resolveCoughAdvisoryTier(
+            latestSeverityLevel: 'mild',
+            healthConditions: const ['KOAH'],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'moderate',
+        );
+      });
+
+      test('asthma also triggers the bump', () {
+        expect(
+          engine.resolveCoughAdvisoryTier(
+            latestSeverityLevel: 'moderate',
+            healthConditions: const ['Astim'],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'severe',
+        );
+      });
+
+      test('a non-respiratory condition does not bump the tier', () {
+        expect(
+          engine.resolveCoughAdvisoryTier(
+            latestSeverityLevel: 'mild',
+            healthConditions: const ['Hipertansiyon'],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'mild',
+        );
+      });
+
+      test('the bump never pushes severe past urgent', () {
+        expect(
+          engine.resolveCoughAdvisoryTier(
+            latestSeverityLevel: 'severe',
+            healthConditions: const ['KOAH'],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'urgent',
+        );
+      });
+
+      test(
+        'three or more moderate-plus results in 14 days forces urgent',
+        () {
+          expect(
+            engine.resolveCoughAdvisoryTier(
+              latestSeverityLevel: 'mild',
+              healthConditions: const [],
+              recentModerateOrWorseCountLast14Days: 3,
+            ),
+            'urgent',
+          );
+        },
+      );
+
+      test('two moderate-plus results in 14 days does not force urgent', () {
+        expect(
+          engine.resolveCoughAdvisoryTier(
+            latestSeverityLevel: 'mild',
+            healthConditions: const [],
+            recentModerateOrWorseCountLast14Days: 2,
+          ),
+          'mild',
+        );
       });
     });
   });

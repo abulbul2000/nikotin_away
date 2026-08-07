@@ -13,6 +13,7 @@ import '../models/user_profile_snapshot.dart';
 import '../pages/achievements_page.dart';
 import '../pages/breath_analysis_page.dart';
 import '../pages/breath_test_page.dart';
+import '../pages/cough_test_page.dart';
 import '../pages/craving_sos_page.dart';
 import '../pages/smoked_log_consent_page.dart';
 import '../pages/health_metrics_page.dart';
@@ -1076,6 +1077,19 @@ class _HomePageState extends State<HomePage> {
           packsPerDay: packsPerDay,
           navigateToHomeOnComplete: true,
         ),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadHomeMetrics();
+  }
+
+  Future<void> _openCoughTestFromMenu() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CoughTestPage(navigateToHomeOnComplete: true),
       ),
     );
     if (!mounted) {
@@ -2702,6 +2716,14 @@ class _HomePageState extends State<HomePage> {
                   },
                   icon: const Icon(Icons.history),
                   label: Text(context.t('menuSurveyHistory')),
+                ),
+              ),
+              SizedBox(
+                width: 160,
+                child: OutlinedButton.icon(
+                  onPressed: _openCoughTestFromMenu,
+                  icon: const Icon(Icons.sick_outlined),
+                  label: Text(context.t('menuCoughTest')),
                 ),
               ),
             ]),

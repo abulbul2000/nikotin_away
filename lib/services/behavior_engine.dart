@@ -4,6 +4,7 @@ import '../core/text_utils.dart';
 import '../models/adaptive_plan.dart';
 import '../models/behavior_dashboard.dart';
 import '../models/breath_test_record.dart';
+import '../models/cough_test_record.dart';
 import '../models/sensor_usage_event.dart';
 import '../models/survey_history.dart';
 import '../models/survey_record.dart';
@@ -1007,6 +1008,90 @@ class BehaviorEngine {
       }
     }
     return selected.toList();
+  }
+
+  /// Bounded risk adjustment from the most recent cough test result. No
+  /// records means no penalty — the weekly survey already gates on having
+  /// taken one this week (see WeeklySurveyPage), so missing data here is
+  /// never possible for someone actively using the app, and double-
+  /// penalizing "no test yet" the way [calculateProfileRiskAdjustment]'s
+  /// `hasBreathTests` flag does would just stack two warnings for the same
+  /// gap. A 'normal' result gets a small confidence discount, mirroring how
+  /// clean weeks nudge other adjustments (steps, barrier success) downward.
+  int calculateCoughRiskAdjustment({
+    required List<CoughTestRecord> recentRecords,
+  }) {
+    if (recentRecords.isEmpty) return 0;
+    switch (recentRecords.last.severityLevel) {
+      case 'severe':
+        return 8;
+      case 'moderate':
+        return 4;
+      case 'mild':
+        return 1;
+      default:
+        return -2;
+    }
+  }
+
+  /// Bounded risk adjustment from how many snore-likely probes the
+  /// (opt-in) overnight Snoring Test recorded recently — the first time
+  /// this signal feeds into risk scoring rather than only surfacing as a
+  /// Settings-screen counter.
+  int calculateSnoringRiskAdjustment({required int recentSnoreLikelyCount}) {
+    if (recentSnoreLikelyCount <= 0) return 0;
+    if (recentSnoreLikelyCount >= 10) return 6;
+    if (recentSnoreLikelyCount >= 4) return 3;
+    return 1;
+  }
+
+  static const List<int> _coughAdvisoryTierOrder = [0, 1, 2, 3, 4];
+  static const List<String> _coughAdvisoryTierNames = [
+    'normal',
+    'mild',
+    'moderate',
+    'severe',
+    'urgent',
+  ];
+
+  /// Widens a single cough test's severity into a personalized advisory
+  /// tier — not a diagnosis (this app never gives one, see CLAUDE.md), just
+  /// a stronger or softer nudge toward seeing a doctor based on context the
+  /// test alone can't see: an existing chronic respiratory/heart condition
+  /// makes the same cough count more worth mentioning, and coughs that keep
+  /// coming back across tests read differently than a one-off.
+  ///
+  /// [latestSeverityLevel] is the baseline tier. It's bumped up one step
+  /// (never down — a chronic condition never makes a result look better)
+  /// when the user has self-reported COPD or asthma and the baseline is
+  /// already mild or worse: those two respiratory conditions are the ones
+  /// where a new/worsening cough is specifically the thing to watch for,
+  /// unlike e.g. hypertension. [recentTestCountLast14Days] moderate-or-worse
+  /// results is a persistence signal independent of any single test's
+  /// severity — three or more results at moderate+ in two weeks escalates
+  /// straight to 'urgent' regardless of today's own severity, since a
+  /// pattern across tests is the thing a single reading can never show.
+  String resolveCoughAdvisoryTier({
+    required String latestSeverityLevel,
+    required List<String> healthConditions,
+    required int recentModerateOrWorseCountLast14Days,
+  }) {
+    var tierIndex = _coughAdvisoryTierNames.indexOf(latestSeverityLevel);
+    if (tierIndex < 0) {
+      tierIndex = 0;
+    }
+
+    final hasRespiratoryCondition =
+        healthConditions.contains('KOAH') || healthConditions.contains('Astim');
+    if (hasRespiratoryCondition && tierIndex >= 1) {
+      tierIndex = min(tierIndex + 1, _coughAdvisoryTierOrder.length - 1);
+    }
+
+    if (recentModerateOrWorseCountLast14Days >= 3) {
+      tierIndex = _coughAdvisoryTierOrder.length - 1;
+    }
+
+    return _coughAdvisoryTierNames[tierIndex];
   }
 
   int calculateProfileRiskAdjustment({

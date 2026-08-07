@@ -14,6 +14,7 @@ import '../models/behavior_dashboard.dart';
 import '../models/breath_noise_baseline.dart';
 import '../models/breath_progress_record.dart';
 import '../models/breath_test_result.dart';
+import '../models/cough_test_record.dart';
 import '../models/mentor_message.dart';
 import '../models/protocol_violation.dart';
 import '../models/reduction_progress.dart';
@@ -57,6 +58,7 @@ class StorageService {
   static const _breathTestResultsTable = 'breath_test_results';
   static const _breathProgressRecordsTable = 'breath_progress_records';
   static const _breathNoiseBaselinesTable = 'breath_noise_baselines';
+  static const _coughTestRecordsTable = 'cough_test_records';
   static const _behaviorSnapshotTable = 'behavior_snapshots';
   static const _taskFollowUpTable = 'task_followups';
   static const _protocolViolationTable = 'protocol_violations';
@@ -130,7 +132,9 @@ class StorageService {
       // representation). breath_noise_baselines — per-attempt ambient noise
       // baseline readings BreathNoiseEngine uses to compute each device's
       // own relative reference level.
-      version: 26,
+      // 27: cough_test_records — user-initiated 30s cough test result
+      // (coughCount/severityScore/severityLevel).
+      version: 27,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -176,6 +180,7 @@ class StorageService {
         await _ensureConsentEventsTable(db);
         await _ensureMedicationsTable(db);
         await _ensureMedicationDoseLogTable(db);
+        await _ensureCoughTestRecordsTable(db);
         await _ensureIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -209,6 +214,7 @@ class StorageService {
         await _ensureConsentEventsTable(db);
         await _ensureMedicationsTable(db);
         await _ensureMedicationDoseLogTable(db);
+        await _ensureCoughTestRecordsTable(db);
         if (oldVersion < 9) {
           await _ensureIndexes(db);
         }
@@ -850,6 +856,27 @@ class StorageService {
     );
   }
 
+  /// User-initiated cough test result — a short (default 30s) mic listen
+  /// that counts distinct cough events, separate from the breath test's
+  /// hold/exhale protocol. averageIntervalSeconds/earlyBurstRatio/
+  /// peakIntensityScore are nullable: rows with zero detected coughs have
+  /// nothing to compute an interval or burst pattern from.
+  Future<void> _ensureCoughTestRecordsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_coughTestRecordsTable (
+        id TEXT PRIMARY KEY,
+        createdAt TEXT NOT NULL,
+        coughCount INTEGER NOT NULL,
+        testDurationSeconds INTEGER NOT NULL,
+        severityScore INTEGER NOT NULL,
+        severityLevel TEXT NOT NULL,
+        averageIntervalSeconds REAL,
+        earlyBurstRatio REAL,
+        peakIntensityScore INTEGER
+      )
+    ''');
+  }
+
   /// User-facing breath test record (score/duration/stability/intensity +
   /// noisy-environment flag) that BreathTrendEngine.summarize consumes —
   /// deliberately separate from [_breathTestResultsTable], which is the
@@ -1359,6 +1386,49 @@ class StorageService {
       return null;
     }
     return rows.last;
+  }
+
+  Future<void> saveCoughTestRecord(CoughTestRecord record) async {
+    final db = await database;
+    await db.insert(
+      _coughTestRecordsTable,
+      record.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    await markBehaviorDirty();
+  }
+
+  Future<List<CoughTestRecord>> loadCoughTestRecords({int limit = 50}) async {
+    final db = await database;
+    final rows = await db.query(
+      _coughTestRecordsTable,
+      orderBy: 'createdAt DESC',
+      limit: limit,
+    );
+    final results = rows.map((row) => CoughTestRecord.fromJson(row)).toList();
+    return results.reversed.toList();
+  }
+
+  Future<CoughTestRecord?> loadLatestCoughTestRecord() async {
+    final rows = await loadCoughTestRecords(limit: 1);
+    if (rows.isEmpty) {
+      return null;
+    }
+    return rows.last;
+  }
+
+  /// Whether at least one cough test was completed since [since] — used to
+  /// gate the weekly survey's save action rather than a standalone
+  /// scheduled reminder (see WeeklySurveyPage).
+  Future<bool> hasCoughTestSince(DateTime since) async {
+    final db = await database;
+    final rows = await db.query(
+      _coughTestRecordsTable,
+      where: 'createdAt >= ?',
+      whereArgs: [since.toUtc().toIso8601String()],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
   }
 
   Future<void> saveBreathProgressRecord(BreathProgressRecord record) async {
@@ -3845,6 +3915,31 @@ class StorageService {
     final wearableRiskAdjustment = await _loadCachedWearableRiskAdjustment();
     if (wearableRiskAdjustment > 0) {
       dynamicRisk = (dynamicRisk + wearableRiskAdjustment).clamp(0, 100).toInt();
+    }
+
+    // Cough test + snoring test signals — bounded adjustments applied the
+    // same way as the barrier/steps/wearable ones above, rather than as new
+    // inputs to _breathTestEngine.calculateFinalRisk (that blend has a
+    // fixed 4-weight formula with one caller; adding a 5th input would mean
+    // rebalancing all the weights). Snoring is wired into risk scoring for
+    // the first time here — it previously only surfaced as a Settings-page
+    // counter.
+    final coughRecords = await loadCoughTestRecords(limit: 20);
+    final coughAdjustment = _behaviorEngine.calculateCoughRiskAdjustment(
+      recentRecords: coughRecords,
+    );
+    if (coughAdjustment != 0) {
+      dynamicRisk = (dynamicRisk + coughAdjustment).clamp(0, 100).toInt();
+    }
+
+    final recentSnoreLikelyCount = await countRecentSnoreLikelyEvents(
+      since: DateTime.now().subtract(const Duration(days: 7)),
+    );
+    final snoringAdjustment = _behaviorEngine.calculateSnoringRiskAdjustment(
+      recentSnoreLikelyCount: recentSnoreLikelyCount,
+    );
+    if (snoringAdjustment != 0) {
+      dynamicRisk = (dynamicRisk + snoringAdjustment).clamp(0, 100).toInt();
     }
 
     final startDate = surveyRecords.isNotEmpty

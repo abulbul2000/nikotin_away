@@ -308,6 +308,7 @@ class NotificationService {
   static const int _breathOverdueNotificationId = 920002;
   static const int _sleepActivityAdvisoryNotificationId = 930001;
   static const int _snoringResultNotificationId = 930002;
+  static const int _coughTestResultNotificationId = 930003;
   static const int _weeklySurveyNotificationId = 700001;
   static const int _dailyBreathReminderBaseId = 420100;
   static const int _dailyBreathReminderMaxSlots = 6;
@@ -736,6 +737,68 @@ class NotificationService {
       );
     } catch (_) {
       // Keep notification flow resilient even if snoring-result sync fails.
+    }
+  }
+
+  static const String _lastCoughResultNotificationDateKey =
+      'last_cough_result_notification_date';
+
+  /// Fired directly by CoughTestPage right after a test result is saved —
+  /// unlike [_syncSnoringResultFromNative], there's no native-side queue to
+  /// drain here: the cough test is user-initiated and synchronous, so the
+  /// result is already known the moment this is called. Still capped to
+  /// once per calendar day (same key convention as the snoring summary) so
+  /// running the test more than once in a day doesn't re-notify for every
+  /// attempt — the in-app result screen already shows every result
+  /// immediately, this notification is a secondary nudge.
+  static Future<void> showCoughTestResultAdvisory({
+    required int coughCount,
+    required String severityLevel,
+  }) async {
+    try {
+      final storage = StorageService();
+      final today = DateTime.now();
+      final todayKey =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final lastNotifiedKey = await storage.loadSetting(
+        _lastCoughResultNotificationDateKey,
+      );
+      if (lastNotifiedKey == todayKey) {
+        return;
+      }
+      await storage.saveSetting(_lastCoughResultNotificationDateKey, todayKey);
+
+      final code = await LanguageService.loadSelectedLanguageCode();
+      final body = coughCount > 0
+          ? _text(code, 'coughTestResultCount').replaceAll(
+              '{count}',
+              '$coughCount',
+            )
+          : _text(code, 'coughTestSeverityNormal');
+
+      await _plugin.show(
+        _coughTestResultNotificationId,
+        _text(code, 'coughTestNotificationTitle'),
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _healthTipChannelId,
+            _text(code, 'channelNameHealthTip'),
+            importance: Importance.defaultImportance,
+            visibility: NotificationVisibility.private,
+            priority: Priority.defaultPriority,
+            playSound: true,
+            enableVibration: true,
+            audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+            category: AndroidNotificationCategory.reminder,
+          ),
+          iOS: const DarwinNotificationDetails(presentSound: true),
+        ),
+        payload: jsonEncode({'type': _typeHealthTip}),
+      );
+    } catch (_) {
+      // Keep notification flow resilient even if the cough-result
+      // notification fails — the in-app result screen already showed it.
     }
   }
 
