@@ -4,7 +4,7 @@ import 'storage_service.dart';
 /// Orchestrates the opt-in Sleep Intelligence feature: turning it on/off
 /// arms or cancels the native overnight probe schedule (SleepProbeService)
 /// and persists the actual window that was armed, so risk scoring
-/// (StorageService._resolveEffectiveSleepWindow) reads back exactly what
+/// (StorageService.resolveEffectiveSleepWindow) reads back exactly what
 /// was probed rather than recomputing it from survey fields that may have
 /// changed since.
 class SleepIntelligenceService {

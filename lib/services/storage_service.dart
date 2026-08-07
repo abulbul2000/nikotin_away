@@ -1566,7 +1566,7 @@ class StorageService {
   /// reason about which side of midnight the configured window falls on —
   /// SleepIntelligenceEngine finds the best matching rest period within
   /// whatever probes exist in that span.
-  Future<({String? sleepTime, String? wakeTime})> _resolveEffectiveSleepWindow({
+  Future<({String? sleepTime, String? wakeTime})> resolveEffectiveSleepWindow({
     required String? fallbackSleepTime,
     required String? fallbackWakeTime,
   }) async {
@@ -3671,7 +3671,7 @@ class StorageService {
       contextMap: contextMap,
     );
     final latestContext = mergedProfileContext;
-    final effectiveSleepWindow = await _resolveEffectiveSleepWindow(
+    final effectiveSleepWindow = await resolveEffectiveSleepWindow(
       fallbackSleepTime: latestContext['sleepTime'] as String?,
       fallbackWakeTime: latestContext['wakeTime'] as String?,
     );

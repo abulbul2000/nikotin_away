@@ -1294,6 +1294,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': 'Registrierungsmarkierung konnte nicht gespeichert werden. Bitte versuche es erneut.',
     'breathTestSaveFailed': 'Atemtestergebnis konnte nicht gespeichert werden. Bitte versuche es erneut.',
     'barrierStartedInstruction': 'Bitte rauche in den nächsten {duration} nicht. Wenn du eine Zigarette in der Hand hast, lösche sie jetzt aus.',
+    'snoringResultNotificationTitle': 'Der Schnarchtest von letzter Nacht',
+    'snoringResultNotificationBodyDetected': 'Letzte Nacht wurde {count} Mal ein schnarchähnliches Klangmuster erkannt. Details siehe Einstellungen > Schnarchtest.',
+    'snoringResultNotificationBodyClear': 'Letzte Nacht wurde kein schnarchähnliches Klangmuster erkannt.',
   },
   'ar': <String, String>{
     'reductionCardTitle': 'تقدّمك في التقليل',
@@ -2590,6 +2593,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': 'تعذر حفظ علامة التسجيل. يرجى المحاولة مرة أخرى.',
     'breathTestSaveFailed': 'تعذر حفظ نتيجة اختبار التنفس. يرجى المحاولة مرة أخرى.',
     'barrierStartedInstruction': 'يرجى عدم التدخين خلال {duration} القادمة. إذا كانت لديك سيجارة في يدك، أطفئها الآن.',
+    'snoringResultNotificationTitle': 'اختبار الشخير الليلة الماضية',
+    'snoringResultNotificationBodyDetected': 'تم رصد نمط صوت يشبه الشخير {count} مرة الليلة الماضية. راجع الإعدادات > اختبار الشخير للتفاصيل.',
+    'snoringResultNotificationBodyClear': 'لم يتم رصد أي نمط صوت يشبه الشخير الليلة الماضية.',
 },
   'fr': <String, String>{
     'reductionCardTitle': 'Ta progression',
@@ -3886,6 +3892,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': 'Impossible d\'enregistrer l\'indicateur d\'inscription. Réessaie.',
     'breathTestSaveFailed': 'Impossible d\'enregistrer le résultat du test respiratoire. Réessaie.',
     'barrierStartedInstruction': 'Merci de ne pas fumer pendant les {duration} à venir. Si tu as une cigarette en main, éteins-la maintenant.',
+    'snoringResultNotificationTitle': 'Le test de ronflement d\'hier soir',
+    'snoringResultNotificationBodyDetected': 'Un schéma sonore semblable à un ronflement a été détecté {count} fois la nuit dernière. Voir Paramètres > Test de ronflement pour les détails.',
+    'snoringResultNotificationBodyClear': 'Aucun schéma sonore semblable à un ronflement n\'a été détecté la nuit dernière.',
   },
   'es': <String, String>{
     'reductionCardTitle': 'Tu progreso de reducción',
@@ -5182,6 +5191,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': 'No se pudo guardar la marca de registro. Inténtalo de nuevo.',
     'breathTestSaveFailed': 'No se pudo guardar el resultado de la prueba de respiración. Inténtalo de nuevo.',
     'barrierStartedInstruction': 'No fumes durante los próximos {duration}. Si tienes un cigarrillo en la mano, apágalo ahora.',
+    'snoringResultNotificationTitle': 'La prueba de ronquidos de anoche',
+    'snoringResultNotificationBodyDetected': 'Se detectó un patrón de sonido similar a un ronquido {count} veces anoche. Consulta Ajustes > Prueba de ronquidos para más detalles.',
+    'snoringResultNotificationBodyClear': 'No se detectó ningún patrón de sonido similar a un ronquido anoche.',
   },
   'pt': <String, String>{
     'reductionCardTitle': 'Seu progresso de redução',
@@ -6478,6 +6490,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': 'Não foi possível salvar o sinalizador de registro. Tente novamente.',
     'breathTestSaveFailed': 'Não foi possível salvar o resultado do teste respiratório. Tente novamente.',
     'barrierStartedInstruction': 'Não fume pelas próximas {duration}. Se você tiver um cigarro na mão, apague-o agora.',
+    'snoringResultNotificationTitle': 'O teste de ronco de ontem à noite',
+    'snoringResultNotificationBodyDetected': 'Um padrão sonoro semelhante a ronco foi detectado {count} vezes ontem à noite. Veja Configurações > Teste de Ronco para detalhes.',
+    'snoringResultNotificationBodyClear': 'Nenhum padrão sonoro semelhante a ronco foi detectado ontem à noite.',
   },
   'it': <String, String>{
     'reductionCardTitle': 'I tuoi progressi',
@@ -7774,6 +7789,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': 'Impossibile salvare il flag di registrazione. Riprova.',
     'breathTestSaveFailed': 'Impossibile salvare il risultato del test respiratorio. Riprova.',
     'barrierStartedInstruction': 'Non fumare per le prossime {duration}. Se hai una sigaretta in mano, spegnila ora.',
+    'snoringResultNotificationTitle': 'Il test del russamento di ieri notte',
+    'snoringResultNotificationBodyDetected': 'Ieri notte è stato rilevato uno schema sonoro simile al russamento {count} volte. Vedi Impostazioni > Test del russamento per i dettagli.',
+    'snoringResultNotificationBodyClear': 'Ieri notte non è stato rilevato alcuno schema sonoro simile al russamento.',
 },
   'pl': <String, String>{
     'reductionCardTitle': 'Twoje postępy w ograniczaniu',
@@ -9070,6 +9088,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': 'Nie udało się zapisać flagi rejestracji. Spróbuj ponownie.',
     'breathTestSaveFailed': 'Nie udało się zapisać wyniku testu oddechowego. Spróbuj ponownie.',
     'barrierStartedInstruction': 'Nie pal przez najbliższe {duration}. Jeśli trzymasz papierosa w ręce, zgaś go teraz.',
+    'snoringResultNotificationTitle': 'Wczorajszy test chrapania',
+    'snoringResultNotificationBodyDetected': 'Zeszłej nocy {count} razy wykryto wzorzec dźwięku przypominający chrapanie. Szczegóły w Ustawieniach > Test chrapania.',
+    'snoringResultNotificationBodyClear': 'Zeszłej nocy nie wykryto wzorca dźwięku przypominającego chrapanie.',
 },
   'ru': <String, String>{
     'reductionCardTitle': 'Ваш прогресс в снижении',
@@ -10366,6 +10387,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': 'Не удалось сохранить флаг регистрации. Попробуй ещё раз.',
     'breathTestSaveFailed': 'Не удалось сохранить результат дыхательного теста. Попробуй ещё раз.',
     'barrierStartedInstruction': 'Пожалуйста, не кури следующие {duration}. Если сигарета у тебя в руке, потуши её сейчас.',
+    'snoringResultNotificationTitle': 'Вчерашний тест на храп',
+    'snoringResultNotificationBodyDetected': 'Прошлой ночью звуковой паттерн, похожий на храп, был обнаружен {count} раз(а). Подробности см. в Настройках > Тест на храп.',
+    'snoringResultNotificationBodyClear': 'Прошлой ночью звуковой паттерн, похожий на храп, не был обнаружен.',
 },
   'ja': <String, String>{
     'reductionCardTitle': '減煙の進みぐあい',
@@ -11662,6 +11686,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': '登録フラグを保存できませんでした。もう一度お試しください。',
     'breathTestSaveFailed': '呼吸テストの結果を保存できませんでした。もう一度お試しください。',
     'barrierStartedInstruction': 'これから{duration}はタバコを吸わないでください。手にタバコがある場合は今すぐ消してください。',
+    'snoringResultNotificationTitle': '昨夜のいびきテスト',
+    'snoringResultNotificationBodyDetected': '昨夜、いびきに似た音のパターンが{count}回検出されました。詳細は設定 > いびきテストをご覧ください。',
+    'snoringResultNotificationBodyClear': '昨夜、いびきに似た音のパターンは検出されませんでした。',
 },
   'zh': <String, String>{
     'reductionCardTitle': '你的减量进展',
@@ -12958,6 +12985,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': '无法保存注册标记，请重试。',
     'breathTestSaveFailed': '无法保存呼吸测试结果，请重试。',
     'barrierStartedInstruction': '接下来的{duration}请不要抽烟。如果手里正拿着烟，请现在熄灭它。',
+    'snoringResultNotificationTitle': '昨晚的打鼾测试',
+    'snoringResultNotificationBodyDetected': '昨晚检测到{count}次类似打鼾的声音模式。详情请查看 设置 > 打鼾测试。',
+    'snoringResultNotificationBodyClear': '昨晚未检测到类似打鼾的声音模式。',
 },
   'ko': <String, String>{
     'reductionCardTitle': '줄여가는 과정',
@@ -14254,6 +14284,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': '등록 플래그를 저장할 수 없습니다. 다시 시도해 주세요.',
     'breathTestSaveFailed': '호흡 테스트 결과를 저장할 수 없습니다. 다시 시도해 주세요.',
     'barrierStartedInstruction': '앞으로 {duration} 동안 담배를 피우지 마세요. 손에 담배를 들고 있다면 지금 꺼주세요.',
+    'snoringResultNotificationTitle': '어젯밤 코골이 테스트',
+    'snoringResultNotificationBodyDetected': '어젯밤 코골이와 비슷한 소리 패턴이 {count}회 감지되었습니다. 자세한 내용은 설정 > 코골이 테스트를 확인하세요.',
+    'snoringResultNotificationBodyClear': '어젯밤 코골이와 비슷한 소리 패턴이 감지되지 않았습니다.',
 },
   'hi': <String, String>{
     'reductionCardTitle': 'आपकी कमी की प्रगति',
@@ -15550,6 +15583,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'कोरोनरी हृदय रोग का जोखिम आधा हो जाता है।',
     'recoveryYear5Desc': 'स्ट्रोक का जोखिम बिना धूम्रपान करने वाले व्यक्ति के करीब आ जाता है।',
     'recoveryYear10Desc': 'फेफड़ों के कैंसर से मृत्यु दर धूम्रपान करने वाले व्यक्ति की लगभग आधी हो जाती है।',
+    'snoringResultNotificationTitle': 'कल रात का खर्राटा परीक्षण',
+    'snoringResultNotificationBodyDetected': 'कल रात {count} बार खर्राटे जैसा ध्वनि पैटर्न पाया गया। विवरण के लिए सेटिंग्स > खर्राटा परीक्षण देखें।',
+    'snoringResultNotificationBodyClear': 'कल रात खर्राटे जैसा कोई ध्वनि पैटर्न नहीं पाया गया।',
   },
   'bn': <String, String>{
     'reductionCardTitle': 'আপনার কমানোর অগ্রগতি',
@@ -16846,6 +16882,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'করোনারি হৃদরোগের ঝুঁকি অর্ধেকে নেমে আসে।',
     'recoveryYear5Desc': 'স্ট্রোকের ঝুঁকি একজন অধূমপায়ীর কাছাকাছি চলে আসে।',
     'recoveryYear10Desc': 'ফুসফুস ক্যান্সারে মৃত্যুর হার একজন ধূমপায়ীর প্রায় অর্ধেক হয়ে যায়।',
+    'snoringResultNotificationTitle': 'গতকাল রাতের নাক ডাকার পরীক্ষা',
+    'snoringResultNotificationBodyDetected': 'গতকাল রাতে {count} বার নাক ডাকার মতো শব্দের প্যাটার্ন শনাক্ত হয়েছে। বিস্তারিত জানতে সেটিংস > নাক ডাকার পরীক্ষা দেখুন।',
+    'snoringResultNotificationBodyClear': 'গতকাল রাতে নাক ডাকার মতো কোনো শব্দের প্যাটার্ন শনাক্ত হয়নি।',
   },
   'pa': <String, String>{
     'reductionCardTitle': 'ਤੁਹਾਡੀ ਘਟਾਉਣ ਦੀ ਤਰੱਕੀ',
@@ -18142,6 +18181,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'ਕੋਰੋਨਰੀ ਦਿਲ ਦੀ ਬਿਮਾਰੀ ਦਾ ਖ਼ਤਰਾ ਅੱਧਾ ਰਹਿ ਜਾਂਦਾ ਹੈ।',
     'recoveryYear5Desc': 'ਦੌਰੇ (ਸਟ੍ਰੋਕ) ਦਾ ਖ਼ਤਰਾ ਕਦੇ ਸਿਗਰਟ ਨਾ ਪੀਣ ਵਾਲੇ ਵਿਅਕਤੀ ਦੇ ਬਰਾਬਰ ਹੋਣ ਲੱਗਦਾ ਹੈ।',
     'recoveryYear10Desc': 'ਫੇਫੜਿਆਂ ਦੇ ਕੈਂਸਰ ਨਾਲ ਮੌਤ ਦੀ ਦਰ ਸਿਗਰਟ ਪੀਣ ਵਾਲੇ ਦੇ ਲਗਭਗ ਅੱਧੀ ਹੋ ਜਾਂਦੀ ਹੈ।',
+    'snoringResultNotificationTitle': 'ਬੀਤੀ ਰਾਤ ਦਾ ਘੁਰਾੜੇ ਟੈਸਟ',
+    'snoringResultNotificationBodyDetected': 'ਬੀਤੀ ਰਾਤ {count} ਵਾਰ ਘੁਰਾੜਿਆਂ ਵਰਗਾ ਆਵਾਜ਼ ਪੈਟਰਨ ਮਿਲਿਆ। ਵੇਰਵਿਆਂ ਲਈ ਸੈਟਿੰਗਾਂ > ਘੁਰਾੜੇ ਟੈਸਟ ਵੇਖੋ।',
+    'snoringResultNotificationBodyClear': 'ਬੀਤੀ ਰਾਤ ਘੁਰਾੜਿਆਂ ਵਰਗਾ ਕੋਈ ਆਵਾਜ਼ ਪੈਟਰਨ ਨਹੀਂ ਮਿਲਿਆ।',
   },
   'te': <String, String>{
     'reductionCardTitle': 'మీ తగ్గింపు పురోగతి',
@@ -19438,6 +19480,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'కొరోనరీ గుండె జబ్బు ప్రమాదం సగానికి తగ్గుతుంది.',
     'recoveryYear5Desc': 'స్ట్రోక్ ప్రమాదం ఎప్పుడూ ధూమపానం చేయని వ్యక్తి స్థాయికి దగ్గరవుతుంది.',
     'recoveryYear10Desc': 'ఊపిరితిత్తుల క్యాన్సర్ మరణాల రేటు ధూమపానం చేసేవారి కంటే దాదాపు సగం ఉంటుంది.',
+    'snoringResultNotificationTitle': 'నిన్న రాత్రి గురక పరీక్ష',
+    'snoringResultNotificationBodyDetected': 'నిన్న రాత్రి గురకను పోలిన ధ్వని నమూనా {count} సార్లు గుర్తించబడింది. వివరాల కోసం సెట్టింగ్‌లు > గురక పరీక్ష చూడండి.',
+    'snoringResultNotificationBodyClear': 'నిన్న రాత్రి గురకను పోలిన ధ్వని నమూనా ఏదీ గుర్తించబడలేదు.',
   },
   'mr': <String, String>{
     'reductionCardTitle': 'तुमची कमी करण्याची प्रगती',
@@ -20734,6 +20779,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'कोरोनरी हृदयरोगाचा धोका निम्म्याने कमी होतो.',
     'recoveryYear5Desc': 'पक्षाघाताचा (स्ट्रोक) धोका कधीही धूम्रपान न करणाऱ्या व्यक्तीच्या पातळीजवळ येतो.',
     'recoveryYear10Desc': 'फुफ्फुसांच्या कर्करोगाने मृत्यूचे प्रमाण धूम्रपान करणाऱ्याच्या तुलनेत जवळपास निम्मे होते.',
+    'snoringResultNotificationTitle': 'काल रात्रीची घोरण्याची चाचणी',
+    'snoringResultNotificationBodyDetected': 'काल रात्री {count} वेळा घोरण्यासारखा आवाजाचा नमुना आढळला. तपशीलांसाठी सेटिंग्ज > घोरण्याची चाचणी पहा.',
+    'snoringResultNotificationBodyClear': 'काल रात्री घोरण्यासारखा कोणताही आवाजाचा नमुना आढळला नाही.',
   },
   'ta': <String, String>{
     'reductionCardTitle': 'உங்கள் குறைப்பு முன்னேற்றம்',
@@ -22030,6 +22078,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'கரோனரி இதய நோய் ஆபத்து பாதியாகக் குறைகிறது.',
     'recoveryYear5Desc': 'பக்கவாத ஆபத்து புகைக்காதவரின் நிலையை நெருங்குகிறது.',
     'recoveryYear10Desc': 'நுரையீரல் புற்றுநோய் இறப்பு விகிதம் புகைப்பவரின் விகிதத்தில் சுமார் பாதியாகும்.',
+    'snoringResultNotificationTitle': 'நேற்று இரவு குறட்டை சோதனை',
+    'snoringResultNotificationBodyDetected': 'நேற்று இரவு குறட்டை போன்ற ஒலி முறை {count} முறை கண்டறியப்பட்டது. விவரங்களுக்கு அமைப்புகள் > குறட்டை சோதனை பார்க்கவும்.',
+    'snoringResultNotificationBodyClear': 'நேற்று இரவு குறட்டை போன்ற ஒலி முறை எதுவும் கண்டறியப்படவில்லை.',
   },
   'gu': <String, String>{
     'reductionCardTitle': 'તમારી ઘટાડાની પ્રગતિ',
@@ -23326,6 +23377,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'કોરોનરી હૃદયરોગનું જોખમ અડધું થઈ જાય છે.',
     'recoveryYear5Desc': 'લકવાનું જોખમ ધુમ્રપાન ન કરનાર વ્યક્તિ જેટલું નજીક આવે છે.',
     'recoveryYear10Desc': 'ફેફસાંના કેન્સરથી મૃત્યુનો દર ધુમ્રપાન કરનારના લગભગ અડધા જેટલો થાય છે.',
+    'snoringResultNotificationTitle': 'ગઈકાલ રાત્રિની નસકોરાં કસોટી',
+    'snoringResultNotificationBodyDetected': 'ગઈકાલ રાત્રે {count} વખત નસકોરાં જેવી ધ્વનિ પેટર્ન મળી આવી. વિગતો માટે સેટિંગ્સ > નસકોરાં કસોટી જુઓ.',
+    'snoringResultNotificationBodyClear': 'ગઈકાલ રાત્રે નસકોરાં જેવી કોઈ ધ્વનિ પેટર્ન મળી નથી.',
   },
   'kn': <String, String>{
     'reductionCardTitle': 'ನಿಮ್ಮ ಕಡಿತದ ಪ್ರಗತಿ',
@@ -24622,6 +24676,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'ಪರಿಧಮನಿ ಹೃದಯ ಕಾಯಿಲೆಯ ಅಪಾಯ ಅರ್ಧದಷ್ಟು ಕಡಿಮೆಯಾಗುತ್ತದೆ.',
     'recoveryYear5Desc': 'ಪಾರ್ಶ್ವವಾಯುವಿನ ಅಪಾಯ ಎಂದಿಗೂ ಸೇದದ ವ್ಯಕ್ತಿಯ ಮಟ್ಟಕ್ಕೆ ಹತ್ತಿರವಾಗುತ್ತದೆ.',
     'recoveryYear10Desc': 'ಶ್ವಾಸಕೋಶ ಕ್ಯಾನ್ಸರ್‌ನಿಂದ ಸಾವಿನ ಪ್ರಮಾಣ ಸಿಗರೇಟ್ ಸೇದುವವರಿಗಿಂತ ಸುಮಾರು ಅರ್ಧದಷ್ಟಿರುತ್ತದೆ.',
+    'snoringResultNotificationTitle': 'ನಿನ್ನೆ ರಾತ್ರಿಯ ಗೊರಕೆ ಪರೀಕ್ಷೆ',
+    'snoringResultNotificationBodyDetected': 'ನಿನ್ನೆ ರಾತ್ರಿ ಗೊರಕೆಯಂತಹ ಧ್ವನಿ ಮಾದರಿ {count} ಬಾರಿ ಪತ್ತೆಯಾಗಿದೆ. ವಿವರಗಳಿಗಾಗಿ ಸೆಟ್ಟಿಂಗ್‌ಗಳು > ಗೊರಕೆ ಪರೀಕ್ಷೆ ನೋಡಿ.',
+    'snoringResultNotificationBodyClear': 'ನಿನ್ನೆ ರಾತ್ರಿ ಗೊರಕೆಯಂತಹ ಯಾವುದೇ ಧ್ವನಿ ಮಾದರಿ ಪತ್ತೆಯಾಗಿಲ್ಲ.',
   },
   'ml': <String, String>{
     'reductionCardTitle': 'നിങ്ങളുടെ കുറയ്ക്കൽ പുരോഗതി',
@@ -25918,6 +25975,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'കൊറോണറി ഹൃദ്രോഗ സാധ്യത പകുതിയായി കുറയുന്നു.',
     'recoveryYear5Desc': 'സ്ട്രോക്ക് സാധ്യത ഒരിക്കലും പുകവലിക്കാത്ത ഒരാളുടെ നിലയോട് അടുക്കുന്നു.',
     'recoveryYear10Desc': 'ശ്വാസകോശ അർബുദം മൂലമുള്ള മരണനിരക്ക് പുകവലിക്കുന്ന ഒരാളുടേതിന്റെ ഏകദേശം പകുതിയായി കുറയുന്നു.',
+    'snoringResultNotificationTitle': 'ഇന്നലെ രാത്രിയിലെ കൂർക്കംവലി പരിശോധന',
+    'snoringResultNotificationBodyDetected': 'ഇന്നലെ രാത്രി കൂർക്കംവലി പോലുള്ള ശബ്ദരീതി {count} തവണ കണ്ടെത്തി. വിശദാംശങ്ങൾക്ക് ക്രമീകരണങ്ങൾ > കൂർക്കംവലി പരിശോധന കാണുക.',
+    'snoringResultNotificationBodyClear': 'ഇന്നലെ രാത്രി കൂർക്കംവലി പോലുള്ള ശബ്ദരീതി ഒന്നും കണ്ടെത്തിയില്ല.',
   },
   'th': <String, String>{
     'reductionCardTitle': 'ความคืบหน้าในการลด',
@@ -27214,6 +27274,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'registrationFlagSaveFailed': 'ไม่สามารถบันทึกสถานะการลงทะเบียนได้ กรุณาลองอีกครั้ง',
     'breathTestSaveFailed': 'ไม่สามารถบันทึกผลการทดสอบการหายใจได้ กรุณาลองอีกครั้ง',
     'barrierStartedInstruction': 'กรุณาอย่าสูบบุหรี่ในอีก {duration} ข้างหน้า หากคุณถือบุหรี่อยู่ในมือ กรุณาดับตอนนี้',
+    'snoringResultNotificationTitle': 'ผลทดสอบการกรนเมื่อคืนนี้',
+    'snoringResultNotificationBodyDetected': 'ตรวจพบรูปแบบเสียงคล้ายการกรน {count} ครั้งเมื่อคืนนี้ ดูรายละเอียดที่ การตั้งค่า > ทดสอบการกรน',
+    'snoringResultNotificationBodyClear': 'ไม่พบรูปแบบเสียงคล้ายการกรนเมื่อคืนนี้',
 },
   'vi': <String, String>{
     'reductionCardTitle': 'Tiến trình giảm của bạn',
@@ -28510,6 +28573,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'Nguy cơ mắc bệnh mạch vành giảm một nửa.',
     'recoveryYear5Desc': 'Nguy cơ đột quỵ tiệm cận mức của người chưa từng hút thuốc.',
     'recoveryYear10Desc': 'Tỷ lệ tử vong do ung thư phổi giảm xuống còn khoảng một nửa so với người hút thuốc.',
+    'snoringResultNotificationTitle': 'Bài kiểm tra ngáy đêm qua',
+    'snoringResultNotificationBodyDetected': 'Đã phát hiện {count} lần âm thanh giống tiếng ngáy vào đêm qua. Xem Cài đặt > Kiểm tra ngáy để biết chi tiết.',
+    'snoringResultNotificationBodyClear': 'Không phát hiện âm thanh giống tiếng ngáy nào vào đêm qua.',
   },
   'id': <String, String>{
     'reductionCardTitle': 'Kemajuan pengurangan kamu',
@@ -29806,6 +29872,9 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'Risiko penyakit jantung koroner berkurang setengahnya.',
     'recoveryYear5Desc': 'Risiko stroke mendekati tingkat orang yang tidak pernah merokok.',
     'recoveryYear10Desc': 'Tingkat kematian akibat kanker paru-paru sekitar setengah dari perokok.',
+    'snoringResultNotificationTitle': 'Tes dengkuran semalam',
+    'snoringResultNotificationBodyDetected': 'Pola suara mirip dengkuran terdeteksi {count} kali semalam. Lihat Pengaturan > Tes Dengkuran untuk detailnya.',
+    'snoringResultNotificationBodyClear': 'Tidak ada pola suara mirip dengkuran yang terdeteksi semalam.',
   },
   'ms': <String, String>{
     'reductionCardTitle': 'Kemajuan pengurangan anda',
@@ -31102,5 +31171,8 @@ const Map<String, Map<String, String>> generatedLanguageData = <String, Map<Stri
     'recoveryYear1Desc': 'Risiko penyakit jantung koronari berkurangan sebanyak separuh.',
     'recoveryYear5Desc': 'Risiko strok menghampiri paras bukan perokok.',
     'recoveryYear10Desc': 'Kadar kematian akibat kanser paru-paru kira-kira separuh daripada perokok.',
+    'snoringResultNotificationTitle': 'Ujian dengkuran malam tadi',
+    'snoringResultNotificationBodyDetected': 'Corak bunyi seperti dengkuran dikesan {count} kali malam tadi. Lihat Tetapan > Ujian Dengkuran untuk butiran.',
+    'snoringResultNotificationBodyClear': 'Tiada corak bunyi seperti dengkuran dikesan malam tadi.',
   },
 };

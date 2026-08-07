@@ -763,6 +763,11 @@ class AppTexts {
     'snoringDetectionRequiresSleepIntelligence':
       'Once Uyku Zekasini acmalisin, horlama testi onun uzerine calisir.',
     'snoringDetectionLastNightCount': 'Son gece horlama paterni sayisi',
+    'snoringResultNotificationTitle': 'Dun geceki horlama testi',
+    'snoringResultNotificationBodyDetected':
+      'Dun gece {count} kez horlamaya benzer bir ses paterni tespit edildi. Detaylar icin Ayarlar > Horlama Testi\'ne bakabilirsin.',
+    'snoringResultNotificationBodyClear':
+      'Dun gece horlamaya benzer bir ses paterni tespit edilmedi.',
     'settingsWearableIntelligenceRow': 'Bileklik Verisi (Deneysel)',
     'wearableIntelligenceTitle': 'Bileklik Verisi (Deneysel)',
     'wearableIntelligenceDescription':
@@ -2300,6 +2305,11 @@ class AppTexts {
     'snoringDetectionRequiresSleepIntelligence':
       'Turn on Sleep Intelligence first -- the snoring test runs on top of it.',
     'snoringDetectionLastNightCount': 'Snore-like patterns detected last night',
+    'snoringResultNotificationTitle': 'Last night\'s snoring test',
+    'snoringResultNotificationBodyDetected':
+      'A snore-like sound pattern was detected {count} times last night. See Settings > Snoring Test for details.',
+    'snoringResultNotificationBodyClear':
+      'No snore-like sound pattern was detected last night.',
     'settingsWearableIntelligenceRow': 'Wearable Data (Experimental)',
     'wearableIntelligenceTitle': 'Wearable Data (Experimental)',
     'wearableIntelligenceDescription':

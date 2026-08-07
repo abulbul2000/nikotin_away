@@ -307,6 +307,7 @@ class NotificationService {
   static const int _sedentaryReminderNotificationId = 920001;
   static const int _breathOverdueNotificationId = 920002;
   static const int _sleepActivityAdvisoryNotificationId = 930001;
+  static const int _snoringResultNotificationId = 930002;
   static const int _weeklySurveyNotificationId = 700001;
   static const int _dailyBreathReminderBaseId = 420100;
   static const int _dailyBreathReminderMaxSlots = 6;
@@ -479,6 +480,7 @@ class NotificationService {
     await _syncWatchdogViolationsFromNative();
     await syncOverlayStateFromNative();
     await _syncSleepActivityFromNative();
+    await _syncSnoringResultFromNative();
     await _syncSmokedLogEventsFromNative();
     await _restoreSmokedLogButton(code);
     await AndroidWatchdogService.setTaskOverlayChannelInfo(
@@ -658,6 +660,82 @@ class NotificationService {
       }
     } catch (_) {
       // Keep notification flow resilient even if sleep-activity sync fails.
+    }
+  }
+
+  static const String _lastSnoringResultNotificationDateKey =
+      'last_snoring_result_notification_date';
+
+  /// Tells the user what last night's (opt-in) Snoring Test actually found —
+  /// until now the count only ever surfaced if they opened Settings and
+  /// looked. Runs once per calendar day (keyed by date, not a rolling
+  /// cooldown, since this is a once-a-night summary rather than an
+  /// event-driven alert) and only when there's something to report: at
+  /// least one probe fired, so the window wasn't skipped entirely.
+  static Future<void> _syncSnoringResultFromNative() async {
+    try {
+      final storage = StorageService();
+      final enabled =
+          (await storage.loadSetting('snoring_detection_enabled')) == '1';
+      if (!enabled) {
+        return;
+      }
+
+      final today = DateTime.now();
+      final todayKey =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final lastNotifiedKey = await storage.loadSetting(
+        _lastSnoringResultNotificationDateKey,
+      );
+      if (lastNotifiedKey == todayKey) {
+        return;
+      }
+
+      final since = today.subtract(const Duration(hours: 12));
+      final probes = await storage.loadSnoringProbeEventsBetween(
+        start: since,
+        end: today,
+      );
+      if (probes.isEmpty) {
+        // Nothing sampled yet tonight — don't claim a result before there
+        // is one; this same check will run again on the next app open.
+        return;
+      }
+
+      final snoreCount = probes.where((e) => e.snoreLikely).length;
+      await storage.saveSetting(
+        _lastSnoringResultNotificationDateKey,
+        todayKey,
+      );
+
+      final code = await LanguageService.loadSelectedLanguageCode();
+      final body = snoreCount > 0
+          ? _text(code, 'snoringResultNotificationBodyDetected')
+                .replaceAll('{count}', '$snoreCount')
+          : _text(code, 'snoringResultNotificationBodyClear');
+
+      await _plugin.show(
+        _snoringResultNotificationId,
+        _text(code, 'snoringResultNotificationTitle'),
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _healthTipChannelId,
+            _text(code, 'channelNameHealthTip'),
+            importance: Importance.defaultImportance,
+            visibility: NotificationVisibility.private,
+            priority: Priority.defaultPriority,
+            playSound: true,
+            enableVibration: true,
+            audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+            category: AndroidNotificationCategory.reminder,
+          ),
+          iOS: const DarwinNotificationDetails(presentSound: true),
+        ),
+        payload: jsonEncode({'type': _typeHealthTip}),
+      );
+    } catch (_) {
+      // Keep notification flow resilient even if snoring-result sync fails.
     }
   }
 
@@ -1678,11 +1756,22 @@ class NotificationService {
       safePreferred = _dailyBreathReminderMaxSlots;
     }
 
-    final wakeParts = wakeTime.split(':');
+    // Same drift problem as scheduleHealthConditionAdviceNotifications: the
+    // caller's wakeTime/sleepTime is the static survey/settings value, which
+    // can go stale once Sleep Intelligence has a better read on when the
+    // user is actually awake.
+    final effectiveWindow = await StorageService().resolveEffectiveSleepWindow(
+      fallbackSleepTime: sleepTime,
+      fallbackWakeTime: wakeTime,
+    );
+    final resolvedWakeTime = effectiveWindow.wakeTime ?? wakeTime;
+    final resolvedSleepTime = effectiveWindow.sleepTime ?? sleepTime;
+
+    final wakeParts = resolvedWakeTime.split(':');
     final wakeHour = int.tryParse(wakeParts[0]) ?? 7;
     final wakeMinute = int.tryParse(wakeParts[1]) ?? 0;
 
-    final sleepParts = sleepTime.split(':');
+    final sleepParts = resolvedSleepTime.split(':');
     final sleepHour = int.tryParse(sleepParts[0]) ?? 21;
     final sleepMinute = int.tryParse(sleepParts[1]) ?? 0;
 
@@ -1848,6 +1937,18 @@ class NotificationService {
       return;
     }
 
+    // The caller passes the static survey/settings window, but the user's
+    // actual sleep schedule can drift from that over time. Sleep
+    // Intelligence (when enabled) tracks the real window from overnight
+    // probes — resolve against that so tips land in waking hours instead of
+    // the stale configured ones.
+    final effectiveWindow = await StorageService().resolveEffectiveSleepWindow(
+      fallbackSleepTime: sleepTime,
+      fallbackWakeTime: wakeTime,
+    );
+    final resolvedWakeTime = effectiveWindow.wakeTime ?? wakeTime;
+    final resolvedSleepTime = effectiveWindow.sleepTime ?? sleepTime;
+
     // Anyone with medication already gets their tip attached to a reminder
     // they receive anyway (see scheduleMedicationReminders). Sending this as
     // well would say the same thing twice in one day.
@@ -1863,11 +1964,11 @@ class NotificationService {
     final code = await LanguageService.loadSelectedLanguageCode();
     final now = tz.TZDateTime.now(tz.local);
 
-    final wakeParts = wakeTime.split(':');
+    final wakeParts = resolvedWakeTime.split(':');
     final wakeHour = int.tryParse(wakeParts[0]) ?? 7;
     final wakeMinute = int.tryParse(wakeParts.length > 1 ? wakeParts[1] : '0') ?? 0;
 
-    final sleepParts = sleepTime.split(':');
+    final sleepParts = resolvedSleepTime.split(':');
     final sleepHour = int.tryParse(sleepParts[0]) ?? 21;
     final sleepMinute = int.tryParse(sleepParts.length > 1 ? sleepParts[1] : '0') ?? 0;
 
@@ -1984,6 +2085,7 @@ class NotificationService {
         if (!fireAt.isAfter(now)) {
           fireAt = fireAt.add(const Duration(days: 1));
         }
+        fireAt = await _reserveNonConflictingTime(fireAt);
 
         final reminder = _text(
           code,
