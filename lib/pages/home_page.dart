@@ -24,6 +24,7 @@ import '../pages/protocol_violations_page.dart';
 import '../pages/reports_page.dart';
 import '../pages/settings_page.dart';
 import '../pages/sleep_routine_page.dart';
+import '../pages/snoring_test_page.dart';
 import '../pages/survey_history_page.dart';
 import '../pages/task_follow_up_page.dart';
 import '../pages/task_outcome_confirm_page.dart';
@@ -35,6 +36,7 @@ import '../services/step_tracking_service.dart';
 import '../services/notification_service.dart';
 import '../services/protocol_violation_service.dart';
 import '../services/smoked_log_button_service.dart';
+import '../services/snoring_detection_service.dart';
 import '../services/storage_service.dart';
 import '../services/task_assignment_service.dart';
 import '../widgets/no_smoke_logo.dart';
@@ -71,6 +73,8 @@ class _HomePageState extends State<HomePage> {
   final Map<String, DateTime> _durationBarrierEndsAt = {};
   final Set<String> _notifiedTaskTitles = <String>{};
   MentorMessage? _latestMentorMessage;
+  int _snoringSummaryCount = 0;
+  String? _snoringSummaryWorstSeverity;
   StreamSubscription<Map<String, String>>? _taskActionSubscription;
   Timer? _durationBarrierTicker;
   Timer? _mandatoryGateCallRetryTimer;
@@ -811,6 +815,7 @@ class _HomePageState extends State<HomePage> {
       unawaited(_storageService.refreshWearableRiskSignal());
       unawaited(_scheduleSedentaryReminderIfNeeded());
       await _ensureMentorMessageCadence();
+      await _loadSnoringSummary();
     }
   }
 
@@ -835,6 +840,55 @@ class _HomePageState extends State<HomePage> {
     }
     setState(() {
       _latestMentorMessage = message;
+    });
+  }
+
+  /// Mirrors the same last-12-hours window
+  /// NotificationService._syncSnoringResultFromNative reads, so the home
+  /// card and the morning notification always agree on what "last night"
+  /// means. No separate dedup key -- the card is just whatever's true for
+  /// today's data, recomputed on every home-metrics load like every other
+  /// card on this tab.
+  Future<void> _loadSnoringSummary() async {
+    final enabled = await SnoringDetectionService().isEnabled();
+    if (!enabled) {
+      if (mounted) {
+        setState(() {
+          _snoringSummaryCount = 0;
+          _snoringSummaryWorstSeverity = null;
+        });
+      }
+      return;
+    }
+
+    final since = DateTime.now().subtract(const Duration(hours: 12));
+    final probes = await _storageService.loadSnoringProbeEventsBetween(
+      start: since,
+      end: DateTime.now(),
+    );
+    final snoreLikelyProbes = probes.where((e) => e.snoreLikely).toList();
+
+    const order = {'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3};
+    String? worst;
+    var worstRank = -1;
+    for (final probe in snoreLikelyProbes) {
+      final level = probe.severityLevel;
+      if (level == null) {
+        continue;
+      }
+      final rank = order[level] ?? 0;
+      if (rank > worstRank) {
+        worstRank = rank;
+        worst = level;
+      }
+    }
+
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _snoringSummaryCount = snoreLikelyProbes.length;
+      _snoringSummaryWorstSeverity = worst;
     });
   }
 
@@ -956,6 +1010,19 @@ class _HomePageState extends State<HomePage> {
       context,
       MaterialPageRoute(
         builder: (_) => const CoughTestPage(navigateToHomeOnComplete: true),
+      ),
+    );
+    if (!mounted) {
+      return;
+    }
+    await _loadHomeMetrics();
+  }
+
+  Future<void> _openSnoringTestFromMenu() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SnoringTestPage(navigateToHomeOnComplete: true),
       ),
     );
     if (!mounted) {
@@ -2013,6 +2080,10 @@ class _HomePageState extends State<HomePage> {
               _buildMentorCard(context),
               const SizedBox(height: 24),
             ],
+            if (_snoringSummaryCount > 0) ...[
+              _buildSnoringSummaryCard(context),
+              const SizedBox(height: 24),
+            ],
             _buildReductionCard(context),
             const SizedBox(height: 24),
             _buildHealthMetricsButton(context),
@@ -2153,6 +2224,74 @@ class _HomePageState extends State<HomePage> {
             if (message.quickReplies.isNotEmpty) ...[
               const SizedBox(height: 12),
               _buildMentorReplyArea(context, message, languageCode, answered),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSnoringSummaryCard(BuildContext context) {
+    final severity = _snoringSummaryWorstSeverity;
+    final toneColor = switch (severity) {
+      'severe' => Colors.red,
+      'moderate' => Colors.orange,
+      'mild' => Colors.amber,
+      _ => Colors.white70,
+    };
+    final severityTextKey = switch (severity) {
+      'severe' => 'snoringSeveritySevere',
+      'moderate' => 'snoringSeverityModerate',
+      'mild' => 'snoringSeverityMild',
+      _ => 'snoringSeverityNone',
+    };
+
+    return Card(
+      key: const ValueKey('home_snoring_summary_card'),
+      color: toneColor.withValues(alpha: 0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: toneColor.withValues(alpha: 0.4)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.bedtime_outlined, color: toneColor, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    context.t('snoringHomeSummaryCardTitle'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: toneColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              _snoringSummaryCount > 0
+                  ? context
+                        .t('snoringHomeSummaryCardBodyDetected')
+                        .replaceAll('{count}', '$_snoringSummaryCount')
+                  : context.t('snoringHomeSummaryCardBodyClear'),
+              style: const TextStyle(fontSize: 14, height: 1.5),
+            ),
+            if (_snoringSummaryCount > 0) ...[
+              const SizedBox(height: 6),
+              Text(
+                context.t(severityTextKey),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: toneColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ],
         ),
@@ -2695,6 +2834,14 @@ class _HomePageState extends State<HomePage> {
               onPressed: _openCoughTestFromMenu,
               icon: const Icon(Icons.sick_outlined),
               label: Text(context.t('menuCoughTest')),
+            ),
+          ),
+          SizedBox(
+            width: 160,
+            child: OutlinedButton.icon(
+              onPressed: _openSnoringTestFromMenu,
+              icon: const Icon(Icons.bedtime_outlined),
+              label: Text(context.t('menuSnoringTest')),
             ),
           ),
         ]),

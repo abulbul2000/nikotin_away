@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/models/adaptive_task_models.dart';
 import 'package:no_smoke/models/cough_test_record.dart';
+import 'package:no_smoke/models/snoring_probe_event.dart';
 import 'package:no_smoke/models/step_counter_sample.dart';
 import 'package:no_smoke/models/survey_record.dart';
 import 'package:no_smoke/services/storage_service.dart';
@@ -371,6 +372,59 @@ void main() {
       final report = await storage.buildDailyProgressReport(now: now);
 
       expect(report.taskSuccessRateLast7Days, 1.0);
+    });
+  });
+
+  group('snoring probe severity migration', () {
+    test('saveManualSnoringProbe/loadSnoringProbeEventsBetween round-trips '
+        'severity fields', () async {
+      final storage = StorageService();
+      final now = DateTime.now();
+      await storage.saveManualSnoringProbe(
+        SnoringProbeEvent(
+          id: 'manualsnoreprobe_1',
+          createdAt: now,
+          snoreLikely: true,
+          severityScore: 72,
+          severityLevel: 'severe',
+        ),
+      );
+
+      final events = await storage.loadSnoringProbeEventsBetween(
+        start: now.subtract(const Duration(minutes: 1)),
+        end: now.add(const Duration(minutes: 1)),
+      );
+
+      expect(events, hasLength(1));
+      expect(events.single.snoreLikely, isTrue);
+      expect(events.single.severityScore, 72);
+      expect(events.single.severityLevel, 'severe');
+    });
+
+    test('a pre-migration row with no severity columns loads as null '
+        'instead of crashing', () async {
+      final storage = StorageService();
+      final db = await storage.database;
+      final now = DateTime.now();
+      // Simulates a row written by an older APK version, before the
+      // severityScore/severityLevel columns existed — insert without them
+      // to confirm the migration's ALTER TABLE left them nullable and the
+      // read path tolerates missing values on old rows.
+      await db.insert('snoring_probe_events', {
+        'id': 'snoreprobe_legacy',
+        'createdAt': now.toUtc().toIso8601String(),
+        'snoreLikely': 1,
+      });
+
+      final events = await storage.loadSnoringProbeEventsBetween(
+        start: now.subtract(const Duration(minutes: 1)),
+        end: now.add(const Duration(minutes: 1)),
+      );
+
+      expect(events, hasLength(1));
+      expect(events.single.snoreLikely, isTrue);
+      expect(events.single.severityScore, isNull);
+      expect(events.single.severityLevel, isNull);
     });
   });
 }

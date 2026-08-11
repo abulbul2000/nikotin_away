@@ -714,6 +714,8 @@ class StorageService {
         snoreLikely INTEGER NOT NULL
       )
     ''');
+    await _ensureTableColumn(db, _snoringProbeTable, 'severityScore', 'INTEGER');
+    await _ensureTableColumn(db, _snoringProbeTable, 'severityLevel', 'TEXT');
   }
 
   Future<List<SnoringProbeEvent>> loadSnoringProbeEventsBetween({
@@ -733,6 +735,8 @@ class StorageService {
             id: row['id'] as String,
             createdAt: DateTime.parse(row['createdAt'] as String),
             snoreLikely: (row['snoreLikely'] as int) == 1,
+            severityScore: row['severityScore'] as int?,
+            severityLevel: row['severityLevel'] as String?,
           ),
         )
         .toList();
@@ -748,6 +752,22 @@ class StorageService {
       end: DateTime.now(),
     );
     return events.where((e) => e.snoreLikely).length;
+  }
+
+  /// Records a daytime, user-initiated Snoring Test result into the same
+  /// table the overnight native probes write to -- the id prefix
+  /// ("manualsnoreprobe_" vs. native's "snoreprobe_") is the only thing
+  /// distinguishing the two sources, kept in case that distinction is ever
+  /// needed later (e.g. excluding manual tests from the overnight summary).
+  Future<void> saveManualSnoringProbe(SnoringProbeEvent event) async {
+    final db = await database;
+    await db.insert(_snoringProbeTable, {
+      'id': event.id,
+      'createdAt': event.createdAt.toUtc().toIso8601String(),
+      'snoreLikely': event.snoreLikely ? 1 : 0,
+      'severityScore': event.severityScore,
+      'severityLevel': event.severityLevel,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<void> _ensureLocationIntelligenceTables(Database db) async {

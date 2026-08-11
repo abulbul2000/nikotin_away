@@ -178,7 +178,7 @@ class SleepProbeReceiver : BroadcastReceiver() {
             }
 
             audioRecord.stop()
-            SnoringProbeStore.insertProbe(context, detectSnorePattern(energies, windowMs))
+            SnoringProbeStore.insertProbe(context, detectSnoreSeverity(energies, windowMs))
         } catch (_: Exception) {
             // Best-effort -- a missed capture just skips this probe cycle.
         } finally {
@@ -191,9 +191,17 @@ class SleepProbeReceiver : BroadcastReceiver() {
     /// this clip's own median to count as a "burst", collapses adjacent
     /// loud windows into single events, then checks whether consecutive
     /// events repeat at a snore-typical interval.
-    private fun detectSnorePattern(energies: DoubleArray, windowMs: Int): Boolean {
+    ///
+    /// Beyond the plain detected/not-detected call, also scores how
+    /// pronounced this probe's pattern was -- combining how far events
+    /// cleared the threshold (intensity) with how consistently consecutive
+    /// events landed inside the snore-cycle window (continuity), same
+    /// two-component-weighted-sum shape as WheezeDetectionEngine's severity
+    /// score on the Dart side. Not device-calibrated -- see this file's
+    /// other detection heuristics for the same caveat.
+    private fun detectSnoreSeverity(energies: DoubleArray, windowMs: Int): SnoreDetectionResult {
         if (energies.isEmpty()) {
-            return false
+            return SnoreDetectionResult(snoreLikely = false, severityScore = 0, severityLevel = "none")
         }
         val sorted = energies.sorted()
         val median = sorted[sorted.size / 2]
@@ -208,16 +216,47 @@ class SleepProbeReceiver : BroadcastReceiver() {
             }
         }
         if (events.size < 2) {
-            return false
+            return SnoreDetectionResult(snoreLikely = false, severityScore = 0, severityLevel = "none")
         }
 
+        var inCycleGapCount = 0
+        var intensityRatioSum = 0.0
         for (i in 1 until events.size) {
             val gapMs = (events[i] - events[i - 1]) * windowMs
             if (gapMs in SNORE_MIN_CYCLE_MS..SNORE_MAX_CYCLE_MS) {
-                return true
+                inCycleGapCount++
             }
         }
-        return false
+        for (index in events) {
+            intensityRatioSum += energies[index] / threshold
+        }
+
+        val snoreLikely = inCycleGapCount > 0
+        if (!snoreLikely) {
+            return SnoreDetectionResult(snoreLikely = false, severityScore = 0, severityLevel = "none")
+        }
+
+        // Continuity: what fraction of consecutive event pairs actually fell
+        // inside the snore-cycle window -- a single lucky pair among many
+        // unrelated bursts scores low, a clip that's snore-cycle end to end
+        // scores near 1.
+        val continuityScore = (inCycleGapCount.toDouble() / (events.size - 1)).coerceIn(0.0, 1.0)
+        // Intensity: how far above the threshold events cleared, on
+        // average, anchored the same way WheezeDetectionEngine anchors its
+        // ratio score (a event right at the threshold scores 0, one at 2x+
+        // the threshold scores 1).
+        val averageIntensityRatio = intensityRatioSum / events.size
+        val intensityScore = ((averageIntensityRatio - 1.0) / 1.0).coerceIn(0.0, 1.0)
+
+        val combined = intensityScore * 0.5 + continuityScore * 0.5
+        val score = (combined * 100).toInt().coerceIn(0, 100)
+        val level = when {
+            score <= 0 -> "none"
+            score < 35 -> "mild"
+            score < 65 -> "moderate"
+            else -> "severe"
+        }
+        return SnoreDetectionResult(snoreLikely = true, severityScore = score, severityLevel = level)
     }
 
     private fun isInteractive(context: Context): Boolean {
@@ -492,16 +531,26 @@ object SleepActivityStore {
     }
 }
 
-/// Writes each snoring probe's boolean result straight to SQLite, same
-/// direct-write pattern as SleepProbeStore.insertProbe -- Dart only ever
-/// reads this table back (StorageService.countRecentSnoreLikelyEvents),
+/// Result of one probe's snore-pattern analysis -- see
+/// SleepProbeReceiver.detectSnoreSeverity's doc comment for how the score is
+/// derived. severityLevel is one of "none"/"mild"/"moderate"/"severe",
+/// mirroring WheezeDetectionEngine's levels on the Dart side.
+data class SnoreDetectionResult(
+    val snoreLikely: Boolean,
+    val severityScore: Int,
+    val severityLevel: String,
+)
+
+/// Writes each snoring probe's result straight to SQLite, same direct-write
+/// pattern as SleepProbeStore.insertProbe -- Dart only ever reads this table
+/// back (StorageService.countRecentSnoreLikelyEvents/loadSnoringProbeEventsBetween),
 /// never writes to it, since the whole point is the analysis running
 /// natively without needing the Flutter engine alive overnight.
 object SnoringProbeStore {
     private const val TABLE = "snoring_probe_events"
     private const val RETENTION_DAYS = 14
 
-    fun insertProbe(context: Context, snoreLikely: Boolean) {
+    fun insertProbe(context: Context, result: SnoreDetectionResult) {
         val dbFile = File(File(context.applicationInfo.dataDir, "app_flutter"), "no_smoke.db")
         if (!dbFile.exists()) {
             return
@@ -512,7 +561,9 @@ object SnoringProbeStore {
                 val values = ContentValues().apply {
                     put("id", "snoreprobe_${now}")
                     put("createdAt", formatIsoUtc(now))
-                    put("snoreLikely", if (snoreLikely) 1 else 0)
+                    put("snoreLikely", if (result.snoreLikely) 1 else 0)
+                    put("severityScore", result.severityScore)
+                    put("severityLevel", result.severityLevel)
                 }
                 db.insert(TABLE, null, values)
 

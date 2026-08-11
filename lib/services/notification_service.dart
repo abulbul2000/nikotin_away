@@ -12,6 +12,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../core/app_texts.dart';
 import '../models/adaptive_task_models.dart';
 import '../models/medication.dart';
+import '../models/snoring_probe_event.dart';
 import '../models/task_assignment.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
@@ -725,12 +726,17 @@ class NotificationService {
       );
 
       final code = await LanguageService.loadSelectedLanguageCode();
-      final body = snoreCount > 0
+      var body = snoreCount > 0
           ? _text(
               code,
               'snoringResultNotificationBodyDetected',
             ).replaceAll('{count}', '$snoreCount')
           : _text(code, 'snoringResultNotificationBodyClear');
+
+      final worstSeverity = _worstSnoringSeverity(probes);
+      if (worstSeverity != null && worstSeverity != 'none') {
+        body = '$body ${_text(code, _snoringSeverityBodyKey(worstSeverity))}';
+      }
 
       await _plugin.show(
         _snoringResultNotificationId,
@@ -885,6 +891,38 @@ class NotificationService {
         return 'wheezeAdviceModerate';
       default:
         return 'wheezeAdviceMild';
+    }
+  }
+
+  /// The worst severityLevel among last night's probes, or null when none
+  /// carry a severity yet (probes recorded before this field existed) or no
+  /// probe was snore-likely at all.
+  static String? _worstSnoringSeverity(List<SnoringProbeEvent> probes) {
+    const order = {'none': 0, 'mild': 1, 'moderate': 2, 'severe': 3};
+    String? worst;
+    var worstRank = -1;
+    for (final probe in probes) {
+      final level = probe.severityLevel;
+      if (level == null) {
+        continue;
+      }
+      final rank = order[level] ?? 0;
+      if (rank > worstRank) {
+        worstRank = rank;
+        worst = level;
+      }
+    }
+    return worst;
+  }
+
+  static String _snoringSeverityBodyKey(String severityLevel) {
+    switch (severityLevel) {
+      case 'severe':
+        return 'snoringAdviceSevere';
+      case 'moderate':
+        return 'snoringAdviceModerate';
+      default:
+        return 'snoringAdviceMild';
     }
   }
 

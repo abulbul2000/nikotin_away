@@ -775,6 +775,28 @@ class AppTexts {
       'Dun gece {count} kez horlamaya benzer bir ses paterni tespit edildi. Detaylar icin Ayarlar > Horlama Testi\'ne bakabilirsin.',
     'snoringResultNotificationBodyClear':
       'Dun gece horlamaya benzer bir ses paterni tespit edilmedi.',
+    'snoringSeverityNone': 'Horlama tespit edilmedi.',
+    'snoringSeverityMild': 'Hafif duzeyde horlama tespit edildi.',
+    'snoringSeverityModerate': 'Orta duzeyde horlama tespit edildi.',
+    'snoringSeveritySevere': 'Belirgin duzeyde horlama tespit edildi.',
+    'snoringAdviceMild':
+      'Hafif horlama genelde gecicidir. Yan yatarak uyumak ve alkolden kacinmak faydali olabilir.',
+    'snoringAdviceModerate':
+      'Orta duzeyde horlama birkac gecedir surmesi halinde, kilo ve uyku pozisyonu gibi yasam tarzi onlemlerinin yaninda bir doktora danismani oneririz.',
+    'snoringAdviceSevere':
+      'Belirgin duzeyde horlama tespit edildi. Bu durum devam ederse lutfen bir doktora danis; bu uygulama tibbi tani veya tedavi onerisi vermez.',
+    'snoringHomeSummaryCardTitle': 'Dun geceki horlama',
+    'snoringHomeSummaryCardBodyDetected':
+      'Dun gece {count} kez horlamaya benzer bir ses paterni tespit edildi.',
+    'snoringHomeSummaryCardBodyClear':
+      'Dun gece horlamaya benzer bir ses paterni tespit edilmedi.',
+    'snoringTestTitle': 'Horlama Testi',
+    'snoringTestInstructions':
+      '60 saniye boyunca mikrofonu acik tutacagiz. Ses hicbir zaman kaydedilmez veya disariya gonderilmez, sadece horlama paterni analiz edilir.',
+    'snoringTestStartButton': 'Testi Baslat',
+    'snoringTestListening': 'Dinleniyor...',
+    'snoringTestResultTitle': 'Test Sonucu',
+    'menuSnoringTest': 'Horlama Testi',
     'coughTestTitle': 'Oksuruk Testi',
     'coughTestIntro':
       '30 saniye boyunca mikrofonu acik tutacagiz ve bu surede kac kez oksurdugunu sayacagiz.',
@@ -2395,6 +2417,28 @@ class AppTexts {
       'A snore-like sound pattern was detected {count} times last night. See Settings > Snoring Test for details.',
     'snoringResultNotificationBodyClear':
       'No snore-like sound pattern was detected last night.',
+    'snoringSeverityNone': 'No snoring detected.',
+    'snoringSeverityMild': 'A mild level of snoring was detected.',
+    'snoringSeverityModerate': 'A moderate level of snoring was detected.',
+    'snoringSeveritySevere': 'A pronounced level of snoring was detected.',
+    'snoringAdviceMild':
+      'Mild snoring is usually temporary. Sleeping on your side and avoiding alcohol can help.',
+    'snoringAdviceModerate':
+      'If moderate snoring has lasted several nights, alongside lifestyle steps like weight and sleep position, we recommend seeing a doctor.',
+    'snoringAdviceSevere':
+      'A pronounced level of snoring was detected. If this continues, please see a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
+    'snoringHomeSummaryCardTitle': 'Last night\'s snoring',
+    'snoringHomeSummaryCardBodyDetected':
+      'A snore-like sound pattern was detected {count} times last night.',
+    'snoringHomeSummaryCardBodyClear':
+      'No snore-like sound pattern was detected last night.',
+    'snoringTestTitle': 'Snoring Test',
+    'snoringTestInstructions':
+      'We\'ll keep the microphone on for 60 seconds. Sound is never recorded or sent anywhere, only the snoring pattern is analyzed.',
+    'snoringTestStartButton': 'Start Test',
+    'snoringTestListening': 'Listening...',
+    'snoringTestResultTitle': 'Test Result',
+    'menuSnoringTest': 'Snoring Test',
     'coughTestTitle': 'Cough Test',
     'coughTestIntro':
       'We\'ll keep the microphone on for 30 seconds and count how many times you cough.',
