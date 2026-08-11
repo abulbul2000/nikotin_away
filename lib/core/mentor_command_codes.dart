@@ -102,4 +102,14 @@ abstract final class MentorMessageCodes {
   static const quickReplyThanks = 'QUICK_REPLY_THANKS';
   static const quickReplyLetsTalk = 'QUICK_REPLY_LETS_TALK';
   static const quickReplyOkAck = 'QUICK_REPLY_OK_ACK';
+
+  // The "Zorlanıyorum" follow-up question, its 3 answer options, and the
+  // confirmation shown once the user has picked one.
+  static const followUpStrugglingQuestion = 'MENTOR_FOLLOWUP_STRUGGLING_Q';
+  static const quickReplyReduceTasks = 'QUICK_REPLY_REDUCE_TASKS';
+  static const quickReplyEaseBarrier = 'QUICK_REPLY_EASE_BARRIER';
+  static const quickReplyJustTalking = 'QUICK_REPLY_JUST_TALKING';
+  static const followUpAckReduceTasks = 'MENTOR_FOLLOWUP_ACK_REDUCE_TASKS';
+  static const followUpAckEaseBarrier = 'MENTOR_FOLLOWUP_ACK_EASE_BARRIER';
+  static const followUpAckJustTalking = 'MENTOR_FOLLOWUP_ACK_JUST_TALKING';
 }

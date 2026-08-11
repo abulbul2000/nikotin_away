@@ -24,6 +24,18 @@ class MentorMessage {
   /// The quick-reply the user tapped, if any.
   final String? userReply;
 
+  /// A follow-up question attached after certain replies (currently just
+  /// "Zorlanıyorum") — a canonical code, resolved the same way [text] is.
+  /// Null until attached; never cleared back to null once set.
+  final String? followUpQuestion;
+
+  /// The answer options shown with [followUpQuestion], canonical codes like
+  /// [quickReplies].
+  final List<String> followUpQuickReplies;
+
+  /// The follow-up option the user picked, if any.
+  final String? followUpReply;
+
   const MentorMessage({
     required this.id,
     required this.createdAt,
@@ -33,9 +45,18 @@ class MentorMessage {
     required this.quickReplies,
     required this.read,
     this.userReply,
+    this.followUpQuestion,
+    this.followUpQuickReplies = const [],
+    this.followUpReply,
   });
 
-  MentorMessage copyWith({bool? read, String? userReply}) {
+  MentorMessage copyWith({
+    bool? read,
+    String? userReply,
+    String? followUpQuestion,
+    List<String>? followUpQuickReplies,
+    String? followUpReply,
+  }) {
     return MentorMessage(
       id: id,
       createdAt: createdAt,
@@ -45,6 +66,9 @@ class MentorMessage {
       quickReplies: quickReplies,
       read: read ?? this.read,
       userReply: userReply ?? this.userReply,
+      followUpQuestion: followUpQuestion ?? this.followUpQuestion,
+      followUpQuickReplies: followUpQuickReplies ?? this.followUpQuickReplies,
+      followUpReply: followUpReply ?? this.followUpReply,
     );
   }
 
@@ -58,11 +82,15 @@ class MentorMessage {
       'quickReplies': quickReplies.join('|'),
       'read': read ? 1 : 0,
       'userReply': userReply,
+      'followUpQuestion': followUpQuestion,
+      'followUpQuickReplies': followUpQuickReplies.join('|'),
+      'followUpReply': followUpReply,
     };
   }
 
   factory MentorMessage.fromJson(Map<String, dynamic> json) {
     final rawReplies = json['quickReplies']?.toString() ?? '';
+    final rawFollowUpReplies = json['followUpQuickReplies']?.toString() ?? '';
     return MentorMessage(
       id: json['id'] as String,
       createdAt: DateTime.parse(json['createdAt'] as String),
@@ -72,6 +100,11 @@ class MentorMessage {
       quickReplies: rawReplies.isEmpty ? const [] : rawReplies.split('|'),
       read: ((json['read'] as num?)?.toInt() ?? 0) == 1,
       userReply: json['userReply'] as String?,
+      followUpQuestion: json['followUpQuestion'] as String?,
+      followUpQuickReplies: rawFollowUpReplies.isEmpty
+          ? const []
+          : rawFollowUpReplies.split('|'),
+      followUpReply: json['followUpReply'] as String?,
     );
   }
 }

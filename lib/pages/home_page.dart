@@ -5,6 +5,7 @@ import 'package:home_widget/home_widget.dart';
 
 import '../core/app_texts.dart';
 import '../core/app_theme.dart';
+import '../core/mentor_command_codes.dart';
 import '../models/adaptive_task_models.dart';
 import '../models/mentor_message.dart';
 import '../models/reduction_progress.dart';
@@ -451,13 +452,12 @@ class _HomePageState extends State<HomePage> {
       // for every task this stream carries, same as the background isolate
       // path in notification_service.dart assumes when canonicalTitle is
       // absent from the payload.
-      final followUp = await TaskAssignmentService(
-        _storageService,
-      ).handleTaskAction(
-        canonicalTitle: taskTitle,
-        taskTitle: taskTitle,
-        actionId: actionId,
-      );
+      final followUp = await TaskAssignmentService(_storageService)
+          .handleTaskAction(
+            canonicalTitle: taskTitle,
+            taskTitle: taskTitle,
+            actionId: actionId,
+          );
       if (!mounted) {
         return;
       }
@@ -488,8 +488,9 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (actionId == 'followup_done' || actionId == 'smoked_yes') {
-      final plannedMinutes =
-          TaskAssignmentService.resolveInitialTaskDelay(taskTitle).inMinutes;
+      final plannedMinutes = TaskAssignmentService.resolveInitialTaskDelay(
+        taskTitle,
+      ).inMinutes;
       await _storageService.recordAdaptiveTaskOutcome(
         taskTitle: taskTitle,
         outcome: AdaptiveTaskOutcome.success,
@@ -517,13 +518,12 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (actionId == 'followup_later' || actionId == 'smoked_no') {
-      await _protocolViolationService.logFollowUpDeferred(
-        taskTitle: taskTitle,
-      );
+      await _protocolViolationService.logFollowUpDeferred(taskTitle: taskTitle);
       final delay = await _storageService.resolveAdaptivePostponeDelay();
       final followUpAt = DateTime.now().add(delay);
-      final plannedMinutes =
-          TaskAssignmentService.resolveInitialTaskDelay(taskTitle).inMinutes;
+      final plannedMinutes = TaskAssignmentService.resolveInitialTaskDelay(
+        taskTitle,
+      ).inMinutes;
       await _storageService.recordAdaptiveTaskOutcome(
         taskTitle: taskTitle,
         outcome: AdaptiveTaskOutcome.deferred,
@@ -709,10 +709,7 @@ class _HomePageState extends State<HomePage> {
       _riskyHours = behavior?.riskyHours ?? const [];
       _breathTrendText = behavior?.breathTrend ?? 'Stable';
       _progressSummaryText = behavior?.progressSummary ?? 'Stable';
-      _adaptivePlanItems = [
-        ...?adaptivePlan?.items,
-        ?sleepRoutinePlanItem,
-      ];
+      _adaptivePlanItems = [...?adaptivePlan?.items, ?sleepRoutinePlanItem];
       _todaysTasks = _adaptivePlanItems.isNotEmpty
           ? _adaptivePlanItems.map((item) => item.taskTitle).toList()
           : behavior?.todaysTasks ?? const [];
@@ -847,12 +844,58 @@ class _HomePageState extends State<HomePage> {
       return;
     }
     await _storageService.replyToMentorMessage(message.id, reply);
+    final isStruggling = reply == MentorMessageCodes.quickReplyStruggling;
+    if (isStruggling) {
+      await _storageService.attachMentorFollowUpQuestion(message.id);
+    }
     if (!mounted) {
       return;
     }
     setState(() {
-      _latestMentorMessage = message.copyWith(read: true, userReply: reply);
+      _latestMentorMessage = message.copyWith(
+        read: true,
+        userReply: reply,
+        followUpQuestion: isStruggling
+            ? MentorMessageCodes.followUpStrugglingQuestion
+            : null,
+        followUpQuickReplies: isStruggling
+            ? const [
+                MentorMessageCodes.quickReplyReduceTasks,
+                MentorMessageCodes.quickReplyEaseBarrier,
+                MentorMessageCodes.quickReplyJustTalking,
+              ]
+            : const [],
+      );
     });
+  }
+
+  Future<void> _replyToMentorFollowUp(String choice) async {
+    final message = _latestMentorMessage;
+    if (message == null) {
+      return;
+    }
+    await _storageService.applyMentorFollowUpChoice(message.id, choice);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _latestMentorMessage = message.copyWith(followUpReply: choice);
+    });
+
+    String? snackCode;
+    if (choice == MentorMessageCodes.quickReplyReduceTasks) {
+      snackCode = MentorMessageCodes.followUpAckReduceTasks;
+    } else if (choice == MentorMessageCodes.quickReplyEaseBarrier) {
+      snackCode = MentorMessageCodes.followUpAckEaseBarrier;
+    }
+    if (snackCode != null && mounted) {
+      final languageCode = Localizations.localeOf(context).languageCode;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppTexts.localizeMentorMessage(languageCode, snackCode)),
+        ),
+      );
+    }
   }
 
   Color _respiratoryBandColor() {
@@ -1335,7 +1378,9 @@ class _HomePageState extends State<HomePage> {
       await _protocolViolationService.logFollowUpFailed(taskTitle: taskTitle);
     }
 
-    final plannedMinutes = TaskAssignmentService.resolveInitialTaskDelay(taskTitle).inMinutes;
+    final plannedMinutes = TaskAssignmentService.resolveInitialTaskDelay(
+      taskTitle,
+    ).inMinutes;
     await _storageService.recordAdaptiveTaskOutcome(
       taskTitle: taskTitle,
       outcome: succeeded == true
@@ -1347,7 +1392,9 @@ class _HomePageState extends State<HomePage> {
     );
     await _storageService.saveTaskResult(
       taskTitle: taskTitle,
-      taskResult: succeeded == true ? 'willpower_success' : 'willpower_weakness',
+      taskResult: succeeded == true
+          ? 'willpower_success'
+          : 'willpower_weakness',
       completedAt: DateTime.now(),
     );
     await _storageService.resolveTaskFollowUpById(id);
@@ -1370,7 +1417,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _presentMandatoryTaskIfNeeded({bool isRetry = false}) async {
-    if (!mounted || (!isRetry && _mandatoryTaskShown) || !_registrationCompleted) {
+    if (!mounted ||
+        (!isRetry && _mandatoryTaskShown) ||
+        !_registrationCompleted) {
       return;
     }
 
@@ -1451,9 +1500,7 @@ class _HomePageState extends State<HomePage> {
         // The pre-sleep routine has no countdown/follow-up of its own —
         // accepting it on the fake-call screen hands the user straight into
         // SleepRoutinePage, same as the notification-action path.
-        await TaskAssignmentService(
-          _storageService,
-        ).handleTaskAction(
+        await TaskAssignmentService(_storageService).handleTaskAction(
           canonicalTitle: acceptedTaskTitle,
           taskTitle: acceptedTaskTitle,
           actionId: TaskActionId.done,
@@ -1949,51 +1996,84 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  int _selectedTabIndex = 0;
+
+  Widget _buildHomeTab(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+        child: Column(
+          children: [
+            Text(
+              '${context.t('welcome')}, ${widget.name}',
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 24),
+            if (_latestMentorMessage != null) ...[
+              _buildMentorCard(context),
+              const SizedBox(height: 24),
+            ],
+            _buildReductionCard(context),
+            const SizedBox(height: 24),
+            _buildHealthMetricsButton(context),
+            const SizedBox(height: 24),
+            _buildSummaryStats(context),
+            const SizedBox(height: 16),
+            _buildBreathTrendCard(),
+            const SizedBox(height: 12),
+            _buildQuickLinkButtons(context),
+            const SizedBox(height: 24),
+            if (!_registrationCompleted)
+              _buildCompleteRegistrationButton(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsTab(BuildContext context) {
+    return const SettingsPage();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(context),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-          child: Column(
-            children: [
-              Text(
-                '${context.t('welcome')}, ${widget.name}',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 24),
-              if (_latestMentorMessage != null) ...[
-                _buildMentorCard(context),
-                const SizedBox(height: 24),
-              ],
-              _buildReductionCard(context),
-              const SizedBox(height: 24),
-              _buildHealthMetricsButton(context),
-              const SizedBox(height: 24),
-              _buildSummaryStats(context),
-              const SizedBox(height: 16),
-              _buildMainMenuCard(),
-              const SizedBox(height: 16),
-              _buildBreathTrendCard(),
-              const SizedBox(height: 16),
-              _buildAdaptiveInsightsCard(),
-              const SizedBox(height: 16),
-              _buildTaskReasonCard(),
-              const SizedBox(height: 16),
-              _buildTodayTaskCard(),
-              const SizedBox(height: 12),
-              _buildQuickLinkButtons(context),
-              const SizedBox(height: 16),
-              _buildConsecutiveSmokingCard(),
-              const SizedBox(height: 24),
-              if (!_registrationCompleted) _buildCompleteRegistrationButton(context),
-            ],
+      body: IndexedStack(
+        index: _selectedTabIndex,
+        children: [
+          _buildHomeTab(context),
+          _buildTestsTab(context),
+          _buildTrackingTab(context),
+          _buildSettingsTab(context),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedTabIndex,
+        onDestinationSelected: (index) =>
+            setState(() => _selectedTabIndex = index),
+        destinations: [
+          NavigationDestination(
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: context.t('home'),
           ),
-        ),
+          NavigationDestination(
+            icon: const Icon(Icons.assignment_outlined),
+            selectedIcon: const Icon(Icons.assignment),
+            label: context.t('tabTests'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.insights_outlined),
+            selectedIcon: const Icon(Icons.insights),
+            label: context.t('tabTracking'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.settings_outlined),
+            selectedIcon: const Icon(Icons.settings),
+            label: context.t('settingsTitle'),
+          ),
+        ],
       ),
     );
   }
@@ -2026,17 +2106,6 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.sos, size: 18),
             label: Text(context.t('cravingSosButton')),
           ),
-        ),
-        IconButton(
-          onPressed: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SettingsPage()),
-            );
-            if (!mounted) return;
-            await _loadHomeMetrics();
-          },
-          icon: const Icon(Icons.settings_outlined),
-          tooltip: context.t('settingsTitle'),
         ),
       ],
     );
@@ -2083,34 +2152,106 @@ class _HomePageState extends State<HomePage> {
             ),
             if (message.quickReplies.isNotEmpty) ...[
               const SizedBox(height: 12),
-              if (answered)
-                Text(
-                  '${context.t('mentorReplySentPrefix')}: '
-                  '${AppTexts.localizeMentorReplyCode(languageCode, message.userReply!)}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.white54,
-                  ),
-                )
-              else
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: message.quickReplies
-                      .map(
-                        (reply) => OutlinedButton(
-                          onPressed: () => _replyToMentorMessage(reply),
-                          child: Text(
-                            AppTexts.localizeMentorReplyCode(languageCode, reply),
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
+              _buildMentorReplyArea(context, message, languageCode, answered),
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  /// The area below the mentor's message — one of four states depending on
+  /// how far the "Zorlanıyorum" branch has progressed:
+  /// 1. Not answered yet → the original quick-reply buttons (İyiyim/
+  ///    Zorlanıyorum).
+  /// 2. Answered "İyiyim" (or answered "Zorlanıyorum" but no follow-up
+  ///    question was attached — a defensive fallback) → the static
+  ///    "cevabın gönderildi" text, same as before this feature existed.
+  /// 3. Answered "Zorlanıyorum", follow-up question attached, not yet
+  ///    answered → the follow-up question + its 3 buttons.
+  /// 4. Follow-up answered → a final acknowledgement text.
+  Widget _buildMentorReplyArea(
+    BuildContext context,
+    MentorMessage message,
+    String languageCode,
+    bool answered,
+  ) {
+    if (!answered) {
+      return Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: message.quickReplies
+            .map(
+              (reply) => OutlinedButton(
+                onPressed: () => _replyToMentorMessage(reply),
+                child: Text(
+                  AppTexts.localizeMentorReplyCode(languageCode, reply),
+                ),
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    final isStrugglingWithFollowUp =
+        message.userReply == MentorMessageCodes.quickReplyStruggling &&
+        message.followUpQuestion != null;
+
+    if (isStrugglingWithFollowUp && message.followUpReply == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppTexts.localizeMentorMessage(
+              languageCode,
+              message.followUpQuestion!,
+            ),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: message.followUpQuickReplies
+                .map(
+                  (reply) => OutlinedButton(
+                    onPressed: () => _replyToMentorFollowUp(reply),
+                    child: Text(
+                      AppTexts.localizeMentorReplyCode(languageCode, reply),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      );
+    }
+
+    if (isStrugglingWithFollowUp && message.followUpReply != null) {
+      final ackCode = switch (message.followUpReply) {
+        MentorMessageCodes.quickReplyReduceTasks =>
+          MentorMessageCodes.followUpAckReduceTasks,
+        MentorMessageCodes.quickReplyEaseBarrier =>
+          MentorMessageCodes.followUpAckEaseBarrier,
+        _ => MentorMessageCodes.followUpAckJustTalking,
+      };
+      return Text(
+        AppTexts.localizeMentorMessage(languageCode, ackCode),
+        style: const TextStyle(
+          fontSize: 12,
+          fontStyle: FontStyle.italic,
+          color: Colors.white54,
+        ),
+      );
+    }
+
+    return Text(
+      '${context.t('mentorReplySentPrefix')}: '
+      '${AppTexts.localizeMentorReplyCode(languageCode, message.userReply!)}',
+      style: const TextStyle(
+        fontSize: 12,
+        fontStyle: FontStyle.italic,
+        color: Colors.white54,
       ),
     );
   }
@@ -2139,115 +2280,115 @@ class _HomePageState extends State<HomePage> {
               );
             },
       child: Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: accent.withAlpha((255 * 0.2).toInt()),
-        border: Border.all(color: accent, width: 2),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            '📉 ${context.t('reductionCardTitle')}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: accent,
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (progress == null || !progress.hasEvidence) ...[
-            // Three confident zeros would read as failure to someone who has
-            // simply just installed the app. Say what's missing instead.
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: accent.withAlpha((255 * 0.2).toInt()),
+          border: Border.all(color: accent, width: 2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
             Text(
-              context.t('reductionNoDataTitle'),
+              '📉 ${context.t('reductionCardTitle')}',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 15,
+                fontSize: 18,
                 fontWeight: FontWeight.w600,
                 color: accent,
               ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              context.t('reductionNoDataBody'),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: accent.withAlpha((255 * 0.85).toInt()),
+            const SizedBox(height: 16),
+            if (progress == null || !progress.hasEvidence) ...[
+              // Three confident zeros would read as failure to someone who has
+              // simply just installed the app. Say what's missing instead.
+              Text(
+                context.t('reductionNoDataTitle'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: accent,
+                ),
               ),
-            ),
-          ] else ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _buildReductionMetric(
-                    context,
-                    value: '${progress.targetStreakDays}',
-                    unit: context.t('dayUnit'),
-                    label: context.t('reductionStreakLabel'),
+              const SizedBox(height: 6),
+              Text(
+                context.t('reductionNoDataBody'),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: accent.withAlpha((255 * 0.85).toInt()),
+                ),
+              ),
+            ] else ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildReductionMetric(
+                      context,
+                      value: '${progress.targetStreakDays}',
+                      unit: context.t('dayUnit'),
+                      label: context.t('reductionStreakLabel'),
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildReductionMetric(
+                      context,
+                      value: '${progress.cigarettesAvoided}',
+                      unit: context.t('cigaretteUnit'),
+                      label: context.t('reductionAvoidedLabel'),
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildReductionMetric(
+                      context,
+                      value: '${progress.currentBarrierMinutes}',
+                      unit: context.t('minutesShort'),
+                      label: context.t('reductionIntervalLabel'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                context
+                    .t('reductionTargetToday')
+                    .replaceAll('{target}', '${progress.dailyTarget}'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: accent,
+                ),
+              ),
+              if (progress.loggedToday != null)
+                Text(
+                  context
+                      .t('reductionLoggedToday')
+                      .replaceAll('{count}', '${progress.loggedToday}'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: accent.withAlpha((255 * 0.85).toInt()),
                   ),
                 ),
-                Expanded(
-                  child: _buildReductionMetric(
-                    context,
-                    value: '${progress.cigarettesAvoided}',
-                    unit: context.t('cigaretteUnit'),
-                    label: context.t('reductionAvoidedLabel'),
-                  ),
-                ),
-                Expanded(
-                  child: _buildReductionMetric(
-                    context,
-                    value: '${progress.currentBarrierMinutes}',
-                    unit: context.t('minutesShort'),
-                    label: context.t('reductionIntervalLabel'),
+              if (progress.naturalIntervalMinutes > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '${context.t('reductionIntervalDetail').replaceAll('{natural}', '${progress.naturalIntervalMinutes}').replaceAll('{barrier}', '${progress.currentBarrierMinutes}')}'
+                  ' • '
+                  '${context.t('reductionIntervalGain').replaceAll('{percent}', '${(progress.intervalProgress * 100).round()}')}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: accent.withAlpha((255 * 0.85).toInt()),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              context
-                  .t('reductionTargetToday')
-                  .replaceAll('{target}', '${progress.dailyTarget}'),
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: accent,
-              ),
-            ),
-            if (progress.loggedToday != null)
-              Text(
-                context
-                    .t('reductionLoggedToday')
-                    .replaceAll('{count}', '${progress.loggedToday}'),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: accent.withAlpha((255 * 0.85).toInt()),
-                ),
-              ),
-            if (progress.naturalIntervalMinutes > 0) ...[
-              const SizedBox(height: 4),
-              Text(
-                '${context.t('reductionIntervalDetail').replaceAll('{natural}', '${progress.naturalIntervalMinutes}').replaceAll('{barrier}', '${progress.currentBarrierMinutes}')}'
-                ' • '
-                '${context.t('reductionIntervalGain').replaceAll('{percent}', '${(progress.intervalProgress * 100).round()}')}',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: accent.withAlpha((255 * 0.85).toInt()),
-                ),
-              ),
             ],
           ],
-        ],
-      ),
+        ),
       ),
     );
   }
@@ -2268,10 +2409,7 @@ class _HomePageState extends State<HomePage> {
             color: Colors.teal,
           ),
         ),
-        Text(
-          unit,
-          style: const TextStyle(fontSize: 12, color: Colors.teal),
-        ),
+        Text(unit, style: const TextStyle(fontSize: 12, color: Colors.teal)),
         const SizedBox(height: 4),
         Text(
           label,
@@ -2517,110 +2655,109 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildMainMenuCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              context.t('quickMenuTitle'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  Widget _buildTestsTab(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildMenuSection('menuSectionTestsAndSurveys', [
+          SizedBox(
+            width: 160,
+            child: ElevatedButton.icon(
+              onPressed: _openBreathTestFromMenu,
+              icon: const Icon(Icons.air),
+              label: Text(context.t('menuBreathTest')),
             ),
-            const SizedBox(height: 12),
-            _buildMenuSection('menuSectionTestsAndSurveys', [
-              SizedBox(
-                width: 160,
-                child: ElevatedButton.icon(
-                  onPressed: _openBreathTestFromMenu,
-                  icon: const Icon(Icons.air),
-                  label: Text(context.t('menuBreathTest')),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: OutlinedButton.icon(
-                  onPressed: _openWeeklySurveyFromMenu,
-                  icon: const Icon(Icons.assignment),
-                  label: Text(context.t('menuWeeklySurvey')),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const SurveyHistoryPage(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.history),
-                  label: Text(context.t('menuSurveyHistory')),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: OutlinedButton.icon(
-                  onPressed: _openCoughTestFromMenu,
-                  icon: const Icon(Icons.sick_outlined),
-                  label: Text(context.t('menuCoughTest')),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 16),
-            _buildMenuSection('menuSectionTrackingAndReports', [
-              SizedBox(
-                width: 160,
-                child: OutlinedButton.icon(
-                  onPressed: _openPersonalProgressScreen,
-                  icon: const Icon(Icons.insights),
-                  label: Text(context.t('menuPersonalProgress')),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: OutlinedButton.icon(
-                  onPressed: _openBreathAnalysisScreen,
-                  icon: const Icon(Icons.show_chart),
-                  label: Text(context.t('breathAnalysisPageTitle')),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: OutlinedButton.icon(
-                  onPressed: _openReports,
-                  icon: const Icon(Icons.picture_as_pdf_outlined),
-                  label: Text(context.t('menuReports')),
-                ),
-              ),
-              SizedBox(
-                width: 160,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const ProtocolViolationsPage(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.report_gmailerrorred),
-                  label: Text(context.t('menuViolationReport')),
-                ),
-              ),
-            ]),
-            // "Sigara İçtim" and "Günlük Değerlendirme" used to sit here.
-            // The first is being replaced by the always-available
-            // quick-log button, which reaches further than a menu entry
-            // the user has to open the app to find; the second asked at
-            // day's end which hours they had smoked, which that same
-            // button now records as it happens.
-          ],
-        ),
+          ),
+          SizedBox(
+            width: 160,
+            child: OutlinedButton.icon(
+              onPressed: _openWeeklySurveyFromMenu,
+              icon: const Icon(Icons.assignment),
+              label: Text(context.t('menuWeeklySurvey')),
+            ),
+          ),
+          SizedBox(
+            width: 160,
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SurveyHistoryPage()),
+                );
+              },
+              icon: const Icon(Icons.history),
+              label: Text(context.t('menuSurveyHistory')),
+            ),
+          ),
+          SizedBox(
+            width: 160,
+            child: OutlinedButton.icon(
+              onPressed: _openCoughTestFromMenu,
+              icon: const Icon(Icons.sick_outlined),
+              label: Text(context.t('menuCoughTest')),
+            ),
+          ),
+        ]),
+      ],
+    );
+  }
+
+  Widget _buildTrackingLinkCard({
+    required IconData icon,
+    required String labelKey,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      child: ListTile(
+        leading: Icon(icon),
+        title: Text(context.t(labelKey)),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
       ),
+    );
+  }
+
+  Widget _buildTrackingTab(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _buildAdaptiveInsightsCard(),
+        const SizedBox(height: 16),
+        _buildTaskReasonCard(),
+        const SizedBox(height: 16),
+        _buildTodayTaskCard(),
+        const SizedBox(height: 16),
+        _buildConsecutiveSmokingCard(),
+        const SizedBox(height: 16),
+        _buildTrackingLinkCard(
+          icon: Icons.insights,
+          labelKey: 'menuPersonalProgress',
+          onTap: _openPersonalProgressScreen,
+        ),
+        const SizedBox(height: 8),
+        _buildTrackingLinkCard(
+          icon: Icons.show_chart,
+          labelKey: 'breathAnalysisPageTitle',
+          onTap: _openBreathAnalysisScreen,
+        ),
+        const SizedBox(height: 8),
+        _buildTrackingLinkCard(
+          icon: Icons.picture_as_pdf_outlined,
+          labelKey: 'menuReports',
+          onTap: _openReports,
+        ),
+        const SizedBox(height: 8),
+        _buildTrackingLinkCard(
+          icon: Icons.report_gmailerrorred,
+          labelKey: 'menuViolationReport',
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProtocolViolationsPage()),
+            );
+          },
+        ),
+      ],
     );
   }
 
@@ -2989,9 +3126,7 @@ class _HomePageState extends State<HomePage> {
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
-                        shadows: [
-                          Shadow(color: Colors.black54, blurRadius: 3),
-                        ],
+                        shadows: [Shadow(color: Colors.black54, blurRadius: 3)],
                       ),
                     ),
                   ),

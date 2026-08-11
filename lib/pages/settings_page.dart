@@ -154,7 +154,9 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _toggleSnoringDetection(bool value) async {
     if (value && !_sleepIntelligenceEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('snoringDetectionRequiresSleepIntelligence'))),
+        SnackBar(
+          content: Text(context.t('snoringDetectionRequiresSleepIntelligence')),
+        ),
       );
       return;
     }
@@ -517,334 +519,320 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(context.t('settingsTitle'))),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _SectionLabel(context.t('notifKindsSectionTitle')),
-          const NotificationKindsCard(),
-          const SizedBox(height: 20),
-          _SectionLabel(context.t('settingsSectionGeneral')),
-          Card(
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _SectionLabel(context.t('notifKindsSectionTitle')),
+        const NotificationKindsCard(),
+        const SizedBox(height: 20),
+        _SectionLabel(context.t('settingsSectionGeneral')),
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.language),
+                title: Text(context.t('settingsLanguageRow')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _openLanguageSettings,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.tune_outlined),
+                title: Text(context.t('settingsCoachModeRow')),
+                subtitle: Text(context.t('settingsCoachModeRowSubtitle')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _openCoachMode,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.medication_outlined),
+                title: Text(context.t('medicationsSettingsRow')),
+                subtitle: Text(context.t('medicationsSettingsRowSubtitle')),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _openMedications,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _SectionLabel(context.t('settingsSleepIntelligenceRow')),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ListTile(
-                  leading: const Icon(Icons.language),
-                  title: Text(context.t('settingsLanguageRow')),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _openLanguageSettings,
+                Row(
+                  children: [
+                    const Icon(Icons.bedtime_outlined, color: Colors.white70),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        context.t('sleepIntelligenceTitle'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Switch(
+                      value: _sleepIntelligenceEnabled,
+                      onChanged: _toggleSleepIntelligence,
+                    ),
+                  ],
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.tune_outlined),
-                  title: Text(context.t('settingsCoachModeRow')),
-                  subtitle: Text(context.t('settingsCoachModeRowSubtitle')),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _openCoachMode,
+                const SizedBox(height: 10),
+                Text(
+                  context.t('sleepIntelligenceDescription'),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
                 ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.medication_outlined),
-                  title: Text(context.t('medicationsSettingsRow')),
-                  subtitle: Text(context.t('medicationsSettingsRowSubtitle')),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _openMedications,
+                const SizedBox(height: 6),
+                Text(
+                  context.t('sleepIntelligencePurpose'),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          _SectionLabel(context.t('settingsSleepIntelligenceRow')),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.bedtime_outlined, color: Colors.white70),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          context.t('sleepIntelligenceTitle'),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+        ),
+        const SizedBox(height: 20),
+        _SectionLabel(context.t('settingsSnoringDetectionRow')),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.mic_none_outlined, color: Colors.white70),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        context.t('snoringDetectionTitle'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      Switch(
-                        value: _sleepIntelligenceEnabled,
-                        onChanged: _toggleSleepIntelligence,
-                      ),
-                    ],
+                    ),
+                    Switch(
+                      value: _snoringDetectionEnabled,
+                      onChanged: _toggleSnoringDetection,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  context.t('snoringDetectionDescription'),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  context.t('snoringDetectionPurpose'),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
                   ),
+                ),
+                if (_snoringDetectionEnabled) ...[
                   const SizedBox(height: 10),
                   Text(
-                    context.t('sleepIntelligenceDescription'),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.75),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    context.t('sleepIntelligencePurpose'),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 13,
-                      fontStyle: FontStyle.italic,
-                    ),
+                    '${context.t('snoringDetectionLastNightCount')}: $_lastNightSnoreLikelyCount',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ],
-              ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
-          _SectionLabel(context.t('settingsSnoringDetectionRow')),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.mic_none_outlined, color: Colors.white70),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          context.t('snoringDetectionTitle'),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
+        ),
+        const SizedBox(height: 20),
+        _SectionLabel(context.t('smokedLogButtonRow')),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.smoking_rooms_outlined,
+                      color: Colors.white70,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        context.t('smokedLogButtonTitle'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      Switch(
-                        value: _snoringDetectionEnabled,
-                        onChanged: _toggleSnoringDetection,
+                    ),
+                    Switch(
+                      key: const ValueKey('smoked_log_button_switch'),
+                      value: _smokedLogButtonEnabled,
+                      onChanged: _toggleSmokedLogButton,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  context.t('smokedLogButtonDescription'),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  context.t('smokedLogButtonPurpose'),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        _SectionLabel(context.t('settingsWearableIntelligenceRow')),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.watch_outlined, color: Colors.white70),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        context.t('wearableIntelligenceTitle'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    context.t('snoringDetectionDescription'),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.75),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    context.t('snoringDetectionPurpose'),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 13,
-                      fontStyle: FontStyle.italic,
+                    Switch(
+                      value: _wearableIntelligenceEnabled,
+                      onChanged: _toggleWearableIntelligence,
                     ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  context.t('wearableIntelligenceDescription'),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  context.t('wearableIntelligencePurpose'),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
                   ),
-                  if (_snoringDetectionEnabled) ...[
-                    const SizedBox(height: 10),
+                ),
+                if (_wearableIntelligenceEnabled) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  if (_wearableSnapshotLoading)
+                    const Center(
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  else if (!_wearableSnapshot.hasAnyData)
                     Text(
-                      '${context.t('snoringDetectionLastNightCount')}: $_lastNightSnoreLikelyCount',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _SectionLabel(context.t('smokedLogButtonRow')),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.smoking_rooms_outlined,
-                        color: Colors.white70,
+                      context.t('wearableIntelligenceNoData'),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.6),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          context.t('smokedLogButtonTitle'),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      Switch(
-                        key: const ValueKey('smoked_log_button_switch'),
-                        value: _smokedLogButtonEnabled,
-                        onChanged: _toggleSmokedLogButton,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    context.t('smokedLogButtonDescription'),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.75),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    context.t('smokedLogButtonPurpose'),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 13,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _SectionLabel(context.t('settingsWearableIntelligenceRow')),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.watch_outlined, color: Colors.white70),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          context.t('wearableIntelligenceTitle'),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      Switch(
-                        value: _wearableIntelligenceEnabled,
-                        onChanged: _toggleWearableIntelligence,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    context.t('wearableIntelligenceDescription'),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.75),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    context.t('wearableIntelligencePurpose'),
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.5),
-                      fontSize: 13,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  if (_wearableIntelligenceEnabled) ...[
-                    const SizedBox(height: 12),
-                    const Divider(height: 1),
-                    const SizedBox(height: 12),
-                    if (_wearableSnapshotLoading)
-                      const Center(
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    else if (!_wearableSnapshot.hasAnyData)
+                    )
+                  else ...[
+                    if (_wearableSnapshot.latestHeartRateBpm != null)
                       Text(
-                        context.t('wearableIntelligenceNoData'),
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.6),
-                        ),
-                      )
-                    else ...[
-                      if (_wearableSnapshot.latestHeartRateBpm != null)
-                        Text(
-                          '${context.t('wearableIntelligenceLatestHeartRate')}: '
-                          '${_wearableSnapshot.latestHeartRateBpm!.round()} bpm',
-                        ),
-                      if (_wearableSnapshot.lastSleepSessionDuration != null)
-                        Text(
-                          '${context.t('wearableIntelligenceLastSleep')}: '
-                          '${_wearableSnapshot.lastSleepSessionDuration!.inHours}s '
-                          '${_wearableSnapshot.lastSleepSessionDuration!.inMinutes % 60}d',
-                        ),
-                    ],
+                        '${context.t('wearableIntelligenceLatestHeartRate')}: '
+                        '${_wearableSnapshot.latestHeartRateBpm!.round()} bpm',
+                      ),
+                    if (_wearableSnapshot.lastSleepSessionDuration != null)
+                      Text(
+                        '${context.t('wearableIntelligenceLastSleep')}: '
+                        '${_wearableSnapshot.lastSleepSessionDuration!.inHours}s '
+                        '${_wearableSnapshot.lastSleepSessionDuration!.inMinutes % 60}d',
+                      ),
                   ],
                 ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _SectionLabel(context.t('settingsSectionPrivacy')),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.privacy_tip_outlined),
-              title: Text(context.t('settingsPermissionsRow')),
-              subtitle: Text(context.t('settingsPermissionsRowSubtitle')),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _openPermissionsCenter,
-            ),
-          ),
-          const SizedBox(height: 20),
-          _SectionLabel(context.t('settingsLocationIntelligenceRow')),
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.place_outlined),
-              title: Text(context.t('settingsLocationIntelligenceRow')),
-              subtitle: Text(
-                context.t('settingsLocationIntelligenceRowSubtitle'),
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _openLocationIntelligence,
-            ),
-          ),
-          const SizedBox(height: 20),
-          _SectionLabel(context.t('settingsSectionData')),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.cloud_upload_outlined),
-                  title: Text(context.t('cloudBackupRow')),
-                  subtitle: Text(context.t('cloudBackupRowSubtitle')),
-                  onTap: _confirmCloudBackup,
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.cloud_download_outlined),
-                  title: Text(context.t('cloudRestoreRow')),
-                  subtitle: Text(context.t('cloudRestoreRowSubtitle')),
-                  onTap: _confirmCloudRestore,
-                ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          Card(
-            child: ListTile(
-              leading: const Icon(
-                Icons.delete_outline,
-                color: Colors.redAccent,
-              ),
-              title: Text(context.t('settingsResetDataRow')),
-              subtitle: Text(context.t('settingsResetDataSubtitle')),
-              onTap: _confirmResetData,
-            ),
+        ),
+        const SizedBox(height: 20),
+        _SectionLabel(context.t('settingsSectionPrivacy')),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: Text(context.t('settingsPermissionsRow')),
+            subtitle: Text(context.t('settingsPermissionsRowSubtitle')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _openPermissionsCenter,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 20),
+        _SectionLabel(context.t('settingsLocationIntelligenceRow')),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.place_outlined),
+            title: Text(context.t('settingsLocationIntelligenceRow')),
+            subtitle: Text(
+              context.t('settingsLocationIntelligenceRowSubtitle'),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _openLocationIntelligence,
+          ),
+        ),
+        const SizedBox(height: 20),
+        _SectionLabel(context.t('settingsSectionData')),
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.cloud_upload_outlined),
+                title: Text(context.t('cloudBackupRow')),
+                subtitle: Text(context.t('cloudBackupRowSubtitle')),
+                onTap: _confirmCloudBackup,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.cloud_download_outlined),
+                title: Text(context.t('cloudRestoreRow')),
+                subtitle: Text(context.t('cloudRestoreRowSubtitle')),
+                onTap: _confirmCloudRestore,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            title: Text(context.t('settingsResetDataRow')),
+            subtitle: Text(context.t('settingsResetDataSubtitle')),
+            onTap: _confirmResetData,
+          ),
+        ),
+      ],
     );
   }
 }

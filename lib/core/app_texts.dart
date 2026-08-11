@@ -20,6 +20,8 @@ class AppTexts {
     'no': 'Hayır',
     'save': 'Kaydet',
     'home': 'Ana Sayfa',
+    'tabTests': 'Testler',
+    'tabTracking': 'Takip',
     'weeklySurvey': 'Haftalık Anket',
     'riskAnalysis': 'Risk Analizi',
     'retry': 'Tekrar dene',
@@ -1665,6 +1667,14 @@ class AppTexts {
     'quickReplyThanks': 'Teşekkürler',
     'quickReplyLetsTalk': 'Konuşalım',
     'quickReplyOkAck': 'Tamam',
+    'mentorFollowupStrugglingQ': 'Ne tür yardım istersin?',
+    'quickReplyReduceTasks': 'Görevleri azalt',
+    'quickReplyEaseBarrier': 'Bariyeri gevşet',
+    'quickReplyJustTalking': 'Sadece konuşmak istedim',
+    'mentorFollowupAckReduceTasks':
+        'Yarından itibaren bir hafta boyunca görevlerini azalttım, kendine iyi bak.',
+    'mentorFollowupAckEaseBarrier': 'Yarın için bariyeri biraz gevşettim.',
+    'mentorFollowupAckJustTalking': 'Buradayım, ne zaman istersen yazabilirsin.',
     'sleepRoutineTitle': 'Uyku Öncesi Rutin',
     'sleepRoutineIntro': 'Uyumadan önce 4 kısa adım',
     'sleepRoutineStepIndicator': 'Adım {current} / {total}',
@@ -1696,6 +1706,8 @@ class AppTexts {
     'no': 'No',
     'save': 'Save',
     'home': 'Home',
+    'tabTests': 'Tests',
+    'tabTracking': 'Tracking',
     'weeklySurvey': 'Weekly Survey',
     'riskAnalysis': 'Risk Analysis',
     'retry': 'Retry',
@@ -3354,6 +3366,14 @@ class AppTexts {
     'quickReplyThanks': 'Thanks',
     'quickReplyLetsTalk': "Let's talk",
     'quickReplyOkAck': 'Okay',
+    'mentorFollowupStrugglingQ': 'What kind of help would you like?',
+    'quickReplyReduceTasks': 'Reduce tasks',
+    'quickReplyEaseBarrier': 'Ease the barrier',
+    'quickReplyJustTalking': 'I just wanted to talk',
+    'mentorFollowupAckReduceTasks':
+        "Starting tomorrow, I've eased your tasks for a week — take care of yourself.",
+    'mentorFollowupAckEaseBarrier': "I've eased tomorrow's barrier a bit.",
+    'mentorFollowupAckJustTalking': "I'm here, write whenever you'd like.",
     'sleepRoutineTitle': 'Pre-Sleep Routine',
     'sleepRoutineIntro': '4 short steps before you sleep',
     'sleepRoutineStepIndicator': 'Step {current} of {total}',
@@ -3968,6 +3988,14 @@ class AppTexts {
         return textForCode(code, 'mentorReframeFollowupDeferred');
       case MentorMessageCodes.reframeDurationBarrier:
         return textForCode(code, 'mentorReframeDurationBarrier');
+      case MentorMessageCodes.followUpStrugglingQuestion:
+        return textForCode(code, 'mentorFollowupStrugglingQ');
+      case MentorMessageCodes.followUpAckReduceTasks:
+        return textForCode(code, 'mentorFollowupAckReduceTasks');
+      case MentorMessageCodes.followUpAckEaseBarrier:
+        return textForCode(code, 'mentorFollowupAckEaseBarrier');
+      case MentorMessageCodes.followUpAckJustTalking:
+        return textForCode(code, 'mentorFollowupAckJustTalking');
       default:
         return segment;
     }
@@ -4010,6 +4038,12 @@ class AppTexts {
         return textForCode(code, 'quickReplyLetsTalk');
       case MentorMessageCodes.quickReplyOkAck:
         return textForCode(code, 'quickReplyOkAck');
+      case MentorMessageCodes.quickReplyReduceTasks:
+        return textForCode(code, 'quickReplyReduceTasks');
+      case MentorMessageCodes.quickReplyEaseBarrier:
+        return textForCode(code, 'quickReplyEaseBarrier');
+      case MentorMessageCodes.quickReplyJustTalking:
+        return textForCode(code, 'quickReplyJustTalking');
       default:
         return replyCode;
     }

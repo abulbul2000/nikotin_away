@@ -10,12 +10,60 @@ void main() {
       riskScore: 30,
       recentSuccessRate: 0.85,
       riskyHours: const ['20:00-22:00'],
+      now: DateTime(2026, 1, 1, 10, 0),
     );
     expect(message.tone, 'coach');
     expect(message.type, 'daily');
     expect(
       message.text,
       '${MentorMessageCodes.dailyCoachWithHour}:20:00-22:00',
+    );
+  });
+
+  test(
+    'skips a risky-hour window whose end time has already passed today',
+    () {
+      // 18:19 — well past the day's most-frequent window (14:00-16:00), but
+      // still ahead of a second, less-frequent one (20:00-22:00). Naming a
+      // window that's already over reads as the mentor not knowing what
+      // time it is, so the message should skip to the next upcoming one
+      // rather than repeating the stale, highest-ranked window.
+      final message = builder.buildDailyMessage(
+        riskScore: 30,
+        recentSuccessRate: 0.85,
+        riskyHours: const ['14:00-16:00', '20:00-22:00'],
+        now: DateTime(2026, 1, 1, 18, 19),
+      );
+      expect(
+        message.text,
+        '${MentorMessageCodes.dailyCoachWithHour}:20:00-22:00',
+      );
+    },
+  );
+
+  test(
+    'falls back to the no-hour message when every risky hour has passed',
+    () {
+      final message = builder.buildDailyMessage(
+        riskScore: 30,
+        recentSuccessRate: 0.85,
+        riskyHours: const ['09:00-11:00', '14:00-16:00'],
+        now: DateTime(2026, 1, 1, 18, 19),
+      );
+      expect(message.text, MentorMessageCodes.dailyCoachNoHour);
+    },
+  );
+
+  test('a window still in progress counts as upcoming, not passed', () {
+    final message = builder.buildDailyMessage(
+      riskScore: 30,
+      recentSuccessRate: 0.85,
+      riskyHours: const ['14:00-16:00'],
+      now: DateTime(2026, 1, 1, 15, 30),
+    );
+    expect(
+      message.text,
+      '${MentorMessageCodes.dailyCoachWithHour}:14:00-16:00',
     );
   });
 

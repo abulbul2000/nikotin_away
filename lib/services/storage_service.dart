@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../core/mentor_command_codes.dart';
 import '../engines/mentor_message_builder.dart';
 import '../models/adaptive_plan.dart';
 import '../models/adaptive_task_models.dart';
@@ -43,6 +44,7 @@ import '../engines/wearable_signal_engine.dart';
 import 'behavior_engine.dart';
 import 'discipline_protocol_service.dart';
 import 'smoking_count_discrepancy_engine.dart';
+import 'mentor_relief_service.dart';
 import 'smoking_interval_service.dart';
 import 'health_connect_service.dart';
 
@@ -143,7 +145,11 @@ class StorageService {
       // check-in slotted into a long barrier, apart from a full task.
       // 29: task_assignments.taskKind — what shape completing a task takes
       // (no_smoke_window/check_in/sleep_routine), see TaskKind.
-      version: 29,
+      // 30: mentor_messages.{followUpQuestion,followUpQuickReplies,
+      // followUpReply} — the "Zorlanıyorum" follow-up question/options/
+      // answer, stored on the same row rather than a new message so it
+      // reads as a continuation of the original reply.
+      version: 30,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -537,6 +543,12 @@ class StorageService {
         userReply TEXT
       )
     ''');
+    // 30: the "Zorlanıyorum" follow-up question/options/answer, added via
+    // ALTER (not the CREATE above) so installs already on this table pick
+    // it up too.
+    await _ensureTableColumn(db, _mentorMessagesTable, 'followUpQuestion', 'TEXT');
+    await _ensureTableColumn(db, _mentorMessagesTable, 'followUpQuickReplies', 'TEXT');
+    await _ensureTableColumn(db, _mentorMessagesTable, 'followUpReply', 'TEXT');
   }
 
   Future<void> _ensureSettingsTable(Database db) async {
@@ -2010,6 +2022,12 @@ class StorageService {
   static const _barrierMinutesKey = 'current_barrier_minutes';
   static const _barrierWeekStartKey = 'current_barrier_week_start';
 
+  /// Mentor-granted temporary relief, set by [applyMentorFollowUpChoice] —
+  /// both take effect starting tomorrow, never today, so they can never
+  /// collide with a plan/tasks already delivered for the current day.
+  static const _mentorTaskReliefUntilKey = 'mentor_task_relief_until';
+  static const _mentorBarrierReliefDateKey = 'mentor_barrier_relief_date';
+
   /// Cigarettes the user logged since [since], or null when they logged
   /// nothing at all.
   ///
@@ -2439,17 +2457,32 @@ class StorageService {
       ..._smokingIntervalService.blockedTaskWindows(windowInput),
       _sleepRoutineBlockedWindow(sleepAt),
     ];
+    final barrierMinutes = await loadCurrentBarrierMinutes(now: now);
+    final reliefUntilRaw = await loadSetting(_mentorTaskReliefUntilKey);
+    final reliefDateRaw = await loadSetting(_mentorBarrierReliefDateKey);
+    final effectiveBarrierMinutes = MentorReliefService.applyBarrierReliefIfActive(
+      baseMinutes: barrierMinutes,
+      now: now,
+      reliefDate: reliefDateRaw == null ? null : DateTime.tryParse(reliefDateRaw),
+      minBarrierMinutes: SmokingIntervalService.minBarrierMinutes,
+    );
+    final baseTaskCount = _smokingIntervalService.dailyTaskCount(
+      input: windowInput,
+      movingSuccessRate: state.movingSuccessRate,
+      movingFailureRate: state.movingFailureRate,
+      postponeRate: state.postponeRate,
+    );
+    final effectiveTaskCount = MentorReliefService.applyTaskReliefIfActive(
+      baseCount: baseTaskCount,
+      now: now,
+      reliefUntil: reliefUntilRaw == null ? null : DateTime.tryParse(reliefUntilRaw),
+    );
     final plan = _disciplineProtocolService.buildDailyAdaptivePlan(
       now: now,
       sleepAt: sleepAt,
       riskyHours: riskyHours,
-      barrierMinutes: await loadCurrentBarrierMinutes(now: now),
-      targetTaskCount: _smokingIntervalService.dailyTaskCount(
-        input: windowInput,
-        movingSuccessRate: state.movingSuccessRate,
-        movingFailureRate: state.movingFailureRate,
-        postponeRate: state.postponeRate,
-      ),
+      barrierMinutes: effectiveBarrierMinutes,
+      targetTaskCount: effectiveTaskCount,
       state: state,
       hourlyProfiles: hourly,
       blockedWindows: blockedWindows,
@@ -3544,6 +3577,65 @@ class StorageService {
       {'read': 1, 'userReply': reply},
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  /// Attaches the "Ne tür yardım istersin?" follow-up question to a message
+  /// the user just replied "Zorlanıyorum" to. Kept separate from
+  /// [replyToMentorMessage] so that function stays reply-agnostic and
+  /// callers explicitly opt into this branchier, struggling-only behavior.
+  Future<void> attachMentorFollowUpQuestion(String messageId) async {
+    final db = await database;
+    await db.update(
+      _mentorMessagesTable,
+      {
+        'followUpQuestion': MentorMessageCodes.followUpStrugglingQuestion,
+        'followUpQuickReplies': [
+          MentorMessageCodes.quickReplyReduceTasks,
+          MentorMessageCodes.quickReplyEaseBarrier,
+          MentorMessageCodes.quickReplyJustTalking,
+        ].join('|'),
+      },
+      where: 'id = ?',
+      whereArgs: [messageId],
+    );
+  }
+
+  /// Applies the user's answer to the "Zorlanıyorum" follow-up question.
+  /// [choice] is one of MentorMessageCodes.{quickReplyReduceTasks,
+  /// quickReplyEaseBarrier,quickReplyJustTalking}.
+  ///
+  /// Both relief settings start tomorrow, never today — the daily adaptive
+  /// plan may already be cached and its tasks already delivered for today
+  /// (see buildAdaptiveNoSmokePlan's daily cache), so easing today's plan
+  /// retroactively would either be a no-op or collide with tasks the user
+  /// already saw. Starting tomorrow needs no cache invalidation at all.
+  Future<void> applyMentorFollowUpChoice(String messageId, String choice) async {
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day + 1);
+    switch (choice) {
+      case MentorMessageCodes.quickReplyReduceTasks:
+        await saveSetting(
+          _mentorTaskReliefUntilKey,
+          tomorrow.add(const Duration(days: 7)).toIso8601String(),
+        );
+        break;
+      case MentorMessageCodes.quickReplyEaseBarrier:
+        await saveSetting(
+          _mentorBarrierReliefDateKey,
+          tomorrow.toIso8601String(),
+        );
+        break;
+      case MentorMessageCodes.quickReplyJustTalking:
+        break;
+    }
+
+    final db = await database;
+    await db.update(
+      _mentorMessagesTable,
+      {'followUpReply': choice},
+      where: 'id = ?',
+      whereArgs: [messageId],
     );
   }
 
