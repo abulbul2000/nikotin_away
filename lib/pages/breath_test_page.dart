@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemSound, SystemSoundType;
@@ -9,15 +10,20 @@ import '../engines/breath_acoustic_engine.dart';
 import '../engines/breath_feedback_engine.dart';
 import '../engines/breath_test_engine.dart';
 import '../engines/breath_trend_engine.dart';
+import '../engines/wheeze_detection_engine.dart';
 import '../models/breath_acoustic_sample.dart';
 import '../models/breath_attempt_feedback.dart';
 import '../models/breath_progress_record.dart';
 import '../models/noise_check_result.dart';
+import '../models/wheeze_acoustic_sample.dart';
+import '../services/behavior_engine.dart';
 import '../services/breath_audio_service.dart';
 import '../services/breath_noise_check_service.dart';
 import '../services/breath_test_service.dart';
+import '../services/notification_service.dart';
 import '../services/permission_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/success_check_overlay.dart';
 import 'breath_spirometry_result_page.dart';
 import 'home_page.dart';
 import 'risk_result_page.dart';
@@ -108,6 +114,16 @@ class _BreathTestPageState extends State<BreathTestPage>
   // this simply gets overwritten by whichever attempt finishes last rather
   // than accumulating a list like _attemptAcousticResults does.
   SpirometryEstimate? _lastSpirometryEstimate;
+  final WheezeDetectionEngine _wheezeDetectionEngine = WheezeDetectionEngine();
+  final StorageService _storageService = StorageService();
+  final BehaviorEngine _behaviorEngine = BehaviorEngine();
+  // Collected across the whole attempt (mic-start to finish), not scoped to
+  // the exhale onset/offset window — wheeze detection should see the whole
+  // attempt regardless of whether energy-based exhale detection succeeded.
+  final List<WheezeAcousticSample> _currentAttemptWheezeSamples = [];
+  // Same "only the most recent attempt is shown" reasoning as
+  // _lastSpirometryEstimate.
+  WheezeAnalysis? _lastWheezeAnalysis;
   // One entry per completed attempt; null means the microphone wasn't
   // available or no exhale could be confidently detected for that attempt —
   // _navigateToResult falls back to the timing-based proxy unless every
@@ -537,12 +553,14 @@ class _BreathTestPageState extends State<BreathTestPage>
   /// every attempt behaves exactly like the manual-tap flow always has.
   Future<void> _startAcousticListeningForAttempt() async {
     _currentAttemptSamples.clear();
+    _currentAttemptWheezeSamples.clear();
     // Guards against back-to-back calls (finishing one attempt's listening
     // session and starting the next one's, e.g. into the rest countdown)
     // racing the recorder plugin's own stop/start handling.
     await _breathAudioService.stopListening();
     final started = await _breathAudioService.startListening(
       _handleAcousticSample,
+      onRawChunk: _handleRawChunk,
     );
     if (!mounted) {
       return;
@@ -581,6 +599,13 @@ class _BreathTestPageState extends State<BreathTestPage>
   /// but an exhale is only ever *acted on* once the exhale step has
   /// actually begun — otherwise a stray noise during an earlier step could
   /// end the attempt before the user was even told to exhale.
+  void _handleRawChunk(Uint8List chunk, int elapsedMs) {
+    final sample = _wheezeDetectionEngine.pushChunk(chunk, elapsedMs);
+    if (sample != null) {
+      _currentAttemptWheezeSamples.add(sample);
+    }
+  }
+
   void _handleAcousticSample(BreathAcousticSample sample) {
     // Attempts 2 and 3 skip straight to exhale (see
     // _beginAutoMeasuredAttempt), so the preceding rest countdown is their
@@ -677,12 +702,73 @@ class _BreathTestPageState extends State<BreathTestPage>
         acoustic.holdDurationMs! + acoustic.blowDurationMs!,
       );
     }
+    _lastWheezeAnalysis = _wheezeDetectionEngine.analyze(
+      _currentAttemptWheezeSamples,
+    );
+    _currentAttemptWheezeSamples.clear();
 
     _recordAttemptFeedback(
       seconds: seconds,
       stability: acoustic?.blowStability,
       intensity: acoustic?.blowIntensity,
     );
+
+    unawaited(_handleAttemptOutcomeUi(acoustic));
+  }
+
+  /// Confirms the microphone actually caught the exhale. A detected exhale
+  /// gets a brief checkmark before the flow continues; a genuine miss (the
+  /// user did blow, the mic just didn't register it) offers a real retry
+  /// instead of silently recording a weak-signal fallback attempt — retrying
+  /// discards this attempt and returns to the "Devam" tap, same recovery
+  /// path the noise-warning dialog already uses. Declining the retry keeps
+  /// the existing behavior (time-based result with no acoustic reading).
+  Future<void> _handleAttemptOutcomeUi(
+    BreathAcousticAnalysis? acoustic,
+  ) async {
+    if (!mounted) {
+      return;
+    }
+    final hadMicrophoneReading = _currentAttemptSamples.isNotEmpty;
+    final detected = acoustic != null && acoustic.exhaleDetected;
+
+    if (detected) {
+      await SuccessCheckOverlay.show(context);
+      if (!mounted) {
+        return;
+      }
+    } else if (hadMicrophoneReading) {
+      final retry = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(context.t('breathNotDetectedRetryTitle')),
+          content: Text(context.t('breathNotDetectedRetryMessage')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(context.t('keepResultAnywayButton')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(context.t('retryAttemptButton')),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) {
+        return;
+      }
+      if (retry == true) {
+        _attemptSeconds.removeLast();
+        _attemptAcousticResults.removeLast();
+        _attemptNoiseFlags.removeLast();
+        _attemptScores.removeLast();
+        setState(() {
+          _step = _AttemptStep.notStarted;
+        });
+        return;
+      }
+    }
 
     if (_attemptSeconds.length >= _requiredAttemptCount) {
       unawaited(_navigateToResult());
@@ -898,10 +984,44 @@ class _BreathTestPageState extends State<BreathTestPage>
         blowStability: blowStability,
         blowIntensity: blowIntensity,
         spirometry: spirometry,
+        wheeze: _lastWheezeAnalysis,
         title: context.t('breathTestRecordTitle'),
       );
 
       unawaited(_saveBreathProgressRecord());
+
+      String? wheezeAdvisoryTier;
+      final wheeze = _lastWheezeAnalysis;
+      if (wheeze != null && wheeze.wheezeDetected) {
+        final healthConditions = await _storageService.loadHealthConditions();
+        final priorResults = await _storageService.loadBreathTestResults(
+          limit: 30,
+        );
+        final fourteenDaysAgo = DateTime.now().subtract(
+          const Duration(days: 14),
+        );
+        const moderateOrWorse = {'moderate', 'severe'};
+        final recentWheezeModerateOrWorseCount = priorResults
+            .where((r) => r.createdAt.isAfter(fourteenDaysAgo))
+            .where(
+              (r) =>
+                  r.wheezeSeverityLevel != null &&
+                  moderateOrWorse.contains(r.wheezeSeverityLevel),
+            )
+            .length;
+        wheezeAdvisoryTier = _behaviorEngine.resolveWheezeAdvisoryTier(
+          latestWheezeSeverityLevel: wheeze.severityLevel,
+          healthConditions: healthConditions,
+          recentModerateOrWorseCountLast14Days:
+              recentWheezeModerateOrWorseCount,
+        );
+        unawaited(
+          NotificationService.showWheezeTestResultAdvisory(
+            wheezeDetected: true,
+            severityLevel: wheezeAdvisoryTier,
+          ),
+        );
+      }
 
       if (!mounted) {
         return;
@@ -931,6 +1051,8 @@ class _BreathTestPageState extends State<BreathTestPage>
               riskScore: processed.finalRiskScore,
               riskLevel: processed.finalRiskLevel,
               spirometry: spirometry,
+              wheeze: wheeze,
+              wheezeAdvisoryTier: wheezeAdvisoryTier,
             ),
           ),
         );

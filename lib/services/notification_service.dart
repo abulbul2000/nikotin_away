@@ -307,6 +307,7 @@ class NotificationService {
   static const int _sleepActivityAdvisoryNotificationId = 930001;
   static const int _snoringResultNotificationId = 930002;
   static const int _coughTestResultNotificationId = 930003;
+  static const int _wheezeTestResultNotificationId = 930004;
   static const int _weeklySurveyNotificationId = 700001;
   static const String _healthTipChannelId = 'health_tip_channel_v2';
   static const int _healthTipBaseId = 430100;
@@ -815,6 +816,75 @@ class NotificationService {
     } catch (_) {
       // Keep notification flow resilient even if the cough-result
       // notification fails — the in-app result screen already showed it.
+    }
+  }
+
+  static const String _lastWheezeResultNotificationDateKey =
+      'last_wheeze_result_notification_date';
+
+  /// Fired by CoughTestPage/BreathTestPage right after a test result with a
+  /// detected acoustic wheeze is saved — same once-a-day dedup and
+  /// resilient-to-failure shape as [showCoughTestResultAdvisory], its
+  /// closest sibling. Only called when a wheeze was actually detected
+  /// (callers check that before calling), so unlike the cough version there
+  /// is no "nothing detected" body branch here.
+  static Future<void> showWheezeTestResultAdvisory({
+    required bool wheezeDetected,
+    required String severityLevel,
+  }) async {
+    if (!wheezeDetected) {
+      return;
+    }
+    try {
+      final storage = StorageService();
+      final today = DateTime.now();
+      final todayKey =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final lastNotifiedKey = await storage.loadSetting(
+        _lastWheezeResultNotificationDateKey,
+      );
+      if (lastNotifiedKey == todayKey) {
+        return;
+      }
+      await storage.saveSetting(_lastWheezeResultNotificationDateKey, todayKey);
+
+      final code = await LanguageService.loadSelectedLanguageCode();
+      final body = _text(code, _wheezeSeverityBodyKey(severityLevel));
+
+      await _plugin.show(
+        _wheezeTestResultNotificationId,
+        _text(code, 'wheezeTestNotificationTitle'),
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _healthTipChannelId,
+            _text(code, 'channelNameHealthTip'),
+            importance: Importance.defaultImportance,
+            visibility: NotificationVisibility.private,
+            priority: Priority.defaultPriority,
+            playSound: true,
+            enableVibration: true,
+            audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+            category: AndroidNotificationCategory.reminder,
+          ),
+          iOS: const DarwinNotificationDetails(presentSound: true),
+        ),
+        payload: jsonEncode({'type': _typeHealthTip}),
+      );
+    } catch (_) {
+      // Keep notification flow resilient even if the wheeze-result
+      // notification fails — the in-app result screen already showed it.
+    }
+  }
+
+  static String _wheezeSeverityBodyKey(String severityLevel) {
+    switch (severityLevel) {
+      case 'severe':
+        return 'wheezeAdviceSevere';
+      case 'moderate':
+        return 'wheezeAdviceModerate';
+      default:
+        return 'wheezeAdviceMild';
     }
   }
 

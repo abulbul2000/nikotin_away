@@ -891,6 +891,32 @@ class StorageService {
       'peakFlowAtMs',
       'INTEGER',
     );
+    // Acoustic wheeze finding (see WheezeDetectionEngine.analyze) — nullable,
+    // same reasoning as the spirometry columns above.
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'wheezeDetected',
+      'INTEGER',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'wheezeSeverityLevel',
+      'TEXT',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'wheezeSeverityScore',
+      'INTEGER',
+    );
+    await _ensureTableColumn(
+      db,
+      _breathTestResultsTable,
+      'wheezeBandEnergyRatio',
+      'REAL',
+    );
   }
 
   /// User-initiated cough test result — a short (default 30s) mic listen
@@ -912,6 +938,12 @@ class StorageService {
         peakIntensityScore INTEGER
       )
     ''');
+    // Acoustic wheeze finding (see WheezeDetectionEngine.analyze) — nullable,
+    // same reasoning as breath_test_results' wheeze columns.
+    await _ensureTableColumn(db, _coughTestRecordsTable, 'wheezeDetected', 'INTEGER');
+    await _ensureTableColumn(db, _coughTestRecordsTable, 'wheezeSeverityLevel', 'TEXT');
+    await _ensureTableColumn(db, _coughTestRecordsTable, 'wheezeSeverityScore', 'INTEGER');
+    await _ensureTableColumn(db, _coughTestRecordsTable, 'wheezeBandEnergyRatio', 'REAL');
   }
 
   /// User-facing breath test record (score/duration/stability/intensity +

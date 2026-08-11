@@ -3,6 +3,7 @@ import 'dart:math';
 import '../models/breath_test_result.dart';
 import '../models/breath_trend_analysis.dart';
 import 'breath_acoustic_engine.dart';
+import 'wheeze_detection_engine.dart';
 
 class BreathTestEngine {
   int holdRisk(double holdDuration) {
@@ -145,6 +146,7 @@ class BreathTestEngine {
     required double blowIntensity,
     required double blowStability,
     SpirometryEstimate? spirometry,
+    WheezeAnalysis? wheeze,
   }) {
     final computedHoldRisk = holdRisk(holdDuration);
     final computedBlowRisk = blowDurationRisk(blowDuration);
@@ -176,6 +178,10 @@ class BreathTestEngine {
       fev1FvcRatioPercent: spirometry?.fev1FvcRatioPercent,
       peakFlowIndex: spirometry?.peakFlowIndex,
       peakFlowAtMs: spirometry?.peakFlowAtMs,
+      wheezeDetected: wheeze?.wheezeDetected,
+      wheezeSeverityLevel: wheeze?.severityLevel,
+      wheezeSeverityScore: wheeze?.severityScore,
+      wheezeBandEnergyRatio: wheeze?.wheezeBandEnergyRatio,
     );
   }
 

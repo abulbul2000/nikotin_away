@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/engines/breath_acoustic_engine.dart';
+import 'package:no_smoke/engines/wheeze_detection_engine.dart';
 import 'package:no_smoke/models/breath_test_result.dart';
 import 'package:no_smoke/models/survey_record.dart';
 import 'package:no_smoke/pages/breath_test_page.dart';
@@ -31,6 +32,7 @@ class _FakeBreathTestService extends BreathTestService {
     required double blowStability,
     required double blowIntensity,
     SpirometryEstimate? spirometry,
+    WheezeAnalysis? wheeze,
     DateTime? completedAt,
     String title = 'Nefes Testi',
   }) async {

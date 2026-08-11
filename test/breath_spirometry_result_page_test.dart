@@ -2,35 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/engines/breath_acoustic_engine.dart';
+import 'package:no_smoke/engines/wheeze_detection_engine.dart';
 import 'package:no_smoke/pages/breath_spirometry_result_page.dart';
 
-void main() {
-  const spirometry = SpirometryEstimate(
-    fev1EnergyIntegral: 0.18,
-    fvcEnergyIntegral: 0.2,
-    fev1FvcRatioPercent: 78,
-    peakFlowIndex: 82,
-    peakFlowAtMs: 250,
-    curve: [
-      BreathFlowCurvePoint(
-        millisecondsSinceOnset: 0,
-        energy: 0.1,
-        cumulativeEnergyIntegral: 0,
-      ),
-      BreathFlowCurvePoint(
-        millisecondsSinceOnset: 500,
-        energy: 0.3,
-        cumulativeEnergyIntegral: 0.1,
-      ),
-      BreathFlowCurvePoint(
-        millisecondsSinceOnset: 1000,
-        energy: 0.2,
-        cumulativeEnergyIntegral: 0.18,
-      ),
-    ],
-  );
+const _fakeSpirometry = SpirometryEstimate(
+  fev1EnergyIntegral: 10,
+  fvcEnergyIntegral: 14,
+  fev1FvcRatioPercent: 71,
+  peakFlowIndex: 60,
+  peakFlowAtMs: 300,
+  curve: [],
+);
 
-  Widget wrap(Widget child) => MaterialApp(
+Widget _wrap(Widget child) {
+  return MaterialApp(
     locale: const Locale('tr'),
     supportedLocales: const [Locale('tr'), Locale('en')],
     localizationsDelegates: const [
@@ -40,55 +25,73 @@ void main() {
     ],
     home: child,
   );
+}
 
-  testWidgets('renders ratio/peak-flow tiles and disclaimers', (
-    tester,
-  ) async {
+void main() {
+  testWidgets('no wheeze card when wheeze is null', (tester) async {
     await tester.pumpWidget(
-      wrap(
+      _wrap(
         const BreathSpirometryResultPage(
           name: 'Ada',
-          riskScore: 42,
+          riskScore: 40,
           riskLevel: 'ORTA',
-          spirometry: spirometry,
+          spirometry: _fakeSpirometry,
         ),
       ),
     );
-    await tester.pumpAndSettle();
 
-    expect(find.text('42 / 100'), findsOneWidget);
-    expect(find.textContaining('78%'), findsOneWidget);
-    expect(find.textContaining('82/100'), findsOneWidget);
-    // "(tahmini)" suffix appears once per metric tile.
-    expect(find.text('(tahmini)'), findsNWidgets(2));
     expect(
-      find.byKey(const ValueKey('breath_result_ratio')),
-      findsOneWidget,
-    );
-    expect(
-      find.byKey(const ValueKey('breath_result_peak_flow')),
-      findsOneWidget,
+      find.byKey(const ValueKey('breath_result_wheeze_card')),
+      findsNothing,
     );
   });
 
-  testWidgets('continue button navigates to HomePage', (tester) async {
+  testWidgets('no wheeze card when wheeze was not detected', (tester) async {
     await tester.pumpWidget(
-      wrap(
+      _wrap(
         const BreathSpirometryResultPage(
           name: 'Ada',
-          riskScore: 20,
-          riskLevel: 'DÜŞÜK',
-          spirometry: spirometry,
+          riskScore: 40,
+          riskLevel: 'ORTA',
+          spirometry: _fakeSpirometry,
+          wheeze: WheezeAnalysis.none,
         ),
       ),
     );
-    await tester.pumpAndSettle();
 
-    final continueButton = find.byKey(const ValueKey('breath_result_continue'));
-    await tester.scrollUntilVisible(continueButton, 200);
-    await tester.tap(continueButton);
-    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey('breath_result_wheeze_card')),
+      findsNothing,
+    );
+  });
 
-    expect(find.byType(BreathSpirometryResultPage), findsNothing);
+  testWidgets('shows the wheeze card with severity and advice when detected', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        const BreathSpirometryResultPage(
+          name: 'Ada',
+          riskScore: 40,
+          riskLevel: 'ORTA',
+          spirometry: _fakeSpirometry,
+          wheeze: WheezeAnalysis(
+            wheezeDetected: true,
+            severityLevel: 'moderate',
+            severityScore: 50,
+            wheezeBandEnergyRatio: 0.5,
+            dominantFrequencyHz: 400,
+            wheezeDurationMs: 1500,
+          ),
+          wheezeAdvisoryTier: 'moderate',
+        ),
+      ),
+    );
+
+    expect(
+      find.byKey(const ValueKey('breath_result_wheeze_card')),
+      findsOneWidget,
+    );
+    expect(find.text('Orta duzeyde hiriltili nefes tespit edildi.'), findsOneWidget);
   });
 }

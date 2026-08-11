@@ -1,5 +1,6 @@
 import '../engines/breath_acoustic_engine.dart';
 import '../engines/breath_test_engine.dart';
+import '../engines/wheeze_detection_engine.dart';
 import '../models/breath_test_result.dart';
 import '../models/survey_record.dart';
 import '../repositories/breath_test_repository.dart';
@@ -40,6 +41,7 @@ class BreathTestService {
     required double blowStability,
     required double blowIntensity,
     SpirometryEstimate? spirometry,
+    WheezeAnalysis? wheeze,
     DateTime? completedAt,
     String title = 'Nefes Testi',
   }) async {
@@ -52,6 +54,7 @@ class BreathTestService {
       blowIntensity: blowIntensity,
       blowStability: blowStability,
       spirometry: spirometry,
+      wheeze: wheeze,
     );
 
     // Persist the raw breath result FIRST, then derive the risk score from a

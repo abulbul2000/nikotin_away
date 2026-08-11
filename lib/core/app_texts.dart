@@ -799,6 +799,25 @@ class AppTexts {
     'coughTipUrgent':
       'Son iki haftada birden fazla testte belirgin duzeyde oksuruk tespit edildi. Lutfen bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
     'coughTestNotificationTitle': 'Oksuruk testi sonucun',
+    'wheezeFindingSectionTitle': 'Hiriltili Nefes Bulgusu',
+    'wheezeSeverityMild': 'Hafif duzeyde hiriltili nefes tespit edildi.',
+    'wheezeSeverityModerate': 'Orta duzeyde hiriltili nefes tespit edildi.',
+    'wheezeSeveritySevere': 'Belirgin duzeyde hiriltili nefes tespit edildi.',
+    'wheezeAdviceMild':
+      'Hafif hiriltili nefes gecici olabilir. Belirti tekrarlarsa bir doktora danismani oneririz.',
+    'wheezeAdviceModerate':
+      'Orta duzeyde hiriltili nefes birkac testte tekrar ediyorsa, lutfen bir doktora danis; bu uygulama tibbi tani veya tedavi onerisi vermez.',
+    'wheezeAdviceSevere':
+      'Belirgin duzeyde hiriltili nefes tespit edildi. Lutfen bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
+    'wheezeTestNotificationTitle': 'Hiriltili nefes bulgusu',
+    'breathNotDetectedRetryTitle': 'Nefes algilanamadi',
+    'breathNotDetectedRetryMessage':
+      'Mikrofon nefesini net algilayamadi. Tekrar denemek ister misin?',
+    'coughNotDetectedRetryTitle': 'Oksuruk algilanamadi',
+    'coughNotDetectedRetryMessage':
+      'Mikrofon bir oksuruk algilamadi. Tekrar denemek ister misin?',
+    'retryAttemptButton': 'Tekrar Dene',
+    'keepResultAnywayButton': 'Yine de Devam Et',
     'coughTestRequiredForWeeklySurvey': 'Testi Yap',
     'coughTestRequiredDialogTitle': 'Oksuruk testi gerekiyor',
     'coughTestRequiredDialogMessage':
@@ -2400,6 +2419,25 @@ class AppTexts {
     'coughTipUrgent':
       'A pronounced level of coughing showed up in more than one test over the last two weeks. We recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
     'coughTestNotificationTitle': 'Your cough test result',
+    'wheezeFindingSectionTitle': 'Wheezing Finding',
+    'wheezeSeverityMild': 'A mild level of wheezing was detected.',
+    'wheezeSeverityModerate': 'A moderate level of wheezing was detected.',
+    'wheezeSeveritySevere': 'A pronounced level of wheezing was detected.',
+    'wheezeAdviceMild':
+      'Mild wheezing can be temporary. If it recurs, we recommend seeing a doctor.',
+    'wheezeAdviceModerate':
+      'If moderate wheezing keeps showing up across tests, please see a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
+    'wheezeAdviceSevere':
+      'A pronounced level of wheezing was detected. We recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
+    'wheezeTestNotificationTitle': 'Wheezing finding',
+    'breathNotDetectedRetryTitle': 'Breath not detected',
+    'breathNotDetectedRetryMessage':
+      "The microphone couldn't clearly detect your breath. Want to try again?",
+    'coughNotDetectedRetryTitle': 'Cough not detected',
+    'coughNotDetectedRetryMessage':
+      "The microphone didn't detect a cough. Want to try again?",
+    'retryAttemptButton': 'Try Again',
+    'keepResultAnywayButton': 'Continue Anyway',
     'coughTestRequiredForWeeklySurvey': 'Take the Test',
     'coughTestRequiredDialogTitle': 'Cough test required',
     'coughTestRequiredDialogMessage':

@@ -4,13 +4,18 @@ import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
 import '../engines/cough_acoustic_engine.dart';
+import '../engines/wheeze_detection_engine.dart';
 import '../models/breath_acoustic_sample.dart';
 import '../models/cough_test_record.dart';
+import '../models/wheeze_acoustic_sample.dart';
+import '../models/noise_check_result.dart';
 import '../services/behavior_engine.dart';
 import '../services/breath_audio_service.dart';
+import '../services/breath_noise_check_service.dart';
 import '../services/notification_service.dart';
 import '../services/permission_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/success_check_overlay.dart';
 
 enum _CoughTestPhase { notStarted, listening, finished }
 
@@ -34,6 +39,7 @@ class CoughTestPage extends StatefulWidget {
   final BreathAudioService? breathAudioService;
   final CoughAcousticEngine? coughAcousticEngine;
   final StorageService? storageService;
+  final BreathNoiseCheckService? breathNoiseCheckService;
 
   const CoughTestPage({
     super.key,
@@ -43,6 +49,7 @@ class CoughTestPage extends StatefulWidget {
     this.breathAudioService,
     this.coughAcousticEngine,
     this.storageService,
+    this.breathNoiseCheckService,
   });
 
   @override
@@ -56,15 +63,19 @@ class _CoughTestPageState extends State<CoughTestPage> {
   late final CoughAcousticEngine _acousticEngine;
   late final StorageService _storageService;
   late final BehaviorEngine _behaviorEngine;
+  late final BreathNoiseCheckService _breathNoiseCheckService;
 
   _CoughTestPhase _phase = _CoughTestPhase.notStarted;
   int _secondsRemaining = _testDurationSeconds;
   Timer? _countdownTimer;
   final List<BreathAcousticSample> _samples = [];
   bool _micPermissionRequested = false;
+  final WheezeDetectionEngine _wheezeDetectionEngine = WheezeDetectionEngine();
+  final List<WheezeAcousticSample> _wheezeSamples = [];
 
   CoughTestRecord? _result;
   String? _advisoryTier;
+  String? _wheezeAdvisoryTier;
 
   @override
   void initState() {
@@ -73,6 +84,8 @@ class _CoughTestPageState extends State<CoughTestPage> {
     _acousticEngine = widget.coughAcousticEngine ?? CoughAcousticEngine();
     _storageService = widget.storageService ?? StorageService();
     _behaviorEngine = BehaviorEngine();
+    _breathNoiseCheckService =
+        widget.breathNoiseCheckService ?? BreathNoiseCheckService();
   }
 
   @override
@@ -121,13 +134,30 @@ class _CoughTestPageState extends State<CoughTestPage> {
       return;
     }
     _samples.clear();
+    _wheezeSamples.clear();
     setState(() {
       _phase = _CoughTestPhase.listening;
       _secondsRemaining = _testDurationSeconds;
     });
 
-    await _audioService.startListening((sample) {
-      _samples.add(sample);
+    await _audioService.startListening(
+      (sample) {
+        _samples.add(sample);
+      },
+      onRawChunk: (chunk, elapsedMs) {
+        final sample = _wheezeDetectionEngine.pushChunk(chunk, elapsedMs);
+        if (sample != null) {
+          _wheezeSamples.add(sample);
+        }
+      },
+    );
+
+    // No separate "sit-relax" step here (unlike BreathTestPage) — the test
+    // is a single 30s listen, so the ambient check runs against whatever
+    // was captured in the first 1.5s of that same window, before the user
+    // has had time to cough.
+    Timer(const Duration(milliseconds: 1500), () {
+      unawaited(_runAmbientNoiseCheck());
     });
 
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -145,12 +175,113 @@ class _CoughTestPageState extends State<CoughTestPage> {
     });
   }
 
+  /// Checks the first ~1.5s of the recording against this device's own
+  /// ambient-noise reference — same BreathNoiseCheckService this page's mic
+  /// session shares the underlying audio pipeline with, just triggered once
+  /// early in the listen window rather than during a dedicated sit-relax
+  /// step (this test has none). Never blocks: "tekrar dene" simply restarts
+  /// the whole 30s listen, "yine de devam et" leaves the countdown running
+  /// exactly where it was.
+  Future<void> _runAmbientNoiseCheck() async {
+    if (!mounted || _phase != _CoughTestPhase.listening) {
+      return;
+    }
+    if (_samples.isEmpty) {
+      return;
+    }
+    final result = await _breathNoiseCheckService.evaluatePreTestSamples(
+      List.of(_samples),
+    );
+    if (!mounted || _phase != _CoughTestPhase.listening) {
+      return;
+    }
+    if (result.level == NoiseLevel.quiet) {
+      return;
+    }
+
+    final keepGoing = await _showNoiseWarningDialog(result);
+    if (!mounted || _phase != _CoughTestPhase.listening) {
+      return;
+    }
+    if (keepGoing == false) {
+      _countdownTimer?.cancel();
+      unawaited(_audioService.stopListening());
+      unawaited(_startTest());
+    }
+  }
+
+  Future<bool?> _showNoiseWarningDialog(NoiseCheckResult result) {
+    final isLoud = result.level == NoiseLevel.loud;
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          context.t(isLoud ? 'breathNoiseLoudTitle' : 'breathNoiseWarningTitle'),
+        ),
+        content: Text(
+          context.t(
+            isLoud ? 'breathNoiseLoudMessage' : 'breathNoiseWarningMessage',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('breathNoiseRetry')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('breathNoiseContinueAnyway')),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _finishTest() async {
     await _audioService.stopListening();
     final analysis = _acousticEngine.analyze(
       _samples,
       testDurationSeconds: _testDurationSeconds,
     );
+
+    if (analysis.coughCount > 0) {
+      if (mounted) {
+        await SuccessCheckOverlay.show(context);
+      }
+    } else {
+      if (!mounted) {
+        return;
+      }
+      final retry = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(context.t('coughNotDetectedRetryTitle')),
+          content: Text(context.t('coughNotDetectedRetryMessage')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text(context.t('keepResultAnywayButton')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text(context.t('retryAttemptButton')),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) {
+        return;
+      }
+      if (retry == true) {
+        unawaited(_startTest());
+        return;
+      }
+    }
+    if (!mounted) {
+      return;
+    }
+
+    final wheezeAnalysis = _wheezeDetectionEngine.analyze(_wheezeSamples);
     final record = CoughTestRecord(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       createdAt: DateTime.now(),
@@ -161,6 +292,10 @@ class _CoughTestPageState extends State<CoughTestPage> {
       averageIntervalSeconds: analysis.averageIntervalSeconds,
       earlyBurstRatio: analysis.earlyBurstRatio,
       peakIntensityScore: analysis.peakIntensityScore,
+      wheezeDetected: wheezeAnalysis.wheezeDetected,
+      wheezeSeverityLevel: wheezeAnalysis.severityLevel,
+      wheezeSeverityScore: wheezeAnalysis.severityScore,
+      wheezeBandEnergyRatio: wheezeAnalysis.wheezeBandEnergyRatio,
     );
     await _storageService.saveCoughTestRecord(record);
 
@@ -178,6 +313,30 @@ class _CoughTestPageState extends State<CoughTestPage> {
       recentModerateOrWorseCountLast14Days: recentModerateOrWorseCount,
     );
 
+    String? wheezeAdvisoryTier;
+    if (record.wheezeDetected == true) {
+      const wheezeModerateOrWorse = {'moderate', 'severe'};
+      final recentWheezeModerateOrWorseCount = priorRecords
+          .where((r) => r.createdAt.isAfter(fourteenDaysAgo))
+          .where(
+            (r) =>
+                r.wheezeSeverityLevel != null &&
+                wheezeModerateOrWorse.contains(r.wheezeSeverityLevel),
+          )
+          .length;
+      wheezeAdvisoryTier = _behaviorEngine.resolveWheezeAdvisoryTier(
+        latestWheezeSeverityLevel: record.wheezeSeverityLevel!,
+        healthConditions: healthConditions,
+        recentModerateOrWorseCountLast14Days: recentWheezeModerateOrWorseCount,
+      );
+      unawaited(
+        NotificationService.showWheezeTestResultAdvisory(
+          wheezeDetected: true,
+          severityLevel: wheezeAdvisoryTier,
+        ),
+      );
+    }
+
     unawaited(
       NotificationService.showCoughTestResultAdvisory(
         coughCount: record.coughCount,
@@ -190,6 +349,7 @@ class _CoughTestPageState extends State<CoughTestPage> {
     setState(() {
       _result = record;
       _advisoryTier = advisoryTier;
+      _wheezeAdvisoryTier = wheezeAdvisoryTier;
       _phase = _CoughTestPhase.finished;
     });
     widget.onCompleted?.call();
@@ -222,6 +382,28 @@ class _CoughTestPageState extends State<CoughTestPage> {
         return 'coughTipUrgent';
       default:
         return null;
+    }
+  }
+
+  String _wheezeSeverityTextKey(String severityLevel) {
+    switch (severityLevel) {
+      case 'severe':
+        return 'wheezeSeveritySevere';
+      case 'moderate':
+        return 'wheezeSeverityModerate';
+      default:
+        return 'wheezeSeverityMild';
+    }
+  }
+
+  String _wheezeAdviceTextKey(String advisoryTier) {
+    switch (advisoryTier) {
+      case 'severe':
+        return 'wheezeAdviceSevere';
+      case 'moderate':
+        return 'wheezeAdviceModerate';
+      default:
+        return 'wheezeAdviceMild';
     }
   }
 
@@ -359,6 +541,40 @@ class _CoughTestPageState extends State<CoughTestPage> {
               child: Padding(
                 padding: const EdgeInsets.all(14),
                 child: Text(context.t(tipKey)),
+              ),
+            ),
+          ],
+          if (result.wheezeDetected == true) ...[
+            const SizedBox(height: 16),
+            Card(
+              key: const ValueKey('cough_result_wheeze_card'),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.t('wheezeFindingSectionTitle'),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      context.t(
+                        _wheezeSeverityTextKey(result.wheezeSeverityLevel!),
+                      ),
+                    ),
+                    if (_wheezeAdvisoryTier != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        context.t(_wheezeAdviceTextKey(_wheezeAdvisoryTier!)),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],

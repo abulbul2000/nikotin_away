@@ -1094,6 +1094,42 @@ class BehaviorEngine {
     return _coughAdvisoryTierNames[tierIndex];
   }
 
+  static const List<String> _wheezeAdvisoryTierNames = [
+    'none',
+    'mild',
+    'moderate',
+    'severe',
+  ];
+
+  /// Widens a single test's acoustic wheeze finding into a personalized
+  /// advisory tier — structurally the same idea as [resolveCoughAdvisoryTier]
+  /// (chronic-condition bump, recurrence escalation), but with 4 tiers
+  /// instead of 5: a single acoustic wheeze reading is a much less validated
+  /// signal than a cough count, so this deliberately stops at 'severe'
+  /// rather than adding an 'urgent' tier on top of it.
+  String resolveWheezeAdvisoryTier({
+    required String latestWheezeSeverityLevel,
+    required List<String> healthConditions,
+    required int recentModerateOrWorseCountLast14Days,
+  }) {
+    var tierIndex = _wheezeAdvisoryTierNames.indexOf(latestWheezeSeverityLevel);
+    if (tierIndex < 0) {
+      tierIndex = 0;
+    }
+
+    final hasRespiratoryCondition =
+        healthConditions.contains('KOAH') || healthConditions.contains('Astim');
+    if (hasRespiratoryCondition && tierIndex >= 1) {
+      tierIndex = min(tierIndex + 1, _wheezeAdvisoryTierNames.length - 1);
+    }
+
+    if (recentModerateOrWorseCountLast14Days >= 3) {
+      tierIndex = _wheezeAdvisoryTierNames.length - 1;
+    }
+
+    return _wheezeAdvisoryTierNames[tierIndex];
+  }
+
   int calculateProfileRiskAdjustment({
     required String? profession,
     required String? sleepTime,

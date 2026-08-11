@@ -20,6 +20,14 @@ class CoughTestRecord {
   /// detected.
   final int? peakIntensityScore;
 
+  /// Acoustic wheeze finding from the same recording (see
+  /// WheezeDetectionEngine.analyze). Null when no sustained wheeze was
+  /// found, or for rows saved before this field existed.
+  final bool? wheezeDetected;
+  final String? wheezeSeverityLevel;
+  final int? wheezeSeverityScore;
+  final double? wheezeBandEnergyRatio;
+
   const CoughTestRecord({
     required this.id,
     required this.createdAt,
@@ -30,6 +38,10 @@ class CoughTestRecord {
     this.averageIntervalSeconds,
     this.earlyBurstRatio,
     this.peakIntensityScore,
+    this.wheezeDetected,
+    this.wheezeSeverityLevel,
+    this.wheezeSeverityScore,
+    this.wheezeBandEnergyRatio,
   });
 
   Map<String, dynamic> toJson() {
@@ -43,6 +55,10 @@ class CoughTestRecord {
       'averageIntervalSeconds': averageIntervalSeconds,
       'earlyBurstRatio': earlyBurstRatio,
       'peakIntensityScore': peakIntensityScore,
+      'wheezeDetected': wheezeDetected == null ? null : (wheezeDetected! ? 1 : 0),
+      'wheezeSeverityLevel': wheezeSeverityLevel,
+      'wheezeSeverityScore': wheezeSeverityScore,
+      'wheezeBandEnergyRatio': wheezeBandEnergyRatio,
     };
   }
 
@@ -58,6 +74,13 @@ class CoughTestRecord {
           ?.toDouble(),
       earlyBurstRatio: (json['earlyBurstRatio'] as num?)?.toDouble(),
       peakIntensityScore: (json['peakIntensityScore'] as num?)?.toInt(),
+      wheezeDetected: (json['wheezeDetected'] as num?) == null
+          ? null
+          : (json['wheezeDetected'] as num).toInt() == 1,
+      wheezeSeverityLevel: json['wheezeSeverityLevel'] as String?,
+      wheezeSeverityScore: (json['wheezeSeverityScore'] as num?)?.toInt(),
+      wheezeBandEnergyRatio: (json['wheezeBandEnergyRatio'] as num?)
+          ?.toDouble(),
     );
   }
 }

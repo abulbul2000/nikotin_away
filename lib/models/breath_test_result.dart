@@ -24,6 +24,16 @@ class BreathTestResult {
   final double? peakFlowIndex;
   final int? peakFlowAtMs;
 
+  /// Acoustic wheeze finding from the same attempt (see
+  /// WheezeDetectionEngine.analyze). Null when no sustained wheeze was
+  /// found, or for rows saved before this field existed. Same
+  /// presentation-only exclusion from [breathScore]/[riskContribution] as
+  /// the spirometry fields above.
+  final bool? wheezeDetected;
+  final String? wheezeSeverityLevel;
+  final int? wheezeSeverityScore;
+  final double? wheezeBandEnergyRatio;
+
   const BreathTestResult({
     required this.id,
     required this.createdAt,
@@ -42,6 +52,10 @@ class BreathTestResult {
     this.fev1FvcRatioPercent,
     this.peakFlowIndex,
     this.peakFlowAtMs,
+    this.wheezeDetected,
+    this.wheezeSeverityLevel,
+    this.wheezeSeverityScore,
+    this.wheezeBandEnergyRatio,
   });
 
   Map<String, dynamic> toJson() {
@@ -63,6 +77,10 @@ class BreathTestResult {
       'fev1FvcRatioPercent': fev1FvcRatioPercent,
       'peakFlowIndex': peakFlowIndex,
       'peakFlowAtMs': peakFlowAtMs,
+      'wheezeDetected': wheezeDetected == null ? null : (wheezeDetected! ? 1 : 0),
+      'wheezeSeverityLevel': wheezeSeverityLevel,
+      'wheezeSeverityScore': wheezeSeverityScore,
+      'wheezeBandEnergyRatio': wheezeBandEnergyRatio,
     };
   }
 
@@ -85,6 +103,12 @@ class BreathTestResult {
       fev1FvcRatioPercent: (json['fev1FvcRatioPercent'] as num?)?.toDouble(),
       peakFlowIndex: (json['peakFlowIndex'] as num?)?.toDouble(),
       peakFlowAtMs: (json['peakFlowAtMs'] as num?)?.toInt(),
+      wheezeDetected: (json['wheezeDetected'] as num?) == null
+          ? null
+          : (json['wheezeDetected'] as num).toInt() == 1,
+      wheezeSeverityLevel: json['wheezeSeverityLevel'] as String?,
+      wheezeSeverityScore: (json['wheezeSeverityScore'] as num?)?.toInt(),
+      wheezeBandEnergyRatio: (json['wheezeBandEnergyRatio'] as num?)?.toDouble(),
     );
   }
 }

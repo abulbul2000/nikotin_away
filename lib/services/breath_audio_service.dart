@@ -9,10 +9,19 @@ import '../models/breath_acoustic_sample.dart';
 /// Thin wrapper around the `record` package for the breath test's live
 /// exhale detection. Every audio chunk is converted to a single RMS energy
 /// float the instant it arrives and the chunk itself is discarded
-/// immediately after — raw audio bytes never leave this method, are never
-/// buffered, and are never written to disk. Only the resulting scalar
-/// samples (see BreathAcousticEngine) are kept in memory for the duration
-/// of one test attempt.
+/// immediately after — raw audio bytes never leave this method on their
+/// own, are never buffered here, and are never written to disk. Only the
+/// resulting scalar samples (see BreathAcousticEngine) are kept in memory
+/// for the duration of one test attempt.
+///
+/// The optional [onRawChunk] callback on [startListening] is the one
+/// exception: when a caller supplies it, the same transient chunk is also
+/// handed to that callback synchronously, before this method returns. It
+/// exists for WheezeDetectionEngine, which needs frequency information
+/// `computeRmsEnergy`'s single time-domain scalar can't provide — but the
+/// same discipline applies on the caller's side: WheezeDetectionEngine
+/// reduces each chunk to a few spectral-summary floats
+/// (WheezeAcousticSample) and never retains the chunk itself either.
 class BreathAudioService {
   final AudioRecorder _recorder;
   final BreathAcousticEngine _engine;
@@ -35,7 +44,14 @@ class BreathAudioService {
   /// reading, timestamped relative to when listening began. Returns false
   /// (caller falls back to the manual-tap timing flow) if the microphone
   /// couldn't be started at all — never throws.
-  Future<bool> startListening(void Function(BreathAcousticSample) onSample) async {
+  ///
+  /// [onRawChunk], when provided, receives the same chunk [onSample] was
+  /// derived from — see the class doc comment for what callers are expected
+  /// to do (and not do) with it.
+  Future<bool> startListening(
+    void Function(BreathAcousticSample) onSample, {
+    void Function(Uint8List rawChunk, int millisecondsSinceStart)? onRawChunk,
+  }) async {
     if (!await hasPermission()) {
       return false;
     }
@@ -69,6 +85,7 @@ class BreathAudioService {
         }
         final energy = _engine.computeRmsEnergy(chunk);
         final elapsedMs = DateTime.now().difference(startedAt).inMilliseconds;
+        onRawChunk?.call(chunk, elapsedMs);
         onSample(
           BreathAcousticSample(
             millisecondsSinceStart: elapsedMs,

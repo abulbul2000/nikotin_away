@@ -496,5 +496,100 @@ void main() {
         );
       });
     });
+
+    group('resolveWheezeAdvisoryTier', () {
+      final engine = BehaviorEngine();
+
+      test('baseline severity with no conditions or history passes through', () {
+        expect(
+          engine.resolveWheezeAdvisoryTier(
+            latestWheezeSeverityLevel: 'mild',
+            healthConditions: const [],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'mild',
+        );
+      });
+
+      test('none stays none even with a chronic condition', () {
+        expect(
+          engine.resolveWheezeAdvisoryTier(
+            latestWheezeSeverityLevel: 'none',
+            healthConditions: const ['KOAH'],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'none',
+        );
+      });
+
+      test('a respiratory condition bumps a mild+ result up one tier', () {
+        expect(
+          engine.resolveWheezeAdvisoryTier(
+            latestWheezeSeverityLevel: 'mild',
+            healthConditions: const ['KOAH'],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'moderate',
+        );
+      });
+
+      test('asthma also triggers the bump', () {
+        expect(
+          engine.resolveWheezeAdvisoryTier(
+            latestWheezeSeverityLevel: 'moderate',
+            healthConditions: const ['Astim'],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'severe',
+        );
+      });
+
+      test('a non-respiratory condition does not bump the tier', () {
+        expect(
+          engine.resolveWheezeAdvisoryTier(
+            latestWheezeSeverityLevel: 'mild',
+            healthConditions: const ['Hipertansiyon'],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'mild',
+        );
+      });
+
+      test('the bump never pushes past severe (top tier clamp)', () {
+        expect(
+          engine.resolveWheezeAdvisoryTier(
+            latestWheezeSeverityLevel: 'severe',
+            healthConditions: const ['KOAH'],
+            recentModerateOrWorseCountLast14Days: 0,
+          ),
+          'severe',
+        );
+      });
+
+      test(
+        'three or more moderate-plus results in 14 days forces the top tier',
+        () {
+          expect(
+            engine.resolveWheezeAdvisoryTier(
+              latestWheezeSeverityLevel: 'mild',
+              healthConditions: const [],
+              recentModerateOrWorseCountLast14Days: 3,
+            ),
+            'severe',
+          );
+        },
+      );
+
+      test('two moderate-plus results in 14 days does not force the top tier', () {
+        expect(
+          engine.resolveWheezeAdvisoryTier(
+            latestWheezeSeverityLevel: 'mild',
+            healthConditions: const [],
+            recentModerateOrWorseCountLast14Days: 2,
+          ),
+          'mild',
+        );
+      });
+    });
   });
 }

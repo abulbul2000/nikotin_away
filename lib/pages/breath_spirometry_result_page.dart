@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
 import '../engines/breath_acoustic_engine.dart';
+import '../engines/wheeze_detection_engine.dart';
 import 'home_page.dart';
 
 /// Shown after a breath test that got a full acoustic reading, instead of
@@ -19,12 +20,20 @@ class BreathSpirometryResultPage extends StatelessWidget {
   final String riskLevel;
   final SpirometryEstimate spirometry;
 
+  /// Acoustic wheeze finding from the same attempt — null when detection
+  /// never accumulated enough windows even though exhale timing succeeded,
+  /// or [WheezeAnalysis.wheezeDetected] is false.
+  final WheezeAnalysis? wheeze;
+  final String? wheezeAdvisoryTier;
+
   const BreathSpirometryResultPage({
     super.key,
     required this.name,
     required this.riskScore,
     required this.riskLevel,
     required this.spirometry,
+    this.wheeze,
+    this.wheezeAdvisoryTier,
   });
 
   Color _riskColor() {
@@ -67,6 +76,28 @@ class BreathSpirometryResultPage extends StatelessWidget {
       return context.t('breathPeakFlowBandNormalRange');
     }
     return context.t('breathPeakFlowBandMonitor');
+  }
+
+  String _wheezeSeverityTextKey(String severityLevel) {
+    switch (severityLevel) {
+      case 'severe':
+        return 'wheezeSeveritySevere';
+      case 'moderate':
+        return 'wheezeSeverityModerate';
+      default:
+        return 'wheezeSeverityMild';
+    }
+  }
+
+  String _wheezeAdviceTextKey(String advisoryTier) {
+    switch (advisoryTier) {
+      case 'severe':
+        return 'wheezeAdviceSevere';
+      case 'moderate':
+        return 'wheezeAdviceModerate';
+      default:
+        return 'wheezeAdviceMild';
+    }
   }
 
   @override
@@ -142,6 +173,42 @@ class BreathSpirometryResultPage extends StatelessWidget {
               ),
             ),
           ),
+          if (wheeze != null && wheeze!.wheezeDetected) ...[
+            const SizedBox(height: 20),
+            Card(
+              key: const ValueKey('breath_result_wheeze_card'),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.t('wheezeFindingSectionTitle'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.t(_wheezeSeverityTextKey(wheeze!.severityLevel)),
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                    if (wheezeAdvisoryTier != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        context.t(_wheezeAdviceTextKey(wheezeAdvisoryTier!)),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 20),
           Card(
             child: Padding(
