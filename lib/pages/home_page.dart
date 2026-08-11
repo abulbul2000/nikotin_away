@@ -861,7 +861,10 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    final since = DateTime.now().subtract(const Duration(hours: 12));
+    // 24h, matching NotificationService._syncSnoringResultFromNative's
+    // window — a 12h lookback anchored to "whenever the user opens the app"
+    // misses last night once the user checks in more than 12h after waking.
+    final since = DateTime.now().subtract(const Duration(hours: 24));
     final probes = await _storageService.loadSnoringProbeEventsBetween(
       start: since,
       end: DateTime.now(),
@@ -881,6 +884,14 @@ class _HomePageState extends State<HomePage> {
         worstRank = rank;
         worst = level;
       }
+    }
+    // A snore-likely probe with no severity recorded (e.g. a pre-migration
+    // row) must never leave the card showing a positive count next to a
+    // "none detected" severity line — those two would directly contradict
+    // each other on screen. 'mild' is the honest floor: snoreLikely was
+    // still true, the only thing actually missing is how bad it was.
+    if (worst == null && snoreLikelyProbes.isNotEmpty) {
+      worst = 'mild';
     }
 
     if (!mounted) {

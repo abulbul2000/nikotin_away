@@ -708,7 +708,13 @@ class NotificationService {
         return;
       }
 
-      final since = today.subtract(const Duration(hours: 12));
+      // 24h, not 12h — a 12h lookback anchored to "whenever the user opens
+      // the app" misses last night entirely once the user opens the app
+      // more than 12h after waking (e.g. slept 23:00-07:00, doesn't check
+      // the app until 20:00 that evening). The once-a-day dedup key above
+      // already guarantees this only ever shows once per calendar day, so
+      // widening the window doesn't risk re-surfacing an older night.
+      final since = today.subtract(const Duration(hours: 24));
       final probes = await storage.loadSnoringProbeEventsBetween(
         start: since,
         end: today,

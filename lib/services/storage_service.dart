@@ -2753,7 +2753,12 @@ class StorageService {
       'source': source,
       'taskTitle': taskTitle,
       'details': details,
-      'createdAt': now.toIso8601String(),
+      // UTC, matching NativeViolationStore.tryInsertNoResponseViolation's
+      // formatIsoUtc on the Kotlin side — both writers share this table and
+      // it's read back with plain string ORDER BY/comparisons, so a local
+      // vs. UTC mismatch here would sort rows out of true chronological
+      // order.
+      'createdAt': now.toUtc().toIso8601String(),
       'resolved': resolved ? 1 : 0,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
