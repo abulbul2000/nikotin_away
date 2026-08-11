@@ -1,4 +1,7 @@
 import 'adaptive_task_models.dart';
+import 'task_kind.dart';
+
+export 'task_kind.dart';
 
 /// Where a task currently stands.
 ///
@@ -50,6 +53,90 @@ class TaskLifecycleState {
     expired,
   };
 
+  /// Which states a transition may legally land on, keyed by the state it
+  /// starts from.
+  ///
+  /// Mirrors the design doc's state diagram, with two deliberate widenings
+  /// forced by what the real notification/watchdog code actually calls
+  /// today (verified against notification_service.dart's `_transitionTask`
+  /// call sites before writing this map — this is not a literal transcription
+  /// of the diagram):
+  ///
+  /// 1. The diagram routes every task through `delivered` (and sometimes
+  ///    `pendingDelivery`) before a user can act on it, but nothing calls a
+  ///    `planned->delivered` transition — a row is created `planned` and
+  ///    stays there until the user answers, at which point the code jumps
+  ///    straight from `planned` to whatever the answer implies. So `planned`
+  ///    permits every edge the diagram allows from `delivered`,
+  ///    `pendingDelivery` and `retrying` as well.
+  /// 2. The diagram has `accepted` only ever reaching `awaitingConfirmation`,
+  ///    with the smoked-confirmation question being a separate step. No code
+  ///    ever transitions a row to `awaitingConfirmation` either — the
+  ///    "did you smoke?" answer (`_actionConfirmSmokedYes/No`) is applied
+  ///    directly against whatever state the row is still sitting in (usually
+  ///    `planned`, per point 1), landing straight on `succeeded`/
+  ///    `failedSmoked`. So every non-terminal state also accepts the
+  ///    terminal states `awaitingConfirmation` would have been allowed to
+  ///    reach.
+  ///
+  /// Once native delivery timing and the confirmation step are wired into
+  /// the state machine for real (tracked separately), the intermediate
+  /// states start being visited and these widenings simply become unused
+  /// rather than wrong — `canTransition` never has to change again for that.
+  static const Set<String> _confirmationOutcomes = {
+    succeeded,
+    failedSmoked,
+    failedMissed,
+  };
+
+  static const Map<String, Set<String>> _allowedTransitions = {
+    planned: {
+      pendingDelivery,
+      delivered,
+      accepted,
+      postponed,
+      failedDeclined,
+      sosActive,
+      retrying,
+      ..._confirmationOutcomes,
+    },
+    pendingDelivery: {delivered, expired},
+    delivered: {
+      accepted,
+      postponed,
+      failedDeclined,
+      sosActive,
+      retrying,
+      ..._confirmationOutcomes,
+    },
+    retrying: {retrying, delivered, failedMissed},
+    postponed: {
+      delivered,
+      accepted,
+      postponed,
+      failedDeclined,
+      sosActive,
+      retrying,
+      ..._confirmationOutcomes,
+    },
+    sosActive: {postponed},
+    accepted: {awaitingConfirmation, ..._confirmationOutcomes},
+    awaitingConfirmation: _confirmationOutcomes,
+  };
+
+  /// Whether moving a task from [from] to [to] is a legal edge in the state
+  /// machine. Terminal states have no outgoing edges — callers check
+  /// [terminal] separately before ever reaching here, but an unknown/terminal
+  /// `from` resolves to "no", not a crash.
+  static bool canTransition(String from, String to) {
+    if (from == to) {
+      // Re-saving the same state (e.g. a duplicate delivery) is a no-op, not
+      // an illegal edge.
+      return true;
+    }
+    return _allowedTransitions[from]?.contains(to) ?? false;
+  }
+
   /// How a finished task should be reported to the learning engine, or null
   /// when it shouldn't be reported at all.
   static String? outcomeFor(String state) {
@@ -78,6 +165,11 @@ class TaskGateReason {
   static const String driving = 'driving';
   static const String fullscreen = 'fullscreen';
 }
+
+/// The `canonicalTitle` for the one-per-day pre-sleep routine task — see
+/// [TaskKind.sleepRoutine]. Unlike `ADAPTIVE_NO_SMOKE:<minutes>`, this title
+/// carries no parameters, so it is a plain constant rather than a pattern.
+const String sleepRoutineCanonicalTitle = 'SLEEP_ROUTINE';
 
 /// A single no-smoking task, from planning through to its outcome.
 ///
@@ -127,6 +219,19 @@ class TaskAssignment {
   final String? watchdogId;
   final int? notificationId;
 
+  /// A short "still holding on?" prompt slotted into a long barrier, rather
+  /// than a full no-smoking window — see
+  /// `DisciplineProtocolService.buildDailyAdaptivePlan`. Deliberately not a
+  /// separate [TaskLifecycleState]: a check-in goes through the same
+  /// delivered/accepted/succeeded machine a real task does, it's only the
+  /// duration and the notification wording that differ.
+  final bool isCheckIn;
+
+  /// What shape completing this task takes — see [TaskKind]. Defaults to
+  /// [TaskKind.noSmokeWindow] so rows written before this field existed
+  /// (and any JSON missing the key) keep behaving exactly as they did.
+  final String taskKind;
+
   const TaskAssignment({
     required this.id,
     required this.planDate,
@@ -147,6 +252,8 @@ class TaskAssignment {
     this.sosTotalMinutes = 0,
     this.watchdogId,
     this.notificationId,
+    this.isCheckIn = false,
+    this.taskKind = TaskKind.noSmokeWindow,
   });
 
   bool get isTerminal => TaskLifecycleState.terminal.contains(state);
@@ -192,6 +299,8 @@ class TaskAssignment {
       sosTotalMinutes: sosTotalMinutes ?? this.sosTotalMinutes,
       watchdogId: watchdogId ?? this.watchdogId,
       notificationId: notificationId ?? this.notificationId,
+      isCheckIn: isCheckIn,
+      taskKind: taskKind,
     );
   }
 
@@ -216,6 +325,8 @@ class TaskAssignment {
       'sosTotalMinutes': sosTotalMinutes,
       'watchdogId': watchdogId,
       'notificationId': notificationId,
+      'isCheckIn': isCheckIn ? 1 : 0,
+      'taskKind': taskKind,
     };
   }
 
@@ -247,6 +358,8 @@ class TaskAssignment {
       sosTotalMinutes: (json['sosTotalMinutes'] as num?)?.toInt() ?? 0,
       watchdogId: json['watchdogId'] as String?,
       notificationId: (json['notificationId'] as num?)?.toInt(),
+      isCheckIn: (json['isCheckIn'] as num?)?.toInt() == 1,
+      taskKind: json['taskKind'] as String? ?? TaskKind.noSmokeWindow,
     );
   }
 }

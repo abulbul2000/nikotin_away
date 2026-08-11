@@ -164,33 +164,37 @@ class SmokedLogButtonService {
   ///
   /// The button runs with no Flutter engine alive, so it can only leave the
   /// timestamps behind; this is the only writer that ever touches the table.
-  /// Returns how many were taken, so the caller can decide whether an undo
-  /// prompt is worth showing.
-  Future<int> drainPendingEvents() async {
+  /// Returns the id of each row created — the lock-screen notification
+  /// action is a single tap with no hold-to-confirm, so these are what the
+  /// caller offers an undo against (see NotificationService's
+  /// _syncSmokedLogEventsFromNative).
+  Future<List<String>> drainPendingEvents() async {
     if (!_isAndroid) {
-      return 0;
+      return const [];
     }
 
     List<dynamic>? raw;
     try {
       raw = await _channel.invokeMethod<List<dynamic>>('consumeSmokedLogEvents');
     } catch (_) {
-      return 0;
+      return const [];
     }
     if (raw == null || raw.isEmpty) {
-      return 0;
+      return const [];
     }
 
     final placeId = await _resolvePlaceId();
+    final ids = <String>[];
     for (final entry in raw) {
       final millis = entry is int ? entry : int.tryParse('$entry');
       if (millis == null) continue;
-      await _storageService.logSmokingNow(
+      final id = await _storageService.logSmokingNow(
         timestamp: DateTime.fromMillisecondsSinceEpoch(millis),
         placeId: placeId,
       );
+      ids.add(id);
     }
-    return raw.length;
+    return ids;
   }
 
   /// Which of the user's known places they were at, or null.

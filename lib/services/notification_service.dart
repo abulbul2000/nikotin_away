@@ -1,4 +1,6 @@
 import 'dart:async';
+// ignore_for_file: use_build_context_synchronously
+
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -13,6 +15,7 @@ import '../models/medication.dart';
 import '../models/task_assignment.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
+import '../pages/sleep_routine_page.dart';
 import '../pages/weekly_survey_page.dart';
 import 'android_watchdog_service.dart';
 import 'language_service.dart';
@@ -21,6 +24,7 @@ import 'phone_state_service.dart';
 import 'sleep_probe_service.dart';
 import 'smoked_log_button_service.dart';
 import 'storage_service.dart';
+import 'task_assignment_service.dart';
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse response) {
@@ -39,6 +43,7 @@ class NotificationService {
   static const String _typeTaskFollowUp = 'task_followup';
   static const String _typeTaskPostpone = 'task_postpone';
   static const String _typeTaskConfirm = 'task_confirm';
+  static const String _typeCoachCommand = 'coach_command';
   static const String _typeWeeklySurvey = 'weekly_survey';
   static const String _typeHealthTip = 'health_tip';
   static const String _typeMedicationReminder = 'medication_reminder';
@@ -210,10 +215,7 @@ class NotificationService {
           categoryIdentifier: _categoryPostpone,
         ),
       ),
-      payload: jsonEncode({
-        'type': _typeTaskPostpone,
-        'taskTitle': taskTitle,
-      }),
+      payload: jsonEncode({'type': _typeTaskPostpone, 'taskTitle': taskTitle}),
     );
   }
 
@@ -273,10 +275,7 @@ class NotificationService {
       androidScheduleMode: scheduleMode,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
-      payload: jsonEncode({
-        'type': _typeTaskConfirm,
-        'taskTitle': taskTitle,
-      }),
+      payload: jsonEncode({'type': _typeTaskConfirm, 'taskTitle': taskTitle}),
     );
   }
 
@@ -300,37 +299,32 @@ class NotificationService {
   static const String _taskStartChannelId = 'task_start_channel_v5';
   static const String _taskFollowUpChannelId = 'task_followup_channel_v6';
   static const String _taskEscalationChannelId = 'task_escalation_channel_v2';
-  static const String _breathReminderChannelId = 'breath_reminder_channel_v3';
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
-  static const String _sedentaryReminderChannelId = 'sedentary_reminder_channel_v1';
+  static const String _sedentaryReminderChannelId =
+      'sedentary_reminder_channel_v1';
   static const String _coachCommandChannelId = 'coach_command_channel_v1';
   static const int _sedentaryReminderNotificationId = 920001;
-  static const int _breathOverdueNotificationId = 920002;
   static const int _sleepActivityAdvisoryNotificationId = 930001;
   static const int _snoringResultNotificationId = 930002;
   static const int _coughTestResultNotificationId = 930003;
   static const int _weeklySurveyNotificationId = 700001;
-  static const int _dailyBreathReminderBaseId = 420100;
-  static const int _dailyBreathReminderMaxSlots = 6;
   static const String _healthTipChannelId = 'health_tip_channel_v2';
   static const int _healthTipBaseId = 430100;
+
   /// Upper bound for [scheduleHealthConditionAdviceNotifications] — mirrors
   /// the range NotificationKindsCard's picker offers. The actual per-day
   /// count (default 3) comes from [StorageService.loadDailyHealthTipCount].
   static const int _healthTipDailyCountMax = 5;
 
   /// The native health-tip-overlay alarm (AndroidWatchdogService.
-  /// scheduleHealthTipTrigger) is shared by health tips, breath-test
-  /// reminders and the weekly survey reminder — each caller needs its own
-  /// slot range so cancelling/rescheduling one never clobbers another's
-  /// alarm. Health tips own 0..[_healthTipDailyCountMax]-1 (see above).
-  static const int _breathOverlaySlotBase = 10;
+  /// scheduleHealthTipTrigger) is shared by health tips and the weekly
+  /// survey reminder — each caller needs its own slot range so cancelling/
+  /// rescheduling one never clobbers another's alarm. Health tips own
+  /// 0..[_healthTipDailyCountMax]-1 (see above).
   static const int _weeklySurveyOverlaySlot = 20;
 
-  /// Ids HealthTipTriggerReceiver caches a reminder's fields under, so its
-  /// "Postpone" button can reschedule without Dart. Suffixed with the slot
-  /// index for breath reminders, which can have more than one per day.
-  static const String _reminderIdBreathTest = 'breath_test_';
+  /// Id HealthTipTriggerReceiver caches the weekly survey reminder's fields
+  /// under, so its "Postpone" button can reschedule without Dart.
   static const String _reminderIdWeeklySurvey = 'weekly_survey';
   static const String _routeBreathTest = 'breathTest';
   static const String _routeWeeklySurvey = 'weeklySurvey';
@@ -338,6 +332,7 @@ class NotificationService {
       'medication_reminder_channel_v1';
   static const int _medicationReminderBaseId = 440100;
   static const int _medicationReminderMaxSlots = 30;
+
   /// Tip key prefixes per condition, numbered from 1 up to
   /// [_healthTipsPerCondition].
   ///
@@ -356,35 +351,6 @@ class NotificationService {
   /// grown ahead of the translations degrades quietly.
   static const int _healthTipsPerCondition = 33;
 
-  /// Picks a tip for the user's conditions, rotating so the same sentence
-  /// doesn't arrive with every dose.
-  ///
-  /// [slot] is the reminder's index in the day, so consecutive doses show
-  /// different tips; the day-of-year term keeps it moving across days too.
-  /// Returns null when the user reported no conditions.
-  static Future<String?> _healthTipFor(String code, int slot) async {
-    try {
-      final conditions = await StorageService().loadHealthConditions();
-      final withTips = conditions
-          .where(_healthTipPrefixByCondition.containsKey)
-          .toList(growable: false);
-      if (withTips.isEmpty) {
-        return null;
-      }
-
-      final now = DateTime.now();
-      final dayOfYear = now.difference(DateTime(now.year)).inDays;
-      final condition = withTips[(dayOfYear + slot) % withTips.length];
-      final prefix = _healthTipPrefixByCondition[condition]!;
-      final index = ((dayOfYear + slot) % _healthTipsPerCondition) + 1;
-
-      final tip = _text(code, '$prefix$index');
-      // _text returns the key itself when nothing matches.
-      return tip == '$prefix$index' ? null : tip;
-    } catch (_) {
-      return null;
-    }
-  }
   static const int _notificationTimeoutMs = 15000;
   static const String _reservedTimesSettingKey =
       'reserved_notification_fire_times';
@@ -532,13 +498,64 @@ class NotificationService {
   /// database until this runs. Without it every press on a locked or closed
   /// phone — which is most of them — would be silently discarded, and both the
   /// weekly barrier review and the risky-hour ranking read from that table.
+  ///
+  /// Each drained row gets its own undo prompt: the lock-screen route (the
+  /// only way to reach the button over the keyguard, see
+  /// SmokedLogOverlayService.kt) is a single notification tap with no
+  /// hold-to-confirm, so an accidental press has no guard until this runs.
   static Future<void> _syncSmokedLogEventsFromNative() async {
     try {
-      await SmokedLogButtonService().drainPendingEvents();
+      final ids = await SmokedLogButtonService().drainPendingEvents();
+      for (final id in ids) {
+        await showSmokedLogUndoPrompt(eventId: id);
+      }
     } catch (_) {
       // Best effort: a failed drain leaves the entries queued for next launch
       // rather than losing them.
     }
+  }
+
+  static const String _typeSmokedLogUndo = 'smoked_log_undo';
+  static const String _actionSmokedLogUndo = 'smoked_log_undo';
+  static const String _smokedLogUndoChannelId = 'smoked_log_undo_channel_v1';
+
+  /// Offers to remove a cigarette the lock-screen quick-log button recorded.
+  ///
+  /// A plain notification, not the alarm-style task prompts — this confirms
+  /// something that already happened rather than asking for anything, so it
+  /// shouldn't compete for attention the way a mandatory task does.
+  static Future<void> showSmokedLogUndoPrompt({
+    required String eventId,
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final id = eventId.hashCode & 0x7fffffff;
+    await _plugin.show(
+      id,
+      _text(code, 'smokedLogRecordedWithUndo'),
+      _text(code, 'smokedLogUndoBody'),
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _smokedLogUndoChannelId,
+          _text(code, 'channelNameSmokedLogUndo'),
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+          visibility: NotificationVisibility.private,
+          actions: <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              _actionSmokedLogUndo,
+              _text(code, 'smokedLogUndoAction'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+          ],
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+      payload: jsonEncode({
+        'type': _typeSmokedLogUndo,
+        'eventId': eventId,
+      }),
+    );
   }
 
   static Future<void> _syncWatchdogViolationsFromNative() async {
@@ -578,7 +595,8 @@ class NotificationService {
         // A terminal transition writes the adaptive outcome itself, so when
         // it succeeds the explicit record below must be skipped — otherwise
         // one ignored task would be scored as two.
-        final closedAssignment = taskTitle != null &&
+        final closedAssignment =
+            taskTitle != null &&
             await _transitionTask(taskTitle, TaskLifecycleState.failedMissed);
 
         // Feeds the same "no response" event into the adaptive engine (see
@@ -589,9 +607,7 @@ class NotificationService {
         // adaptive engine at all, so there's nothing to record for those.
         final adaptiveMatch = closedAssignment || taskTitle == null
             ? null
-            : RegExp(
-                r'^ADAPTIVE_NO_SMOKE:(\d+)$',
-              ).firstMatch(taskTitle.trim());
+            : RegExp(r'^ADAPTIVE_NO_SMOKE:(\d+)$').firstMatch(taskTitle.trim());
         if (adaptiveMatch != null) {
           final plannedMinutes =
               int.tryParse(adaptiveMatch.group(1) ?? '') ?? 30;
@@ -636,9 +652,7 @@ class NotificationService {
       final lastAtRaw = await storage.loadSetting(
         _lastSleepActivityNotificationKey,
       );
-      final lastAt = lastAtRaw == null
-          ? null
-          : DateTime.tryParse(lastAtRaw);
+      final lastAt = lastAtRaw == null ? null : DateTime.tryParse(lastAtRaw);
       final now = DateTime.now();
       if (lastAt != null &&
           now.difference(lastAt) < _sleepActivityNotificationCooldown) {
@@ -711,8 +725,10 @@ class NotificationService {
 
       final code = await LanguageService.loadSelectedLanguageCode();
       final body = snoreCount > 0
-          ? _text(code, 'snoringResultNotificationBodyDetected')
-                .replaceAll('{count}', '$snoreCount')
+          ? _text(
+              code,
+              'snoringResultNotificationBodyDetected',
+            ).replaceAll('{count}', '$snoreCount')
           : _text(code, 'snoringResultNotificationBodyClear');
 
       await _plugin.show(
@@ -770,10 +786,10 @@ class NotificationService {
 
       final code = await LanguageService.loadSelectedLanguageCode();
       final body = coughCount > 0
-          ? _text(code, 'coughTestResultCount').replaceAll(
-              '{count}',
-              '$coughCount',
-            )
+          ? _text(
+              code,
+              'coughTestResultCount',
+            ).replaceAll('{count}', '$coughCount')
           : _text(code, 'coughTestSeverityNormal');
 
       await _plugin.show(
@@ -846,17 +862,18 @@ class NotificationService {
       }
       switch (route) {
         case _routeBreathTest:
-          final hasOnboarded = await StorageService().hasCompletedInitialSurvey();
+          final hasOnboarded = await StorageService()
+              .hasCompletedInitialSurvey();
           if (!hasOnboarded) {
             return;
           }
-          // ignore: use_build_context_synchronously
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const BreathTestPage()));
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const BreathTestPage()));
         case _routeWeeklySurvey:
-          // ignore: use_build_context_synchronously
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const WeeklySurveyPage()));
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const WeeklySurveyPage()));
       }
     } catch (_) {
       // Keep notification flow resilient even if route sync fails.
@@ -956,8 +973,8 @@ class NotificationService {
             AndroidFlutterLocalNotificationsPlugin
           >();
       if (androidPlugin != null) {
-        final dynamic requested =
-            await androidPlugin.requestFullScreenIntentPermission();
+        final dynamic requested = await androidPlugin
+            .requestFullScreenIntentPermission();
         if (requested is bool) {
           fullScreenGranted = requested;
         }
@@ -1019,9 +1036,7 @@ class NotificationService {
   static void handleBackgroundNotificationResponse(
     NotificationResponse response,
   ) {
-    unawaited(
-      _processNotificationResponse(response, allowNavigation: false),
-    );
+    unawaited(_processNotificationResponse(response, allowNavigation: false));
   }
 
   static Future<void> _processNotificationResponse(
@@ -1055,9 +1070,9 @@ class NotificationService {
       // despite the preceding await.
       final context = _navigatorKey?.currentContext;
       if (context != null) {
-        // ignore: use_build_context_synchronously
-        Navigator.of(context)
-            .push(MaterialPageRoute(builder: (_) => const BreathTestPage()));
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const BreathTestPage()));
       }
       return;
     }
@@ -1066,16 +1081,37 @@ class NotificationService {
       return;
     }
 
-    if (type == _typeMedicationReminder) {
-      unawaited(_handleMedicationReminderAction(
-        actionId: response.actionId ?? '',
-        medicationId: payload['medicationId'] ?? '',
-        medicationName: payload['medicationName'] ?? '',
-      ));
+    if (type == _typeCoachCommand) {
+      // A suggestion, not a task — dismissing it only cancels the
+      // notification (already done above via reminderId). No task_assignments
+      // row exists for it, so it must never reach _dispatchTaskAction.
       return;
     }
 
-    if (type == _typeTaskStart || type == _typeTaskFollowUp) {
+    if (type == _typeSmokedLogUndo) {
+      if (response.actionId == _actionSmokedLogUndo) {
+        final eventId = payload['eventId']?.trim() ?? '';
+        if (eventId.isNotEmpty) {
+          unawaited(StorageService().deleteSmokingEvent(eventId));
+        }
+      }
+      return;
+    }
+
+    if (type == _typeMedicationReminder) {
+      unawaited(
+        _handleMedicationReminderAction(
+          actionId: response.actionId ?? '',
+          medicationId: payload['medicationId'] ?? '',
+          medicationName: payload['medicationName'] ?? '',
+        ),
+      );
+      return;
+    }
+
+    if (type == _typeTaskStart ||
+        type == _typeTaskFollowUp ||
+        type == _typeTaskConfirm) {
       final watchdogId = payload['watchdogId']?.trim() ?? '';
       if (watchdogId.isNotEmpty) {
         unawaited(AndroidWatchdogService.acknowledgeWatchdog(watchdogId));
@@ -1170,6 +1206,53 @@ class NotificationService {
     );
   }
 
+  /// Opens the pre-sleep routine for [canonicalTitle], same reachability
+  /// caveat as [_openSosPage] — only when the app is already running and a
+  /// navigator exists. [name]/[packsPerDay] come from the latest survey
+  /// record since, unlike the foreground path in HomePage, nothing here has
+  /// them in memory already.
+  static Future<void> _openSleepRoutinePage(String canonicalTitle) async {
+    final storage = StorageService();
+    final records = await storage.loadSurveyHistory();
+    var name = '';
+    var packsPerDay = '1 paketten az';
+    for (final record in records.reversed) {
+      if (record.packsPerDay.trim().isNotEmpty) {
+        packsPerDay = record.packsPerDay;
+        name = record.name;
+        break;
+      }
+    }
+    final context = _navigatorKey?.currentContext;
+    if (context == null) {
+      return;
+    }
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SleepRoutinePage(
+          canonicalTitle: canonicalTitle,
+          name: name,
+          packsPerDay: packsPerDay,
+        ),
+      ),
+    );
+  }
+
+  /// The set [TaskAssignmentService.handleTaskAction] now owns. Anything
+  /// outside this set is a legacy follow-up action (see below) that never
+  /// got a `task_assignments` row and still runs its own, older path.
+  static const Set<String> _taskAssignmentActionIds = {
+    _actionTaskDone,
+    _actionTaskNotNow,
+    _actionPostpone5,
+    _actionPostpone10,
+    _actionPostpone15,
+    _actionTaskDecline,
+    _actionTaskSos,
+    _actionConfirmSmokedYes,
+    _actionConfirmSmokedNo,
+  };
+
   static Future<void> _handleActionWithoutUi(Map<String, String> event) async {
     final taskTitle = event['taskTitle']?.trim() ?? '';
     final actionId = event['actionId']?.trim() ?? '';
@@ -1183,97 +1266,27 @@ class NotificationService {
         : taskTitle;
     _ensureIsolateReady();
 
+    if (_taskAssignmentActionIds.contains(actionId)) {
+      final followUp = await TaskAssignmentService(
+        StorageService(),
+      ).handleTaskAction(
+        canonicalTitle: canonicalTitle,
+        taskTitle: taskTitle,
+        actionId: actionId,
+      );
+      if (followUp == TaskActionFollowUp.openSosPage) {
+        _openSosPage(canonicalTitle);
+      } else if (followUp == TaskActionFollowUp.openSleepRoutinePage) {
+        await _openSleepRoutinePage(canonicalTitle);
+      }
+      return;
+    }
+
+    // Everything below is the older follow-up path (`followup_done`,
+    // `followup_later`, `smoked_no`) — tied to `task_follow_ups`, not
+    // `task_assignments`, and deliberately left as-is.
     final storage = StorageService();
     final now = DateTime.now();
-
-    if (actionId == _actionTaskDone) {
-      final delay = _resolveInitialTaskDelay(taskTitle);
-      // Mirrors what HomePage's foreground handler persists, so a task
-      // accepted with the app closed leaves the same trail as one accepted
-      // with it open.
-      await storage.saveTaskResult(
-        taskTitle: taskTitle,
-        taskResult: 'started',
-        completedAt: now,
-      );
-      await storage.saveTaskFollowUp(
-        taskTitle: taskTitle,
-        scheduledAt: now.add(delay),
-      );
-      await _transitionTask(
-        canonicalTitle, TaskLifecycleState.accepted);
-      await showTaskTimerStartedNotification(
-        taskTitle: taskTitle,
-        duration: delay,
-      );
-      // The end-of-window question, asked as "did you smoke?". Replaces the
-      // old follow-up, which asked whether the task was completed — the same
-      // moment, the opposite polarity.
-      await scheduleTaskConfirmationPrompt(taskTitle: taskTitle, delay: delay);
-      return;
-    }
-
-    // "Ertele" asks how long rather than picking for the user.
-    if (actionId == _actionTaskNotNow) {
-      await showPostponeChoiceNotification(taskTitle: taskTitle);
-      return;
-    }
-
-    const postponeMinutes = <String, int>{
-      _actionPostpone5: 5,
-      _actionPostpone10: 10,
-      _actionPostpone15: 15,
-    };
-    final chosen = postponeMinutes[actionId];
-    if (chosen != null) {
-      await _transitionTask(
-        canonicalTitle,
-        TaskLifecycleState.postponed,
-        postponeMinutes: chosen,
-      );
-      await scheduleFirstTaskTriggerNotification(
-        taskDescription: taskTitle,
-        delay: Duration(minutes: chosen),
-      );
-      return;
-    }
-
-    if (actionId == _actionTaskDecline) {
-      // Scored as smoking, per the rule agreed for this flow: declining is
-      // treated as intending to smoke, so the barrier doesn't keep growing on
-      // the strength of tasks that were simply turned down.
-      await _transitionTask(
-        canonicalTitle, TaskLifecycleState.failedDeclined);
-      return;
-    }
-
-    if (actionId == _actionTaskSos) {
-      // Suspended, not finished — the breathing exercise runs and hands the
-      // user back to this same task afterwards.
-      await _transitionTask(
-        canonicalTitle, TaskLifecycleState.sosActive);
-      _openSosPage(canonicalTitle);
-      return;
-    }
-
-    // The end-of-window answer. "Did you smoke?" — so yes is the failure.
-    // Getting this backwards would invert every outcome the learning engine
-    // ever records, which is why these ids are distinct from the older
-    // followup pair rather than reused.
-    if (actionId == _actionConfirmSmokedYes) {
-      await _transitionTask(
-        canonicalTitle, TaskLifecycleState.failedSmoked);
-      // An admission is also a real cigarette, so it belongs in the same
-      // table the quick-log button writes to — otherwise the risky-hour
-      // ranking never learns about the ones admitted this way.
-      await StorageService().logSmokingNow();
-      return;
-    }
-    if (actionId == _actionConfirmSmokedNo) {
-      await _transitionTask(
-        canonicalTitle, TaskLifecycleState.succeeded);
-      return;
-    }
 
     // The "yes, I got through it" answer. Previously unhandled here: while
     // actions still opened the app, HomePage's listener recorded it. Now that
@@ -1283,7 +1296,8 @@ class NotificationService {
       await storage.recordAdaptiveTaskOutcome(
         taskTitle: taskTitle,
         outcome: AdaptiveTaskOutcome.success,
-        plannedDurationMinutes: _resolveInitialTaskDelay(taskTitle).inMinutes,
+        plannedDurationMinutes:
+            TaskAssignmentService.resolveInitialTaskDelay(taskTitle).inMinutes,
         respondedAt: now,
       );
       await storage.saveTaskResult(
@@ -1344,9 +1358,7 @@ class NotificationService {
     required String medicationName,
   }) async {
     final code = await LanguageService.loadSelectedLanguageCode();
-    final fireAt = tz.TZDateTime.now(
-      tz.local,
-    ).add(_medicationPostponeDelay);
+    final fireAt = tz.TZDateTime.now(tz.local).add(_medicationPostponeDelay);
     final body = _text(
       code,
       'medicationReminderBody',
@@ -1421,43 +1433,6 @@ class NotificationService {
     return (sourceId + 1000000000).remainder(2147483647);
   }
 
-  static Duration _resolveInitialTaskDelay(String taskTitle) {
-    final adaptiveCanonical = RegExp(
-      r'^ADAPTIVE_NO_SMOKE:(\d+)$',
-      caseSensitive: false,
-    ).firstMatch(taskTitle.trim());
-    if (adaptiveCanonical != null) {
-      final minutes = int.tryParse(adaptiveCanonical.group(1) ?? '');
-      if (minutes != null && minutes > 0) {
-        return Duration(minutes: minutes);
-      }
-    }
-
-    final minuteMatch = RegExp(
-      r'(\d+)\s*(dakika|minute|minutes|min)',
-      caseSensitive: false,
-    ).firstMatch(taskTitle);
-    if (minuteMatch != null) {
-      final minutes = int.tryParse(minuteMatch.group(1) ?? '');
-      if (minutes != null && minutes > 0) {
-        return Duration(minutes: minutes);
-      }
-    }
-
-    final hourMatch = RegExp(
-      r'(\d+)\s*(saat|hour|hours)',
-      caseSensitive: false,
-    ).firstMatch(taskTitle);
-    if (hourMatch != null) {
-      final hours = int.tryParse(hourMatch.group(1) ?? '');
-      if (hours != null && hours > 0) {
-        return Duration(hours: hours);
-      }
-    }
-
-    return const Duration(minutes: 30);
-  }
-
   /// Schedules attempt [attempt] (2 or 3) of the unanswered-task retry
   /// chain. Each attempt embeds the *next* attempt's reminderId in its own
   /// payload -- exactly the same "tapping this cancels reminderId" path
@@ -1483,8 +1458,8 @@ class NotificationService {
         ? _text(code, 'taskFollowUpTitlePush')
         : _text(code, 'taskEscalationTitle');
     final body = isFollowUp
-      ? '${_text(code, 'taskFollowUpQuestion')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}'
-      : '${_text(code, 'taskEscalationBodyPrefix')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}';
+        ? '${_text(code, 'taskFollowUpQuestion')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}'
+        : '${_text(code, 'taskEscalationBodyPrefix')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}';
     final androidCategory = isFollowUp
         ? AndroidNotificationCategory.call
         : AndroidNotificationCategory.reminder;
@@ -1568,7 +1543,7 @@ class NotificationService {
     final contextLabel =
         interruptionContext['contextLabel']?.toString() ?? 'normal';
     final confidence =
-      (interruptionContext['confidence'] as num?)?.toDouble() ?? 0.0;
+        (interruptionContext['confidence'] as num?)?.toDouble() ?? 0.0;
     await _persistNotificationContext(
       code: code,
       contextLabel: contextLabel,
@@ -1577,7 +1552,7 @@ class NotificationService {
     final allowance = await _taskAllowanceFor(taskDescription);
     final adjustedDescription = contextLabel == 'eating'
         ? _text(code, 'postMealShieldCommand')
-      : AppTexts.localizeCanonicalTextForCode(code, taskDescription);
+        : AppTexts.localizeCanonicalTextForCode(code, taskDescription);
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
     final reminderId = _deriveReminderId(id);
     final watchdogId = 'wdg_$id';
@@ -1659,6 +1634,15 @@ class NotificationService {
   static Future<void> scheduleFirstTaskTriggerNotification({
     required String taskDescription,
     Duration delay = const Duration(minutes: 10),
+    /// The `task_assignments` row this notification is for, when one
+    /// exists. Threading it through as the watchdogId (rather than the
+    /// freshly-generated `wdg_<id>` below) is what lets a native delivery
+    /// event — an expiry from the pending-delivery queue limit, a watchdog
+    /// violation — be matched straight back to its row by id instead of by
+    /// canonicalTitle, which stops working the moment two tasks share a
+    /// title. Left null for call sites with no row yet (older payload
+    /// shapes, code paths not yet wired to task_assignments).
+    String? taskAssignmentId,
   }) async {
     final code = await LanguageService.loadSelectedLanguageCode();
     final scheduleMode = await _resolveAndroidScheduleMode();
@@ -1668,7 +1652,7 @@ class NotificationService {
     final contextLabel =
         interruptionContext['contextLabel']?.toString() ?? 'normal';
     final confidence =
-      (interruptionContext['confidence'] as num?)?.toDouble() ?? 0.0;
+        (interruptionContext['confidence'] as num?)?.toDouble() ?? 0.0;
     await _persistNotificationContext(
       code: code,
       contextLabel: contextLabel,
@@ -1679,10 +1663,10 @@ class NotificationService {
     final allowance = await _taskAllowanceFor(taskDescription);
     final adjustedDescription = contextLabel == 'eating'
         ? _text(code, 'postMealShieldCommand')
-      : AppTexts.localizeCanonicalTextForCode(code, taskDescription);
+        : AppTexts.localizeCanonicalTextForCode(code, taskDescription);
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
     final reminderId = _deriveReminderId(id);
-    final watchdogId = 'wdg_$id';
+    final watchdogId = taskAssignmentId ?? 'wdg_$id';
     await _plugin.zonedSchedule(
       id,
       _text(code, 'disciplineCommand'),
@@ -1793,199 +1777,6 @@ class NotificationService {
     );
   }
 
-  static Future<void> scheduleDailyBreathReminder({
-    required String sleepTime,
-  }) async {
-    await scheduleAdaptiveDailyBreathReminders(
-      sleepTime: sleepTime,
-      wakeTime: '07:00',
-      minimumCount: 1,
-      preferredCount: 1,
-    );
-  }
-
-  static Future<void> scheduleAdaptiveDailyBreathReminders({
-    required String sleepTime,
-    required String wakeTime,
-    int minimumCount = 1,
-    int preferredCount = 1,
-  }) async {
-    final scheduleMode = await _resolveAndroidScheduleMode();
-    final code = await LanguageService.loadSelectedLanguageCode();
-    final now = tz.TZDateTime.now(tz.local);
-    var safeMinimum = minimumCount < 1 ? 1 : minimumCount;
-    if (safeMinimum > _dailyBreathReminderMaxSlots) {
-      safeMinimum = _dailyBreathReminderMaxSlots;
-    }
-    var safePreferred = preferredCount < safeMinimum
-        ? safeMinimum
-        : preferredCount;
-    if (safePreferred > _dailyBreathReminderMaxSlots) {
-      safePreferred = _dailyBreathReminderMaxSlots;
-    }
-
-    // Same drift problem as scheduleHealthConditionAdviceNotifications: the
-    // caller's wakeTime/sleepTime is the static survey/settings value, which
-    // can go stale once Sleep Intelligence has a better read on when the
-    // user is actually awake.
-    final effectiveWindow = await StorageService().resolveEffectiveSleepWindow(
-      fallbackSleepTime: sleepTime,
-      fallbackWakeTime: wakeTime,
-    );
-    final resolvedWakeTime = effectiveWindow.wakeTime ?? wakeTime;
-    final resolvedSleepTime = effectiveWindow.sleepTime ?? sleepTime;
-
-    final wakeParts = resolvedWakeTime.split(':');
-    final wakeHour = int.tryParse(wakeParts[0]) ?? 7;
-    final wakeMinute = int.tryParse(wakeParts[1]) ?? 0;
-
-    final sleepParts = resolvedSleepTime.split(':');
-    final sleepHour = int.tryParse(sleepParts[0]) ?? 21;
-    final sleepMinute = int.tryParse(sleepParts[1]) ?? 0;
-
-    var wakeAt = _atDeviceTimeOfDay(
-      wakeHour,
-      wakeMinute,
-    );
-    var sleepAt = _atDeviceTimeOfDay(
-      sleepHour,
-      sleepMinute,
-    );
-    if (!sleepAt.isAfter(wakeAt)) {
-      sleepAt = sleepAt.add(const Duration(days: 1));
-    }
-
-    final windowMinutes = sleepAt.difference(wakeAt).inMinutes;
-    final count = safePreferred;
-    // For the common single-reminder case, land near bedtime rather than
-    // the middle of the day — the app's daily touchpoint is meant to be one
-    // consolidated evening moment, not a random daytime interruption. Only
-    // when the adaptive target has escalated above 1 (e.g. worsening
-    // respiratory burden calling for closer monitoring) do reminders spread
-    // across the day as before.
-    const preBedtimeBufferMinutes = 45;
-    final intervalMinutes = count <= 1
-        ? (windowMinutes - preBedtimeBufferMinutes).clamp(1, windowMinutes)
-        : (windowMinutes ~/ (count + 1));
-
-    for (var i = 0; i < _dailyBreathReminderMaxSlots; i++) {
-      await _plugin.cancel(_dailyBreathReminderBaseId + i);
-      await AndroidWatchdogService.cancelHealthTipTrigger(
-        _breathOverlaySlotBase + i,
-      );
-    }
-
-    for (var i = 0; i < count; i++) {
-      var fireAt = wakeAt.add(Duration(minutes: intervalMinutes * (i + 1)));
-      if (!fireAt.isAfter(now)) {
-        fireAt = fireAt.add(const Duration(days: 1));
-      }
-
-      final interruptionContext = await _resolveInterruptionContext();
-      final extraDelay =
-          (interruptionContext['recommendedDeferralMinutes'] as int?) ?? 0;
-      final contextLabel =
-          interruptionContext['contextLabel']?.toString() ?? 'normal';
-      final confidence =
-          (interruptionContext['confidence'] as num?)?.toDouble() ?? 0.0;
-      await _persistNotificationContext(
-        code: code,
-        contextLabel: contextLabel,
-        confidence: confidence,
-      );
-      fireAt = fireAt.add(Duration(minutes: extraDelay));
-      fireAt = await _reserveNonConflictingTime(fireAt);
-
-      final body = contextLabel == 'driving'
-          ? _text(code, 'breathReminderDriving')
-          : contextLabel == 'workout'
-          ? _text(code, 'breathReminderWorkout')
-          : contextLabel == 'eating'
-          ? _text(code, 'breathReminderPostMeal')
-          : _text(code, 'breathReminderBody');
-
-      await _plugin.zonedSchedule(
-        _dailyBreathReminderBaseId + i,
-        _text(code, 'breathReminderTitle'),
-        body,
-        fireAt,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            _breathReminderChannelId,
-            _text(code, 'channelNameBreathTestReminder'),
-            importance: Importance.max,
-            visibility: NotificationVisibility.private,
-            priority: Priority.high,
-            playSound: true,
-            enableVibration: true,
-            vibrationPattern: _taskVibrationPattern,
-            audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
-            category: AndroidNotificationCategory.reminder,
-          ),
-          iOS: const DarwinNotificationDetails(presentSound: true),
-        ),
-        androidScheduleMode: scheduleMode,
-        matchDateTimeComponents: DateTimeComponents.time,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        payload: jsonEncode({'type': _typeBreath}),
-      );
-
-      // Also arms a native alarm that shows the same reminder as an
-      // Open/Postpone overlay over whatever app is in the foreground — the
-      // notification alone only surfaces if the user is on the lock screen
-      // or taps it. "Open" launches straight into BreathTestPage; "Postpone"
-      // re-arms itself an hour out, entirely on the native side.
-      await AndroidWatchdogService.scheduleReminderOverlayTrigger(
-        slot: _breathOverlaySlotBase + i,
-        reminderId: '$_reminderIdBreathTest$i',
-        title: _text(code, 'breathReminderTitle'),
-        body: body,
-        route: _routeBreathTest,
-        openLabel: _text(code, 'taskActionDoneLabel'),
-        postponeLabel: _text(code, 'taskActionNotNowLabel'),
-        triggerAt: fireAt,
-      );
-    }
-
-    if (safeMinimum <= count) {
-      return;
-    }
-
-    // Safety net: if preferred count somehow falls below minimum.
-    for (var i = count; i < safeMinimum; i++) {
-      final fallbackAt = await _reserveNonConflictingTime(
-        now.add(Duration(minutes: 60 + (i * 45))),
-      );
-      await _plugin.zonedSchedule(
-        _dailyBreathReminderBaseId + i,
-        _text(code, 'breathReminderTitle'),
-        _text(code, 'breathReminderBody'),
-        fallbackAt,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            _breathReminderChannelId,
-            _text(code, 'channelNameBreathTestReminder'),
-            importance: Importance.max,
-            visibility: NotificationVisibility.private,
-            priority: Priority.high,
-            playSound: true,
-            enableVibration: true,
-            vibrationPattern: _taskVibrationPattern,
-            audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
-            category: AndroidNotificationCategory.reminder,
-          ),
-          iOS: const DarwinNotificationDetails(presentSound: true),
-        ),
-        androidScheduleMode: scheduleMode,
-        matchDateTimeComponents: DateTimeComponents.time,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        payload: jsonEncode({'type': _typeBreath}),
-      );
-    }
-  }
-
   /// A few short, condition-specific tips spread across the user's waking
   /// hours — cycles through whichever conditions the user picked in the
   /// initial survey (see SurveyPage._selectedHealthConditions), rotating
@@ -2017,16 +1808,16 @@ class NotificationService {
     final resolvedWakeTime = effectiveWindow.wakeTime ?? wakeTime;
     final resolvedSleepTime = effectiveWindow.sleepTime ?? sleepTime;
 
-    // Anyone with medication already gets their tip attached to a reminder
-    // they receive anyway (see scheduleMedicationReminders). Sending this as
-    // well would say the same thing twice in one day.
-    final takesMedication = (await StorageService().loadMedications()).isNotEmpty;
-    if (takesMedication) {
-      return;
-    }
+    // Condition advice used to skip anyone taking medication, on the theory
+    // that their tip already rode along with a reminder they got anyway —
+    // but medication reminders no longer carry a tip (they say one thing:
+    // take this medication now), so every user with a tracked condition
+    // gets this regardless of whether they also take medication.
 
-    final dailyCount = (await StorageService().loadDailyHealthTipCount())
-        .clamp(1, _healthTipDailyCountMax);
+    final dailyCount = (await StorageService().loadDailyHealthTipCount()).clamp(
+      1,
+      _healthTipDailyCountMax,
+    );
 
     final scheduleMode = await _resolveAndroidScheduleMode();
     final code = await LanguageService.loadSelectedLanguageCode();
@@ -2034,20 +1825,16 @@ class NotificationService {
 
     final wakeParts = resolvedWakeTime.split(':');
     final wakeHour = int.tryParse(wakeParts[0]) ?? 7;
-    final wakeMinute = int.tryParse(wakeParts.length > 1 ? wakeParts[1] : '0') ?? 0;
+    final wakeMinute =
+        int.tryParse(wakeParts.length > 1 ? wakeParts[1] : '0') ?? 0;
 
     final sleepParts = resolvedSleepTime.split(':');
     final sleepHour = int.tryParse(sleepParts[0]) ?? 21;
-    final sleepMinute = int.tryParse(sleepParts.length > 1 ? sleepParts[1] : '0') ?? 0;
+    final sleepMinute =
+        int.tryParse(sleepParts.length > 1 ? sleepParts[1] : '0') ?? 0;
 
-    var wakeAt = _atDeviceTimeOfDay(
-      wakeHour,
-      wakeMinute,
-    );
-    var sleepAt = _atDeviceTimeOfDay(
-      sleepHour,
-      sleepMinute,
-    );
+    var wakeAt = _atDeviceTimeOfDay(wakeHour, wakeMinute);
+    var sleepAt = _atDeviceTimeOfDay(sleepHour, sleepMinute);
     if (!sleepAt.isAfter(wakeAt)) {
       sleepAt = sleepAt.add(const Duration(days: 1));
     }
@@ -2073,7 +1860,8 @@ class NotificationService {
         continue;
       }
 
-      final condition = healthConditions[conditionCursor % healthConditions.length];
+      final condition =
+          healthConditions[conditionCursor % healthConditions.length];
       final prefix = _healthTipPrefixByCondition[condition];
       conditionCursor++;
       if (prefix == null) {
@@ -2116,7 +1904,8 @@ class NotificationService {
       await AndroidWatchdogService.scheduleHealthTipTrigger(
         slot: i,
         title: _text(code, 'healthTipTitle'),
-        body: '${_text(code, tipKey)}\n${_text(code, 'medicationAdviceDisclaimer')}',
+        body:
+            '${_text(code, tipKey)}\n${_text(code, 'medicationAdviceDisclaimer')}',
         dismissLabel: _text(code, 'taskActionDoneLabel'),
         triggerAt: fireAt,
       );
@@ -2146,29 +1935,22 @@ class NotificationService {
         final parts = time.split(':');
         final hour = int.tryParse(parts[0]) ?? 8;
         final minute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
-        var fireAt = _atDeviceTimeOfDay(
-          hour,
-          minute,
-        );
+        var fireAt = _atDeviceTimeOfDay(hour, minute);
         if (!fireAt.isAfter(now)) {
           fireAt = fireAt.add(const Duration(days: 1));
         }
         fireAt = await _reserveNonConflictingTime(fireAt);
 
-        final reminder = _text(
+        // A medication reminder says one thing: take this medication now.
+        // Condition-specific advice used to ride along here, but that made
+        // the reminder read as two different messages at once — the tip
+        // now arrives on its own via scheduleHealthConditionAdviceNotifications,
+        // which every user with a tracked condition receives regardless of
+        // whether they also take medication.
+        final body = _text(
           code,
           'medicationReminderBody',
         ).replaceAll('{name}', medication.name);
-
-        // The condition-specific tip rides along with a notification the user
-        // already receives, instead of arriving as its own. Three separate
-        // advice notifications a day was the previous design and it read as
-        // nagging; this reaches the same person at a moment they're already
-        // thinking about their health, at no extra interruption.
-        final tip = await _healthTipFor(code, slot);
-        final body = tip == null
-            ? reminder
-            : '$reminder\n\n💡 $tip\n${_text(code, 'medicationAdviceDisclaimer')}';
 
         await _plugin.zonedSchedule(
           _medicationReminderBaseId + slot,
@@ -2185,9 +1967,15 @@ class NotificationService {
               playSound: true,
               enableVibration: true,
               vibrationPattern: _taskVibrationPattern,
+              // Taking a dose on time matters enough to route through the
+              // alarm stream (not just the notification chime) and repeat
+              // sound+vibration until answered — same treatment a mandatory
+              // task gets, see _taskAlarmSound/_insistentFlag.
+              sound: _taskAlarmSound,
+              additionalFlags: _insistentFlag,
               fullScreenIntent: true,
-              audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
-              category: AndroidNotificationCategory.reminder,
+              audioAttributesUsage: AudioAttributesUsage.alarm,
+              category: AndroidNotificationCategory.alarm,
               actions: <AndroidNotificationAction>[
                 AndroidNotificationAction(
                   _actionMedicationTaken,
@@ -2233,7 +2021,7 @@ class NotificationService {
     final contextLabel =
         interruptionContext['contextLabel']?.toString() ?? 'normal';
     final confidence =
-      (interruptionContext['confidence'] as num?)?.toDouble() ?? 0.0;
+        (interruptionContext['confidence'] as num?)?.toDouble() ?? 0.0;
     await _persistNotificationContext(
       code: code,
       contextLabel: contextLabel,
@@ -2257,7 +2045,7 @@ class NotificationService {
     await _plugin.zonedSchedule(
       notificationId,
       _text(code, 'taskFollowUpTitlePush'),
-        followUpBody,
+      followUpBody,
       fireAt,
       NotificationDetails(
         android: AndroidNotificationDetails(
@@ -2378,7 +2166,9 @@ class NotificationService {
 
   static Future<void> cancelWeeklySurveyReminder() async {
     await _plugin.cancel(_weeklySurveyNotificationId);
-    await AndroidWatchdogService.cancelHealthTipTrigger(_weeklySurveyOverlaySlot);
+    await AndroidWatchdogService.cancelHealthTipTrigger(
+      _weeklySurveyOverlaySlot,
+    );
   }
 
   static Future<void> showTaskTimerStartedNotification({
@@ -2425,8 +2215,10 @@ class NotificationService {
       code,
       duration.inMinutes,
     );
-    final instruction = _text(code, 'barrierStartedInstruction')
-        .replaceAll('{duration}', durationText);
+    final instruction = _text(
+      code,
+      'barrierStartedInstruction',
+    ).replaceAll('{duration}', durationText);
     await _plugin.show(
       id,
       _text(code, 'barrierStartedTitle'),
@@ -2449,7 +2241,6 @@ class NotificationService {
       ),
     );
   }
-
 
   /// Phase 11: a gentle "get up and move" nudge — deliberately styled like
   /// the breath-test reminder (normal ringtone, no insistent flag, no
@@ -2493,40 +2284,6 @@ class NotificationService {
     );
   }
 
-  /// Tells the user a full day has gone by with no breathing test.
-  ///
-  /// Separate from the daily reminder, which fires at a time of day whether
-  /// or not a reading was taken. This one is about the gap itself: the trend
-  /// the whole programme reports on is built from these readings, and a
-  /// missed day cannot be filled in afterwards.
-  ///
-  /// A fixed id, so re-showing it replaces the previous one rather than
-  /// stacking a fresh copy every time the app is opened.
-  static Future<void> showBreathTestOverdueNotification() async {
-    final code = await LanguageService.loadSelectedLanguageCode();
-    await _plugin.show(
-      _breathOverdueNotificationId,
-      _text(code, 'dailyBreathOverdueNotificationTitle'),
-      _text(code, 'dailyBreathOverdueNotificationBody'),
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _sedentaryReminderChannelId,
-          _text(code, 'channelNameMovementReminder'),
-          importance: Importance.high,
-          visibility: NotificationVisibility.private,
-          priority: Priority.high,
-          playSound: true,
-          // A nudge, not a task alert: no insistent flag and no alarm sound,
-          // because nothing here is time-critical to the minute.
-          enableVibration: true,
-          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
-          category: AndroidNotificationCategory.reminder,
-        ),
-        iOS: const DarwinNotificationDetails(presentSound: true),
-      ),
-    );
-  }
-
   static Future<void> scheduleCoachCommandNotifications({
     required List<String> commands,
     String? predictedRiskWindow,
@@ -2556,7 +2313,7 @@ class NotificationService {
         : now.add(const Duration(minutes: 2));
     final interruptionContext = await _resolveInterruptionContext();
     final extraDelay =
-      (interruptionContext['recommendedDeferralMinutes'] as int?) ?? 0;
+        (interruptionContext['recommendedDeferralMinutes'] as int?) ?? 0;
     final contextLabel =
         interruptionContext['contextLabel']?.toString() ?? 'normal';
     final confidence =
@@ -2569,7 +2326,9 @@ class NotificationService {
 
     final safeSpacing = spacingMinutes < 10 ? 10 : spacingMinutes;
     final configuredMax = (maxNotifications ?? 3).clamp(1, 6);
-    final maxCount = commands.length < configuredMax ? commands.length : configuredMax;
+    final maxCount = commands.length < configuredMax
+        ? commands.length
+        : configuredMax;
     for (var i = 0; i < maxCount; i++) {
       final fireAt = await _reserveNonConflictingTime(
         normalizedFirstAt
@@ -2588,10 +2347,9 @@ class NotificationService {
       )) {
         continue;
       }
-      final id =
-          (DateTime.now().millisecondsSinceEpoch + 700000 + i).remainder(
-            2147483647,
-          );
+      final id = (DateTime.now().millisecondsSinceEpoch + 700000 + i).remainder(
+        2147483647,
+      );
 
       await _plugin.zonedSchedule(
         id,
@@ -2612,20 +2370,6 @@ class NotificationService {
             playSound: true,
             enableVibration: true,
             category: AndroidNotificationCategory.reminder,
-            actions: <AndroidNotificationAction>[
-              AndroidNotificationAction(
-                _actionTaskDone,
-                _text(code, 'taskActionDoneLabel'),
-                showsUserInterface: false,
-                cancelNotification: true,
-              ),
-              AndroidNotificationAction(
-                _actionTaskNotNow,
-                _text(code, 'taskActionNotNowLabel'),
-                showsUserInterface: false,
-                cancelNotification: true,
-              ),
-            ],
           ),
           iOS: const DarwinNotificationDetails(
             categoryIdentifier: _categoryTaskStart,
@@ -2636,7 +2380,7 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: jsonEncode({
-          'type': _typeTaskStart,
+          'type': _typeCoachCommand,
           'taskTitle': commands[i],
         }),
       );
@@ -2687,8 +2431,9 @@ class NotificationService {
       }
 
       final when = at ?? DateTime.now();
-      final (sentToday, lastSentAt) = await storage
-          .loadNotificationBudgetState(now: when);
+      final (sentToday, lastSentAt) = await storage.loadNotificationBudgetState(
+        now: when,
+      );
       final decision = budget.decide(
         kind: kind,
         at: when,
@@ -2701,8 +2446,7 @@ class NotificationService {
         return false;
       }
       await storage.recordNotificationSent(
-        countsAgainstBudget:
-            budget.classOf(kind) == NotificationClass.offered,
+        countsAgainstBudget: budget.classOf(kind) == NotificationClass.offered,
         at: when,
       );
       return true;
@@ -2742,10 +2486,7 @@ class NotificationService {
       }
 
       reserved.add(candidate.millisecondsSinceEpoch);
-      await storage.saveSetting(
-        _reservedTimesSettingKey,
-        jsonEncode(reserved),
-      );
+      await storage.saveSetting(_reservedTimesSettingKey, jsonEncode(reserved));
       return candidate;
     } catch (_) {
       return proposed;
@@ -2775,7 +2516,10 @@ class NotificationService {
     try {
       final storage = StorageService();
       final confidencePct = (confidence * 100).round().clamp(0, 100);
-      await storage.saveSetting('last_notification_context_label', contextLabel);
+      await storage.saveSetting(
+        'last_notification_context_label',
+        contextLabel,
+      );
       await storage.saveSetting(
         'last_notification_context_confidence',
         confidencePct.toString(),

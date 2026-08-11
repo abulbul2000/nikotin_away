@@ -1,0 +1,223 @@
+import 'package:flutter/material.dart';
+
+import '../core/app_texts.dart';
+import '../core/app_theme.dart';
+import '../models/daily_progress_report.dart';
+import '../services/storage_service.dart';
+
+/// The pre-sleep routine's final step: a same-day summary pulled together by
+/// `StorageService.buildDailyProgressReport`. Reuses the metric-column
+/// layout HomePage's reduction card already established (big number + unit
+/// + label) rather than inventing a new visual language for one screen.
+class DailyProgressReportView extends StatefulWidget {
+  final StorageService storageService;
+  final VoidCallback onClose;
+
+  const DailyProgressReportView({
+    super.key,
+    required this.storageService,
+    required this.onClose,
+  });
+
+  @override
+  State<DailyProgressReportView> createState() =>
+      _DailyProgressReportViewState();
+}
+
+class _DailyProgressReportViewState extends State<DailyProgressReportView> {
+  DailyProgressReport? _report;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final report = await widget.storageService.buildDailyProgressReport();
+    if (!mounted) return;
+    setState(() => _report = report);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final report = _report;
+    const accent = Colors.teal;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              context.t('sleepRoutineReportTitle'),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: report == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : SingleChildScrollView(
+                      child: _buildReportCard(context, report, accent),
+                    ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton(
+                onPressed: widget.onClose,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.brandPrimary,
+                ),
+                child: Text(context.t('sleepRoutineReportCloseButton')),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportCard(
+    BuildContext context,
+    DailyProgressReport report,
+    Color accent,
+  ) {
+    final progress = report.reductionProgress;
+    if (!progress.hasEvidence) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: accent.withAlpha((255 * 0.2).toInt()),
+          border: Border.all(color: accent, width: 2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          context.t('sleepRoutineReportNoEvidence'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: accent.withAlpha((255 * 0.9).toInt()),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: accent.withAlpha((255 * 0.2).toInt()),
+        border: Border.all(color: accent, width: 2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _metric(
+                  value: '${progress.targetStreakDays}',
+                  unit: context.t('dayUnit'),
+                  label: context.t('reductionStreakLabel'),
+                  accent: accent,
+                ),
+              ),
+              Expanded(
+                child: _metric(
+                  value: '${progress.cigarettesAvoided}',
+                  unit: context.t('cigaretteUnit'),
+                  label: context.t('reductionAvoidedLabel'),
+                  accent: accent,
+                ),
+              ),
+              Expanded(
+                child: _metric(
+                  value: '${(report.taskSuccessRateLast7Days * 100).round()}',
+                  unit: '%',
+                  label: context.t('sleepRoutineReportTaskSuccessLabel'),
+                  accent: accent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            context
+                .t('reductionTargetToday')
+                .replaceAll('{target}', '${progress.dailyTarget}'),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: accent,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            context
+                .t('reductionLoggedToday')
+                .replaceAll('{count}', '${report.todaySmokedCount}'),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: accent.withAlpha((255 * 0.85).toInt()),
+            ),
+          ),
+          if (report.latestCoughTest != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              context
+                  .t('coughTestResultCount')
+                  .replaceAll(
+                    '{count}',
+                    '${report.latestCoughTest!.coughCount}',
+                  ),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: accent.withAlpha((255 * 0.85).toInt()),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _metric({
+    required String value,
+    required String unit,
+    required String label,
+    required Color accent,
+  }) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: accent,
+          ),
+        ),
+        Text(unit, style: TextStyle(fontSize: 12, color: accent)),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 11,
+            height: 1.25,
+            color: accent.withAlpha((255 * 0.9).toInt()),
+          ),
+        ),
+      ],
+    );
+  }
+}

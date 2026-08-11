@@ -22,15 +22,36 @@ import java.util.TimeZone
 
 class NoResponseWatchdogService : Service() {
     private val handler = Handler(Looper.getMainLooper())
+
+    /// Walks every currently-registered watchdog (up to
+    /// [WatchdogStore.MAX_ACTIVE_WATCHDOGS]) each tick. A watchdog past its
+    /// current [WatchdogState.dueAtMillis] either advances to its next
+    /// attempt (re-arming the backup alarm [WatchdogStore.RETRY_INTERVAL_MILLIS]
+    /// out) or, once [WatchdogState.attemptCount] reaches
+    /// [WatchdogStore.MAX_ATTEMPTS], is reported as a violation and cleared.
+    /// The service stops only once nothing is left active.
     private val checker = object : Runnable {
         override fun run() {
-            val state = WatchdogStore.loadActive(this@NoResponseWatchdogService)
-            if (state != null && !state.acknowledged && System.currentTimeMillis() >= state.dueAtMillis) {
-                WatchdogViolationNotifier.triggerNoResponseViolation(this@NoResponseWatchdogService, state)
-                WatchdogStore.clearActive(this@NoResponseWatchdogService)
+            val service = this@NoResponseWatchdogService
+            val active = WatchdogStore.loadAllActive(service)
+            for (state in active) {
+                if (state.acknowledged || System.currentTimeMillis() < state.dueAtMillis) {
+                    continue
+                }
+                if (state.attemptCount >= WatchdogStore.MAX_ATTEMPTS) {
+                    WatchdogViolationNotifier.triggerNoResponseViolation(service, state)
+                    WatchdogStore.clearActive(service, state.watchdogId)
+                } else {
+                    WatchdogStore.recordUnansweredAttempt(service, state)
+                    scheduleAlarmBackup(state.watchdogId, state.dueAtMillis + WatchdogStore.RETRY_INTERVAL_MILLIS)
+                }
+            }
+            val remaining = WatchdogStore.loadAllActive(service)
+            if (remaining.isEmpty()) {
                 stopSelf()
                 return
             }
+            ensureForeground(remaining)
             handler.postDelayed(this, 15000)
         }
     }
@@ -42,13 +63,29 @@ class NoResponseWatchdogService : Service() {
                 val watchdogId = intent.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty()
                 val dueAtMillis = intent.getLongExtra(EXTRA_DUE_AT_MILLIS, 0L)
                 if (taskTitle.isNotBlank() && watchdogId.isNotBlank() && dueAtMillis > 0L) {
+                    // The first of MAX_ATTEMPTS check-ins happens after one
+                    // RETRY_INTERVAL_MILLIS, not at the full window's end —
+                    // dueAtMillis coming in is already the *final* deadline
+                    // (see TaskTriggerReceiver.schedule), so the first attempt
+                    // boundary is the window's start plus one interval.
+                    val totalWindowMillis = dueAtMillis - System.currentTimeMillis()
+                    val firstAttemptDueAtMillis = if (totalWindowMillis > WatchdogStore.RETRY_INTERVAL_MILLIS) {
+                        dueAtMillis - (WatchdogStore.RETRY_INTERVAL_MILLIS * (WatchdogStore.MAX_ATTEMPTS - 1))
+                    } else {
+                        dueAtMillis
+                    }
+                    val evicted = WatchdogStore.registerActive(this, watchdogId)
+                    if (evicted != null) {
+                        cancelAlarmBackup(evicted)
+                    }
                     WatchdogStore.saveActive(
                         context = this,
                         state = WatchdogState(
                             watchdogId = watchdogId,
                             taskTitle = taskTitle,
-                            dueAtMillis = dueAtMillis,
+                            dueAtMillis = firstAttemptDueAtMillis,
                             acknowledged = false,
+                            attemptCount = 1,
                         ),
                     )
                     WatchdogStore.saveLocalizedText(
@@ -59,26 +96,31 @@ class NoResponseWatchdogService : Service() {
                         foregroundChannelName = intent.getStringExtra(EXTRA_FOREGROUND_CHANNEL_NAME).orEmpty(),
                         violationChannelName = intent.getStringExtra(EXTRA_VIOLATION_CHANNEL_NAME).orEmpty(),
                     )
-                    scheduleAlarmBackup(watchdogId, dueAtMillis)
-                    ensureForeground(taskTitle)
+                    scheduleAlarmBackup(watchdogId, firstAttemptDueAtMillis)
+                    ensureForeground(WatchdogStore.loadAllActive(this))
                     handler.removeCallbacks(checker)
                     handler.post(checker)
                 }
             }
             ACTION_ACK -> {
                 val watchdogId = intent.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty()
-                val state = WatchdogStore.loadActive(this)
-                if (state != null && state.watchdogId == watchdogId) {
-                    WatchdogStore.markAcknowledged(this)
+                if (watchdogId.isNotBlank()) {
+                    WatchdogStore.markAcknowledged(this, watchdogId)
+                    WatchdogStore.clearActive(this, watchdogId)
+                    cancelAlarmBackup(watchdogId)
                 }
-                WatchdogStore.clearActive(this)
-                handler.removeCallbacks(checker)
-                stopSelf()
+                val remaining = WatchdogStore.loadAllActive(this)
+                if (remaining.isEmpty()) {
+                    handler.removeCallbacks(checker)
+                    stopSelf()
+                } else {
+                    ensureForeground(remaining)
+                }
             }
             else -> {
-                val state = WatchdogStore.loadActive(this)
-                if (state != null && !state.acknowledged) {
-                    ensureForeground(state.taskTitle)
+                val active = WatchdogStore.loadAllActive(this)
+                if (active.isNotEmpty()) {
+                    ensureForeground(active)
                     handler.removeCallbacks(checker)
                     handler.post(checker)
                 }
@@ -105,13 +147,24 @@ class NoResponseWatchdogService : Service() {
     /// a second thing asking for attention — a user seeing "Watchdog" and a
     /// countdown right next to a full-screen command read it as two
     /// unrelated things firing at once.
-    private fun ensureForeground(taskTitle: String) {
+    ///
+    /// [active] can now hold up to [WatchdogStore.MAX_ACTIVE_WATCHDOGS]
+    /// watchdogs at once — the body names the single task when there is
+    /// exactly one, and falls back to a count otherwise, since the
+    /// per-task [WatchdogLocalizedText.foregroundBody] template has nowhere
+    /// to put a second title.
+    private fun ensureForeground(active: List<WatchdogState>) {
         val texts = WatchdogStore.loadLocalizedText(this)
         createChannelIfNeeded(texts.foregroundChannelName)
+        val body = if (active.size <= 1) {
+            texts.foregroundBody
+        } else {
+            "${texts.foregroundBody} (${active.size})"
+        }
         val notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle("Nikotin Away")
-            .setContentText(texts.foregroundBody)
+            .setContentText(body)
             .setOngoing(true)
             .setSilent(true)
             .setShowWhen(false)
@@ -122,18 +175,15 @@ class NoResponseWatchdogService : Service() {
     }
 
     private fun scheduleAlarmBackup(watchdogId: String, dueAtMillis: Long) {
-        val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val receiverIntent = Intent(this, WatchdogTimeoutReceiver::class.java).apply {
-            action = WatchdogTimeoutReceiver.ACTION_TIMEOUT
-            putExtra(EXTRA_WATCHDOG_ID, watchdogId)
-        }
-        val pending = PendingIntent.getBroadcast(
-            this,
-            watchdogId.hashCode(),
-            receiverIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dueAtMillis, pending)
+        WatchdogAlarms.schedule(this, watchdogId, dueAtMillis)
+    }
+
+    /// Cancels a watchdog's backup alarm — needed when [WatchdogStore.registerActive]
+    /// evicts a slot, so the evicted watchdogId's alarm doesn't fire later
+    /// and find no matching state (the exact silent-loss bug the eviction
+    /// itself exists to fix).
+    private fun cancelAlarmBackup(watchdogId: String) {
+        WatchdogAlarms.cancel(this, watchdogId)
     }
 
     private fun createChannelIfNeeded(channelName: String) {
@@ -212,14 +262,70 @@ class NoResponseWatchdogService : Service() {
             }
             context.startService(intent)
         }
+
+        /// Wakes the service to resume polling already-registered watchdogs
+        /// without touching their stored state — unlike [start], which
+        /// always (re)registers [EXTRA_WATCHDOG_ID] as a fresh, first-attempt
+        /// entry. Used by [WatchdogTimeoutReceiver] after it advances a
+        /// watchdog's own attempt counter, in case the process was killed
+        /// while the app was backgrounded and nothing is polling it.
+        fun resumeIfActive(context: Context) {
+            val intent = Intent(context, NoResponseWatchdogService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+    }
+}
+
+/// The backup alarm that fires [WatchdogTimeoutReceiver] even if
+/// [NoResponseWatchdogService]'s own foreground-service checker got killed —
+/// shared between the service (which arms it for each attempt) and the
+/// receiver (which re-arms it for the next attempt when not yet at
+/// [WatchdogStore.MAX_ATTEMPTS]).
+object WatchdogAlarms {
+    private fun pendingIntent(context: Context, watchdogId: String): PendingIntent {
+        val receiverIntent = Intent(context, WatchdogTimeoutReceiver::class.java).apply {
+            action = WatchdogTimeoutReceiver.ACTION_TIMEOUT
+            putExtra(NoResponseWatchdogService.EXTRA_WATCHDOG_ID, watchdogId)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            watchdogId.hashCode(),
+            receiverIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    fun schedule(context: Context, watchdogId: String, dueAtMillis: Long) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            dueAtMillis,
+            pendingIntent(context, watchdogId),
+        )
+    }
+
+    fun cancel(context: Context, watchdogId: String) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(pendingIntent(context, watchdogId))
     }
 }
 
 data class WatchdogState(
     val watchdogId: String,
     val taskTitle: String,
+    /// The final, third-attempt deadline — the moment a still-unanswered
+    /// task is reported as a violation. Individual attempts are spaced
+    /// [WatchdogStore.RETRY_INTERVAL_MILLIS] apart, ending here.
     val dueAtMillis: Long,
     val acknowledged: Boolean,
+    /// 1 to [WatchdogStore.MAX_ATTEMPTS]. Every [WatchdogStore.RETRY_INTERVAL_MILLIS]
+    /// without an ack advances this by one; only reaching the max past
+    /// [dueAtMillis] actually reports a violation.
+    val attemptCount: Int = 1,
 )
 
 data class WatchdogLocalizedText(
@@ -232,10 +338,7 @@ data class WatchdogLocalizedText(
 
 object WatchdogStore {
     private const val PREFS = "no_smoke_watchdog"
-    private const val KEY_ID = "active_id"
-    private const val KEY_TITLE = "active_title"
-    private const val KEY_DUE_AT = "active_due_at"
-    private const val KEY_ACK = "active_ack"
+    private const val KEY_ACTIVE_IDS = "active_ids"
     private const val KEY_VIOLATIONS = "queued_violations"
     private const val KEY_TEXT_FOREGROUND_BODY = "text_foreground_body"
     private const val KEY_TEXT_VIOLATION_TITLE = "text_violation_title"
@@ -243,13 +346,59 @@ object WatchdogStore {
     private const val KEY_TEXT_FOREGROUND_CHANNEL = "text_foreground_channel"
     private const val KEY_TEXT_VIOLATION_CHANNEL = "text_violation_channel"
 
+    /// Past this many concurrently-active watchdogs, starting one more
+    /// expires the oldest rather than silently overwriting its slot — this
+    /// is what used to happen when the store was a single global entry: a
+    /// second task's watchdog would overwrite the first's, but the first's
+    /// own backup alarm was still armed and would later find no matching
+    /// state and silently do nothing, losing the violation entirely.
+    const val MAX_ACTIVE_WATCHDOGS = 2
+
+    /// How often an unanswered task's watchdog re-checks before reporting a
+    /// violation. Three checks spaced this far apart span the same total
+    /// window TaskTriggerReceiver's [WatchdogState.dueAtMillis] already
+    /// represents (15 minutes = 3 x 5).
+    const val RETRY_INTERVAL_MILLIS = 5L * 60L * 1000L
+    const val MAX_ATTEMPTS = 3
+
+    private fun keyId(watchdogId: String) = "wdg_${watchdogId}_id"
+    private fun keyTitle(watchdogId: String) = "wdg_${watchdogId}_title"
+    private fun keyDueAt(watchdogId: String) = "wdg_${watchdogId}_due_at"
+    private fun keyAck(watchdogId: String) = "wdg_${watchdogId}_ack"
+    private fun keyAttempt(watchdogId: String) = "wdg_${watchdogId}_attempt"
+
+    private fun loadActiveIds(prefs: android.content.SharedPreferences): List<String> {
+        return prefs.getStringSet(KEY_ACTIVE_IDS, emptySet())?.toList() ?: emptyList()
+    }
+
+    /// Registers [watchdogId] as active, evicting the oldest-registered
+    /// watchdog if this would push the count past [MAX_ACTIVE_WATCHDOGS].
+    /// Returns the watchdogId evicted, if any — the caller is responsible
+    /// for clearing its native alarm and reporting it to Dart as expired.
+    fun registerActive(context: Context, watchdogId: String): String? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ids = loadActiveIds(prefs).toMutableList()
+        ids.remove(watchdogId)
+        ids.add(watchdogId)
+        var evicted: String? = null
+        while (ids.size > MAX_ACTIVE_WATCHDOGS) {
+            evicted = ids.removeAt(0)
+        }
+        prefs.edit().putStringSet(KEY_ACTIVE_IDS, ids.toSet()).apply()
+        if (evicted != null) {
+            clearActive(context, evicted)
+        }
+        return evicted
+    }
+
     fun saveActive(context: Context, state: WatchdogState) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
-            .putString(KEY_ID, state.watchdogId)
-            .putString(KEY_TITLE, state.taskTitle)
-            .putLong(KEY_DUE_AT, state.dueAtMillis)
-            .putBoolean(KEY_ACK, state.acknowledged)
+            .putString(keyId(state.watchdogId), state.watchdogId)
+            .putString(keyTitle(state.watchdogId), state.taskTitle)
+            .putLong(keyDueAt(state.watchdogId), state.dueAtMillis)
+            .putBoolean(keyAck(state.watchdogId), state.acknowledged)
+            .putInt(keyAttempt(state.watchdogId), state.attemptCount)
             .apply()
     }
 
@@ -290,32 +439,57 @@ object WatchdogStore {
         )
     }
 
-    fun markAcknowledged(context: Context) {
+    fun markAcknowledged(context: Context, watchdogId: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
-            .putBoolean(KEY_ACK, true)
+            .putBoolean(keyAck(watchdogId), true)
             .apply()
     }
 
-    fun loadActive(context: Context): WatchdogState? {
+    /// Advances [watchdogId]'s attempt counter by one and pushes its next
+    /// check-in [RETRY_INTERVAL_MILLIS] out — called when a periodic check
+    /// finds the watchdog still unacknowledged but not yet at [MAX_ATTEMPTS].
+    fun recordUnansweredAttempt(context: Context, state: WatchdogState) {
+        saveActive(
+            context,
+            state.copy(
+                attemptCount = state.attemptCount + 1,
+                dueAtMillis = state.dueAtMillis + RETRY_INTERVAL_MILLIS,
+            ),
+        )
+    }
+
+    fun loadActive(context: Context, watchdogId: String): WatchdogState? {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val id = prefs.getString(KEY_ID, null) ?: return null
-        val title = prefs.getString(KEY_TITLE, null) ?: return null
-        val due = prefs.getLong(KEY_DUE_AT, 0L)
+        val id = prefs.getString(keyId(watchdogId), null) ?: return null
+        val title = prefs.getString(keyTitle(watchdogId), null) ?: return null
+        val due = prefs.getLong(keyDueAt(watchdogId), 0L)
         if (due <= 0L) {
             return null
         }
-        val ack = prefs.getBoolean(KEY_ACK, false)
-        return WatchdogState(id, title, due, ack)
+        val ack = prefs.getBoolean(keyAck(watchdogId), false)
+        val attempt = prefs.getInt(keyAttempt(watchdogId), 1)
+        return WatchdogState(id, title, due, ack, attempt)
     }
 
-    fun clearActive(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .remove(KEY_ID)
-            .remove(KEY_TITLE)
-            .remove(KEY_DUE_AT)
-            .remove(KEY_ACK)
+    /// Every watchdog currently registered active, oldest first — same
+    /// order [registerActive] evicts from.
+    fun loadAllActive(context: Context): List<WatchdogState> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return loadActiveIds(prefs).mapNotNull { loadActive(context, it) }
+    }
+
+    fun clearActive(context: Context, watchdogId: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ids = loadActiveIds(prefs).toMutableList()
+        ids.remove(watchdogId)
+        prefs.edit()
+            .putStringSet(KEY_ACTIVE_IDS, ids.toSet())
+            .remove(keyId(watchdogId))
+            .remove(keyTitle(watchdogId))
+            .remove(keyDueAt(watchdogId))
+            .remove(keyAck(watchdogId))
+            .remove(keyAttempt(watchdogId))
             .apply()
     }
 

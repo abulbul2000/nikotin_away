@@ -33,13 +33,13 @@ class _MedicationsPageState extends State<MedicationsPage> {
   }
 
   Future<void> _rescheduleReminders() async {
+    // A medication reminder now only ever says "take this medication" —
+    // condition-specific advice is scheduleHealthConditionAdviceNotifications'
+    // job, sent to every user with a tracked condition regardless of
+    // whether they also take medication. Still recomputed together here
+    // because both read from the same medication list this page just
+    // changed, not because one depends on the other's outcome.
     await NotificationService.scheduleMedicationReminders(_medications);
-
-    // Health tips ride along with medication reminders, and the standalone
-    // advice notification only exists for people who take nothing. Adding a
-    // first medication (or removing the last one) flips which of those
-    // applies, so both have to be recomputed together — otherwise the user
-    // hears the same tip twice that day, or stops hearing it at all.
     await NotificationService.scheduleHealthConditionAdviceNotifications(
       healthConditions: await _storageService.loadHealthConditions(),
       wakeTime: await _storageService.loadSetting('wake_time') ?? '07:00',

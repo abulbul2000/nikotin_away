@@ -24,8 +24,10 @@ import '../models/sensor_usage_event.dart';
 import '../models/significant_place.dart';
 import '../models/sleep_probe_event.dart';
 import '../models/snoring_probe_event.dart';
+import '../models/smoking_count_discrepancy.dart';
 import '../models/smoking_event.dart';
 import '../models/task_assignment.dart';
+import '../models/daily_progress_report.dart';
 import '../models/step_counter_sample.dart';
 import '../models/smoking_time_prediction.dart';
 import '../models/survey_record.dart';
@@ -40,6 +42,7 @@ import '../engines/step_trend_engine.dart';
 import '../engines/wearable_signal_engine.dart';
 import 'behavior_engine.dart';
 import 'discipline_protocol_service.dart';
+import 'smoking_count_discrepancy_engine.dart';
 import 'smoking_interval_service.dart';
 import 'health_connect_service.dart';
 
@@ -89,6 +92,8 @@ class StorageService {
       DisciplineProtocolService();
   final SmokingIntervalService _smokingIntervalService =
       SmokingIntervalService();
+  final SmokingCountDiscrepancyEngine _smokingCountDiscrepancyEngine =
+      const SmokingCountDiscrepancyEngine();
   Database? _database;
 
   Future<Database> get database async {
@@ -134,7 +139,11 @@ class StorageService {
       // own relative reference level.
       // 27: cough_test_records — user-initiated 30s cough test result
       // (coughCount/severityScore/severityLevel).
-      version: 27,
+      // 28: task_assignments.isCheckIn — marks a short "still holding on?"
+      // check-in slotted into a long barrier, apart from a full task.
+      // 29: task_assignments.taskKind — what shape completing a task takes
+      // (no_smoke_window/check_in/sleep_routine), see TaskKind.
+      version: 29,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -494,9 +503,25 @@ class StorageService {
         sosCount INTEGER NOT NULL DEFAULT 0,
         sosTotalMinutes INTEGER NOT NULL DEFAULT 0,
         watchdogId TEXT,
-        notificationId INTEGER
+        notificationId INTEGER,
+        isCheckIn INTEGER NOT NULL DEFAULT 0,
+        taskKind TEXT NOT NULL DEFAULT '${TaskKind.noSmokeWindow}'
       )
     ''');
+    // 28: isCheckIn — marks a shorter "are you still holding on?" prompt
+    // slotted into a long barrier, distinct from a full ADAPTIVE_NO_SMOKE
+    // task. Added via ALTER rather than only in the CREATE above so
+    // installs already on this table (created before this column existed)
+    // pick it up too.
+    await _ensureTableColumn(db, _taskAssignmentsTable, 'isCheckIn', 'INTEGER NOT NULL DEFAULT 0');
+    // 29: taskKind — what shape completing the task takes (see TaskKind).
+    // Same ALTER-for-existing-installs reasoning as isCheckIn above.
+    await _ensureTableColumn(
+      db,
+      _taskAssignmentsTable,
+      'taskKind',
+      "TEXT NOT NULL DEFAULT '${TaskKind.noSmokeWindow}'",
+    );
   }
 
   Future<void> _ensureMentorMessagesTable(Database db) async {
@@ -2405,6 +2430,15 @@ class StorageService {
     final state = await loadAdaptiveTaskState();
     final hourly = await loadAdaptiveHourlyProfile();
     final windowInput = await loadSmokingWindowInput();
+    // The pre-sleep routine lands 1 hour before sleepAt (see
+    // TaskAssignmentService.buildSleepRoutinePlanItem) — a normal
+    // ADAPTIVE_NO_SMOKE task landing in that same narrow stretch would ask
+    // the user to start a fresh commitment right as the routine is about to
+    // interrupt them anyway.
+    final blockedWindows = [
+      ..._smokingIntervalService.blockedTaskWindows(windowInput),
+      _sleepRoutineBlockedWindow(sleepAt),
+    ];
     final plan = _disciplineProtocolService.buildDailyAdaptivePlan(
       now: now,
       sleepAt: sleepAt,
@@ -2418,11 +2452,24 @@ class StorageService {
       ),
       state: state,
       hourlyProfiles: hourly,
-      blockedWindows: _smokingIntervalService.blockedTaskWindows(windowInput),
+      blockedWindows: blockedWindows,
     );
     await saveSetting(_adaptivePlanDateKey, todayKey);
     await saveSetting(_adaptivePlanJsonKey, jsonEncode(plan.toJson()));
     return plan;
+  }
+
+  /// The narrow stretch `[sleepAt-70min, sleepAt-50min]` normal tasks may
+  /// not land in, clearing room around the pre-sleep routine's own
+  /// `sleepAt-60min` slot. Returned as "HH:mm" clock strings, the same shape
+  /// `blockedTaskWindows` already produces, since `blockedWindows` only ever
+  /// compares clock time, not a specific calendar date.
+  (String, String) _sleepRoutineBlockedWindow(DateTime sleepAt) {
+    String hhmm(DateTime t) =>
+        '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    final start = sleepAt.subtract(const Duration(minutes: 70));
+    final end = sleepAt.subtract(const Duration(minutes: 50));
+    return (hhmm(start), hhmm(end));
   }
 
   /// Whether today's adaptive plan target has already been met by
@@ -3261,7 +3308,9 @@ class StorageService {
     String? gateReason,
   }) async {
     final existing = await loadTaskAssignment(id);
-    if (existing == null || existing.isTerminal) {
+    if (existing == null ||
+        existing.isTerminal ||
+        !TaskLifecycleState.canTransition(existing.state, state)) {
       return existing;
     }
 
@@ -3319,6 +3368,50 @@ class StorageService {
       );
     }
     return updated;
+  }
+
+  /// How today's logged cigarette count compares to what the user's survey
+  /// answers imply, for the pre-sleep routine's discrepancy question.
+  Future<SmokingCountDiscrepancy> evaluateTodaySmokingDiscrepancy({
+    DateTime? now,
+  }) async {
+    final today = now ?? DateTime.now();
+    final loggedToday = await loadSmokingEventsForDay(today);
+    final windowInput = await loadSmokingWindowInput();
+    return _smokingCountDiscrepancyEngine.evaluate(
+      loggedCount: loggedToday.length,
+      declaredDailyAverage: windowInput.dailyCigarettes,
+    );
+  }
+
+  /// Everything the pre-sleep routine's final "today's progress" step shows,
+  /// gathered in one place so the widget doesn't have to know which tables
+  /// or engines each figure comes from.
+  Future<DailyProgressReport> buildDailyProgressReport({DateTime? now}) async {
+    final today = now ?? DateTime.now();
+    final results = await Future.wait([
+      loadReductionProgress(now: today),
+      taskSuccessRateSince(today.subtract(const Duration(days: 7))),
+      loadCurrentBarrierMinutes(now: today),
+      loadLatestBreathRecord(),
+      loadBehaviorDashboard(),
+      loadLatestCoughTestRecord(),
+      loadSmokingEventsForDay(today),
+    ]);
+
+    final breathRecord = results[3] as SurveyRecord?;
+    final dashboard = results[4] as BehaviorDashboard;
+    final smokedToday = results[6] as List<SmokingEvent>;
+
+    return DailyProgressReport(
+      reductionProgress: results[0] as ReductionProgress,
+      taskSuccessRateLast7Days: results[1] as double,
+      currentBarrierMinutes: results[2] as int,
+      lastBreathTestAt: breathRecord?.completedAt,
+      breathTrend: dashboard.breathTrendLast3,
+      todaySmokedCount: smokedToday.length,
+      latestCoughTest: results[5] as CoughTestRecord?,
+    );
   }
 
   Future<void> saveSmokingEvent(SmokingEvent event) async {

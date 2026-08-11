@@ -1,0 +1,389 @@
+import '../models/adaptive_task_models.dart';
+import '../models/task_assignment.dart';
+import 'android_watchdog_service.dart';
+import 'notification_service.dart';
+import 'storage_service.dart';
+import 'task_delivery_gate.dart';
+
+/// What a caller (foreground UI or the background isolate) still has to do
+/// after [TaskAssignmentService.handleTaskAction] applies a state
+/// transition. Only [openSosPage]/[openSleepRoutinePage] need a UI —
+/// everything else is already fully handled by the time this returns.
+enum TaskActionFollowUp { none, openSosPage, openSleepRoutinePage }
+
+/// Notification/overlay action ids for a mandatory task.
+///
+/// Duplicated in value (not import) from `NotificationService`'s private
+/// `_actionXxx` constants — those stay private because they are also baked
+/// into `AndroidNotificationAction` wiring that lives there, and re-exporting
+/// them would make this the wrong place to look for their real definition.
+/// The values themselves are notification-payload/native-bridge contracts
+/// and cannot change independently in either file.
+class TaskActionId {
+  static const String done = 'task_done';
+  static const String notNow = 'task_not_now';
+  static const String decline = 'task_decline';
+  static const String sos = 'task_sos';
+  static const String postpone5 = 'task_postpone_5';
+  static const String postpone10 = 'task_postpone_10';
+  static const String postpone15 = 'task_postpone_15';
+  static const String confirmSmokedYes = 'confirm_smoked_yes';
+  static const String confirmSmokedNo = 'confirm_smoked_no';
+
+  static const Map<String, int> postponeMinutesByAction = {
+    postpone5: 5,
+    postpone10: 10,
+    postpone15: 15,
+  };
+}
+
+/// Where a planned task first becomes a real, trackable row.
+///
+/// The daily plan (`DisciplineProtocolService.buildDailyAdaptivePlan`) only
+/// ever produced in-memory `AdaptiveTaskPlanItem`s that notifications were
+/// scheduled from directly — the `task_assignments` table existed but
+/// nothing ever inserted into it, so every downstream read
+/// (`_taskAllowanceFor`, `transitionTaskAssignment`) silently no-opped. This
+/// is the one place that turns a plan item into a row other code can act on.
+class TaskAssignmentService {
+  TaskAssignmentService(this._storage);
+
+  final StorageService _storage;
+
+  /// Ensures every item in [items] has a corresponding `task_assignments`
+  /// row for [planDate], without duplicating rows already created by an
+  /// earlier call this same day (app reopened, plan recomputed, etc).
+  ///
+  /// Matched by canonicalTitle+scheduledAt — the same pairing
+  /// `AdaptiveTaskPlanItem`s are naturally unique by, since the plan never
+  /// places two items at the same moment.
+  ///
+  /// Returns every row for [planDate] (both newly-created and already
+  /// existing), so a caller scheduling notifications from the same [items]
+  /// list can look each one's row id up by canonicalTitle+scheduledAt and
+  /// thread it through as the watchdogId — see
+  /// `NotificationService.scheduleFirstTaskTriggerNotification`'s
+  /// `taskAssignmentId` parameter.
+  Future<List<TaskAssignment>> planDailyTasks({
+    required DateTime planDate,
+    required List<AdaptiveTaskPlanItem> items,
+  }) async {
+    if (items.isEmpty) {
+      return const [];
+    }
+    final existing = await _storage.loadTaskAssignmentsForDay(planDate);
+    final existingKeys = existing
+        .map((task) => _matchKey(task.canonicalTitle, task.scheduledAt))
+        .toSet();
+
+    final planDateKey = _planDateKey(planDate);
+    final created = <TaskAssignment>[];
+    for (final item in items) {
+      final key = _matchKey(item.taskTitle, item.scheduledAt);
+      if (existingKeys.contains(key)) {
+        continue;
+      }
+      final task = TaskAssignment(
+        id: _generateId(item),
+        planDate: planDateKey,
+        canonicalTitle: item.taskTitle,
+        durationMinutes: item.durationMinutes,
+        scheduledAt: item.scheduledAt,
+        state: TaskLifecycleState.planned,
+        isCheckIn: item.isCheckIn,
+        taskKind: item.taskKind,
+      );
+      await _storage.saveTaskAssignment(task);
+      created.add(task);
+      existingKeys.add(key);
+    }
+    return [...existing, ...created];
+  }
+
+  /// Applies [TaskDeliveryGate]'s two-task queue limit to whatever is
+  /// currently sitting in `pendingDelivery` (tasks the native delivery gate
+  /// held back for DND/gaming/a call and hasn't retried into `delivered`
+  /// yet).
+  ///
+  /// Called from the foreground, where a Dart isolate is actually running —
+  /// the native `TaskTriggerReceiver`/`DeliveryGateEvaluator` retry loop is
+  /// the one enforcing this while the app is closed (see
+  /// TaskTriggerReceiver.kt's own queue handling). This is the app-open
+  /// backstop for the same rule.
+  Future<void> enforceDeliveryQueueLimit() async {
+    final open = await _storage.loadOpenTaskAssignments();
+    final pending = open
+        .where((task) => task.state == TaskLifecycleState.pendingDelivery)
+        .toList();
+    final decision = TaskDeliveryGate.decide(pending);
+    for (final task in decision.toExpire) {
+      await _storage.transitionTaskAssignment(
+        id: task.id,
+        state: TaskLifecycleState.expired,
+      );
+    }
+  }
+
+  /// Drains watchdog ids `TaskTriggerReceiver.kt`'s own delivery-gate queue
+  /// limit expired natively (app closed, two or more tasks blocked by the
+  /// same DND/gaming stretch) and closes the matching rows out here too.
+  ///
+  /// Matched by id, not canonicalTitle — the native side only ever learns a
+  /// task's watchdogId, and `scheduleFirstTaskTriggerNotification` threads
+  /// the `task_assignments` row id through as that watchdogId precisely so
+  /// this lookup works even when two tasks share a title.
+  Future<void> syncPendingDeliveryExpirationsFromNative() async {
+    final rows = await AndroidWatchdogService.consumePendingDeliveryExpirations();
+    await applyPendingDeliveryExpirations(rows);
+  }
+
+  /// The applying half of [syncPendingDeliveryExpirationsFromNative], split
+  /// out so it can be exercised with a canned [rows] list — the native
+  /// consume call itself always returns empty off-device (no platform
+  /// channel in tests), which would make the transition logic untestable
+  /// otherwise.
+  Future<void> applyPendingDeliveryExpirations(
+    List<Map<String, dynamic>> rows,
+  ) async {
+    for (final row in rows) {
+      final watchdogId = row['watchdogId']?.toString();
+      if (watchdogId == null || watchdogId.isEmpty) {
+        continue;
+      }
+      await _storage.transitionTaskAssignment(
+        id: watchdogId,
+        state: TaskLifecycleState.expired,
+      );
+    }
+  }
+
+  /// The single place a task-notification action (Kabul Et / Ertele /
+  /// Reddet / SOS / the "did you smoke?" answer) is decided.
+  ///
+  /// Used to be two near-duplicate switches: `notification_service.dart`'s
+  /// `_handleActionWithoutUi` (ran when nothing was listening — app closed
+  /// or backgrounded) and `home_page.dart`'s `_handleTaskNotificationAction`
+  /// (ran whenever `HomePage` was subscribed to the action stream). They had
+  /// drifted apart — the foreground one never handled decline, SOS, or the
+  /// smoked-confirmation actions at all, so pressing those while the app was
+  /// open silently did nothing. This is their merged replacement; both call
+  /// sites now go through here.
+  ///
+  /// [canonicalTitle] is the `ADAPTIVE_NO_SMOKE:<minutes>` form used to
+  /// look up the `task_assignments` row; [taskTitle] is what a caller
+  /// displays. Returns what the caller still needs a UI for, if anything.
+  Future<TaskActionFollowUp> handleTaskAction({
+    required String canonicalTitle,
+    required String taskTitle,
+    required String actionId,
+  }) async {
+    if (canonicalTitle.isEmpty || actionId.isEmpty) {
+      return TaskActionFollowUp.none;
+    }
+    final now = DateTime.now();
+
+    if (actionId == TaskActionId.done) {
+      final existing = await _storage.loadLatestTaskAssignmentByTitle(
+        canonicalTitle,
+      );
+      if (isComposite(existing?.taskKind ?? TaskKind.noSmokeWindow)) {
+        // The pre-sleep routine has no countdown or barrier to run and no
+        // separate confirmation prompt — accepting it just hands the user
+        // straight into SleepRoutinePage, which reports its own completion
+        // via [completeSleepRoutine] once the report step is closed.
+        await _transitionTask(canonicalTitle, TaskLifecycleState.accepted);
+        return TaskActionFollowUp.openSleepRoutinePage;
+      }
+
+      final delay = resolveInitialTaskDelay(taskTitle);
+      await _storage.saveTaskResult(
+        taskTitle: taskTitle,
+        taskResult: 'started',
+        completedAt: now,
+      );
+      await _storage.saveTaskFollowUp(
+        taskTitle: taskTitle,
+        scheduledAt: now.add(delay),
+      );
+      await _transitionTask(canonicalTitle, TaskLifecycleState.accepted);
+      await NotificationService.showTaskTimerStartedNotification(
+        taskTitle: taskTitle,
+        duration: delay,
+      );
+      // The end-of-window question, asked as "did you smoke?" — replaces the
+      // old follow-up, which asked whether the task was completed, the same
+      // moment with the opposite polarity.
+      await NotificationService.scheduleTaskConfirmationPrompt(
+        taskTitle: taskTitle,
+        delay: delay,
+      );
+      return TaskActionFollowUp.none;
+    }
+
+    if (actionId == TaskActionId.notNow) {
+      await NotificationService.showPostponeChoiceNotification(
+        taskTitle: taskTitle,
+      );
+      return TaskActionFollowUp.none;
+    }
+
+    final postponeChosen = TaskActionId.postponeMinutesByAction[actionId];
+    if (postponeChosen != null) {
+      await _transitionTask(
+        canonicalTitle,
+        TaskLifecycleState.postponed,
+        postponeMinutes: postponeChosen,
+      );
+      await NotificationService.scheduleFirstTaskTriggerNotification(
+        taskDescription: taskTitle,
+        delay: Duration(minutes: postponeChosen),
+      );
+      return TaskActionFollowUp.none;
+    }
+
+    if (actionId == TaskActionId.decline) {
+      // Scored as smoking, per the agreed rule: declining is treated as
+      // intending to smoke, so the barrier doesn't keep growing on the
+      // strength of tasks that were simply turned down.
+      await _transitionTask(canonicalTitle, TaskLifecycleState.failedDeclined);
+      return TaskActionFollowUp.none;
+    }
+
+    if (actionId == TaskActionId.sos) {
+      // Suspended, not finished — the breathing exercise runs and hands the
+      // user back to this same task afterwards.
+      await _transitionTask(canonicalTitle, TaskLifecycleState.sosActive);
+      return TaskActionFollowUp.openSosPage;
+    }
+
+    // The end-of-window answer. "Did you smoke?" — so yes is the failure.
+    // Getting this backwards would invert every outcome the learning engine
+    // ever records, which is why these ids are distinct from the older
+    // followup pair rather than reused.
+    if (actionId == TaskActionId.confirmSmokedYes) {
+      await _transitionTask(canonicalTitle, TaskLifecycleState.failedSmoked);
+      // An admission is also a real cigarette, so it belongs in the same
+      // table the quick-log button writes to — otherwise the risky-hour
+      // ranking never learns about the ones admitted this way.
+      await _storage.logSmokingNow();
+      return TaskActionFollowUp.none;
+    }
+    if (actionId == TaskActionId.confirmSmokedNo) {
+      await _transitionTask(canonicalTitle, TaskLifecycleState.succeeded);
+      return TaskActionFollowUp.none;
+    }
+
+    return TaskActionFollowUp.none;
+  }
+
+  /// Moves the `task_assignments` row for [canonicalTitle] to [state].
+  ///
+  /// A no-op when nothing matches: tasks issued before this table was wired
+  /// up have no row, and should keep working through whatever older path
+  /// they already used rather than throwing here.
+  Future<void> _transitionTask(
+    String canonicalTitle,
+    String state, {
+    int? postponeMinutes,
+  }) async {
+    try {
+      final task = await _storage.loadLatestTaskAssignmentByTitle(
+        canonicalTitle,
+      );
+      if (task == null) {
+        return;
+      }
+      await _storage.transitionTaskAssignment(
+        id: task.id,
+        state: state,
+        postponeMinutes: postponeMinutes,
+      );
+    } catch (_) {
+      // Best effort — never let bookkeeping swallow the user's answer.
+    }
+  }
+
+  /// Closes out the pre-sleep routine once its final report step is
+  /// dismissed. Called from `SleepRoutinePage` itself — not a notification
+  /// action, since accepting the task already handed the user into the page
+  /// rather than starting a countdown/confirmation like a normal task.
+  Future<void> completeSleepRoutine(String canonicalTitle) =>
+      _transitionTask(canonicalTitle, TaskLifecycleState.succeeded);
+
+  /// Whether a task of this kind is a "composite" — a multi-step in-app flow
+  /// (see [TaskKind.sleepRoutine]) rather than a timed no-smoking window.
+  /// Composite tasks skip the countdown/confirmation-prompt machinery in
+  /// [handleTaskAction]'s `done` branch entirely.
+  static bool isComposite(String taskKind) => taskKind == TaskKind.sleepRoutine;
+
+  /// The one-per-day pre-sleep routine plan item: breath test, cough test,
+  /// an optional smoking-count discrepancy question, then a daily report.
+  /// [sleepAt] is the effective bedtime the daily plan already resolved;
+  /// the routine itself starts an hour before it. `durationMinutes: 0`
+  /// because — unlike [TaskKind.noSmokeWindow] — completing it opens
+  /// `SleepRoutinePage` rather than starting a barrier countdown.
+  static AdaptiveTaskPlanItem buildSleepRoutinePlanItem({
+    required DateTime sleepAt,
+  }) {
+    return AdaptiveTaskPlanItem(
+      scheduledAt: sleepAt.subtract(const Duration(hours: 1)),
+      durationMinutes: 0,
+      taskTitle: sleepRoutineCanonicalTitle,
+      taskKind: TaskKind.sleepRoutine,
+    );
+  }
+
+  /// How long a task's no-smoking window lasts, parsed from its title.
+  ///
+  /// The canonical `ADAPTIVE_NO_SMOKE:<minutes>` form is tried first; the
+  /// looser minute/hour-word patterns exist for older or localized titles
+  /// that don't follow it.
+  static Duration resolveInitialTaskDelay(String taskTitle) {
+    final adaptiveCanonical = RegExp(
+      r'^ADAPTIVE_NO_SMOKE:(\d+)$',
+      caseSensitive: false,
+    ).firstMatch(taskTitle.trim());
+    if (adaptiveCanonical != null) {
+      final minutes = int.tryParse(adaptiveCanonical.group(1) ?? '');
+      if (minutes != null && minutes > 0) {
+        return Duration(minutes: minutes);
+      }
+    }
+
+    final minuteMatch = RegExp(
+      r'(\d+)\s*(dakika|minute|minutes|min)',
+      caseSensitive: false,
+    ).firstMatch(taskTitle);
+    if (minuteMatch != null) {
+      final minutes = int.tryParse(minuteMatch.group(1) ?? '');
+      if (minutes != null && minutes > 0) {
+        return Duration(minutes: minutes);
+      }
+    }
+
+    final hourMatch = RegExp(
+      r'(\d+)\s*(saat|hour|hours)',
+      caseSensitive: false,
+    ).firstMatch(taskTitle);
+    if (hourMatch != null) {
+      final hours = int.tryParse(hourMatch.group(1) ?? '');
+      if (hours != null && hours > 0) {
+        return Duration(hours: hours);
+      }
+    }
+
+    return const Duration(minutes: 30);
+  }
+
+  static String _matchKey(String canonicalTitle, DateTime scheduledAt) =>
+      '$canonicalTitle@${scheduledAt.toIso8601String()}';
+
+  static String _generateId(AdaptiveTaskPlanItem item) =>
+      'ta_${item.scheduledAt.microsecondsSinceEpoch}';
+
+  static String _planDateKey(DateTime day) {
+    final month = day.month.toString().padLeft(2, '0');
+    final dayOfMonth = day.day.toString().padLeft(2, '0');
+    return '${day.year}-$month-$dayOfMonth';
+  }
+}

@@ -152,5 +152,88 @@ void main() {
 
       expect(await storage.countSmokingEventsSince(DateTime(2027, 1, 1)), 2);
     });
+
+    test('logSmokingNow returns an id that undoes exactly that record',
+        () async {
+      // The lock-screen quick-log route is a single notification tap with
+      // no hold-to-confirm — an accidental press has no guard until
+      // NotificationService.showSmokedLogUndoPrompt offers this id back.
+      final storage = StorageService();
+      final keptId = await storage.logSmokingNow(
+        timestamp: DateTime(2026, 8, 1, 9, 0),
+      );
+      final undoneId = await storage.logSmokingNow(
+        timestamp: DateTime(2026, 8, 1, 10, 0),
+      );
+
+      await storage.deleteSmokingEvent(undoneId);
+
+      final events = await storage.loadSmokingEvents(
+        since: DateTime(2026, 8, 1),
+      );
+      expect(events, hasLength(1));
+      expect(events.single.timestamp, DateTime(2026, 8, 1, 9, 0));
+      // keptId's row is the one still there, not incidentally the only one.
+      expect(keptId, isNot(undoneId));
+    });
+
+    test('deleting an id that was already removed is a safe no-op',
+        () async {
+      final storage = StorageService();
+      final id = await storage.logSmokingNow(
+        timestamp: DateTime(2026, 8, 2, 9, 0),
+      );
+
+      await storage.deleteSmokingEvent(id);
+      await storage.deleteSmokingEvent(id);
+
+      final events = await storage.loadSmokingEvents(
+        since: DateTime(2026, 8, 2),
+      );
+      expect(events, isEmpty);
+    });
+  });
+
+  group('pre-sleep routine discrepancy recall', () {
+    test(
+      'logRecalledSmokingHours closes the gap evaluateTodaySmokingDiscrepancy '
+      'reported, the real caller in SleepRoutinePage',
+      () async {
+        final storage = StorageService();
+        final now = DateTime.now();
+
+        // Only 2 logged so far today, nothing to imply an average yet — the
+        // discrepancy check falls back to loadSmokingWindowInput's default
+        // (20/day) when no survey exists, so this exercises the same shape
+        // the routine sees on a fresh install.
+        await storage.logSmokingNow(
+          timestamp: DateTime(now.year, now.month, now.day, 9),
+        );
+        await storage.logSmokingNow(
+          timestamp: DateTime(now.year, now.month, now.day, 13),
+        );
+
+        final before = await storage.evaluateTodaySmokingDiscrepancy(
+          now: now,
+        );
+        expect(before.loggedCount, 2);
+        expect(before.hasDiscrepancy, isTrue);
+
+        // The user answers the discrepancy question and picks the hours they
+        // forgot — SleepRoutinePage's _SmokingDiscrepancyStep calls exactly
+        // this with the gap-sized hour selection.
+        await storage.logRecalledSmokingHours(
+          day: now,
+          hours: List<int>.generate(before.gap, (i) => 17 + i),
+        );
+
+        final after = await storage.evaluateTodaySmokingDiscrepancy(now: now);
+        expect(after.loggedCount, before.loggedCount + before.gap);
+        // Logging exactly the missing amount closes the gap to zero, below
+        // the discrepancy threshold.
+        expect(after.gap, 0);
+        expect(after.hasDiscrepancy, isFalse);
+      },
+    );
   });
 }

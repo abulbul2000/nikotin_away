@@ -86,7 +86,7 @@ void main() {
     // Unrelated kinds are untouched by one toggle.
     expect(
       await storage.isNotificationKindEnabled(
-        NotificationKind.breathTest.name,
+        NotificationKind.weeklySurvey.name,
       ),
       isTrue,
     );

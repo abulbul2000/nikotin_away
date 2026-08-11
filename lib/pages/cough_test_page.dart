@@ -25,6 +25,12 @@ class CoughTestPage extends StatefulWidget {
   /// WeeklySurveyPage's save-flow check to know the requirement was met
   /// without re-querying storage itself.
   final VoidCallback? onCompleted;
+
+  /// When set, the "devam" button on the result screen calls this instead of
+  /// popping the page — used by SleepRoutinePage, which embeds this page as
+  /// one step of a larger flow and needs to advance to the next step rather
+  /// than close.
+  final VoidCallback? onFinishRequested;
   final BreathAudioService? breathAudioService;
   final CoughAcousticEngine? coughAcousticEngine;
   final StorageService? storageService;
@@ -33,6 +39,7 @@ class CoughTestPage extends StatefulWidget {
     super.key,
     this.navigateToHomeOnComplete = false,
     this.onCompleted,
+    this.onFinishRequested,
     this.breathAudioService,
     this.coughAcousticEngine,
     this.storageService,
@@ -219,6 +226,10 @@ class _CoughTestPageState extends State<CoughTestPage> {
   }
 
   void _finish() {
+    if (widget.onFinishRequested != null) {
+      widget.onFinishRequested!();
+      return;
+    }
     if (widget.navigateToHomeOnComplete) {
       Navigator.of(context).popUntil((route) => route.isFirst);
     } else {

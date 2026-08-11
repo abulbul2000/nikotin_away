@@ -321,6 +321,12 @@ class MainActivity : FlutterActivity() {
 						result.success(true)
 					}
 
+					"noteTransitContext" -> {
+						val isLikely = call.argument<Boolean>("isLikely") ?: false
+						DeliveryGateEvaluator.noteTransitContext(this, isLikely)
+						result.success(true)
+					}
+
 					"consumeWatchdogViolations" -> {
 						val rows = WatchdogStore.drainViolations(this)
 						val mapped = rows.mapNotNull { row ->
@@ -332,6 +338,21 @@ class MainActivity : FlutterActivity() {
 								"type" to parts[0],
 								"taskTitle" to parts[1],
 								"createdAtMillis" to (parts[2].toLongOrNull() ?: System.currentTimeMillis()),
+							)
+						}
+						result.success(mapped)
+					}
+
+					"consumePendingDeliveryExpirations" -> {
+						val rows = PendingDeliveryQueue.drainExpired(this)
+						val mapped = rows.mapNotNull { row ->
+							val parts = row.split("|")
+							if (parts.size < 2) {
+								return@mapNotNull null
+							}
+							mapOf(
+								"watchdogId" to parts[0],
+								"createdAtMillis" to (parts[1].toLongOrNull() ?: System.currentTimeMillis()),
 							)
 						}
 						result.success(mapped)

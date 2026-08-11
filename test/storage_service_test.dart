@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/models/adaptive_task_models.dart';
+import 'package:no_smoke/models/cough_test_record.dart';
 import 'package:no_smoke/models/step_counter_sample.dart';
 import 'package:no_smoke/models/survey_record.dart';
 import 'package:no_smoke/services/storage_service.dart';
@@ -300,5 +302,75 @@ void main() {
       ),
     );
     expect(await storage.isRecentlySedentary(), isFalse);
+  });
+
+  group('buildDailyProgressReport', () {
+    test('reports no evidence on a fresh install with nothing logged',
+        () async {
+      final storage = StorageService();
+
+      final report = await storage.buildDailyProgressReport();
+
+      expect(report.reductionProgress.hasEvidence, isFalse);
+      expect(report.todaySmokedCount, 0);
+      expect(report.latestCoughTest, isNull);
+    });
+
+    test('reflects today\'s logged cigarette count', () async {
+      final storage = StorageService();
+      final now = DateTime.now();
+      await storage.logSmokingNow(timestamp: now);
+      await storage.logSmokingNow(
+        timestamp: now.subtract(const Duration(hours: 1)),
+      );
+
+      final report = await storage.buildDailyProgressReport(now: now);
+
+      expect(report.todaySmokedCount, 2);
+    });
+
+    test('carries the latest cough test through', () async {
+      final storage = StorageService();
+      final now = DateTime.now();
+      await storage.saveCoughTestRecord(
+        CoughTestRecord(
+          id: 'cough_report_1',
+          createdAt: now,
+          coughCount: 5,
+          testDurationSeconds: 30,
+          severityScore: 40,
+          severityLevel: 'mild',
+        ),
+      );
+
+      final report = await storage.buildDailyProgressReport(now: now);
+
+      expect(report.latestCoughTest?.coughCount, 5);
+    });
+
+    test('task success rate covers the last 7 days, not all time', () async {
+      final storage = StorageService();
+      final now = DateTime.now();
+
+      // Outside the 7-day window entirely — must not affect the figure.
+      await storage.recordAdaptiveTaskOutcome(
+        taskTitle: 'ADAPTIVE_NO_SMOKE:30',
+        outcome: AdaptiveTaskOutcome.missed,
+        plannedDurationMinutes: 30,
+        scheduledAt: now.subtract(const Duration(days: 30)),
+        respondedAt: now.subtract(const Duration(days: 30)),
+      );
+      await storage.recordAdaptiveTaskOutcome(
+        taskTitle: 'ADAPTIVE_NO_SMOKE:30',
+        outcome: AdaptiveTaskOutcome.success,
+        plannedDurationMinutes: 30,
+        scheduledAt: now.subtract(const Duration(days: 1)),
+        respondedAt: now.subtract(const Duration(days: 1)),
+      );
+
+      final report = await storage.buildDailyProgressReport(now: now);
+
+      expect(report.taskSuccessRateLast7Days, 1.0);
+    });
   });
 }

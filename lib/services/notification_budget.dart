@@ -15,9 +15,6 @@ enum NotificationKind {
   /// A dose the user themselves put on the clock.
   medication,
 
-  /// The daily breathing measurement.
-  breathTest,
-
   /// General advice for a reported condition.
   healthTip,
 
@@ -94,7 +91,6 @@ class NotificationBudget {
       case NotificationKind.medication:
         return NotificationClass.owed;
 
-      case NotificationKind.breathTest:
       case NotificationKind.healthTip:
       case NotificationKind.coachCommand:
       case NotificationKind.sedentary:
@@ -116,8 +112,6 @@ class NotificationBudget {
       case NotificationKind.taskConfirmation:
       case NotificationKind.medication:
         return 0;
-      case NotificationKind.breathTest:
-        return 1;
       case NotificationKind.weeklySurvey:
         return 2;
       case NotificationKind.healthTip:

@@ -45,7 +45,12 @@ bir özellik asla tek üreticide çalışacak şekilde kurulmaz.
 
 - **Native → Dart veri akışı:** Native taraf sonucu SharedPreferences kuyruğuna yazar, Dart bir
   sonraki çalışmasında `drain()` ile alır (`TaskOverlayOutcomeStore`, `SleepActivityStore`
-  örnekleri). Arka plan isolate doğrudan SQLite'a yazmaz.
+  örnekleri). Arka plan isolate doğrudan SQLite'a yazmaz — **tek istisna:**
+  `NoResponseWatchdogService.kt`'deki `NativeViolationStore.tryInsertNoResponseViolation`,
+  `protocol_violations` tablosuna doğrudan yazar (kanıtlanmış, kullanıcı onaylı davranış);
+  SharedPreferences kuyruğu bu tek fonksiyonda yalnızca doğrudan yazma başarısız olursa
+  devreye giren bir yedek yoldur. Bu istisna genişletilmez — yeni tablolar/akışlar yine
+  kuyruk+drain desenini kullanır.
 - **Zamanlama:** Uzun süreli sayaçlar için foreground service + wakelock değil,
   `setExactAndAllowWhileIdle` alarmı kullanılır.
 - **Saf motorlar:** `discipline_protocol_service`, `behavior_engine` gibi karar motorları I/O

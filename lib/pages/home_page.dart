@@ -22,6 +22,7 @@ import '../pages/personal_progress_page.dart';
 import '../pages/protocol_violations_page.dart';
 import '../pages/reports_page.dart';
 import '../pages/settings_page.dart';
+import '../pages/sleep_routine_page.dart';
 import '../pages/survey_history_page.dart';
 import '../pages/task_follow_up_page.dart';
 import '../pages/task_outcome_confirm_page.dart';
@@ -32,9 +33,9 @@ import '../services/location_intelligence_service.dart';
 import '../services/step_tracking_service.dart';
 import '../services/notification_service.dart';
 import '../services/protocol_violation_service.dart';
-import '../services/breath_test_gate.dart';
 import '../services/smoked_log_button_service.dart';
 import '../services/storage_service.dart';
+import '../services/task_assignment_service.dart';
 import '../widgets/no_smoke_logo.dart';
 
 class HomePage extends StatefulWidget {
@@ -78,7 +79,6 @@ class _HomePageState extends State<HomePage> {
   bool _mandatoryTaskShown = false;
   bool _followUpConfirmShown = false;
   bool _weeklySurveyMandatoryShown = false;
-  bool _dailyBreathMandatoryShownSession = false;
   bool _registrationCompleted = false;
   bool _isCompletingRegistration = false;
   String _lastSurveyDateText = '...';
@@ -328,7 +328,7 @@ class _HomePageState extends State<HomePage> {
     final now = DateTime.now();
     final startedAt =
         _taskStartedAt[taskTitle] ??
-        now.subtract(_resolveInitialTaskDelay(taskTitle));
+        now.subtract(TaskAssignmentService.resolveInitialTaskDelay(taskTitle));
     final sensorEvents = await _storageService.loadSensorUsageBetween(
       startAt: startedAt,
       endAt: now,
@@ -422,6 +422,22 @@ class _HomePageState extends State<HomePage> {
     await _restorePendingFollowUps();
   }
 
+  /// The set [TaskAssignmentService.handleTaskAction] now owns. Anything
+  /// outside this set is a legacy follow-up action tied to `task_follow_ups`
+  /// rather than `task_assignments`, and keeps running its own older path
+  /// below — unchanged from before this method delegated the rest.
+  static const Set<String> _taskAssignmentActionIds = {
+    TaskActionId.done,
+    TaskActionId.notNow,
+    TaskActionId.postpone5,
+    TaskActionId.postpone10,
+    TaskActionId.postpone15,
+    TaskActionId.decline,
+    TaskActionId.sos,
+    TaskActionId.confirmSmokedYes,
+    TaskActionId.confirmSmokedNo,
+  };
+
   Future<void> _handleTaskNotificationAction(Map<String, String> event) async {
     final taskTitle = event['taskTitle']?.trim() ?? '';
     final actionId = event['actionId']?.trim() ?? '';
@@ -429,56 +445,51 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    if (actionId == 'task_done') {
-      final now = DateTime.now();
-      final delay = _resolveInitialTaskDelay(taskTitle);
-      final followUpAt = now.add(delay);
-      await _storageService.saveTaskResult(
+    if (_taskAssignmentActionIds.contains(actionId)) {
+      // canonicalTitle isn't threaded through HomePage's stream events today
+      // — taskTitle already *is* the canonical ADAPTIVE_NO_SMOKE:<n> form
+      // for every task this stream carries, same as the background isolate
+      // path in notification_service.dart assumes when canonicalTitle is
+      // absent from the payload.
+      final followUp = await TaskAssignmentService(
+        _storageService,
+      ).handleTaskAction(
+        canonicalTitle: taskTitle,
         taskTitle: taskTitle,
-        taskResult: 'started',
-        completedAt: now,
+        actionId: actionId,
       );
-      _taskStartedAt[taskTitle] = now;
-      await _storageService.saveTaskFollowUp(
-        taskTitle: taskTitle,
-        scheduledAt: followUpAt,
-      );
-      await NotificationService.showTaskTimerStartedNotification(
-        taskTitle: taskTitle,
-        duration: delay,
-      );
-      await NotificationService.scheduleTaskFollowUpReminder(
-        taskTitle: taskTitle,
-        delay: delay,
-      );
-      _scheduleLocalFollowUp(taskTitle, followUpAt);
       if (!mounted) {
         return;
       }
+      if (followUp == TaskActionFollowUp.openSosPage) {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => CravingSosPage(taskCanonicalTitle: taskTitle),
+          ),
+        );
+      } else if (followUp == TaskActionFollowUp.openSleepRoutinePage) {
+        final packsPerDay = await _resolveLatestPacksPerDay();
+        if (!mounted) return;
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => SleepRoutinePage(
+              canonicalTitle: taskTitle,
+              name: widget.name,
+              packsPerDay: packsPerDay,
+            ),
+          ),
+        );
+      }
       setState(() {
-        _taskStates[taskTitle] = 'deferred';
+        _taskStates[taskTitle] = _uiStateFor(actionId);
       });
-      return;
-    }
-
-    if (actionId == 'task_not_now') {
-      await _protocolViolationService.logDeferredStart(taskTitle: taskTitle);
-      final delay = await _askPostponeDelay();
-      final followUpAt = DateTime.now().add(delay);
-      await _storageService.saveTaskFollowUp(
-        taskTitle: taskTitle,
-        scheduledAt: followUpAt,
-      );
-      await NotificationService.scheduleFirstTaskTriggerNotification(
-        taskDescription: taskTitle,
-        delay: delay,
-      );
-      _scheduleLocalFollowUp(taskTitle, followUpAt);
+      await _loadHomeMetrics();
       return;
     }
 
     if (actionId == 'followup_done' || actionId == 'smoked_yes') {
-      final plannedMinutes = _resolveInitialTaskDelay(taskTitle).inMinutes;
+      final plannedMinutes =
+          TaskAssignmentService.resolveInitialTaskDelay(taskTitle).inMinutes;
       await _storageService.recordAdaptiveTaskOutcome(
         taskTitle: taskTitle,
         outcome: AdaptiveTaskOutcome.success,
@@ -511,7 +522,8 @@ class _HomePageState extends State<HomePage> {
       );
       final delay = await _storageService.resolveAdaptivePostponeDelay();
       final followUpAt = DateTime.now().add(delay);
-      final plannedMinutes = _resolveInitialTaskDelay(taskTitle).inMinutes;
+      final plannedMinutes =
+          TaskAssignmentService.resolveInitialTaskDelay(taskTitle).inMinutes;
       await _storageService.recordAdaptiveTaskOutcome(
         taskTitle: taskTitle,
         outcome: AdaptiveTaskOutcome.deferred,
@@ -532,58 +544,22 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  /// Instead of silently picking a postpone delay for the user, ask them
-  /// directly when they want to be reminded -- if they don't answer within
-  /// [_postponePromptTimeout], the dialog auto-answers with the same 5
-  /// minute default the unanswered-task retry chain already uses
-  /// (NotificationService._unansweredReminderDelay), so a user who just
-  /// doesn't respond gets the same cadence either way.
-  static const Duration _postponePromptTimeout = Duration(minutes: 5);
-
-  Future<Duration> _askPostponeDelay() async {
-    if (!mounted) {
-      return _postponePromptTimeout;
+  /// The in-memory `_taskStates` label a UI badge reads, for an action id
+  /// [TaskAssignmentService.handleTaskAction] already applied to storage.
+  /// Purely cosmetic — the real state lives in `task_assignments` now.
+  static String _uiStateFor(String actionId) {
+    switch (actionId) {
+      case TaskActionId.done:
+        return 'deferred';
+      case TaskActionId.decline:
+        return 'failed';
+      case TaskActionId.confirmSmokedYes:
+        return 'failed';
+      case TaskActionId.confirmSmokedNo:
+        return 'completed';
+      default:
+        return 'deferred';
     }
-    final options = <Duration>[
-      const Duration(minutes: 5),
-      const Duration(minutes: 15),
-      const Duration(minutes: 30),
-      const Duration(hours: 1),
-    ];
-
-    Timer? autoAnswerTimer;
-    final result = await showDialog<Duration>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        autoAnswerTimer = Timer(_postponePromptTimeout, () {
-          if (Navigator.of(dialogContext).canPop()) {
-            Navigator.of(dialogContext).pop(_postponePromptTimeout);
-          }
-        });
-        return AlertDialog(
-          title: Text(context.t('postponeReminderPromptTitle')),
-          content: Text(context.t('postponeReminderPromptMessage')),
-          actions: options
-              .map(
-                (option) => TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(option),
-                  child: Text(_formatPostponeOptionLabel(option)),
-                ),
-              )
-              .toList(),
-        );
-      },
-    );
-    autoAnswerTimer?.cancel();
-    return result ?? _postponePromptTimeout;
-  }
-
-  String _formatPostponeOptionLabel(Duration option) {
-    if (option.inHours >= 1) {
-      return context.t('oneHourLabel');
-    }
-    return '${option.inMinutes} ${context.t('minutesShort')}';
   }
 
   /// Pushes the current snapshot to the home-screen widget (see
@@ -653,6 +629,7 @@ class _HomePageState extends State<HomePage> {
         ? await _storageService.loadBehaviorDashboard()
         : await _storageService.loadLatestBehaviorSnapshot();
     AdaptiveTaskPlan? adaptivePlan;
+    AdaptiveTaskPlanItem? sleepRoutinePlanItem;
     if (registrationCompleted) {
       final sleepRaw = await _storageService.loadSleepTime() ?? '21:00';
       final parts = sleepRaw.split(':');
@@ -674,6 +651,9 @@ class _HomePageState extends State<HomePage> {
         now: now,
         sleepAt: sleepAt,
         riskyHours: behavior?.riskyHours ?? const <String>[],
+      );
+      sleepRoutinePlanItem = TaskAssignmentService.buildSleepRoutinePlanItem(
+        sleepAt: sleepAt,
       );
     }
     final pendingFollowUps = await _storageService.loadPendingTaskFollowUps();
@@ -729,7 +709,10 @@ class _HomePageState extends State<HomePage> {
       _riskyHours = behavior?.riskyHours ?? const [];
       _breathTrendText = behavior?.breathTrend ?? 'Stable';
       _progressSummaryText = behavior?.progressSummary ?? 'Stable';
-      _adaptivePlanItems = adaptivePlan?.items ?? const [];
+      _adaptivePlanItems = [
+        ...?adaptivePlan?.items,
+        ?sleepRoutinePlanItem,
+      ];
       _todaysTasks = _adaptivePlanItems.isNotEmpty
           ? _adaptivePlanItems.map((item) => item.taskTitle).toList()
           : behavior?.todaysTasks ?? const [];
@@ -820,10 +803,6 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (_registrationCompleted) {
-      await _ensureDailyBreathCadence();
-      if (!mounted) {
-        return;
-      }
       await _ensureWeeklySurveyCadence();
       if (!mounted) {
         return;
@@ -876,69 +855,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> _ensureDailyBreathCadence() async {
-    if (!_registrationCompleted) {
-      return;
-    }
-
-    final now = DateTime.now();
-    final sleepTime = await _storageService.loadSleepTime() ?? '21:00';
-    final wakeTime = await _storageService.loadSetting('wake_time') ?? '07:00';
-    final preferredRaw = await _storageService.loadSetting(
-      'daily_breath_test_target',
-    );
-    var preferred = int.tryParse(preferredRaw ?? '1') ?? 1;
-    if (preferred < 1) {
-      preferred = 1;
-    }
-    if (preferred > 4) {
-      preferred = 4;
-    }
-    final adaptivePreferred = _resolveAdaptiveBreathReminderCount(preferred);
-
-    final signature =
-        '${now.year}-${now.month}-${now.day}|$sleepTime|$wakeTime|$adaptivePreferred|$_lastRespiratoryState|$_lastRespiratoryBurden';
-    final existing = await _storageService.loadSetting(
-      'last_daily_breath_schedule_signature',
-    );
-    if (existing != signature) {
-      await NotificationService.scheduleAdaptiveDailyBreathReminders(
-        sleepTime: sleepTime,
-        wakeTime: wakeTime,
-        minimumCount: 1,
-        preferredCount: adaptivePreferred,
-      );
-      await _storageService.saveSetting(
-        'last_daily_breath_schedule_signature',
-        signature,
-      );
-    }
-
-    if (_dailyBreathStatus != 'breathTestDoneToday') {
-      await _presentDailyBreathMandatoryIfNeeded();
-    }
-  }
-
-  int _resolveAdaptiveBreathReminderCount(int baseTarget) {
-    var target = baseTarget.clamp(1, 4);
-
-    // Keep reminders controlled while still reacting to respiratory worsening.
-    if (_lastRespiratoryState == 'clinical_review_recommended') {
-      target = (target + 1).clamp(2, 3);
-    } else if (_lastRespiratoryState == 'monitor_closer') {
-      target = target.clamp(1, 2);
-      if (_lastRespiratoryBurden >= 55) {
-        target = 2;
-      }
-    } else {
-      if (_lastRespiratoryBurden < 30 && _adaptiveRiskScore < 45) {
-        target = target.clamp(1, 2);
-      }
-    }
-
-    return target;
-  }
-
   Color _respiratoryBandColor() {
     switch (_lastRespiratoryState) {
       case 'clinical_review_recommended':
@@ -959,99 +875,6 @@ class _HomePageState extends State<HomePage> {
       default:
         return context.t('respStable');
     }
-  }
-
-  Future<void> _presentDailyBreathMandatoryIfNeeded() async {
-    if (!mounted ||
-        !_registrationCompleted ||
-        _dailyBreathMandatoryShownSession) {
-      return;
-    }
-    // Elapsed time since the last reading, not "is there one dated today".
-    // Someone who tested at 23:50 and opens the app at 00:10 has skipped
-    // nothing, and being handed an un-dismissable prompt twenty minutes
-    // later would read as the app losing track.
-    const gate = BreathTestGate();
-    final now = DateTime.now();
-    final lastAt = (await _storageService.loadLatestBreathRecord())
-        ?.completedAt;
-    if (!gate.shouldPrompt(lastCompletedAt: lastAt, now: now)) {
-      return;
-    }
-    final mayDefer = gate.canDefer(lastCompletedAt: lastAt, now: now);
-    if (!mayDefer) {
-      // Also say it outside the app. Someone who dismisses the task by
-      // closing the app has no other way of learning the reading is missing
-      // until they next open it — which is precisely the loop that lets a
-      // day go by unmeasured.
-      unawaited(NotificationService.showBreathTestOverdueNotification());
-    }
-    if (!mounted) return;
-    _dailyBreathMandatoryShownSession = true;
-
-    final startNow = await showDialog<bool>(
-      context: context,
-      barrierDismissible: mayDefer,
-      builder: (dialogContext) {
-        // canPop follows the same rule as the "later" button. Blocking
-        // tap-outside is not enough on its own: the Android system/gesture
-        // back button would otherwise dismiss the prompt for free, which is
-        // how the previous version could be skipped without answering.
-        return PopScope(
-          canPop: mayDefer,
-          child: AlertDialog(
-            title: Text(context.t('dailyBreathMandatoryTitle')),
-            content: Text(
-              mayDefer
-                  ? context.t('dailyBreathPromptContent')
-                  // A full day with no reading leaves a hole in the trend
-                  // that cannot be filled in afterwards, so this wording
-                  // says why there is no way out rather than just removing
-                  // the button.
-                  : context.t('dailyBreathOverdueContent'),
-            ),
-            actions: [
-              if (mayDefer)
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: Text(context.t('dailyBreathLater')),
-                ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(dialogContext).pop(true),
-                child: Text(context.t('dailyBreathMandatoryStart')),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-
-    if (!mounted || startNow != true) {
-      return;
-    }
-
-    final packsPerDay = await _resolveLatestPacksPerDay();
-    if (!mounted) {
-      return;
-    }
-
-    // Straight into the breath test. This used to go through a daily
-    // check-in page that paired it with a "which hours did you smoke today?"
-    // recall survey; the quick-log button records those moments as they
-    // happen, so asking the user to reconstruct them at day's end was both
-    // less accurate and an extra screen in the way.
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) =>
-            BreathTestPage(name: widget.name, packsPerDay: packsPerDay),
-      ),
-    );
-
-    if (!mounted) {
-      return;
-    }
-    await _loadHomeMetrics();
   }
 
   Future<String> _resolveLatestPacksPerDay() async {
@@ -1512,7 +1335,7 @@ class _HomePageState extends State<HomePage> {
       await _protocolViolationService.logFollowUpFailed(taskTitle: taskTitle);
     }
 
-    final plannedMinutes = _resolveInitialTaskDelay(taskTitle).inMinutes;
+    final plannedMinutes = TaskAssignmentService.resolveInitialTaskDelay(taskTitle).inMinutes;
     await _storageService.recordAdaptiveTaskOutcome(
       taskTitle: taskTitle,
       outcome: succeeded == true
@@ -1620,7 +1443,41 @@ class _HomePageState extends State<HomePage> {
 
     if (result == true) {
       _mandatoryTaskPostponeCount = 0;
-      await _startTaskFromMandatoryScreen(taskTitle);
+      final acceptedTaskTitle = taskTitle;
+      final row = await _storageService.loadLatestTaskAssignmentByTitle(
+        acceptedTaskTitle,
+      );
+      if (TaskAssignmentService.isComposite(row?.taskKind ?? '')) {
+        // The pre-sleep routine has no countdown/follow-up of its own —
+        // accepting it on the fake-call screen hands the user straight into
+        // SleepRoutinePage, same as the notification-action path.
+        await TaskAssignmentService(
+          _storageService,
+        ).handleTaskAction(
+          canonicalTitle: acceptedTaskTitle,
+          taskTitle: acceptedTaskTitle,
+          actionId: TaskActionId.done,
+        );
+        if (!mounted) return;
+        final packsPerDay = await _resolveLatestPacksPerDay();
+        if (!mounted) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => SleepRoutinePage(
+              canonicalTitle: acceptedTaskTitle,
+              name: widget.name,
+              packsPerDay: packsPerDay,
+            ),
+          ),
+        );
+        if (!mounted) return;
+        setState(() {
+          _taskStates[acceptedTaskTitle] = _uiStateFor(TaskActionId.done);
+        });
+        await _loadHomeMetrics();
+        return;
+      }
+      await _startTaskFromMandatoryScreen(acceptedTaskTitle);
       return;
     }
 
@@ -1637,7 +1494,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _startTaskFromMandatoryScreen(String taskTitle) async {
     final now = DateTime.now();
-    final delay = _resolveInitialTaskDelay(taskTitle);
+    final delay = TaskAssignmentService.resolveInitialTaskDelay(taskTitle);
     final followUpAt = now.add(delay);
 
     await _storageService.saveTaskResult(
@@ -1674,6 +1531,15 @@ class _HomePageState extends State<HomePage> {
   static const Duration _overdueTaskGrace = Duration(minutes: 15);
 
   Future<void> _notifyNewTasks() async {
+    final taskAssignmentService = TaskAssignmentService(_storageService);
+    // Backstop for the native delivery-gate queue limit while the app is
+    // open — a task stuck in pendingDelivery beyond the queue limit is
+    // closed out here even on a day with nothing new to notify.
+    await taskAssignmentService.enforceDeliveryQueueLimit();
+    // Picks up whatever the native queue limit already closed out while the
+    // app was closed (TaskTriggerReceiver.kt's PendingDeliveryQueue).
+    await taskAssignmentService.syncPendingDeliveryExpirationsFromNative();
+
     if (_todaysTasks.isEmpty) {
       return;
     }
@@ -1688,6 +1554,12 @@ class _HomePageState extends State<HomePage> {
     _notifiedTaskTitles.addAll(notifiedToday);
 
     if (_adaptivePlanItems.isNotEmpty) {
+      final planDate = DateTime.now();
+      final assignments = await taskAssignmentService.planDailyTasks(
+        planDate: planDate,
+        items: _adaptivePlanItems,
+      );
+
       DateTime? nextAt;
       for (final item in _adaptivePlanItems) {
         final task = item.taskTitle;
@@ -1720,9 +1592,17 @@ class _HomePageState extends State<HomePage> {
           delay = const Duration(minutes: 1);
         }
 
+        final matchingAssignment = assignments
+            .where(
+              (row) =>
+                  row.canonicalTitle == item.taskTitle &&
+                  row.scheduledAt == item.scheduledAt,
+            )
+            .firstOrNull;
         await NotificationService.scheduleFirstTaskTriggerNotification(
           taskDescription: task,
           delay: delay,
+          taskAssignmentId: matchingAssignment?.id,
         );
 
         _notifiedTaskTitles.add(task);
@@ -1851,43 +1731,6 @@ class _HomePageState extends State<HomePage> {
     final day = dt.day.toString().padLeft(2, '0');
     final month = dt.month.toString().padLeft(2, '0');
     return '$day/$month $hour:$minute';
-  }
-
-  Duration _resolveInitialTaskDelay(String taskTitle) {
-    final adaptiveCanonical = RegExp(
-      r'^ADAPTIVE_NO_SMOKE:(\d+)$',
-      caseSensitive: false,
-    ).firstMatch(taskTitle.trim());
-    if (adaptiveCanonical != null) {
-      final minutes = int.tryParse(adaptiveCanonical.group(1) ?? '');
-      if (minutes != null && minutes > 0) {
-        return Duration(minutes: minutes);
-      }
-    }
-
-    final minuteMatch = RegExp(
-      r'(\d+)\s*dakika',
-      caseSensitive: false,
-    ).firstMatch(taskTitle);
-    if (minuteMatch != null) {
-      final minutes = int.tryParse(minuteMatch.group(1) ?? '');
-      if (minutes != null && minutes > 0) {
-        return Duration(minutes: minutes);
-      }
-    }
-
-    final hourMatch = RegExp(
-      r'(\d+)\s*saat',
-      caseSensitive: false,
-    ).firstMatch(taskTitle);
-    if (hourMatch != null) {
-      final hours = int.tryParse(hourMatch.group(1) ?? '');
-      if (hours != null && hours > 0) {
-        return Duration(hours: hours);
-      }
-    }
-
-    return const Duration(minutes: 30);
   }
 
   String _buildBreathDeltaText({

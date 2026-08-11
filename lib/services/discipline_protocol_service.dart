@@ -413,6 +413,23 @@ class DisciplineProtocolService {
       );
     }
 
+    // A shorter "are you still holding on?" check-in was considered here to
+    // top up a long barrier's shortfall against targetTaskCount, but a
+    // check-in is a real notification+overlay like any other slot, so it is
+    // bound by the same gap >= barrierMinutes rule that keeps two tasks from
+    // ever overlapping (see "no task starts inside another one's window" in
+    // discipline_protocol_adaptive_planner_test.dart). `scheduled` above
+    // already searched this exact grid for every slot that rule allows, so
+    // a second pass over the same grid can never find room the first one
+    // missed — there is nothing left to top up with. A long barrier
+    // legitimately fitting fewer than targetTaskCount slots into the day is
+    // the honest outcome, not a gap to fill.
+    //
+    // isCheckIn stays on TaskAssignment/AdaptiveTaskPlanItem for a future
+    // check-in design that doesn't compete with real tasks for the same
+    // slots (e.g. sized to fit inside a still-running barrier rather than
+    // needing a slot of its own).
+
     return AdaptiveTaskPlan(
       targetTaskCount: items.length,
       baseDurationMinutes: barrierMinutes,

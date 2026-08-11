@@ -32,7 +32,6 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
   /// the budget prioritises them — the most consequential (a missed reading
   /// that can never be retaken) first.
   static const _offeredKinds = <NotificationKind>[
-    NotificationKind.breathTest,
     NotificationKind.weeklySurvey,
     NotificationKind.healthTip,
     NotificationKind.coachCommand,
@@ -83,8 +82,6 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
 
   String _titleKey(NotificationKind kind) {
     switch (kind) {
-      case NotificationKind.breathTest:
-        return 'notifKindBreathTest';
       case NotificationKind.weeklySurvey:
         return 'notifKindWeeklySurvey';
       case NotificationKind.healthTip:

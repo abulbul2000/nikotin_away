@@ -267,6 +267,33 @@ class AndroidWatchdogService {
     }
   }
 
+  /// Watchdog ids the native delivery-gate queue closed out as `expired`
+  /// while the app was closed — two or more tasks fell due during the same
+  /// DND/gaming stretch, and everything past the two-task limit is dropped
+  /// here rather than delivered in a stack once the block clears.
+  static Future<List<Map<String, dynamic>>>
+      consumePendingDeliveryExpirations() async {
+    if (!_isAndroid) {
+      return const [];
+    }
+    try {
+      final raw = await _channel.invokeMethod<List<dynamic>>(
+        'consumePendingDeliveryExpirations',
+      );
+      if (raw == null) {
+        return const [];
+      }
+      return raw
+          .whereType<Map>()
+          .map((entry) => entry.map(
+                (key, value) => MapEntry(key.toString(), value),
+              ))
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> consumeTaskOverlayOutcomes() async {
     if (!_isAndroid) {
       return const [];

@@ -627,21 +627,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
 
     if (result.notificationsGranted) {
       try {
-        await NotificationService.scheduleAdaptiveDailyBreathReminders(
-          sleepTime: sleepTime!,
-          wakeTime: wakeTime!,
-          minimumCount: 1,
-          preferredCount: 1,
-        );
-        debugPrint('[SurveyPage] scheduleDailyBreathReminder ok');
-      } catch (error, stackTrace) {
-        debugPrint(
-          '[SurveyPage] scheduleDailyBreathReminder failed (non-blocking): $error',
-        );
-        debugPrintStack(stackTrace: stackTrace);
-      }
-
-      try {
         await NotificationService.scheduleHealthConditionAdviceNotifications(
           healthConditions: _selectedHealthConditions(),
           sleepTime: sleepTime!,

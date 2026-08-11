@@ -135,40 +135,39 @@ void main() {
   });
 
   group('priority', () {
-    test('a sitting nudge yields to a waiting breath reminder', () {
+    test('a sitting nudge yields to a waiting weekly survey reminder', () {
       // The budget is small, so without this a sedentary nudge in the
-      // morning could spend the last slot and silence the measurement that
-      // leaves a permanent hole in the trend if it is missed.
+      // morning could spend the last slot and silence the reminder for a
+      // survey that stays overdue if it is missed.
       final decision = decide(
         NotificationKind.sedentary,
-        lowestPending: budget.priorityOf(NotificationKind.breathTest),
+        lowestPending: budget.priorityOf(NotificationKind.weeklySurvey),
       );
 
       expect(decision.allowed, isFalse);
       expect(decision.denial, BudgetDenial.outranked);
     });
 
-    test('the breath reminder does not yield to a coaching line', () {
+    test('the weekly survey reminder does not yield to a coaching line', () {
       final decision = decide(
-        NotificationKind.breathTest,
+        NotificationKind.weeklySurvey,
         lowestPending: budget.priorityOf(NotificationKind.coachCommand),
       );
 
       expect(decision.allowed, isTrue);
     });
 
-    test('the measurement outranks every other offered kind', () {
-      final breath = budget.priorityOf(NotificationKind.breathTest);
+    test('the weekly survey outranks every other offered kind', () {
+      final weeklySurvey = budget.priorityOf(NotificationKind.weeklySurvey);
       for (final kind in [
-        NotificationKind.weeklySurvey,
         NotificationKind.healthTip,
         NotificationKind.coachCommand,
         NotificationKind.sedentary,
       ]) {
         expect(
           budget.priorityOf(kind),
-          greaterThan(breath),
-          reason: '$kind should not be able to crowd out the measurement',
+          greaterThan(weeklySurvey),
+          reason: '$kind should not be able to crowd out the weekly survey',
         );
       }
     });

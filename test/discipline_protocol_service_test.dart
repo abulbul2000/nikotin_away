@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/models/adaptive_task_models.dart';
 import 'package:no_smoke/models/sensor_usage_event.dart';
 import 'package:no_smoke/services/discipline_protocol_service.dart';
 
@@ -118,6 +119,57 @@ void main() {
       );
 
       expect(result, isFalse);
+    });
+
+    test('a long barrier legitimately fits fewer than targetTaskCount, '
+        'never a check-in filling the gap', () {
+      // isCheckIn exists on the model for a future design, but no code
+      // path produces one yet: a check-in would be a real notification+
+      // overlay bound by the same gap >= barrierMinutes rule every other
+      // slot follows (see discipline_protocol_adaptive_planner_test.dart's
+      // "no task starts inside another one's window"), and a second fill
+      // pass over the exact grid the first one already searched can never
+      // find room the first one missed. A 240-minute barrier in a 15-hour
+      // waking window legitimately holds only 3-4 slots — coming up short
+      // of targetTaskCount is the honest outcome, not a gap to paper over.
+      final service = DisciplineProtocolService(random: Random(11));
+      final plan = service.buildDailyAdaptivePlan(
+        now: DateTime(2026, 7, 14, 8, 0),
+        sleepAt: DateTime(2026, 7, 14, 23, 0),
+        riskyHours: const [],
+        barrierMinutes: 240,
+        targetTaskCount: 6,
+        state: AdaptiveTaskState.initial(),
+        hourlyProfiles: const [],
+      );
+
+      expect(plan.items.length, lessThan(6));
+      expect(plan.items.any((item) => item.isCheckIn), isFalse);
+      final starts = plan.items.map((i) => i.scheduledAt).toList()
+        ..sort((a, b) => a.compareTo(b));
+      for (var i = 1; i < starts.length; i++) {
+        expect(starts[i].difference(starts[i - 1]).inMinutes, greaterThanOrEqualTo(240));
+      }
+    });
+
+    test('a short barrier with plenty of room reaches targetTaskCount '
+        'without any check-ins', () {
+      final service = DisciplineProtocolService(random: Random(3));
+      final now = DateTime(2026, 7, 14, 8, 0);
+      final sleepAt = DateTime(2026, 7, 14, 23, 0);
+
+      final plan = service.buildDailyAdaptivePlan(
+        now: now,
+        sleepAt: sleepAt,
+        riskyHours: const [],
+        barrierMinutes: 30,
+        targetTaskCount: 4,
+        state: AdaptiveTaskState.initial(),
+        hourlyProfiles: const [],
+      );
+
+      expect(plan.items.length, 4);
+      expect(plan.items.any((item) => item.isCheckIn), isFalse);
     });
   });
 }

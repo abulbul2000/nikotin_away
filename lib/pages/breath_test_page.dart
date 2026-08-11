@@ -28,6 +28,12 @@ class BreathTestPage extends StatefulWidget {
   final String packsPerDay;
   final bool navigateToHomeOnComplete;
   final bool askWeeklySurveyOnComplete;
+
+  /// When set, a finished test calls this instead of navigating to any
+  /// result page (spirometry, risk result, home/weekly-survey) — used by
+  /// SleepRoutinePage, which embeds this page as one step of a larger flow
+  /// and shows its own report step at the end instead.
+  final VoidCallback? onCompleted;
   final BreathTestService? breathTestService;
   final BreathAudioService? breathAudioService;
   final BreathNoiseCheckService? breathNoiseCheckService;
@@ -38,6 +44,7 @@ class BreathTestPage extends StatefulWidget {
     this.packsPerDay = '1 paketten az',
     this.navigateToHomeOnComplete = false,
     this.askWeeklySurveyOnComplete = false,
+    this.onCompleted,
     this.breathTestService,
     this.breathAudioService,
     this.breathNoiseCheckService,
@@ -897,6 +904,11 @@ class _BreathTestPageState extends State<BreathTestPage>
       unawaited(_saveBreathProgressRecord());
 
       if (!mounted) {
+        return;
+      }
+
+      if (widget.onCompleted != null) {
+        widget.onCompleted!();
         return;
       }
 

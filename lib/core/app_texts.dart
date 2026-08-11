@@ -94,6 +94,9 @@ class AppTexts {
     'dailyBreathOverdueNotificationBody':
         '24 saattir ölçüm yapılmadı. Uygulamayı açıp testi tamamla.',
     'smokedLogRecordedWithUndo': 'Sigara kaydedildi.',
+    'smokedLogUndoBody': 'Yanlislikla mi bastin? Geri alabilirsin.',
+    'smokedLogUndoAction': 'Geri Al',
+    'channelNameSmokedLogUndo': 'Sigara kaydi geri alma',
     'smokedLogConsentHeading': 'Sigara Ictim butonunu acalim mi?',
     'smokedLogConsentDataTitle': 'Neler kaydedilir',
     'smokedLogConsentDataBody':
@@ -1385,6 +1388,7 @@ class AppTexts {
       'Onumuzdeki {duration} boyunca sigara icmeyin. Elinizde sigara varsa hemen sondurun.',
     'adaptiveNoSmokeWindowTemplate':
       'Onumuzdeki {duration} boyunca sigara icmeyin, {window} penceresi oncesi hazir ol.',
+    'checkInPrompt': 'Devam ediyor musunuz?',
     'coachReductionTier75': 'Bugun hedef: duneden en az 1 sigara az, ilk sigarayi 90 dakika ertele.',
     'coachReductionTier60': 'Bugun hedef: duneden en az 2 sigara az, her sigara oncesi 10 dakika bekle.',
     'coachReductionTier40': 'Bugun hedef: duneden en az 3 sigara az, oglen sonrasi 1 sigarayi atla.',
@@ -1661,6 +1665,19 @@ class AppTexts {
     'quickReplyThanks': 'Teşekkürler',
     'quickReplyLetsTalk': 'Konuşalım',
     'quickReplyOkAck': 'Tamam',
+    'sleepRoutineTitle': 'Uyku Öncesi Rutin',
+    'sleepRoutineIntro': 'Uyumadan önce 4 kısa adım',
+    'sleepRoutineStepIndicator': 'Adım {current} / {total}',
+    'sleepRoutineDiscrepancyQuestionTitle': 'Bugün kaç sigara içtin?',
+    'sleepRoutineDiscrepancyQuestionBody':
+      'Kayıtlarda {count} eksik görünüyor, unuttuğun var mı?',
+    'sleepRoutineDiscrepancyNoneButton': 'Hayır, doğru logladım',
+    'sleepRoutineDiscrepancyConfirmButton': 'Eklediklerimi kaydet',
+    'sleepRoutineReportTitle': 'Bugünkü İlerleme',
+    'sleepRoutineReportCloseButton': 'Kapat',
+    'sleepRoutineReportNoEvidence': 'Bugün için henüz yeterli veri yok',
+    'sleepRoutineReportTaskSuccessLabel': 'Görev Başarısı',
+    'sleepRoutineCommand': 'Uyku öncesi rutin zamanı',
   };
 
   // English - Full translation
@@ -1753,6 +1770,9 @@ class AppTexts {
     'dailyBreathOverdueNotificationBody':
         'No reading for 24 hours. Open the app and complete the test.',
     'smokedLogRecordedWithUndo': 'Cigarette recorded.',
+    'smokedLogUndoBody': 'Tapped by accident? You can undo it.',
+    'smokedLogUndoAction': 'Undo',
+    'channelNameSmokedLogUndo': 'Smoking log undo',
     'smokedLogConsentHeading': 'Turn on the I Smoked button?',
     'smokedLogConsentDataTitle': 'What gets recorded',
     'smokedLogConsentDataBody':
@@ -3031,6 +3051,7 @@ class AppTexts {
       'Do not smoke for the next {duration}. If you have a cigarette in your hand, put it out now.',
     'adaptiveNoSmokeWindowTemplate':
       'Do not smoke for the next {duration}, get ready before the {window} window.',
+    'checkInPrompt': 'Are you still holding on?',
     'coachReductionTier75': "Today's goal: at least 1 fewer cigarette than yesterday, delay the first one by 90 minutes.",
     'coachReductionTier60': "Today's goal: at least 2 fewer cigarettes than yesterday, wait 10 minutes before each one.",
     'coachReductionTier40': "Today's goal: at least 3 fewer cigarettes than yesterday, skip one after midday.",
@@ -3333,6 +3354,19 @@ class AppTexts {
     'quickReplyThanks': 'Thanks',
     'quickReplyLetsTalk': "Let's talk",
     'quickReplyOkAck': 'Okay',
+    'sleepRoutineTitle': 'Pre-Sleep Routine',
+    'sleepRoutineIntro': '4 short steps before you sleep',
+    'sleepRoutineStepIndicator': 'Step {current} of {total}',
+    'sleepRoutineDiscrepancyQuestionTitle': 'How many cigarettes today?',
+    'sleepRoutineDiscrepancyQuestionBody':
+      "We're missing {count} — did you forget to log any?",
+    'sleepRoutineDiscrepancyNoneButton': 'No, my log is correct',
+    'sleepRoutineDiscrepancyConfirmButton': 'Save what I added',
+    'sleepRoutineReportTitle': "Today's Progress",
+    'sleepRoutineReportCloseButton': 'Close',
+    'sleepRoutineReportNoEvidence': 'Not enough data for today yet',
+    'sleepRoutineReportTaskSuccessLabel': 'Task Success',
+    'sleepRoutineCommand': 'Time for your pre-sleep routine',
   };
 
   // All 40 languages - each inherits from EN, with top keys translated
@@ -4136,6 +4170,14 @@ class AppTexts {
         '{duration}',
         formatAdaptiveDurationPhrase(code, minutes),
       );
+    }
+
+    if (normalized == 'ADAPTIVE_CHECK_IN') {
+      return textForCode(code, 'checkInPrompt');
+    }
+
+    if (normalized == 'SLEEP_ROUTINE') {
+      return textForCode(code, 'sleepRoutineCommand');
     }
 
     final adaptiveLegacyTr = RegExp(

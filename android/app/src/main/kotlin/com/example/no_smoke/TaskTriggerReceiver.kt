@@ -38,9 +38,22 @@ class TaskTriggerReceiver : BroadcastReceiver() {
         if (blockedBy != DeliveryGateEvaluator.REASON_NONE &&
             deferredForMs < MAX_TOTAL_DEFERRAL_MS
         ) {
+            // A queue limit alongside the existing per-task 90-minute cap:
+            // without it, every task whose moment falls during one long DND/
+            // gaming stretch waits independently, and a user re-opening the
+            // app hours later gets hit with all of them stacked at once —
+            // the exact overlap this queue exists to prevent. Only the two
+            // most recently blocked survive; anything older is closed out
+            // as expired (never scored) rather than left to also queue.
+            val evicted = PendingDeliveryQueue.registerBlocked(context, watchdogId)
+            for (evictedWatchdogId in evicted) {
+                cancel(context, evictedWatchdogId)
+                PendingDeliveryQueue.enqueueExpired(context, evictedWatchdogId)
+            }
             requeue(context, intent, deferredForMs, blockedBy)
             return
         }
+        PendingDeliveryQueue.clearBlocked(context, watchdogId)
 
         val watchdogWindowMillis =
             intent.getLongExtra(EXTRA_WATCHDOG_WINDOW_MILLIS, DEFAULT_WATCHDOG_WINDOW_MILLIS)
@@ -213,5 +226,75 @@ class TaskTriggerReceiver : BroadcastReceiver() {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             alarmManager.cancel(pendingIntent(context, watchdogId))
         }
+    }
+}
+
+/// Tracks tasks currently stuck waiting on [DeliveryGateEvaluator] (DND,
+/// gaming, a call) — the "not yet delivered" half of the two-task queue
+/// limit. The other half (already-delivered, awaiting an answer) is
+/// [WatchdogStore]'s own [WatchdogStore.MAX_ACTIVE_WATCHDOGS] limit; this
+/// object exists because a task can spend its entire life in this state
+/// without [NoResponseWatchdogService] ever seeing it, so that store alone
+/// can't catch a backlog of blocked-but-undelivered tasks.
+object PendingDeliveryQueue {
+    private const val PREFS = "no_smoke_pending_delivery_queue"
+    private const val KEY_BLOCKED_IDS = "blocked_watchdog_ids"
+    private const val KEY_EXPIRED = "queued_expired"
+
+    /// Same limit as [WatchdogStore.MAX_ACTIVE_WATCHDOGS] — one shared
+    /// budget across "blocked" and "delivered, awaiting answer" would need
+    /// the two objects to coordinate on every write, which is more coupling
+    /// than the two-task rule is worth; a task only ever occupies one of the
+    /// two queues at a time; in practice a blocked task also being an active
+    /// watchdog never happens; keeping the constant duplicated locally is
+    /// simpler than exporting it.
+    private const val MAX_BLOCKED = 2
+
+    /// Registers [watchdogId] as currently blocked, evicting the
+    /// oldest-registered blocked watchdogId(s) if this pushes the count past
+    /// [MAX_BLOCKED]. Returns everything evicted — the caller cancels each
+    /// one's alarm and reports it to Dart as expired.
+    fun registerBlocked(context: Context, watchdogId: String): List<String> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ids = (prefs.getStringSet(KEY_BLOCKED_IDS, emptySet())?.toList() ?: emptyList())
+            .toMutableList()
+        ids.remove(watchdogId)
+        ids.add(watchdogId)
+        val evicted = mutableListOf<String>()
+        while (ids.size > MAX_BLOCKED) {
+            evicted.add(ids.removeAt(0))
+        }
+        prefs.edit().putStringSet(KEY_BLOCKED_IDS, ids.toSet()).apply()
+        return evicted
+    }
+
+    /// A task that made it past the gate (delivered, or answered before that
+    /// could happen) is no longer "blocked" — remove it so it can't later be
+    /// counted as a stale entry against the queue limit.
+    fun clearBlocked(context: Context, watchdogId: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ids = (prefs.getStringSet(KEY_BLOCKED_IDS, emptySet())?.toList() ?: emptyList())
+            .toMutableList()
+        if (ids.remove(watchdogId)) {
+            prefs.edit().putStringSet(KEY_BLOCKED_IDS, ids.toSet()).apply()
+        }
+    }
+
+    /// Queues [watchdogId] for Dart to transition to `expired` on next
+    /// drain — same SharedPreferences-queue-then-drain shape as
+    /// [WatchdogStore.enqueueViolation]/[WatchdogStore.drainViolations],
+    /// since this receiver has no Flutter engine to call back into directly.
+    fun enqueueExpired(context: Context, watchdogId: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val current = prefs.getStringSet(KEY_EXPIRED, emptySet())?.toMutableSet() ?: mutableSetOf()
+        current.add("$watchdogId|${System.currentTimeMillis()}")
+        prefs.edit().putStringSet(KEY_EXPIRED, current).apply()
+    }
+
+    fun drainExpired(context: Context): List<String> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val items = prefs.getStringSet(KEY_EXPIRED, emptySet())?.toList() ?: emptyList()
+        prefs.edit().remove(KEY_EXPIRED).apply()
+        return items
     }
 }

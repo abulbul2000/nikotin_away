@@ -19,7 +19,7 @@ import android.telecom.TelecomManager
 /// `AccessibilityService` would answer "is the user in a fullscreen game" far
 /// better than any of this, and is explicitly **not** used: Play's policy
 /// limits that API to genuine accessibility purposes and using it for this
-/// would put the whole app at risk of removal.
+/// would put the whole app at risk.
 ///
 /// Do Not Disturb and an in-progress call are exact — the user, or the OS,
 /// has already said not to interrupt. The gaming/video guess and the known
@@ -33,6 +33,7 @@ object DeliveryGateEvaluator {
     const val REASON_CALL = "call"
     const val REASON_GAMING = "gaming"
     const val REASON_FOREGROUND_APP = "foreground_app"
+    const val REASON_TRANSIT = "transit"
     const val REASON_NONE = ""
 
     /// Package names of well-known games, video and social apps. Not
@@ -69,14 +70,17 @@ object DeliveryGateEvaluator {
 
     /// Minimum uninterrupted screen-on time before the landscape+audio
     /// combination is read as "immersed in something".
-    ///
-    /// Without it, simply rotating the phone for a moment while music plays
-    /// would postpone a task. Ten minutes is long enough that the user is
-    /// genuinely in the middle of something.
     private const val IMMERSION_MIN_SCREEN_ON_MS = 10L * 60L * 1000L
 
     private const val PREFS = "no_smoke_delivery_gate"
     private const val KEY_SCREEN_ON_SINCE = "screen_on_since"
+
+    /// Dart writes this short-lived signal after a fresh PhoneStateService
+    /// context check. The timestamp prevents a stale transit result from
+    /// blocking tasks indefinitely when the app stops updating context.
+    private const val KEY_TRANSIT_LIKELY = "transit_likely"
+    private const val KEY_TRANSIT_UPDATED_AT = "transit_updated_at"
+    private const val MAX_TRANSIT_CONTEXT_AGE_MS = 15L * 60L * 1000L
 
     /// How far back to look for the last foreground-app switch. A few
     /// seconds is enough to catch "what's on screen right now" without
@@ -90,6 +94,9 @@ object DeliveryGateEvaluator {
         if (isInPhoneCall(context)) {
             return REASON_CALL
         }
+        if (isTransitLikely(context)) {
+            return REASON_TRANSIT
+        }
         if (isDistractingAppInForeground(context)) {
             return REASON_FOREGROUND_APP
         }
@@ -97,6 +104,28 @@ object DeliveryGateEvaluator {
             return REASON_GAMING
         }
         return REASON_NONE
+    }
+
+    /// Stores a short-lived transit context received from the Dart sensor
+    /// layer. This is intentionally separate from [blockingReason]: the
+    /// receiver may run with no Flutter engine alive.
+    fun noteTransitContext(context: Context, isLikely: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_TRANSIT_LIKELY, isLikely)
+            .putLong(KEY_TRANSIT_UPDATED_AT, System.currentTimeMillis())
+            .apply()
+    }
+
+    private fun isTransitLikely(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val updatedAt = prefs.getLong(KEY_TRANSIT_UPDATED_AT, 0L)
+        if (updatedAt <= 0L ||
+            System.currentTimeMillis() - updatedAt > MAX_TRANSIT_CONTEXT_AGE_MS
+        ) {
+            return false
+        }
+        return prefs.getBoolean(KEY_TRANSIT_LIKELY, false)
     }
 
     /// Same coarse in-call check MainActivity uses for the fake-call barrier —

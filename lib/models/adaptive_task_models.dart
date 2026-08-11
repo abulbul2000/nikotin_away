@@ -234,10 +234,22 @@ class AdaptiveTaskPlanItem {
   final int durationMinutes;
   final String taskTitle;
 
+  /// A short "still holding on?" check-in rather than a full no-smoking
+  /// window — see `DisciplineProtocolService.buildDailyAdaptivePlan`'s
+  /// check-in fill step.
+  final bool isCheckIn;
+
+  /// What shape completing this task takes — see `TaskKind` in
+  /// `task_kind.dart`. Held as a plain string (not that type) to avoid this
+  /// model importing `task_assignment.dart`, which itself imports this file.
+  final String taskKind;
+
   const AdaptiveTaskPlanItem({
     required this.scheduledAt,
     required this.durationMinutes,
     required this.taskTitle,
+    this.isCheckIn = false,
+    this.taskKind = 'no_smoke_window',
   });
 
   Map<String, dynamic> toJson() {
@@ -245,6 +257,8 @@ class AdaptiveTaskPlanItem {
       'scheduledAt': scheduledAt.toIso8601String(),
       'durationMinutes': durationMinutes,
       'taskTitle': taskTitle,
+      'isCheckIn': isCheckIn,
+      'taskKind': taskKind,
     };
   }
 
@@ -253,6 +267,8 @@ class AdaptiveTaskPlanItem {
       scheduledAt: DateTime.parse(json['scheduledAt'] as String),
       durationMinutes: (json['durationMinutes'] as num).toInt(),
       taskTitle: json['taskTitle'] as String,
+      isCheckIn: json['isCheckIn'] as bool? ?? false,
+      taskKind: json['taskKind'] as String? ?? 'no_smoke_window',
     );
   }
 }
