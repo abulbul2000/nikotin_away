@@ -319,7 +319,17 @@ void main() {
 
     test('reflects today\'s logged cigarette count', () async {
       final storage = StorageService();
-      final now = DateTime.now();
+      // Anchored to noon rather than DateTime.now() — a `now`-relative
+      // second timestamp an hour earlier crosses into "yesterday" whenever
+      // this test happens to run in the first hour after local midnight,
+      // making todaySmokedCount flake between 1 and 2 depending on the
+      // clock. Noon has an hour of headroom on both sides.
+      final now = DateTime(
+        DateTime.now().year,
+        DateTime.now().month,
+        DateTime.now().day,
+        12,
+      );
       await storage.logSmokingNow(timestamp: now);
       await storage.logSmokingNow(
         timestamp: now.subtract(const Duration(hours: 1)),

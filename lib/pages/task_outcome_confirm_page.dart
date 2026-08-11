@@ -23,7 +23,7 @@ class TaskOutcomeConfirmPage extends StatelessWidget {
           title: Text(context.t('taskFollowUpTitle')),
         ),
         body: SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

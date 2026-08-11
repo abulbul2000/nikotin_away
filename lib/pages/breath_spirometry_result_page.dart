@@ -164,8 +164,7 @@ class BreathSpirometryResultPage extends StatelessWidget {
                   _MetricRow(
                     key: const ValueKey('breath_result_peak_flow'),
                     label: context.t('breathPeakFlowIndexLabel'),
-                    value:
-                        '${spirometry.peakFlowIndex.toStringAsFixed(0)}/100',
+                    value: '${spirometry.peakFlowIndex.toStringAsFixed(0)}/100',
                     suffix: context.t('breathEstimatedValueSuffix'),
                     interpretation: _peakFlowInterpretation(context),
                   ),
@@ -228,9 +227,7 @@ class BreathSpirometryResultPage extends StatelessWidget {
                     height: 160,
                     width: double.infinity,
                     child: CustomPaint(
-                      painter: _FlowTimeCurvePainter(
-                        curve: spirometry.curve,
-                      ),
+                      painter: _FlowTimeCurvePainter(curve: spirometry.curve),
                     ),
                   ),
                 ],
@@ -249,12 +246,18 @@ class BreathSpirometryResultPage extends StatelessWidget {
               children: [
                 Text(
                   context.t('breathSpirometryNotEquivalentWarning'),
-                  style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   context.t('breathSpirometryEstimateDisclaimer'),
-                  style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ],
             ),
@@ -311,14 +314,28 @@ class _MetricRow extends StatelessWidget {
                 style: const TextStyle(fontSize: 14),
               ),
             ),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.end,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(width: 4),
-            Text(
-              suffix,
-              style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic),
+            Flexible(
+              child: Text(
+                suffix,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
             ),
           ],
         ),

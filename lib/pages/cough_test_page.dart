@@ -216,7 +216,9 @@ class _CoughTestPageState extends State<CoughTestPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
-          context.t(isLoud ? 'breathNoiseLoudTitle' : 'breathNoiseWarningTitle'),
+          context.t(
+            isLoud ? 'breathNoiseLoudTitle' : 'breathNoiseWarningTitle',
+          ),
         ),
         content: Text(
           context.t(
@@ -424,9 +426,16 @@ class _CoughTestPageState extends State<CoughTestPage> {
     return Scaffold(
       appBar: AppBar(title: Text(context.t('coughTestTitle'))),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: _buildBody(context),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: _buildBody(context),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -514,81 +523,79 @@ class _CoughTestPageState extends State<CoughTestPage> {
       return const SizedBox.shrink();
     }
     final tipKey = _tipTextKey(tier);
-    return SingleChildScrollView(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(height: 20),
-          Text(
-            context.t('coughTestResultTitle'),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            context
-                .t('coughTestResultCount')
-                .replaceAll('{count}', '${result.coughCount}'),
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            context.t(_severityTextKey(tier)),
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
-          ),
-          if (tipKey != null) ...[
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Text(context.t(tipKey)),
-              ),
-            ),
-          ],
-          if (result.wheezeDetected == true) ...[
-            const SizedBox(height: 16),
-            Card(
-              key: const ValueKey('cough_result_wheeze_card'),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.t('wheezeFindingSectionTitle'),
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      context.t(
-                        _wheezeSeverityTextKey(result.wheezeSeverityLevel!),
-                      ),
-                    ),
-                    if (_wheezeAdvisoryTier != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        context.t(_wheezeAdviceTextKey(_wheezeAdvisoryTier!)),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.white.withValues(alpha: 0.75),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              onPressed: _finish,
-              child: Text(context.t('continue')),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const SizedBox(height: 20),
+        Text(
+          context.t('coughTestResultTitle'),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          context
+              .t('coughTestResultCount')
+              .replaceAll('{count}', '${result.coughCount}'),
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          context.t(_severityTextKey(tier)),
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+        ),
+        if (tipKey != null) ...[
+          const SizedBox(height: 16),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Text(context.t(tipKey)),
             ),
           ),
         ],
-      ),
+        if (result.wheezeDetected == true) ...[
+          const SizedBox(height: 16),
+          Card(
+            key: const ValueKey('cough_result_wheeze_card'),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.t('wheezeFindingSectionTitle'),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    context.t(
+                      _wheezeSeverityTextKey(result.wheezeSeverityLevel!),
+                    ),
+                  ),
+                  if (_wheezeAdvisoryTier != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      context.t(_wheezeAdviceTextKey(_wheezeAdvisoryTier!)),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withValues(alpha: 0.75),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 32),
+        SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            onPressed: _finish,
+            child: Text(context.t('continue')),
+          ),
+        ),
+      ],
     );
   }
 }

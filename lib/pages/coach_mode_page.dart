@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
 import '../services/storage_service.dart';
+import 'ai_chat_page.dart';
 
 class CoachModePage extends StatefulWidget {
   const CoachModePage({super.key});
@@ -10,12 +11,6 @@ class CoachModePage extends StatefulWidget {
   State<CoachModePage> createState() => _CoachModePageState();
 }
 
-/// The three preset combinations of the two underlying dials
-/// (`duration_barrier_preference` + `duration_barrier_frequency_preference`)
-/// that already drive `home_page.dart`'s notification-limit/spacing
-/// heuristics. Kept to one primary selector per the architecture roadmap's
-/// pushback on three independent top-level difficulty dials — the dials
-/// themselves stay reachable, just demoted to an Advanced section.
 enum _CoachModePreset { easy, normal, hard, custom }
 
 class _CoachModePageState extends State<CoachModePage> {
@@ -111,6 +106,7 @@ class _CoachModePageState extends State<CoachModePage> {
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
                 ),
                 const SizedBox(height: 16),
+
                 _ModeCard(
                   title: context.t('coachModeEasyTitle'),
                   description: context.t('coachModeEasyDescription'),
@@ -118,6 +114,7 @@ class _CoachModePageState extends State<CoachModePage> {
                   selected: currentPreset == _CoachModePreset.easy,
                   onTap: () => _applyPreset(_CoachModePreset.easy),
                 ),
+
                 _ModeCard(
                   title: context.t('coachModeNormalTitle'),
                   description: context.t('coachModeNormalDescription'),
@@ -125,6 +122,7 @@ class _CoachModePageState extends State<CoachModePage> {
                   selected: currentPreset == _CoachModePreset.normal,
                   onTap: () => _applyPreset(_CoachModePreset.normal),
                 ),
+
                 _ModeCard(
                   title: context.t('coachModeHardTitle'),
                   description: context.t('coachModeHardDescription'),
@@ -132,6 +130,7 @@ class _CoachModePageState extends State<CoachModePage> {
                   selected: currentPreset == _CoachModePreset.hard,
                   onTap: () => _applyPreset(_CoachModePreset.hard),
                 ),
+
                 if (currentPreset == _CoachModePreset.custom)
                   _ModeCard(
                     title: context.t('coachModeCustomLabel'),
@@ -140,7 +139,9 @@ class _CoachModePageState extends State<CoachModePage> {
                     selected: true,
                     onTap: null,
                   ),
+
                 const SizedBox(height: 12),
+
                 ExpansionTile(
                   title: Text(context.t('coachModeAdvancedToggle')),
                   childrenPadding: const EdgeInsets.symmetric(horizontal: 4),
@@ -175,7 +176,9 @@ class _CoachModePageState extends State<CoachModePage> {
                         _applyValues(preference: value, frequency: _frequency);
                       },
                     ),
+
                     const SizedBox(height: 12),
+
                     if (_preference != 'off')
                       DropdownButtonFormField<String>(
                         isExpanded: true,
@@ -206,8 +209,24 @@ class _CoachModePageState extends State<CoachModePage> {
                           );
                         },
                       ),
+
                     const SizedBox(height: 12),
                   ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // 🔥 Yapay Zekâ Mentörü Butonu
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AIChatPage(),
+                      ),
+                    );
+                  },
+                  child: const Text("Yapay Zekâ Mentörü"),
                 ),
               ],
             ),

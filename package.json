@@ -1,7 +1,8 @@
 {
   "name": "no_smoke",
   "version": "1.0.0",
-  "description": "No Smoke, sigara bırakma yolculuğunu desteklemek için geliştirilmiş bir Flutter mobil uygulamasıdır. Uygulama;",
+  "description": "No Smoke, sigara bırakma yolcu",
+  "type": "module",
   "main": "index.js",
   "directories": {
     "doc": "docs",
@@ -18,13 +19,8 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/abulbul2000/no_smoke/issues"
   },
-  "homepage": "https://github.com/abulbul2000/no_smoke#readme",
-  "dependencies": {
-    "express": "^5.2.1",
-    "openai": "^7.4.0"
-  }
+  "homepage": "https://github.com/abulbul2000/no_smoke#readme"
 }

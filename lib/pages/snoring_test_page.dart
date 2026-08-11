@@ -201,9 +201,16 @@ class _SnoringTestPageState extends State<SnoringTestPage> {
     return Scaffold(
       appBar: AppBar(title: Text(context.t('snoringTestTitle'))),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: _buildBody(context),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: _buildBody(context),
+              ),
+            );
+          },
         ),
       ),
     );
