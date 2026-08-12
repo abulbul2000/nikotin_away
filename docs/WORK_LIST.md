@@ -308,10 +308,13 @@
 - [x] **71.** Faz 4 — `aiChat` fonksiyonu artık `subscriptionProof` kontrolü yapıyor (abone
       değilse/deneme dışıysa `permission-denied`). `ai_service.dart` her çağrıya kanıt ekliyor,
       `ai_chat_page.dart` reddedilirse `SubscriptionGatePage`'e yönlendiriyor.
-      `docs/PLAY_STORE_DATA_SAFETY.md` güncellenmesi henüz yapılmadı — Faz 5'e taşındı.
+      `docs/PLAY_STORE_DATA_SAFETY.md` güncellendi (2026-08-13): "Finansal bilgiler → Satın
+      alma geçmişi" satırı + abonelik doğrulama ağ yolu (Bölüm 1, 2, 3, 4) eklendi.
 - [ ] **72.** Faz 5 — Manuel uçtan uca senaryolar (yeni kullanıcı → deneme → gate → satın alma →
       devam; offline grace period; Play Console'da manuel iptal → expired). Play Console Data
-      Safety formuna "Finansal bilgiler → Satın alma geçmişi" eklenecek.
+      Safety formunda "Finansal bilgiler → Satın alma geçmişi" **elle işaretlenecek** — referans
+      metin `docs/PLAY_STORE_DATA_SAFETY.md` Bölüm 2 ve 6'da hazır, form doldurma Play Console
+      üzerinden kullanıcı tarafından yapılmalı.
 
 ---
 
