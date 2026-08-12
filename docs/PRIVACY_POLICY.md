@@ -12,7 +12,7 @@ Bu Gizlilik Politikası, **No Smoke** mobil uygulamasının ("Uygulama") kişise
 
 Uygulamaya girdiğiniz veya uygulamanın topladığı hemen hemen her şey **varsayılan olarak yalnızca telefonunuzda**, uygulamanın kendi özel deposunda saklanır ve bizimle veya üçüncü bir tarafla paylaşılmaz. Uygulamanın kendi sunucusu ve kullanıcı hesabı yoktur.
 
-İki istisna var, ikisi de aşağıda (madde 3 ve 5) ayrıntılı açıklanmıştır: (a) isteğe bağlı, sizin açtığınız durumda kullanılan **şifreli bulut yedekleme** ve (b) uygulama çöktüğünde otomatik gönderilen **anonim hata raporları**.
+Üç istisna var, hepsi aşağıda (madde 3 ve 5) ayrıntılı açıklanmıştır: (a) isteğe bağlı, sizin açtığınız durumda kullanılan **şifreli bulut yedekleme**, (b) uygulama çöktüğünde otomatik gönderilen **anonim hata raporları**, ve (c) yalnızca siz Yapay Zeka Mentörü ekranını açıp mesaj yazarsanız kullanılan **AI sohbet**.
 
 ## 3. Toplanan Veriler
 
@@ -31,6 +31,8 @@ Uygulamaya girdiğiniz veya uygulamanın topladığı hemen hemen her şey **var
 
 **Bulut yedekleme** *(isteğe bağlı, varsayılan kapalı):* Ayarlar → Bulut Yedekleme'den kendi belirlediğiniz bir şifreyle açabileceğiniz bir özellik. Açtığınızda, cihazınızdaki tüm uygulama verileri bu şifreyle (cihaz üzerinde, gönderilmeden önce) şifrelenir ve Google'ın Firebase Storage altyapısına yüklenir. Şifreniz bize hiçbir zaman gönderilmez ve sunucuda saklanmaz — yalnızca sizde bulunur; şifrenizi kaybederseniz yedeğinizi biz de geri getiremeyiz.
 
+**Yapay Zeka Mentörü** *(isteğe bağlı, siz açana kadar hiç çalışmaz):* Ana sayfadaki Mentör kartından bu sohbet ekranını açıp mesaj yazarsanız, mesajınız ve o oturumdaki sohbet geçmişi, yanıt üretmesi için bir yapay zeka servis sağlayıcısına (NVIDIA API, Firebase Functions üzerinden) gönderilir. Sohbet geçmişi yalnızca ekran açıkken cihazınızın belleğinde tutulur, ekranı kapattığınızda silinir — cihazınıza kalıcı olarak kaydedilmez. Yapay zekanın önerdiği uygulama ayarı değişiklikleri (ör. Koç Modu, ilaç hatırlatma saati) siz sohbette "Uygula" demeden hiçbir şeyi değiştirmez.
+
 ## 4. Toplamadığımız Veriler
 
 Fotoğraf/video, kişi listesi, takvim, mesajlar, finansal bilgi, web geçmişi veya reklam kimliği toplamıyoruz. Uygulamada reklam SDK'sı veya analitik/izleme SDK'sı bulunmamaktadır.
@@ -39,10 +41,11 @@ Fotoğraf/video, kişi listesi, takvim, mesajlar, finansal bilgi, web geçmişi 
 
 Verilerinizi **hiçbir zaman satmıyor veya reklam/analitik amacıyla paylaşmıyoruz.**
 
-Uygulamanın internete çıktığı **yalnızca iki** durum var:
+Uygulamanın internete çıktığı **yalnızca üç** durum var:
 
 - **Hata raporlama (Firebase Crashlytics):** Uygulama beklenmedik şekilde çökerse, hatanın türünü ve teknik ayrıntılarını (hangi ekranda, hangi hata) — isim, anket cevabı veya sağlık verisi **olmadan** — otomatik olarak Google'ın Firebase Crashlytics servisine göndeririz. Amaç yalnızca hataları bulup düzeltmektir.
 - **Bulut yedekleme (Firebase Storage):** Yukarıda (madde 3) açıklandığı gibi, yalnızca siz açtığınızda ve yalnızca sizin şifrenizle şifrelenmiş halde, Google'ın Firebase Storage servisine gönderilir. Şifrelenmemiş içerik bize veya Google'a hiçbir zaman ulaşmaz.
+- **AI sohbet (NVIDIA API, Firebase Functions üzerinden):** Yukarıda (madde 3) açıklandığı gibi, yalnızca siz Yapay Zeka Mentörü ekranını açıp mesaj yazdığınızda, mesajınız yanıt üretmesi için NVIDIA'nın servislerine gönderilir. Bu, yalnızca yanıt üretmek amacıyla yapılan bir hizmet-sağlayıcı paylaşımıdır; reklam veya pazarlama amaçlı değildir.
 
 ## 6. Verilerinizin Güvenliği
 

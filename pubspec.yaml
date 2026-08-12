@@ -57,11 +57,13 @@ dependencies:
   home_widget: ^0.9.3
   firebase_crashlytics: ^5.2.6
   firebase_storage: ^13.4.5
+  cloud_functions: ^6.3.5
   cryptography: ^2.9.0
   http: ^1.2.1
   fl_chart: ^0.69.0
   fftea: ^1.5.0+1
   flutter_secure_storage: ^11.0.0
+  in_app_purchase: ^3.2.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

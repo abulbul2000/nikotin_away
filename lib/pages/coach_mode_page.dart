@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
 import '../services/storage_service.dart';
-import 'ai_chat_page.dart';
 
 class CoachModePage extends StatefulWidget {
   const CoachModePage({super.key});
@@ -214,20 +213,6 @@ class _CoachModePageState extends State<CoachModePage> {
                   ],
                 ),
 
-                const SizedBox(height: 24),
-
-                // 🔥 Yapay Zekâ Mentörü Butonu
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AIChatPage(),
-                      ),
-                    );
-                  },
-                  child: const Text("Yapay Zekâ Mentörü"),
-                ),
               ],
             ),
     );

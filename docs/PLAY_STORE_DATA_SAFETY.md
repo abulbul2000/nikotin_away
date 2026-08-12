@@ -13,6 +13,7 @@ Bu belge, Google Play Console'un "Data Safety" (Veri Güvenliği) formunu doldur
 - **Arayüz metinleri hiçbir ağ çağrısı yapmıyor.** Uygulama eskiden, hazır çevirisi olmayan bir cihaz dili seçildiğinde arayüz metinlerini `translate.googleapis.com`'dan çekiyordu; bu yol tamamen kaldırıldı (2026-07-29). Tüm diller uygulamanın içine gömülü tablodan çözülüyor, çevirisi eksik anahtarlar İngilizceye düşüyor. `lib/core/app_texts.dart` artık hiçbir I/O yapmıyor ve bunu bir test koruyor (`test/translation_coverage_test.dart`).
 - **Firebase Crashlytics:** uygulama çöktüğünde, kişisel veri içermeyen teknik hata raporu (hata türü, stack trace, cihaz modeli) otomatik olarak gönderiliyor — bkz. Bölüm 4.
 - **Firebase Storage (isteğe bağlı bulut yedekleme):** kullanıcı Ayarlar → Bulut Yedekleme'yi kendi belirlediği bir şifreyle açarsa, tüm yerel veritabanı cihaz üzerinde şifrelenip (AES-256-GCM) Firebase Storage'a yükleniyor. Şifre sunucuya hiç gönderilmiyor — bkz. Bölüm 4.
+- **Yapay Zeka Mentörü (isteğe bağlı, kullanıcı sohbeti başlattığında):** `lib/pages/ai_chat_page.dart` kullanıcının yazdığı mesajı Firebase Functions (`functions/index.js`, `aiChat`) üzerinden bir üçüncü taraf AI sağlayıcısına (NVIDIA API, `nvidia/nemotron` modeli) iletiyor ve yanıtı gösteriyor. Bu, uygulamanın **tek kişisel-veri-içerikli** ağ yolu — bkz. Bölüm 4. Kullanıcı bu ekranı hiç açmazsa bu yol hiç tetiklenmez.
 - Reklam SDK'sı veya kullanıcı davranışı izleyen bir analitik SDK'sı **yok**.
 
 ---
@@ -32,14 +33,16 @@ Bu belge, Google Play Console'un "Data Safety" (Veri Güvenliği) formunu doldur
 | **Uygulama bilgisi ve performansı — Çökme günlükleri** | Evet | Firebase Crashlytics ile otomatik gönderiliyor. Kullanıcı adı, anket cevabı veya sağlık verisi içermez — yalnızca teknik hata bilgisi. |
 | **Cihaz veya diğer kimlikler** | Evet (sınırlı) | Firebase Crashlytics, çökme raporlarını cihazlar arasında ayırt edebilmek için anonim bir Firebase yükleme kimliği (installation ID) kullanır — reklam kimliği veya kişiyi tanımlayan bir kimlik değildir. |
 | **Finansal bilgiler, Mesajlar, Fotoğraf/Video, Kişiler, Takvim, Web geçmişi** | Hayır | Hiçbiri toplanmıyor. |
+| **Uygulama etkinliği — Diğer eylemler (AI sohbet mesajları)** | Evet (isteğe bağlı) | Kullanıcı Yapay Zeka Mentörü ekranını açıp mesaj yazarsa, mesaj metni ve sohbet geçmişi (son ~20 mesaj) Firebase Functions üzerinden NVIDIA'nın AI API'sine işlenmek için gönderiliyor. Sohbet geçmişi yalnızca cihazda (bellekte, sayfa kapanınca silinir) tutuluyor; sunucu tarafında kalıcı olarak saklanmıyor (bkz. Bölüm 4). |
 
 ---
 
 ## 3) Veri Paylaşılıyor mu?
 
-Kullanıcı verisi **hiçbir zaman satılmıyor veya reklam amacıyla paylaşılmıyor.** Google/Firebase ile paylaşılan tek iki şey:
+Kullanıcı verisi **hiçbir zaman satılmıyor veya reklam amacıyla paylaşılmıyor.** Google/Firebase/üçüncü taraf ile paylaşılan üç şey:
 1. **Çökme raporları** (Firebase Crashlytics) — kişisel veri içermez, yalnızca teknik hata bilgisi. Google'ın [Firebase hizmet şartları](https://firebase.google.com/terms) kapsamında bir "hizmet sağlayıcı" paylaşımıdır, reklam/pazarlama amaçlı değildir.
 2. **Şifreli yedek dosyası** (Firebase Storage) — yalnızca kullanıcı bulut yedeklemeyi kendi isteğiyle açarsa. Yüklenen dosya cihaz üzerinde şifrelenmiştir; Google (ya da biz) şifreyi bilmediği için içeriği okuyamaz.
+3. **AI sohbet mesajları** (NVIDIA API, Firebase Functions üzerinden) — yalnızca kullanıcı Yapay Zeka Mentörü ekranını kendi isteğiyle açıp mesaj yazarsa. Mesaj metni işlenmek üzere NVIDIA'nın sunucularına gidiyor; bu bir "hizmet sağlayıcı" paylaşımıdır, reklam/pazarlama amaçlı değildir. **Play Console gönderiminden önce NVIDIA'nın veri saklama/işleme politikası incelenip bu bölüme eklenmeli.**
 
 Bunların dışında uygulama hiçbir sunucuya bağlanmıyor.
 
@@ -47,10 +50,11 @@ Bunların dışında uygulama hiçbir sunucuya bağlanmıyor.
 
 ## 4) Ağ Kullanımı Detayı (Play Console "veri aktarımı şifreli mi" sorusu için)
 
-Uygulamanın **yalnızca iki** ağ yolu var, ikisi de HTTPS:
+Uygulamanın **yalnızca üç** ağ yolu var, hepsi HTTPS:
 
 - **Crashlytics:** `lib/main.dart` → `FirebaseCrashlytics` — uygulama çöktüğünde otomatik, HTTPS üzerinden. Kişisel veri göndermez.
 - **Bulut yedekleme:** `lib/services/cloud_backup_service.dart` → Firebase Storage — yalnızca kullanıcı Ayarlar'dan açıp bir yedekleme/geri yükleme başlattığında, HTTPS üzerinden. Gönderilen içerik AES-256-GCM ile cihaz üzerinde önceden şifrelenmiştir; şifreleme anahtarı kullanıcının girdiği şifreden türetilir ve sunucuya hiçbir zaman gönderilmez.
+- **AI sohbet:** `lib/services/ai_service.dart` → Firebase Functions (`aiChat`, `europe-west1`) → NVIDIA API — yalnızca kullanıcı Yapay Zeka Mentörü ekranını açıp mesaj gönderdiğinde, HTTPS üzerinden. Sohbet geçmişi cihazda yalnızca bellekte tutuluyor (sayfa kapanınca kaybolur), SQLite'a hiç yazılmıyor. Firebase Functions tarafı mesajı NVIDIA'ya iletmekten başka bir şey yapmıyor, kendi tarafında kalıcı log tutmuyor. AI'ın önerdiği ayar değişiklikleri (Koç Modu, ilaç saatleri) sunucu tarafında **uygulanmıyor** — yalnızca bir öneri olarak cihaza dönüyor, kullanıcı sohbette "Uygula" demeden hiçbir ayar değişmiyor; değiştiğinde de değişiklik doğrudan cihazdaki SQLite'a yazılıyor, sunucuya geri bildirilmiyor.
 
 ---
 

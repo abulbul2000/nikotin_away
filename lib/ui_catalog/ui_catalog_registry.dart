@@ -13,7 +13,6 @@ import '../pages/splash_page.dart';
 import '../pages/survey_history_page.dart';
 import '../pages/survey_page.dart';
 import '../pages/survey_review_page.dart';
-import '../pages/task_follow_up_page.dart';
 import '../pages/trial_info_page.dart';
 import '../pages/weekly_survey_page.dart';
 import 'ui_catalog_dialog_preview.dart';
@@ -261,18 +260,6 @@ class UiCatalogRegistry {
         themeSources: const ['lib/core/app_theme.dart'],
       ),
       UiCatalogEntry(
-        screenId: 'SCR-0011-TASK-FOLLOW-UP',
-        screenName: 'TaskFollowUp',
-        appLocation: 'Home -> follow-up tasks',
-        captureProfile: 'seeded',
-        builder: () => const TaskFollowUpPage(),
-        sourceFiles: const ['lib/pages/task_follow_up_page.dart'],
-        uiComponents: const ['ListView', 'Card', 'SnackBar'],
-        translationKeys: const ['taskDeferredTenMinutes', 'yes', 'no'],
-        styleSources: const ['lib/pages/task_follow_up_page.dart'],
-        themeSources: const ['lib/core/app_theme.dart'],
-      ),
-      UiCatalogEntry(
         screenId: 'SCR-0012-PROTOCOL-VIOLATIONS',
         screenName: 'ProtocolViolations',
         appLocation: 'Home -> violation report',
@@ -369,18 +356,6 @@ class UiCatalogRegistry {
           'home',
         ],
         styleSources: const ['lib/pages/home_page.dart'],
-        themeSources: const ['lib/core/app_theme.dart'],
-      ),
-      UiCatalogEntry(
-        screenId: 'SCR-0018-TASK-FOLLOW-UP-EMPTY',
-        screenName: 'TaskFollowUpEmpty',
-        appLocation: 'Home -> follow-up tasks -> empty state',
-        captureProfile: 'empty_followup',
-        builder: () => const TaskFollowUpPage(),
-        sourceFiles: const ['lib/pages/task_follow_up_page.dart'],
-        uiComponents: const ['Center', 'Text', 'Scaffold'],
-        translationKeys: const ['taskFollowUpTitle', 'taskFollowUpEmpty'],
-        styleSources: const ['lib/pages/task_follow_up_page.dart'],
         themeSources: const ['lib/core/app_theme.dart'],
       ),
       UiCatalogEntry(

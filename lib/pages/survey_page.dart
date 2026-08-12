@@ -341,6 +341,11 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       rethrow;
     }
 
+    // Starts the 14-day trial clock — this is the single point where
+    // hasCompletedInitialSurvey() first becomes true, so it's the correct
+    // trigger. Idempotent, so re-running this save path never resets it.
+    await _storageService.startTrialIfNeeded();
+
     try {
       await _storageService.saveSurveyDetail(
         recordId: recordId,

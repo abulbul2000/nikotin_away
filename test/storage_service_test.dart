@@ -5,6 +5,7 @@ import 'package:no_smoke/models/adaptive_task_models.dart';
 import 'package:no_smoke/models/cough_test_record.dart';
 import 'package:no_smoke/models/snoring_probe_event.dart';
 import 'package:no_smoke/models/step_counter_sample.dart';
+import 'package:no_smoke/models/subscription_state.dart';
 import 'package:no_smoke/models/survey_record.dart';
 import 'package:no_smoke/services/storage_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -435,6 +436,71 @@ void main() {
       expect(events.single.snoreLikely, isTrue);
       expect(events.single.severityScore, isNull);
       expect(events.single.severityLevel, isNull);
+    });
+  });
+
+  group('subscription state', () {
+    test('startTrialIfNeeded sets trialStartedAt and status=trial on first '
+        'call', () async {
+      final storage = StorageService();
+
+      await storage.startTrialIfNeeded();
+
+      final state = await storage.loadSubscriptionState();
+      expect(state, isNotNull);
+      expect(state!.trialStartedAt, isNotNull);
+      expect(state.status, SubscriptionStatus.trial);
+    });
+
+    test('startTrialIfNeeded is a no-op once trialStartedAt is already set',
+        () async {
+      final storage = StorageService();
+
+      await storage.startTrialIfNeeded();
+      final first = await storage.loadTrialStartedAt();
+
+      await Future.delayed(const Duration(milliseconds: 5));
+      await storage.startTrialIfNeeded();
+      final second = await storage.loadTrialStartedAt();
+
+      expect(second, first);
+    });
+
+    test('saveSubscriptionState upserts the single current row', () async {
+      final storage = StorageService();
+      final now = DateTime.now();
+
+      await storage.saveSubscriptionState(
+        SubscriptionState(
+          status: SubscriptionStatus.active,
+          productId: 'monthly_sub',
+          purchaseToken: 'token_1',
+          updatedAt: now,
+        ),
+      );
+      await storage.saveSubscriptionState(
+        SubscriptionState(
+          status: SubscriptionStatus.expired,
+          productId: 'monthly_sub',
+          purchaseToken: 'token_1',
+          updatedAt: now.add(const Duration(days: 1)),
+        ),
+      );
+
+      final state = await storage.loadSubscriptionState();
+      expect(state, isNotNull);
+      expect(state!.status, SubscriptionStatus.expired);
+
+      final db = await storage.database;
+      final rows = await db.query('subscription_state');
+      expect(rows, hasLength(1));
+    });
+
+    test('loadSubscriptionState returns null when nothing was ever saved',
+        () async {
+      final storage = StorageService();
+      final state = await storage.loadSubscriptionState();
+      expect(state, isNull);
     });
   });
 }

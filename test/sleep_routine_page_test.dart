@@ -411,11 +411,11 @@ void main() {
   testWidgets('cannot be dismissed with the system back gesture', (
     tester,
   ) async {
-    await StorageService().saveTaskAssignment(_sleepRoutineTask());
     final fakeStorage = _FakeDiscrepancyStorageService(
       discrepancy: _noDiscrepancy,
       report: _emptyReport,
     );
+    await fakeStorage.saveTaskAssignment(_sleepRoutineTask());
 
     await _pumpSleepRoutinePage(
       tester,
@@ -434,11 +434,11 @@ void main() {
   });
 
   testWidgets('starts on the breath test step', (tester) async {
-    await StorageService().saveTaskAssignment(_sleepRoutineTask());
     final fakeStorage = _FakeDiscrepancyStorageService(
       discrepancy: _noDiscrepancy,
       report: _emptyReport,
     );
+    await fakeStorage.saveTaskAssignment(_sleepRoutineTask());
 
     await _pumpSleepRoutinePage(
       tester,
@@ -459,11 +459,11 @@ void main() {
     'no discrepancy: breath -> cough -> report directly, the discrepancy '
     'question is skipped',
     (tester) async {
-      await StorageService().saveTaskAssignment(_sleepRoutineTask());
       final fakeStorage = _FakeDiscrepancyStorageService(
         discrepancy: _noDiscrepancy,
         report: _emptyReport,
       );
+      await fakeStorage.saveTaskAssignment(_sleepRoutineTask());
 
       await _pumpSleepRoutinePage(
         tester,
@@ -492,11 +492,11 @@ void main() {
   testWidgets(
     'with a discrepancy: the question step appears between cough and report',
     (tester) async {
-      await StorageService().saveTaskAssignment(_sleepRoutineTask());
       final fakeStorage = _FakeDiscrepancyStorageService(
         discrepancy: _withDiscrepancy,
         report: _emptyReport,
       );
+      await fakeStorage.saveTaskAssignment(_sleepRoutineTask());
 
       await _pumpSleepRoutinePage(
         tester,
@@ -535,11 +535,11 @@ void main() {
   testWidgets('closing the report transitions the task to succeeded', (
     tester,
   ) async {
-    await StorageService().saveTaskAssignment(_sleepRoutineTask());
     final fakeStorage = _FakeDiscrepancyStorageService(
       discrepancy: _noDiscrepancy,
       report: _emptyReport,
     );
+    await fakeStorage.saveTaskAssignment(_sleepRoutineTask());
 
     await _pumpSleepRoutinePage(
       tester,
@@ -563,7 +563,7 @@ void main() {
       await _pumpRealTime(tester, const Duration(milliseconds: 50));
     }
 
-    final loaded = await StorageService().loadTaskAssignment(
+    final loaded = await fakeStorage.loadTaskAssignment(
       sleepRoutineCanonicalTitle,
     );
     expect(loaded!.state, TaskLifecycleState.succeeded);

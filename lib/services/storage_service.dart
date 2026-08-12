@@ -21,6 +21,7 @@ import '../models/protocol_violation.dart';
 import '../models/reduction_progress.dart';
 import '../models/location_visit_event.dart';
 import '../models/medication.dart';
+import '../models/subscription_state.dart';
 import '../models/sensor_usage_event.dart';
 import '../models/significant_place.dart';
 import '../models/sleep_probe_event.dart';
@@ -74,6 +75,7 @@ class StorageService {
   static const _taskAssignmentsTable = 'task_assignments';
   static const _mentorMessagesTable = 'mentor_messages';
   static const _consentEventsTable = 'consent_events';
+  static const _subscriptionStateTable = 'subscription_state';
   static const _behaviorDirtyKey = 'behavior_dirty';
   static const _registrationCompletedKey = 'registration_completed';
   static const _isProfileCompletedKey = 'isProfileCompleted';
@@ -149,7 +151,11 @@ class StorageService {
       // followUpReply} — the "Zorlanıyorum" follow-up question/options/
       // answer, stored on the same row rather than a new message so it
       // reads as a continuation of the original reply.
-      version: 30,
+      // 31: subscription_state — trial-start timestamp + subscription
+      // status, see SubscriptionState. Upgrading users who already
+      // completed the initial survey get trialStartedAt backfilled to
+      // "now" rather than penalized for not having had a trial before.
+      version: 31,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -193,6 +199,7 @@ class StorageService {
         await _ensureLocationIntelligenceTables(db);
         await _ensureStepCounterTable(db);
         await _ensureConsentEventsTable(db);
+        await _ensureSubscriptionStateTable(db);
         await _ensureMedicationsTable(db);
         await _ensureMedicationDoseLogTable(db);
         await _ensureCoughTestRecordsTable(db);
@@ -227,9 +234,54 @@ class StorageService {
         await _ensureLocationIntelligenceTables(db);
         await _ensureStepCounterTable(db);
         await _ensureConsentEventsTable(db);
+        await _ensureSubscriptionStateTable(db);
         await _ensureMedicationsTable(db);
         await _ensureMedicationDoseLogTable(db);
         await _ensureCoughTestRecordsTable(db);
+        if (oldVersion < 31) {
+          // Can't go through loadSurveyHistory()/startTrialIfNeeded() here —
+          // both resolve the `database` getter, which would recursively
+          // call _initDatabase() while openDatabase() is still mid-upgrade.
+          // Query/write against the upgrade callback's own `db` instead.
+          //
+          // Wrapped in try/catch: $_tableName exists on every real device
+          // (it's the very first table, created since version 1), but some
+          // migration tests open a hand-built legacy DB containing only the
+          // one table they're targeting. Missing it there just means "skip
+          // the trial backfill", not a real failure.
+          try {
+            final surveyRows = await db.query(
+              _tableName,
+              where: 'type = ?',
+              whereArgs: ['initial'],
+              limit: 1,
+            );
+            if (surveyRows.isNotEmpty) {
+              final existingState = await db.query(
+                _subscriptionStateTable,
+                where: 'id = ?',
+                whereArgs: ['current'],
+                limit: 1,
+              );
+              if (existingState.isEmpty ||
+                  existingState.first['trialStartedAt'] == null) {
+                final now = DateTime.now();
+                await db.insert(
+                  _subscriptionStateTable,
+                  SubscriptionState(
+                    trialStartedAt: now,
+                    status: SubscriptionStatus.trial,
+                    updatedAt: now,
+                  ).toJson(),
+                  conflictAlgorithm: ConflictAlgorithm.replace,
+                );
+              }
+            }
+          } catch (_) {
+            // See comment above — expected for isolated-table migration
+            // tests, harmless to skip.
+          }
+        }
         if (oldVersion < 9) {
           await _ensureIndexes(db);
         }
@@ -304,6 +356,79 @@ class StorageService {
       'consentTextVersion': row['consentTextVersion'],
       'createdAt': DateTime.parse(row['createdAt'] as String),
     };
+  }
+
+  /// Single-row (id = 'current') snapshot of trial/subscription state — see
+  /// [SubscriptionState]. Deliberately a mutable single row, not an
+  /// append-only trail like [_consentEventsTable]: this represents "what is
+  /// true right now" (needed on every app-open gate check), not a decision
+  /// history. The server side (verifySubscription Cloud Function) never
+  /// stores this — it only answers "is this token active" on request, so
+  /// this row is the only persistent record of the user's access state.
+  Future<void> _ensureSubscriptionStateTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_subscriptionStateTable (
+        id TEXT PRIMARY KEY,
+        trialStartedAt TEXT,
+        status TEXT NOT NULL,
+        productId TEXT,
+        purchaseToken TEXT,
+        purchaseOrderId TEXT,
+        expiryTimeMillis TEXT,
+        lastVerifiedAt TEXT,
+        lastVerificationAttemptAt TEXT,
+        autoRenewing INTEGER NOT NULL DEFAULT 0,
+        updatedAt TEXT NOT NULL
+      )
+    ''');
+  }
+
+  /// Starts the 14-day trial clock the first time this is called — a no-op
+  /// on every later call, so callers can invoke it unconditionally right
+  /// after the initial survey completes ([hasCompletedInitialSurvey]'s
+  /// trigger point) without needing their own "already started?" check.
+  Future<void> startTrialIfNeeded() async {
+    final existing = await loadSubscriptionState();
+    if (existing?.trialStartedAt != null) {
+      return;
+    }
+    final now = DateTime.now();
+    await saveSubscriptionState(
+      (existing ?? SubscriptionState(status: SubscriptionStatus.trial, updatedAt: now))
+          .copyWith(
+            trialStartedAt: now,
+            status: SubscriptionStatus.trial,
+            updatedAt: now,
+          ),
+    );
+  }
+
+  Future<DateTime?> loadTrialStartedAt() async {
+    final state = await loadSubscriptionState();
+    return state?.trialStartedAt;
+  }
+
+  Future<void> saveSubscriptionState(SubscriptionState state) async {
+    final db = await database;
+    await db.insert(
+      _subscriptionStateTable,
+      state.toJson(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<SubscriptionState?> loadSubscriptionState() async {
+    final db = await database;
+    final rows = await db.query(
+      _subscriptionStateTable,
+      where: 'id = ?',
+      whereArgs: ['current'],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    return SubscriptionState.fromJson(rows.first);
   }
 
   static const _medicationsTable = 'medications';
@@ -1943,21 +2068,6 @@ class StorageService {
     await markBehaviorDirty();
   }
 
-  Future<void> saveTaskFollowUp({
-    required String taskTitle,
-    required DateTime scheduledAt,
-  }) async {
-    final db = await database;
-    final now = DateTime.now();
-    await db.insert(_taskFollowUpTable, {
-      'id': 'followup_${now.microsecondsSinceEpoch}',
-      'taskTitle': taskTitle,
-      'scheduledAt': scheduledAt.toIso8601String(),
-      'status': 'pending',
-      'createdAt': now.toIso8601String(),
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
-  }
-
   Future<AdaptiveTaskState> loadAdaptiveTaskState() async {
     final db = await database;
     final rows = await db.query(
@@ -2855,16 +2965,6 @@ class StorageService {
       {'status': 'resolved'},
       where: 'id = ?',
       whereArgs: [rows.first['id']],
-    );
-  }
-
-  Future<void> resolveTaskFollowUpById(String id) async {
-    final db = await database;
-    await db.update(
-      _taskFollowUpTable,
-      {'status': 'resolved'},
-      where: 'id = ? AND status = ?',
-      whereArgs: [id, 'pending'],
     );
   }
 

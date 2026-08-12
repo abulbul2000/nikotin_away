@@ -652,6 +652,18 @@ class AppTexts {
     'menuLogSmokingNow': 'Simdi ictim',
     'menuDailyCheckIn': 'Gunluk Degerlendirme',
     'mentorCardTitle': 'Mentorunden',
+    'aiMentorButton': 'Yapay Zeka Mentoru',
+    'aiChatTitle': 'Yapay Zeka Mentoru',
+    'aiChatHint': 'Mesaj yaz...',
+    'aiChatSend': 'Gonder',
+    'aiChatError': 'Mesaj gonderilemedi, tekrar deneyin.',
+    'aiChatDisclaimer':
+      'Bu bir yapay zeka asistanidir, tibbi tavsiye vermez. Saglik konularinda doktorunuza danisin.',
+    'aiChatActionApply': 'Uygula',
+    'aiChatActionDismiss': 'Vazgec',
+    'aiChatActionFailed': 'Bu degisiklik uygulanamadi.',
+    'aiChatActionAppliedCoachMode': 'Koc Modu ayari guncellendi.',
+    'aiChatActionAppliedMedication': 'Ilac hatirlatma saatleri guncellendi.',
     'mentorReplySentPrefix': 'Yanitin',
     'miuiPermissionTitle': 'Bir izin daha gerekiyor',
     'miuiPermissionMessage':
@@ -665,11 +677,16 @@ class AppTexts {
     'settingsLanguageRow': 'Dil',
     'cloudBackupRow': 'Bulut Yedekleme',
     'cloudBackupRowSubtitle': 'Verilerini sifreli olarak buluta yedekle',
+    'cloudBackupPhoneChangeWarning':
+      'Telefonunu degistirirsen veya uygulamayi silersen, verilerini geri alman icin tek yol onceden buradan bir yedek almis olman. Bulut Yedekleme kapaliysa telefon degisiminde tum veriler kalici olarak kaybolur.',
     'cloudRestoreRow': 'Bulut Yedeginden Geri Yukle',
     'cloudRestoreRowSubtitle': 'Daha once yedeklediginiz verileri bu cihaza geri getir',
     'cloudBackupPassphraseHint':
-      'Bu sifre yaln izca sende saklanir, biz hicbir zaman goremeyiz. Sifreyi unutursan yedegini geri getiremeyiz, guvenli bir yere not al.',
-    'cloudBackupPassphraseLabel': 'Sifre (en az 6 karakter)',
+      'Simdi yeni bir sifre belirle. Bu sifre yalnizca sende saklanir, biz hicbir zaman goremeyiz. Sifreyi unutursan yedegini geri getiremeyiz, guvenli bir yere not al.',
+    'cloudBackupPassphraseLabel': 'Yeni sifre (en az 6 karakter)',
+    'cloudRestorePassphraseHint':
+      'Daha once yedeklerken belirledigin sifreyi gir. Yanlis sifre girersen yedegin bulunamaz.',
+    'cloudRestorePassphraseLabel': 'Yedekleme sifren',
     'cloudBackupPassphraseTooShort': 'Sifre en az 6 karakter olmali.',
     'cloudBackupInProgress': 'Isleniyor, lutfen bekleyin...',
     'cloudBackupSuccess': 'Yedekleme tamamlandi.',
@@ -695,6 +712,7 @@ class AppTexts {
     'permissionStatusDenied': 'Verilmedi',
     'permissionActionRequest': 'Izin Ver',
     'permissionActionOpenSettings': 'Ayarlari Ac',
+    'permissionActionManage': 'Ayarlardan Yonet',
     'permissionNotificationsTitle': 'Bildirimler',
     'permissionNotificationsDescription':
       'Gorev hatirlatmalari, nefes testi ve mentorundan gelen mesajlar icin kullanilir.',
@@ -720,6 +738,7 @@ class AppTexts {
       'Hatirlatmalarin ve mentor mesajlarinin tam zamaninda gelmesini saglar.',
     'permissionExactAlarmPurpose':
       'Neden: Android bu izni sistem ayarlarindan yonetir.',
+    'permissionExactAlarmAlreadyGranted': 'Bu izin zaten verilmis.',
     'permissionMiuiTitle': 'Xiaomi Ek Izni',
     'permissionMiuiDescription':
       'Sahte destek aramasinin kilitli ekranda da gorunebilmesi icin Xiaomi telefonlarda gereklidir.',
@@ -1633,7 +1652,20 @@ class AppTexts {
       'Risk skorunu guncellemek icin haftalik anketi doldurman gerekiyor.',
     'trialInfoTitle': '14 Gunluk Ucretsiz Deneme',
     'trialInfoMessage':
-      'Nikotin Away uygulamasini 14 gun boyunca ucretsiz deneyebilirsin. Bu surede gunluk gorevler, nefes testleri ve haftalik anketlerle birakma surecini yakindan takip edecegiz.',
+      'Nikotin Away uygulamasini 14 gun boyunca, Yapay Zeka Mentoru dahil tum ozellikleriyle ucretsiz deneyebilirsin. 14 gun sonunda devam etmek icin abonelik gerekir.',
+    'subscriptionGateTitle': 'Deneme Suresi Doldu',
+    'subscriptionGateMessage':
+      '14 gunluk ucretsiz deneme suren sona erdi. Nikotin Away kullanmaya devam etmek icin bir abonelik secmelisin.',
+    'subscriptionMonthlyTitle': 'Aylik',
+    'subscriptionYearlyTitle': 'Yillik',
+    'subscriptionPurchaseButton': 'Satin Al',
+    'subscriptionRestoreButton': 'Satin Alimi Geri Yukle',
+    'subscriptionNeedsConnection':
+      'Abonelik durumunu dogrulamak icin internet baglantisi gerekiyor. Baglaninca otomatik olarak tekrar denenecek.',
+    'subscriptionRetryButton': 'Tekrar Dene',
+    'subscriptionPurchasePending': 'Isleniyor...',
+    'subscriptionPurchaseFailed': 'Satin alma tamamlanamadi, tekrar dene.',
+    'subscriptionRestoreNotFound': 'Geri yuklenecek bir satin alma bulunamadi.',
     'savingsPageTitle': 'Tasarruf',
     'savingsMoneySaved': 'Biriken para',
     'savingsCigarettesNotSmoked': 'İçilmeyen sigara',
@@ -2294,6 +2326,18 @@ class AppTexts {
     'menuLogSmokingNow': 'I smoked now',
     'menuDailyCheckIn': 'Daily Check-in',
     'mentorCardTitle': 'From your mentor',
+    'aiMentorButton': 'AI Mentor',
+    'aiChatTitle': 'AI Mentor',
+    'aiChatHint': 'Type a message...',
+    'aiChatSend': 'Send',
+    'aiChatError': 'Could not send message, try again.',
+    'aiChatDisclaimer':
+      'This is an AI assistant, not medical advice. Consult your doctor for health matters.',
+    'aiChatActionApply': 'Apply',
+    'aiChatActionDismiss': 'Dismiss',
+    'aiChatActionFailed': 'This change could not be applied.',
+    'aiChatActionAppliedCoachMode': 'Coach Mode setting updated.',
+    'aiChatActionAppliedMedication': 'Medication reminder times updated.',
     'mentorReplySentPrefix': 'Your reply',
     'miuiPermissionTitle': 'One more permission needed',
     'miuiPermissionMessage':
@@ -2307,11 +2351,16 @@ class AppTexts {
     'settingsLanguageRow': 'Language',
     'cloudBackupRow': 'Cloud Backup',
     'cloudBackupRowSubtitle': 'Back up your data to the cloud, encrypted',
+    'cloudBackupPhoneChangeWarning':
+      'If you change phones or uninstall the app, the only way to get your data back is having made a backup here beforehand. If Cloud Backup is off, changing phones means losing all your data permanently.',
     'cloudRestoreRow': 'Restore From Cloud Backup',
     'cloudRestoreRowSubtitle': 'Bring your previously backed-up data to this device',
     'cloudBackupPassphraseHint':
-      'This passphrase is stored only on your device -- we can never see it. If you forget it, we cannot restore your backup, so write it down somewhere safe.',
-    'cloudBackupPassphraseLabel': 'Passphrase (at least 6 characters)',
+      'Choose a new passphrase now. It is stored only on your device -- we can never see it. If you forget it, we cannot restore your backup, so write it down somewhere safe.',
+    'cloudBackupPassphraseLabel': 'New passphrase (at least 6 characters)',
+    'cloudRestorePassphraseHint':
+      'Enter the passphrase you chose when you backed up. The wrong passphrase means your backup cannot be found.',
+    'cloudRestorePassphraseLabel': 'Your backup passphrase',
     'cloudBackupPassphraseTooShort': 'Passphrase must be at least 6 characters.',
     'cloudBackupInProgress': 'Working, please wait...',
     'cloudBackupSuccess': 'Backup complete.',
@@ -2337,6 +2386,7 @@ class AppTexts {
     'permissionStatusDenied': 'Not granted',
     'permissionActionRequest': 'Grant',
     'permissionActionOpenSettings': 'Open Settings',
+    'permissionActionManage': 'Manage in Settings',
     'permissionNotificationsTitle': 'Notifications',
     'permissionNotificationsDescription':
       'Used for task reminders, breath tests, and messages from your mentor.',
@@ -2362,6 +2412,7 @@ class AppTexts {
       'Makes sure reminders and mentor messages arrive exactly on time.',
     'permissionExactAlarmPurpose':
       'Why: Android manages this permission from system settings.',
+    'permissionExactAlarmAlreadyGranted': 'This permission is already granted.',
     'permissionMiuiTitle': 'Xiaomi Extra Permission',
     'permissionMiuiDescription':
       'Required on Xiaomi phones so the fake support call can show over the lock screen.',
@@ -3372,7 +3423,20 @@ class AppTexts {
       'Please complete the weekly survey to refresh your risk score.',
     'trialInfoTitle': '14-Day Free Trial',
     'trialInfoMessage':
-      'You can use Nikotin Away free for 14 days. During this period, we guide your quit journey with daily tasks, breath tests, and weekly surveys.',
+      'You can use Nikotin Away free for 14 days, including the AI Mentor and every other feature. A subscription is required to continue after that.',
+    'subscriptionGateTitle': 'Your Trial Has Ended',
+    'subscriptionGateMessage':
+      'Your 14-day free trial is over. Choose a subscription to keep using Nikotin Away.',
+    'subscriptionMonthlyTitle': 'Monthly',
+    'subscriptionYearlyTitle': 'Yearly',
+    'subscriptionPurchaseButton': 'Subscribe',
+    'subscriptionRestoreButton': 'Restore Purchase',
+    'subscriptionNeedsConnection':
+      'An internet connection is needed to verify your subscription. This will retry automatically once connected.',
+    'subscriptionRetryButton': 'Retry',
+    'subscriptionPurchasePending': 'Processing...',
+    'subscriptionPurchaseFailed': 'Purchase could not be completed, try again.',
+    'subscriptionRestoreNotFound': 'No purchase was found to restore.',
     'savingsPageTitle': 'Savings',
     'savingsMoneySaved': 'Money saved',
     'savingsCigarettesNotSmoked': 'Cigarettes not smoked',

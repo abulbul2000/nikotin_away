@@ -9,8 +9,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/app_texts.dart';
 import 'core/app_theme.dart';
 import 'pages/splash_page.dart';
+import 'pages/subscription_gate_page.dart';
 import 'services/language_service.dart';
 import 'services/notification_service.dart';
+import 'services/storage_service.dart';
+import 'services/subscription_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -57,6 +60,8 @@ class NoSmokeApp extends StatefulWidget {
 
 class _NoSmokeAppState extends State<NoSmokeApp> with WidgetsBindingObserver {
   late Locale _locale;
+  DateTime? _lastAccessCheckAt;
+  static const _accessCheckDebounce = Duration(minutes: 5);
 
   @override
   void initState() {
@@ -79,7 +84,54 @@ class _NoSmokeAppState extends State<NoSmokeApp> with WidgetsBindingObserver {
     // up and acted on.
     if (state == AppLifecycleState.resumed) {
       unawaited(NotificationService.syncOverlayStateFromNative());
+      // The watchdog queues a violation + closes the matching task natively
+      // while the app is dead (see NoResponseWatchdogService.kt); this is
+      // also drained on cold start (NotificationService.initialize), but a
+      // user who only ever looks at notifications from the lock screen and
+      // never force-quits/reopens the app could otherwise sit on an
+      // unsynced violation indefinitely — resuming from the background is
+      // the other moment that's reliably reachable.
+      unawaited(NotificationService.syncWatchdogViolationsFromNative());
+      unawaited(_recheckAccessOnResume());
     }
+  }
+
+  /// Catches the case a user stayed on HomePage across the trial-expiry
+  /// boundary (SplashPage's own gate check only runs on cold start).
+  /// Debounced so a user backgrounding/foregrounding repeatedly doesn't
+  /// hit storage on every flip — the cached subscription_state is only a
+  /// few minutes stale at worst, which is fine for this check.
+  Future<void> _recheckAccessOnResume() async {
+    final now = DateTime.now();
+    final last = _lastAccessCheckAt;
+    if (last != null && now.difference(last) < _accessCheckDebounce) {
+      return;
+    }
+    _lastAccessCheckAt = now;
+
+    final storage = StorageService();
+    final hasSurvey = await storage.hasCompletedInitialSurvey();
+    if (!hasSurvey) {
+      // Onboarding itself owns navigation until the survey is done.
+      return;
+    }
+    final decision = await SubscriptionService().resolveAccess(
+      hasCompletedInitialSurvey: true,
+    );
+    if (decision != AccessDecision.showGate &&
+        decision != AccessDecision.needsConnectionCheck) {
+      return;
+    }
+    final navigator = navigatorKey.currentState;
+    if (navigator == null) return;
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => SubscriptionGatePage(
+          needsConnectionOnly: decision == AccessDecision.needsConnectionCheck,
+        ),
+      ),
+      (route) => false,
+    );
   }
 
   void setLocale(Locale locale) {

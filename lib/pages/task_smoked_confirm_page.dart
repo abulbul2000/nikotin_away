@@ -3,15 +3,28 @@ import 'package:flutter/material.dart';
 import '../core/app_texts.dart';
 import '../core/app_theme.dart';
 
-/// Forces an answer for a task whose follow-up is due — large Evet/Hayır
-/// buttons, not dismissible, no third "later" option here (unlike the
-/// in-app follow-up list this replaces as the primary path): the point is
-/// that a due follow-up can no longer be silently skipped by leaving the
-/// app or swiping a notification away.
-class TaskOutcomeConfirmPage extends StatelessWidget {
+/// The "did you smoke during this time?" confirmation for a task whose
+/// no-smoke window has elapsed — replaces the older `TaskOutcomeConfirmPage`
+/// ("was the task completed?"), which asked the opposite-polarity question
+/// and belonged to a separate, now-removed follow-up system. Large
+/// Evet/Hayır buttons, not dismissible: this is the same forced-answer
+/// pattern the old page used, just wired to the current TaskAssignment
+/// state machine's actionId/question instead.
+///
+/// Pops `true` if the user smoked, `false` if they didn't — the caller
+/// (NotificationService._openTaskSmokedConfirmPage) maps that to
+/// TaskActionId.confirmSmokedYes/confirmSmokedNo and drives
+/// TaskAssignmentService.handleTaskAction, so notification actions and this
+/// body-tap-opened page both go through the same single decision point.
+class TaskSmokedConfirmPage extends StatelessWidget {
   final String taskTitle;
+  final String canonicalTitle;
 
-  const TaskOutcomeConfirmPage({super.key, required this.taskTitle});
+  const TaskSmokedConfirmPage({
+    super.key,
+    required this.taskTitle,
+    required this.canonicalTitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +33,7 @@ class TaskOutcomeConfirmPage extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: false,
-          title: Text(context.t('taskFollowUpTitle')),
+          title: Text(context.t('taskConfirmQuestionTitle')),
         ),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -30,7 +43,7 @@ class TaskOutcomeConfirmPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  context.t('taskOutcomeConfirmQuestion'),
+                  context.t('taskConfirmQuestion'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 28,
@@ -55,7 +68,26 @@ class TaskOutcomeConfirmPage extends StatelessWidget {
                 SizedBox(
                   height: 72,
                   child: ElevatedButton(
-                    key: const ValueKey('task_outcome_yes_button'),
+                    key: const ValueKey('task_smoked_confirm_yes_button'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      textStyle: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: Text(context.t('taskConfirmYesLabel')),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 72,
+                  child: ElevatedButton(
+                    key: const ValueKey('task_smoked_confirm_no_button'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.brandPrimary,
                       foregroundColor: Colors.black,
@@ -67,27 +99,8 @@ class TaskOutcomeConfirmPage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: Text(context.t('yes')),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 72,
-                  child: ElevatedButton(
-                    key: const ValueKey('task_outcome_no_button'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent,
-                      textStyle: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
                     onPressed: () => Navigator.of(context).pop(false),
-                    child: Text(context.t('no')),
+                    child: Text(context.t('taskConfirmNoLabel')),
                   ),
                 ),
               ],

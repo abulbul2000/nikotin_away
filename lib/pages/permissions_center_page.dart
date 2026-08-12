@@ -165,8 +165,25 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
                   description: context.t('permissionExactAlarmDescription'),
                   purpose: context.t('permissionExactAlarmPurpose'),
                   granted: null,
-                  onRequest: () =>
-                      NotificationService.openExactAlarmSettingsOptional(),
+                  onRequest: () async {
+                    // If this is already true, the plugin's native side sees
+                    // canScheduleExactAlarms() == true and completes without
+                    // ever opening a settings screen — nothing to grant. The
+                    // button otherwise looks broken (tap, nothing visibly
+                    // happens) instead of "already on".
+                    final granted = await NotificationService
+                        .openExactAlarmSettingsOptional();
+                    if (!context.mounted || granted != true) {
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          context.t('permissionExactAlarmAlreadyGranted'),
+                        ),
+                      ),
+                    );
+                  },
                 ),
                 if (_isMiuiDevice)
                   _PermissionCard(
@@ -360,20 +377,25 @@ class _PermissionCard extends StatelessWidget {
                 fontStyle: FontStyle.italic,
               ),
             ),
-            if (granted != true) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: OutlinedButton(
-                  onPressed: onRequest,
-                  child: Text(
-                    granted == false
-                        ? context.t('permissionActionRequest')
-                        : context.t('permissionActionOpenSettings'),
-                  ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: OutlinedButton(
+                // Android gives apps no API to revoke their own permissions
+                // — the only way to turn one off is the system's own
+                // per-app settings screen, so once granted this button's
+                // job switches from "request" to "take me there to manage
+                // it" instead of disappearing with nothing left to tap.
+                onPressed: granted == true ? openAppSettings : onRequest,
+                child: Text(
+                  granted == true
+                      ? context.t('permissionActionManage')
+                      : granted == false
+                      ? context.t('permissionActionRequest')
+                      : context.t('permissionActionOpenSettings'),
                 ),
               ),
-            ],
+            ),
           ],
         ),
       ),

@@ -9,9 +9,11 @@ import '../services/ambient_audio_service.dart';
 import '../services/language_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/subscription_service.dart';
 import '../widgets/no_smoke_logo.dart';
 import 'home_page.dart';
 import 'language_selection_page.dart';
+import 'subscription_gate_page.dart';
 import 'trial_info_page.dart';
 
 class SplashPage extends StatefulWidget {
@@ -105,8 +107,30 @@ class _SplashPageState extends State<SplashPage> {
       return;
     }
 
-    // Setup already done → go straight to HomePage, not straight into a
-    // forced breath test. HomePage's own daily-breath-cadence check
+    // Setup already done. Before letting a returning user into HomePage,
+    // check whether the trial has run out and no subscription covers them
+    // — this is the primary gate checkpoint (the other is the app-resume
+    // lifecycle hook in main.dart, for users who stay on HomePage across
+    // the trial boundary).
+    final decision = await SubscriptionService().resolveAccess(
+      hasCompletedInitialSurvey: true,
+    );
+    if (!mounted) return;
+    if (decision == AccessDecision.showGate ||
+        decision == AccessDecision.needsConnectionCheck) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SubscriptionGatePage(
+            needsConnectionOnly:
+                decision == AccessDecision.needsConnectionCheck,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // HomePage's own daily-breath-cadence check
     // (_ensureDailyBreathCadence/_presentDailyBreathMandatoryIfNeeded)
     // already asks "would you like to do it now?" and only makes it
     // mandatory when today's breath test genuinely hasn't been done yet —

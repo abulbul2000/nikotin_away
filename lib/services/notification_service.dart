@@ -17,6 +17,7 @@ import '../models/task_assignment.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
 import '../pages/sleep_routine_page.dart';
+import '../pages/task_smoked_confirm_page.dart';
 import '../pages/weekly_survey_page.dart';
 import 'android_watchdog_service.dart';
 import 'language_service.dart';
@@ -41,7 +42,6 @@ class NotificationService {
 
   static const String _typeBreath = 'breath';
   static const String _typeTaskStart = 'task_start';
-  static const String _typeTaskFollowUp = 'task_followup';
   static const String _typeTaskPostpone = 'task_postpone';
   static const String _typeTaskConfirm = 'task_confirm';
   static const String _typeCoachCommand = 'coach_command';
@@ -68,15 +68,17 @@ class NotificationService {
   /// The window elapsed and we're asking whether they got through it.
   ///
   /// Note the polarity: the question is "did you smoke?", so *yes* is the
-  /// failure. The older followup_done/smoked_no pair asked the opposite
-  /// ("did you complete it?") and are kept only so notifications scheduled
-  /// before an update still resolve correctly.
+  /// failure.
   static const String _actionConfirmSmokedYes = 'confirm_smoked_yes';
   static const String _actionConfirmSmokedNo = 'confirm_smoked_no';
 
-  static const String _actionFollowUpDone = 'followup_done';
-  static const String _actionFollowUpLater = 'followup_later';
-  static const String _actionSmokedNo = 'smoked_no';
+  /// Body-tap on the task-start notification (not an action button) — a
+  /// signal to HomePage to re-run its own mandatory-gate check, not an
+  /// action HomePage or the background isolate should act on directly. Only
+  /// ever dispatched when allowNavigation is true (see
+  /// _processNotificationResponse): the gate needs a live HomePage/Navigator,
+  /// which the cold background isolate never has.
+  static const String mandatoryGateCheckActionId = 'mandatory_gate_check';
 
   /// "Tamam" / "Ertele" on a medication reminder. Only these two — no
   /// decline/SOS, unlike the task-trigger notification.
@@ -289,7 +291,6 @@ class NotificationService {
       (taskTitle.hashCode.abs() % 100000) + 820000;
 
   static const String _categoryTaskStart = 'task_start_category';
-  static const String _categoryTaskFollowUp = 'task_followup_category';
   static const String _categoryPostpone = 'task_postpone_category';
   static const String _categoryTaskConfirm = 'task_confirm_category';
   // Bumped (v4->v5, v5->v6, v1->v2): Android freezes a channel's
@@ -298,7 +299,6 @@ class NotificationService {
   // a fresh channel on devices that already had the app installed, so the
   // new alarm sound/vibration pattern actually takes effect.
   static const String _taskStartChannelId = 'task_start_channel_v5';
-  static const String _taskFollowUpChannelId = 'task_followup_channel_v6';
   static const String _taskEscalationChannelId = 'task_escalation_channel_v2';
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
   static const String _sedentaryReminderChannelId =
@@ -418,25 +418,6 @@ class NotificationService {
               ),
             ],
           ),
-          DarwinNotificationCategory(
-            _categoryTaskFollowUp,
-            actions: <DarwinNotificationAction>[
-              DarwinNotificationAction.plain(
-                _actionFollowUpDone,
-                _text(code, 'taskActionDone'),
-                options: <DarwinNotificationActionOption>{
-                  DarwinNotificationActionOption.foreground,
-                },
-              ),
-              DarwinNotificationAction.plain(
-                _actionFollowUpLater,
-                _text(code, 'taskActionNotNow'),
-                options: <DarwinNotificationActionOption>{
-                  DarwinNotificationActionOption.foreground,
-                },
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -446,7 +427,7 @@ class NotificationService {
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
 
-    await _syncWatchdogViolationsFromNative();
+    await syncWatchdogViolationsFromNative();
     await syncOverlayStateFromNative();
     await _syncSleepActivityFromNative();
     await _syncSnoringResultFromNative();
@@ -560,7 +541,7 @@ class NotificationService {
     );
   }
 
-  static Future<void> _syncWatchdogViolationsFromNative() async {
+  static Future<void> syncWatchdogViolationsFromNative() async {
     try {
       final rows = await AndroidWatchdogService.consumeViolations();
       if (rows.isEmpty) {
@@ -600,6 +581,16 @@ class NotificationService {
         final closedAssignment =
             taskTitle != null &&
             await _transitionTask(taskTitle, TaskLifecycleState.failedMissed);
+
+        // The "did you smoke?" prompt for this task was scheduled the
+        // moment it was accepted (scheduleTaskConfirmationPrompt), on its
+        // own OS-level alarm — it has no idea the watchdog just closed the
+        // task as missed, so left alone it still fires on schedule and asks
+        // a question about a task that's already resolved. Same deterministic
+        // id scheme as the scheduling call, so this reaches the exact alarm.
+        if (taskTitle != null) {
+          await _plugin.cancel(_confirmIdFor(taskTitle));
+        }
 
         // Feeds the same "no response" event into the adaptive engine (see
         // AdaptiveTaskOutcome.missed) so difficultyLevel/streak react to it
@@ -1109,15 +1100,25 @@ class NotificationService {
     return enabled && fullScreenGranted;
   }
 
-  static Future<void> openExactAlarmSettingsOptional() async {
+  /// Requests the exact-alarm permission if it isn't already granted. On
+  /// most devices this opens the system settings screen and returns once
+  /// the user comes back; but if the permission was already granted (which
+  /// happens automatically on API < 31, and can also already be true on API
+  /// 31+ depending on how the OEM/user set things up), the plugin's native
+  /// side sees `canScheduleExactAlarms() == true` and completes immediately
+  /// without opening anything — there's nothing to grant. Returning that
+  /// outcome lets the caller tell the user "already on" instead of the
+  /// button silently appearing to do nothing.
+  static Future<bool?> openExactAlarmSettingsOptional() async {
     try {
       final dynamic androidPlugin = _plugin
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      await androidPlugin?.requestExactAlarmsPermission();
+      return await androidPlugin?.requestExactAlarmsPermission() as bool?;
     } catch (_) {
       // Optional action: ignore on unsupported devices/APIs.
+      return null;
     }
   }
 
@@ -1223,15 +1224,46 @@ class NotificationService {
       return;
     }
 
-    if (type == _typeTaskStart ||
-        type == _typeTaskFollowUp ||
-        type == _typeTaskConfirm) {
+    if (type == _typeTaskStart || type == _typeTaskConfirm) {
       final watchdogId = payload['watchdogId']?.trim() ?? '';
       if (watchdogId.isNotEmpty) {
         unawaited(AndroidWatchdogService.acknowledgeWatchdog(watchdogId));
       }
 
       final actionId = response.actionId;
+      if (actionId == null || actionId.isEmpty) {
+        // Body-tap: the notification body was tapped, not an action button.
+        // Actions still go through _dispatchTaskAction below; this is the
+        // separate case where nothing used to happen at all.
+        if (type == _typeTaskConfirm && allowNavigation) {
+          final taskTitle = payload['taskTitle'] ?? '';
+          final canonicalTitle = payload['canonicalTitle'] ?? taskTitle;
+          if (taskTitle.isNotEmpty) {
+            unawaited(
+              _openTaskSmokedConfirmPage(
+                taskTitle: taskTitle,
+                canonicalTitle: canonicalTitle,
+              ),
+            );
+          }
+        } else if (type == _typeTaskStart && allowNavigation) {
+          // Ask HomePage to re-run its mandatory-gate check — which task (if
+          // any) is due is HomePage's own decision
+          // (_presentMandatoryTaskIfNeeded self-selects and is guarded by
+          // _mandatoryTaskShown + a cooldown), so this never tries to push a
+          // page directly and can't race a MandatoryTaskPage HomePage
+          // already has open.
+          _dispatchTaskAction({
+            'type': type ?? '',
+            'taskTitle': payload['taskTitle'] ?? '',
+            'canonicalTitle':
+                payload['canonicalTitle'] ?? payload['taskTitle'] ?? '',
+            'actionId': mandatoryGateCheckActionId,
+          });
+        }
+        return;
+      }
+
       final event = {
         'type': type ?? '',
         'taskTitle': payload['taskTitle'] ?? '',
@@ -1240,11 +1272,41 @@ class NotificationService {
         // same as the behaviour they already had.
         'canonicalTitle':
             payload['canonicalTitle'] ?? payload['taskTitle'] ?? '',
-        'actionId': actionId ?? '',
+        'actionId': actionId,
       };
 
       _dispatchTaskAction(event);
     }
+  }
+
+  /// Opens the "did you smoke?" page for a task-confirm notification's body
+  /// tap. Mirrors the action-button path
+  /// (TaskActionId.confirmSmokedYes/confirmSmokedNo →
+  /// TaskAssignmentService.handleTaskAction) so both routes make the same
+  /// decision through the same single point.
+  static Future<void> _openTaskSmokedConfirmPage({
+    required String taskTitle,
+    required String canonicalTitle,
+  }) async {
+    final context = _navigatorKey?.currentContext;
+    if (context == null) return;
+    final smoked = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => TaskSmokedConfirmPage(
+          taskTitle: taskTitle,
+          canonicalTitle: canonicalTitle,
+        ),
+      ),
+    );
+    if (smoked == null) return;
+    final actionId = smoked
+        ? TaskActionId.confirmSmokedYes
+        : TaskActionId.confirmSmokedNo;
+    await TaskAssignmentService(StorageService()).handleTaskAction(
+      canonicalTitle: canonicalTitle,
+      taskTitle: taskTitle,
+      actionId: actionId,
+    );
   }
 
   static void _dispatchTaskAction(Map<String, String> event) {
@@ -1393,41 +1455,6 @@ class NotificationService {
       } else if (followUp == TaskActionFollowUp.openSleepRoutinePage) {
         await _openSleepRoutinePage(canonicalTitle);
       }
-      return;
-    }
-
-    // Everything below is the older follow-up path (`followup_done`,
-    // `followup_later`, `smoked_no`) — tied to `task_follow_ups`, not
-    // `task_assignments`, and deliberately left as-is.
-    final storage = StorageService();
-    final now = DateTime.now();
-
-    // The "yes, I got through it" answer. Previously unhandled here: while
-    // actions still opened the app, HomePage's listener recorded it. Now that
-    // they don't, an unhandled action would silently drop the one outcome
-    // that proves a task succeeded.
-    if (actionId == _actionFollowUpDone) {
-      await storage.recordAdaptiveTaskOutcome(
-        taskTitle: taskTitle,
-        outcome: AdaptiveTaskOutcome.success,
-        plannedDurationMinutes:
-            TaskAssignmentService.resolveInitialTaskDelay(taskTitle).inMinutes,
-        respondedAt: now,
-      );
-      await storage.saveTaskResult(
-        taskTitle: taskTitle,
-        taskResult: 'willpower_success',
-        completedAt: now,
-      );
-      await storage.resolveTaskFollowUpByTitle(taskTitle);
-      return;
-    }
-
-    if (actionId == _actionFollowUpLater || actionId == _actionSmokedNo) {
-      await scheduleTaskFollowUpReminder(
-        taskTitle: taskTitle,
-        delay: const Duration(minutes: 10),
-      );
     }
   }
 
@@ -1560,24 +1587,15 @@ class NotificationService {
   /// task missed.
   static Future<void> _scheduleUnansweredTaskUpdateReminder({
     required String taskTitle,
-    required String type,
     required int reminderId,
     required tz.TZDateTime triggerAt,
     int attempt = 2,
   }) async {
     final code = await LanguageService.loadSelectedLanguageCode();
     final scheduleMode = await _resolveAndroidScheduleMode();
-    final isFollowUp = type == _typeTaskFollowUp;
-    final title = isFollowUp
-        ? _text(code, 'taskFollowUpTitlePush')
-        : _text(code, 'taskEscalationTitle');
-    final body = isFollowUp
-        ? '${_text(code, 'taskFollowUpQuestion')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}'
-        : '${_text(code, 'taskEscalationBodyPrefix')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}';
-    final androidCategory = isFollowUp
-        ? AndroidNotificationCategory.call
-        : AndroidNotificationCategory.reminder;
-    final iosCategory = isFollowUp ? _categoryTaskFollowUp : _categoryTaskStart;
+    final title = _text(code, 'taskEscalationTitle');
+    final body =
+        '${_text(code, 'taskEscalationBodyPrefix')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}';
 
     final hasNextAttempt = attempt < _maxTaskAttempts;
     final nextReminderId = hasNextAttempt
@@ -1606,16 +1624,16 @@ class NotificationService {
           additionalFlags: _insistentFlag,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           timeoutAfter: _notificationTimeoutMs,
-          category: androidCategory,
+          category: AndroidNotificationCategory.reminder,
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
-              isFollowUp ? _actionFollowUpDone : _actionTaskDone,
+              _actionTaskDone,
               _text(code, 'taskActionDoneLabel'),
               showsUserInterface: false,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
-              isFollowUp ? _actionFollowUpLater : _actionTaskNotNow,
+              _actionTaskNotNow,
               _text(code, 'taskActionNotNowLabel'),
               showsUserInterface: false,
               cancelNotification: true,
@@ -1623,7 +1641,7 @@ class NotificationService {
           ],
         ),
         iOS: DarwinNotificationDetails(
-          categoryIdentifier: iosCategory,
+          categoryIdentifier: _categoryTaskStart,
           presentSound: true,
         ),
       ),
@@ -1631,7 +1649,7 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: jsonEncode({
-        'type': type,
+        'type': _typeTaskStart,
         'taskTitle': taskTitle,
         if (nextReminderId != null) 'reminderId': '$nextReminderId',
       }),
@@ -1640,7 +1658,6 @@ class NotificationService {
     if (hasNextAttempt && nextReminderId != null && nextTriggerAt != null) {
       await _scheduleUnansweredTaskUpdateReminder(
         taskTitle: taskTitle,
-        type: type,
         reminderId: nextReminderId,
         triggerAt: nextTriggerAt,
         attempt: attempt + 1,
@@ -1739,7 +1756,6 @@ class NotificationService {
     ).add(_unansweredReminderDelay);
     await _scheduleUnansweredTaskUpdateReminder(
       taskTitle: taskTitle,
-      type: _typeTaskStart,
       reminderId: reminderId,
       triggerAt: reminderAt,
     );
@@ -1864,7 +1880,6 @@ class NotificationService {
 
     await _scheduleUnansweredTaskUpdateReminder(
       taskTitle: adjustedDescription,
-      type: _typeTaskStart,
       reminderId: reminderId,
       triggerAt: fireAt.add(_unansweredReminderDelay),
     );
@@ -2120,101 +2135,6 @@ class NotificationService {
         slot++;
       }
     }
-  }
-
-  static Future<void> scheduleTaskFollowUpReminder({
-    required String taskTitle,
-    Duration delay = const Duration(minutes: 30),
-  }) async {
-    final scheduleMode = await _resolveAndroidScheduleMode();
-    final code = await LanguageService.loadSelectedLanguageCode();
-    final now = tz.TZDateTime.now(tz.local);
-    final interruptionContext = await _resolveInterruptionContext();
-    final extraDelay =
-        (interruptionContext['recommendedDeferralMinutes'] as int?) ?? 0;
-    final contextLabel =
-        interruptionContext['contextLabel']?.toString() ?? 'normal';
-    final confidence =
-        (interruptionContext['confidence'] as num?)?.toDouble() ?? 0.0;
-    await _persistNotificationContext(
-      code: code,
-      contextLabel: contextLabel,
-      confidence: confidence,
-    );
-    var fireAt = now.add(delay).add(Duration(minutes: extraDelay));
-
-    final followUpBody = contextLabel == 'driving'
-        ? _text(code, 'taskFollowUpQuestionDriving')
-        : contextLabel == 'workout'
-        ? _text(code, 'taskFollowUpQuestionWorkout')
-        : contextLabel == 'eating'
-        ? _text(code, 'taskFollowUpQuestionPostMeal')
-        : '${_text(code, 'taskFollowUpQuestion')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}';
-
-    final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
-      2147483647,
-    );
-    final reminderId = _deriveReminderId(notificationId);
-
-    await _plugin.zonedSchedule(
-      notificationId,
-      _text(code, 'taskFollowUpTitlePush'),
-      followUpBody,
-      fireAt,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _taskFollowUpChannelId,
-          _text(code, 'channelNameTaskFollowUpReminder'),
-          importance: Importance.max,
-          visibility: NotificationVisibility.private,
-          priority: Priority.high,
-          playSound: true,
-          enableVibration: true,
-          vibrationPattern: _taskVibrationPattern,
-          sound: _taskAlarmSound,
-          additionalFlags: _insistentFlag,
-          autoCancel: true,
-          onlyAlertOnce: false,
-          timeoutAfter: _notificationTimeoutMs,
-          audioAttributesUsage: AudioAttributesUsage.alarm,
-          category: AndroidNotificationCategory.call,
-          fullScreenIntent: true,
-          actions: <AndroidNotificationAction>[
-            AndroidNotificationAction(
-              _actionFollowUpDone,
-              _text(code, 'taskActionDoneLabel'),
-              showsUserInterface: false,
-              cancelNotification: true,
-            ),
-            AndroidNotificationAction(
-              _actionFollowUpLater,
-              _text(code, 'taskActionNotNowLabel'),
-              showsUserInterface: false,
-              cancelNotification: true,
-            ),
-          ],
-        ),
-        iOS: const DarwinNotificationDetails(
-          categoryIdentifier: _categoryTaskFollowUp,
-          presentSound: true,
-        ),
-      ),
-      androidScheduleMode: scheduleMode,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      payload: jsonEncode({
-        'type': _typeTaskFollowUp,
-        'taskTitle': taskTitle,
-        'reminderId': '$reminderId',
-      }),
-    );
-
-    await _scheduleUnansweredTaskUpdateReminder(
-      taskTitle: taskTitle,
-      type: _typeTaskFollowUp,
-      reminderId: reminderId,
-      triggerAt: fireAt.add(_unansweredReminderDelay),
-    );
   }
 
   static Future<void> scheduleWeeklySurveyDueReminder({

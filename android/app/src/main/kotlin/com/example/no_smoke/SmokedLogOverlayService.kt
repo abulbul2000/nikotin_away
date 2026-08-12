@@ -315,6 +315,19 @@ class SmokedLogOverlayService : Service() {
                 android.app.PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        val contentIntent = launchIntent?.let {
+            android.app.PendingIntent.getActivity(
+                this,
+                FOREGROUND_NOTIFICATION_ID,
+                it,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                    android.app.PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_edit)
             .setContentTitle(prefs().getString(KEY_NOTIF_TITLE, "Nikotin Away"))
@@ -325,7 +338,11 @@ class SmokedLogOverlayService : Service() {
                 pending,
             )
             .setOngoing(true)
+            .setSilent(true)
+            .setShowWhen(false)
             .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .apply { contentIntent?.let { setContentIntent(it) } }
             .build()
         startForeground(FOREGROUND_NOTIFICATION_ID, notification)
     }

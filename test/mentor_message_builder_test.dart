@@ -14,58 +14,26 @@ void main() {
     );
     expect(message.tone, 'coach');
     expect(message.type, 'daily');
-    expect(
-      message.text,
-      '${MentorMessageCodes.dailyCoachWithHour}:20:00-22:00',
-    );
+    expect(message.text, MentorMessageCodes.dailyCoachNoHour);
   });
 
   test(
-    'skips a risky-hour window whose end time has already passed today',
+    'never names a risky-hour window, even one still ahead today',
     () {
-      // 18:19 — well past the day's most-frequent window (14:00-16:00), but
-      // still ahead of a second, less-frequent one (20:00-22:00). Naming a
-      // window that's already over reads as the mentor not knowing what
-      // time it is, so the message should skip to the next upcoming one
-      // rather than repeating the stale, highest-ranked window.
+      // The mentor used to name the nearest upcoming risky-hour window
+      // ("18:00-20:00 aralığında yanındayım"), but that message is cached
+      // for the rest of the day once generated — read hours later, after
+      // the window has passed, it reads as the mentor not knowing what
+      // time it is. Simplest fix: never name a window at all.
       final message = builder.buildDailyMessage(
         riskScore: 30,
         recentSuccessRate: 0.85,
         riskyHours: const ['14:00-16:00', '20:00-22:00'],
-        now: DateTime(2026, 1, 1, 18, 19),
-      );
-      expect(
-        message.text,
-        '${MentorMessageCodes.dailyCoachWithHour}:20:00-22:00',
-      );
-    },
-  );
-
-  test(
-    'falls back to the no-hour message when every risky hour has passed',
-    () {
-      final message = builder.buildDailyMessage(
-        riskScore: 30,
-        recentSuccessRate: 0.85,
-        riskyHours: const ['09:00-11:00', '14:00-16:00'],
-        now: DateTime(2026, 1, 1, 18, 19),
+        now: DateTime(2026, 1, 1, 10, 0),
       );
       expect(message.text, MentorMessageCodes.dailyCoachNoHour);
     },
   );
-
-  test('a window still in progress counts as upcoming, not passed', () {
-    final message = builder.buildDailyMessage(
-      riskScore: 30,
-      recentSuccessRate: 0.85,
-      riskyHours: const ['14:00-16:00'],
-      now: DateTime(2026, 1, 1, 15, 30),
-    );
-    expect(
-      message.text,
-      '${MentorMessageCodes.dailyCoachWithHour}:14:00-16:00',
-    );
-  });
 
   test('uses supportive tone and an extra quick reply when struggling', () {
     final message = builder.buildDailyMessage(

@@ -36,37 +36,6 @@ class MentorMessageBuilder {
     return 'neutral';
   }
 
-  /// Picks the first entry in [riskyHours] (already sorted by risk, most
-  /// frequent first — see `BehaviorEngine.calculateRiskyHours`) whose window
-  /// hasn't fully elapsed yet relative to [now]. A message that names a
-  /// window already in the past ("14:00-16:00 civarında yanındayım" read at
-  /// 18:19) reads as the mentor not knowing what time it is, so a stale
-  /// window is worth skipping even though it costs some specificity.
-  ///
-  /// Windows are `"HH:00-HH:00"` strings from
-  /// `BehaviorEngine._groupHalfHourToTwoHourWindow`; an overnight window
-  /// (e.g. `"22:00-00:00"`) is treated as ending at midnight rather than
-  /// wrapping, since "still ahead" stops being a meaningful question past
-  /// that point in the same day.
-  String? _currentOrUpcomingRiskyHour(List<String> riskyHours, DateTime now) {
-    final nowMinutes = now.hour * 60 + now.minute;
-    for (final window in riskyHours) {
-      final parts = window.split('-');
-      if (parts.length != 2) continue;
-      final endParts = parts[1].split(':');
-      if (endParts.length != 2) continue;
-      final endHour = int.tryParse(endParts[0]);
-      final endMinute = int.tryParse(endParts[1]);
-      if (endHour == null || endMinute == null) continue;
-      final endMinutes = endHour == 0 && endMinute == 0
-          ? 24 * 60
-          : endHour * 60 + endMinute;
-      if (endMinutes > nowMinutes) {
-        return window;
-      }
-    }
-    return null;
-  }
 
   MentorMessage buildDailyMessage({
     required int riskScore,
@@ -78,26 +47,17 @@ class MentorMessageBuilder {
   }) {
     final tone = _tone(recentSuccessRate);
     final timestamp = now ?? DateTime.now();
-    final upcomingHour = _currentOrUpcomingRiskyHour(riskyHours, timestamp);
 
     final segments = <String>[];
     switch (tone) {
       case 'coach':
-        segments.add(
-          upcomingHour != null
-              ? '${MentorMessageCodes.dailyCoachWithHour}:$upcomingHour'
-              : MentorMessageCodes.dailyCoachNoHour,
-        );
+        segments.add(MentorMessageCodes.dailyCoachNoHour);
         break;
       case 'supportive':
         segments.add(MentorMessageCodes.dailySupportive);
         break;
       default:
-        segments.add(
-          upcomingHour != null
-              ? '${MentorMessageCodes.dailyNeutralWithHour}:$upcomingHour'
-              : MentorMessageCodes.dailyNeutralNoHour,
-        );
+        segments.add(MentorMessageCodes.dailyNeutralNoHour);
     }
 
     if (breathTrend == 'improving') {

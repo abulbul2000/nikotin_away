@@ -300,11 +300,6 @@ Future<void> _seedCatalogData(StorageService storage) async {
     ),
   );
 
-  await storage.saveTaskFollowUp(
-    taskTitle: 'ADAPTIVE_NO_SMOKE:45',
-    scheduledAt: now.add(const Duration(minutes: 25)),
-  );
-
   await storage.saveProtocolViolation(
     type: 'followup_failed',
     severity: 'medium',
@@ -323,15 +318,11 @@ Future<void> _prepareCatalogState(
   String captureProfile,
 ) async {
   switch (captureProfile) {
-    case 'empty_followup':
     case 'empty_violations':
       await _resetCatalogData(storage);
       await _seedCatalogData(storage);
-      await storage.resolveTaskFollowUpByTitle('ADAPTIVE_NO_SMOKE:45');
-      if (captureProfile == 'empty_violations') {
-        final db = await storage.database;
-        await db.delete('protocol_violations');
-      }
+      final db = await storage.database;
+      await db.delete('protocol_violations');
       return;
     case 'empty_history':
     case 'empty_metrics':

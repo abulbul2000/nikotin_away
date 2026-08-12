@@ -285,6 +285,84 @@
 
 ---
 
+# PARÇA 4 — 14 Gün Deneme + Zorunlu Abonelik
+
+> Gerekçe/mimari kararlar: `C:\Users\Dell\.claude\plans\validated-honking-pebble.md`. AI Mentör
+> özelliği paylaşılan bir API anahtarı kullandığı için (her mesaj geliştiriciye fatura yazıyor),
+> tüm uygulama 14 gün deneme sonrası abonelik gerektirecek şekilde kapatılıyor.
+
+- [x] **68.** Faz 1 — `in_app_purchase` eklendi, `subscription_state` tablosu (şema v31) +
+      `SubscriptionState` modeli + `startTrialIfNeeded`/`saveSubscriptionState`/
+      `loadSubscriptionState`. `onUpgrade` migration'ı var olan kullanıcılara (anketi zaten
+      tamamlamış) geriye dönük ceza vermeden bugünden 14 gün tanıyor — ham `db` sorgularıyla,
+      `database` getter'ının `_initDatabase()` ortasında tekrar tetiklenip deadlock olmasını
+      önleyerek. `survey_page.dart`'a trial-start tetikleyicisi eklendi. 4 test.
+- [x] **69.** Faz 2 — `SubscriptionService.resolveAccess()` merkezi karar noktası (trial/active/
+      grace/showGate/needsConnectionCheck). `SubscriptionGatePage` kilit ekranı (satın alma
+      butonları bu fazda placeholder). `splash_page.dart` + `main.dart`'ın resume hook'u
+      (5 dakika debounce'lu) gate'i tetikliyor. Offline grace period: 3 gün. 9 test.
+- [x] **70.** Faz 3 kod tarafı — `functions/subscription.js` (`verifyPlaySubscription`,
+      stateless — Firestore yok), `functions/index.js`'e `verifySubscription` export,
+      `googleapis` dependency. **Kurulum (service account, Play Console izinleri, Blaze planına
+      geçiş, deploy) kullanıcı tarafından yapılacak** — kod hazır, henüz deploy edilmedi.
+- [x] **71.** Faz 4 — `aiChat` fonksiyonu artık `subscriptionProof` kontrolü yapıyor (abone
+      değilse/deneme dışıysa `permission-denied`). `ai_service.dart` her çağrıya kanıt ekliyor,
+      `ai_chat_page.dart` reddedilirse `SubscriptionGatePage`'e yönlendiriyor.
+      `docs/PLAY_STORE_DATA_SAFETY.md` güncellenmesi henüz yapılmadı — Faz 5'e taşındı.
+- [ ] **72.** Faz 5 — Manuel uçtan uca senaryolar (yeni kullanıcı → deneme → gate → satın alma →
+      devam; offline grace period; Play Console'da manuel iptal → expired). Play Console Data
+      Safety formuna "Finansal bilgiler → Satın alma geçmişi" eklenecek.
+
+---
+
+# PARÇA 5 — Watchdog ihlal/görev çelişkisi (kullanıcı bildirdi, 2026-08-12)
+
+> Kullanıcı gerçek cihazda ekran görüntüleriyle bildirdi: aynı görev için hem "İhlal" bildirimi
+> geliyor hem de dakikalar sonra ayrıca "Görevi tamamladın mı?" sorusu geliyor — birbirini
+> çelişen iki bildirim.
+
+- [x] **73.** Kök neden bulundu: `NoResponseWatchdogService.kt`'deki
+      `NativeViolationStore.tryInsertNoResponseViolation` ihlali doğrudan SQLite'a
+      (`protocol_violations`) yazıyordu, `task_assignments` satırını hiç güncellemiyordu. Bu
+      yüzden görev sonsuza dek `accepted` durumunda asılı kalıyor, önceden planlanmış
+      `scheduleTaskConfirmationPrompt` alarmı da normal şekilde ateşleniyordu — iki
+      senkronize olmayan kaynak aynı kullanıcıya çelişkili mesaj gönderiyordu.
+      **Düzeltme:** `NativeViolationStore` tamamen kaldırıldı, watchdog artık ihlali her zaman
+      `WatchdogStore.enqueueViolation` kuyruğuna yazıyor (CLAUDE.md'nin "tek istisna" kuralı da
+      böylece kapandı — artık istisna yok, hepsi kuyruk+drain). Dart tarafında
+      `NotificationService.syncWatchdogViolationsFromNative` (artık public) hem ihlali kaydedip
+      görevi `failedMissed`'e geçiriyor hem de `_plugin.cancel(_confirmIdFor(taskTitle))` ile
+      artık geçersiz olan "tamamladın mı?" alarmını iptal ediyor.
+- [x] **74.** İkinci kök neden: bu senkronizasyon yalnızca `main()`'de (soğuk açılış) bir kez
+      çalışıyordu, resume'da tekrar tetiklenmiyordu — kullanıcı uygulamayı hiç tam açmadan
+      sadece bildirimlerle etkileşiyorsa (ekran görüntülerindeki senaryo tam olarak bu)
+      senkronizasyon hiç olmuyordu. `main.dart`'ın `didChangeAppLifecycleState` resume kolu
+      artık `syncWatchdogViolationsFromNative()`'i de çağırıyor.
+      `flutter analyze` temiz, `app:compileDebugKotlin` başarılı. **Cihaz testi bekliyor.**
+- [x] **75.** Üçüncü, ayrı bir kök neden bulundu: uygulamada iki paralel görev-onay sistemi
+      vardı. Yeni `TaskAssignment` state machine + `scheduleTaskConfirmationPrompt` ("Bu süre
+      içinde sigara içtiniz mi?") ve eski, `task_followups` tablosuna dayanan sistem
+      (`TaskOutcomeConfirmPage`/`_askTaskOutcome`, "Görev başarılı mı?" — ters kutup). Görev
+      kabul edildiğinde ikisine birden yazılıyordu, kullanıcı aynı görev için iki farklı soru
+      görüyordu. Eski sistemin normal-görev (ADAPTIVE_NO_SMOKE) yolu tamamen kaldırıldı;
+      süre-bariyeri (duration-barrier) görevlerinin `task_followups`'a bağımlılığı korundu
+      (araştırma bariyer yolunun şu an canlı bir üreticisi olmadığını gösterdi, ama kullanıcının
+      isteği üzerine dokunulmadı). `task_outcome_confirm_page.dart` ve `task_follow_up_page.dart`
+      silindi, yerine yeni `TaskSmokedConfirmPage` (doğru soru + doğru kutup) geldi.
+      `_startTaskFromMandatoryScreen` de `TaskAssignmentService.handleTaskAction`'a
+      yönlendirildi — bu, MandatoryTaskPage'den kabul edilen görevlerin "sigara içtiniz mi?"
+      sorusunu hiç almadığı ayrı bir bug'ı da düzeltti.
+- [x] **76.** Bildirim gövdesine (body, aksiyon butonuna değil) tıklandığında hiçbir şey
+      olmuyordu — sadece aksiyon butonları işleniyordu. `_typeTaskConfirm` body-tap'i artık
+      `TaskSmokedConfirmPage`'i `navigatorKey` üzerinden açıyor. `_typeTaskStart` body-tap'i
+      ise doğrudan bir sayfa açmak yerine (MandatoryTaskPage'in kendi mandatory-gate
+      mantığıyla çakışma riski taşırdı) `_presentMandatoryTaskIfNeeded()`'i yeniden
+      tetikleyen bir sinyal gönderiyor — bu fonksiyon zaten kendi görevini kendi seçip
+      `_mandatoryTaskShown` + cooldown ile korunuyor, çift ekran açılma riski yok.
+      817 test geçiyor, `flutter analyze` temiz. **Cihaz testi bekliyor.**
+
+---
+
 # Ertelenmiş
 
 - **Simülasyon testi** — 1000+ profil davranış simülasyonu + 40 dil × ekran boyutu taraması.

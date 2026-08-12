@@ -394,14 +394,22 @@ class _SettingsPageState extends State<SettingsPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.t('cloudBackupPassphraseHint')),
+            Text(
+              isRestore
+                  ? context.t('cloudRestorePassphraseHint')
+                  : context.t('cloudBackupPassphraseHint'),
+            ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               autofocus: true,
               obscureText: true,
               decoration: InputDecoration(
-                labelText: context.t('cloudBackupPassphraseLabel'),
+                labelText: context.t(
+                  isRestore
+                      ? 'cloudRestorePassphraseLabel'
+                      : 'cloudBackupPassphraseLabel',
+                ),
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -423,7 +431,12 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
-    controller.dispose();
+    // The showDialog future can resolve before the pop transition (and thus
+    // the TextField holding this controller) has actually finished
+    // unmounting, so disposing synchronously here can hit the framework's
+    // "_dependents.isEmpty" assertion. Deferring to the next frame lets the
+    // route finish tearing down first.
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
     final trimmed = result?.trim();
     return (trimmed == null || trimmed.length < 6) ? null : trimmed;
   }
@@ -804,6 +817,26 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         const SizedBox(height: 20),
         _SectionLabel(context.t('settingsSectionData')),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.info_outline, size: 16, color: Colors.amber),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  context.t('cloudBackupPhoneChangeWarning'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.75),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
         Card(
           child: Column(
             children: [

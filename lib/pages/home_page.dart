@@ -12,6 +12,7 @@ import '../models/reduction_progress.dart';
 import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import '../pages/achievements_page.dart';
+import '../pages/ai_chat_page.dart';
 import '../pages/breath_analysis_page.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/cough_test_page.dart';
@@ -26,11 +27,8 @@ import '../pages/settings_page.dart';
 import '../pages/sleep_routine_page.dart';
 import '../pages/snoring_test_page.dart';
 import '../pages/survey_history_page.dart';
-import '../pages/task_follow_up_page.dart';
-import '../pages/task_outcome_confirm_page.dart';
 import '../pages/weekly_survey_page.dart';
 import '../services/device_permission_service.dart';
-import '../services/discipline_protocol_service.dart';
 import '../services/location_intelligence_service.dart';
 import '../services/step_tracking_service.dart';
 import '../services/notification_service.dart';
@@ -64,12 +62,8 @@ class _HomePageState extends State<HomePage> {
   final StepTrackingService _stepTrackingService = StepTrackingService();
   final ProtocolViolationService _protocolViolationService =
       ProtocolViolationService();
-  final DisciplineProtocolService _disciplineProtocolService =
-      DisciplineProtocolService();
   final Map<String, String> _taskStates = {};
-  final Map<String, Timer> _taskFollowUpTimers = {};
   final Map<String, Timer> _durationBarrierTimers = {};
-  final Map<String, DateTime> _taskStartedAt = {};
   final Map<String, DateTime> _durationBarrierEndsAt = {};
   final Set<String> _notifiedTaskTitles = <String>{};
   MentorMessage? _latestMentorMessage;
@@ -82,7 +76,6 @@ class _HomePageState extends State<HomePage> {
   int _mandatoryTaskPostponeCount = 0;
   List<Map<String, dynamic>> _pendingFollowUps = const [];
   bool _mandatoryTaskShown = false;
-  bool _followUpConfirmShown = false;
   bool _weeklySurveyMandatoryShown = false;
   bool _registrationCompleted = false;
   bool _isCompletingRegistration = false;
@@ -190,9 +183,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _taskActionSubscription?.cancel();
-    for (final timer in _taskFollowUpTimers.values) {
-      timer.cancel();
-    }
     for (final timer in _durationBarrierTimers.values) {
       timer.cancel();
     }
@@ -200,18 +190,6 @@ class _HomePageState extends State<HomePage> {
     _mandatoryGateCallRetryTimer?.cancel();
     _mandatoryPostponeRetryTimer?.cancel();
     super.dispose();
-  }
-
-  void _scheduleLocalFollowUp(String taskTitle, DateTime scheduledAt) {
-    final remaining = scheduledAt.difference(DateTime.now());
-    final delay = remaining.isNegative ? Duration.zero : remaining;
-    _taskFollowUpTimers[taskTitle]?.cancel();
-    _taskFollowUpTimers[taskTitle] = Timer(delay, () {
-      if (!mounted) {
-        return;
-      }
-      _askTaskOutcome(taskTitle);
-    });
   }
 
   void _scheduleLocalDurationBarrierFollowUp(
@@ -278,12 +256,11 @@ class _HomePageState extends State<HomePage> {
     for (final row in pending) {
       final taskTitle = row['taskTitle'] as String;
       final scheduledAt = row['scheduledAt'] as DateTime;
+      // Normal (ADAPTIVE_NO_SMOKE) tasks no longer write to task_followups —
+      // these rows are only ever produced for duration-barrier tasks.
       if (_isDurationBarrierTask(taskTitle)) {
         _durationBarrierEndsAt[taskTitle] = scheduledAt;
         _scheduleLocalDurationBarrierFollowUp(taskTitle, scheduledAt);
-        _taskStates[taskTitle] = 'deferred';
-      } else {
-        _scheduleLocalFollowUp(taskTitle, scheduledAt);
         _taskStates[taskTitle] = 'deferred';
       }
     }
@@ -329,104 +306,6 @@ class _HomePageState extends State<HomePage> {
     return AppTexts.localizeCanonicalText(context, task);
   }
 
-  Future<void> _askTaskOutcome(String taskTitle) async {
-    final now = DateTime.now();
-    final startedAt =
-        _taskStartedAt[taskTitle] ??
-        now.subtract(TaskAssignmentService.resolveInitialTaskDelay(taskTitle));
-    final sensorEvents = await _storageService.loadSensorUsageBetween(
-      startAt: startedAt,
-      endAt: now,
-    );
-    final isSuspicious = _disciplineProtocolService.isSuspiciousDuringTask(
-      events: sensorEvents,
-      riskyHours: _riskyHours,
-      startAt: startedAt,
-      endAt: now,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    if (isSuspicious) {
-      final taskStartTitle = context.t('taskStartTitle');
-      await _protocolViolationService.logSuspiciousBehavior(
-        taskTitle: taskTitle,
-      );
-      await _storageService.saveTaskResult(
-        taskTitle: taskTitle,
-        taskResult: 'suspicious_reset',
-        completedAt: now,
-      );
-      await NotificationService.showFirstTaskTriggerNotification(
-        taskTitle: taskStartTitle,
-        taskDescription: taskTitle,
-      );
-      await NotificationService.scheduleTaskFollowUpReminder(
-        taskTitle: taskTitle,
-        delay: const Duration(minutes: 10),
-      );
-
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.t('taskSuspiciousReset'))));
-      return;
-    }
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(context.t('taskOutcomeQuestion')),
-          content: Text(_localizeTaskText(taskTitle)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(context.t('taskOutcomeNo')),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(context.t('taskOutcomeYes')),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (result == null) {
-      return;
-    }
-
-    await _storageService.saveTaskResult(
-      taskTitle: taskTitle,
-      taskResult: result ? 'willpower_success' : 'willpower_weakness',
-      completedAt: DateTime.now(),
-    );
-    if (!result) {
-      await _protocolViolationService.logWillpowerWeakness(
-        taskTitle: taskTitle,
-      );
-    }
-    await _storageService.resolveTaskFollowUpByTitle(taskTitle);
-    _taskFollowUpTimers[taskTitle]?.cancel();
-    _taskFollowUpTimers.remove(taskTitle);
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _taskStates[taskTitle] = result ? 'completed' : 'failed';
-    });
-
-    await _loadHomeMetrics();
-    await _restorePendingFollowUps();
-  }
-
   /// The set [TaskAssignmentService.handleTaskAction] now owns. Anything
   /// outside this set is a legacy follow-up action tied to `task_follow_ups`
   /// rather than `task_assignments`, and keeps running its own older path
@@ -447,6 +326,11 @@ class _HomePageState extends State<HomePage> {
     final taskTitle = event['taskTitle']?.trim() ?? '';
     final actionId = event['actionId']?.trim() ?? '';
     if (taskTitle.isEmpty || actionId.isEmpty) {
+      return;
+    }
+
+    if (actionId == NotificationService.mandatoryGateCheckActionId) {
+      unawaited(_presentMandatoryTaskIfNeeded());
       return;
     }
 
@@ -491,61 +375,6 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    if (actionId == 'followup_done' || actionId == 'smoked_yes') {
-      final plannedMinutes = TaskAssignmentService.resolveInitialTaskDelay(
-        taskTitle,
-      ).inMinutes;
-      await _storageService.recordAdaptiveTaskOutcome(
-        taskTitle: taskTitle,
-        outcome: AdaptiveTaskOutcome.success,
-        plannedDurationMinutes: plannedMinutes,
-        scheduledAt: _taskStartedAt[taskTitle],
-        respondedAt: DateTime.now(),
-      );
-      await _storageService.saveTaskResult(
-        taskTitle: taskTitle,
-        taskResult: 'willpower_success',
-        completedAt: DateTime.now(),
-      );
-      await _storageService.resolveTaskFollowUpByTitle(taskTitle);
-      _taskFollowUpTimers[taskTitle]?.cancel();
-      _taskFollowUpTimers.remove(taskTitle);
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _taskStates[taskTitle] = 'completed';
-      });
-      await _loadHomeMetrics();
-      await _restorePendingFollowUps();
-      return;
-    }
-
-    if (actionId == 'followup_later' || actionId == 'smoked_no') {
-      await _protocolViolationService.logFollowUpDeferred(taskTitle: taskTitle);
-      final delay = await _storageService.resolveAdaptivePostponeDelay();
-      final followUpAt = DateTime.now().add(delay);
-      final plannedMinutes = TaskAssignmentService.resolveInitialTaskDelay(
-        taskTitle,
-      ).inMinutes;
-      await _storageService.recordAdaptiveTaskOutcome(
-        taskTitle: taskTitle,
-        outcome: AdaptiveTaskOutcome.deferred,
-        plannedDurationMinutes: plannedMinutes,
-        scheduledAt: DateTime.now(),
-        respondedAt: DateTime.now(),
-      );
-      await _storageService.resolveTaskFollowUpByTitle(taskTitle);
-      await _storageService.saveTaskFollowUp(
-        taskTitle: taskTitle,
-        scheduledAt: followUpAt,
-      );
-      await NotificationService.scheduleTaskFollowUpReminder(
-        taskTitle: taskTitle,
-        delay: delay,
-      );
-      _scheduleLocalFollowUp(taskTitle, followUpAt);
-    }
   }
 
   /// The in-memory `_taskStates` label a UI badge reads, for an action id
@@ -811,7 +640,13 @@ class _HomePageState extends State<HomePage> {
       unawaited(_notifyNewTasks());
       unawaited(_scheduleCoachCommandNotificationsIfNeeded());
       unawaited(_scheduleDurationBarrierNotificationsIfNeeded());
-      unawaited(_presentDueScreensInOrder());
+      // Restores duration-barrier timers from task_followups (the only
+      // remaining producer of that table) before the mandatory gate runs.
+      await _restorePendingFollowUps();
+      if (!mounted) {
+        return;
+      }
+      unawaited(_presentMandatoryTaskIfNeeded());
       unawaited(_storageService.refreshWearableRiskSignal());
       unawaited(_scheduleSedentaryReminderIfNeeded());
       await _ensureMentorMessageCadence();
@@ -1393,107 +1228,6 @@ class _HomePageState extends State<HomePage> {
   static const Duration _mandatoryPostponeRetryDelay = Duration(minutes: 10);
   static const int _maxMandatoryPostponeRetries = 5;
 
-  /// Runs the two screen-presenting gates ([_presentPendingFollowUpIfNeeded],
-  /// [_presentMandatoryTaskIfNeeded]) one after the other instead of as
-  /// separate `unawaited()` calls from `_loadHomeMetrics`. Firing them in
-  /// parallel let both `Navigator.push` a full-screen page independently —
-  /// the direct cause of two task prompts landing on top of each other on
-  /// the same app open. Awaiting the follow-up gate first also means the
-  /// mandatory gate always sees its resolved state (`_taskStates` updated,
-  /// `_pendingFollowUps` cleared) rather than racing it.
-  Future<void> _presentDueScreensInOrder() async {
-    await _presentPendingFollowUpIfNeeded();
-    if (!mounted) {
-      return;
-    }
-    await _presentMandatoryTaskIfNeeded();
-  }
-
-  /// Forces an answer for the oldest due follow-up (its scheduledAt has
-  /// already passed) via [TaskOutcomeConfirmPage] — replaces relying on an
-  /// in-memory Timer ([_scheduleLocalFollowUp]/`_askTaskOutcome`), which
-  /// only ever fires while this exact widget instance stays alive in
-  /// memory (so it silently never asks once the app is backgrounded long
-  /// enough to be suspended, which is the common case for delays of tens
-  /// of minutes), and the notification action buttons, which are easy to
-  /// swipe away without answering. Runs before [_presentMandatoryTaskIfNeeded]
-  /// in the app-open cadence so an overdue follow-up is resolved before any
-  /// new task gets presented.
-  Future<void> _presentPendingFollowUpIfNeeded() async {
-    if (!mounted || _followUpConfirmShown || !_registrationCompleted) {
-      return;
-    }
-
-    final now = DateTime.now();
-    Map<String, dynamic>? due;
-    for (final row in _pendingFollowUps) {
-      final scheduledAt = row['scheduledAt'] as DateTime?;
-      if (scheduledAt == null || !scheduledAt.isAfter(now)) {
-        due = row;
-        break;
-      }
-    }
-    if (due == null) {
-      return;
-    }
-
-    final id = due['id'] as String?;
-    final taskTitle = due['taskTitle'] as String?;
-    if (id == null || taskTitle == null || taskTitle.trim().isEmpty) {
-      return;
-    }
-    final scheduledAt = due['scheduledAt'] as DateTime?;
-
-    _followUpConfirmShown = true;
-    final succeeded = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => TaskOutcomeConfirmPage(taskTitle: taskTitle),
-      ),
-    );
-    _followUpConfirmShown = false;
-
-    if (succeeded != true) {
-      await _protocolViolationService.logFollowUpFailed(taskTitle: taskTitle);
-    }
-
-    final plannedMinutes = TaskAssignmentService.resolveInitialTaskDelay(
-      taskTitle,
-    ).inMinutes;
-    await _storageService.recordAdaptiveTaskOutcome(
-      taskTitle: taskTitle,
-      outcome: succeeded == true
-          ? AdaptiveTaskOutcome.success
-          : AdaptiveTaskOutcome.smoked,
-      plannedDurationMinutes: plannedMinutes,
-      scheduledAt: scheduledAt,
-      respondedAt: DateTime.now(),
-    );
-    await _storageService.saveTaskResult(
-      taskTitle: taskTitle,
-      taskResult: succeeded == true
-          ? 'willpower_success'
-          : 'willpower_weakness',
-      completedAt: DateTime.now(),
-    );
-    await _storageService.resolveTaskFollowUpById(id);
-    _taskFollowUpTimers[taskTitle]?.cancel();
-    _taskFollowUpTimers.remove(taskTitle);
-
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _taskStates[taskTitle] = succeeded == true ? 'completed' : 'failed';
-    });
-
-    await _loadHomeMetrics();
-    await _restorePendingFollowUps();
-
-    // _loadHomeMetrics already re-enters _presentDueScreensInOrder, which
-    // chains through any further overdue follow-ups before moving on to the
-    // mandatory gate — no separate re-trigger needed here.
-  }
-
   Future<void> _presentMandatoryTaskIfNeeded({bool isRetry = false}) async {
     if (!mounted ||
         (!isRetry && _mandatoryTaskShown) ||
@@ -1574,16 +1308,18 @@ class _HomePageState extends State<HomePage> {
       final row = await _storageService.loadLatestTaskAssignmentByTitle(
         acceptedTaskTitle,
       );
-      if (TaskAssignmentService.isComposite(row?.taskKind ?? '')) {
+      final followUp = await TaskAssignmentService(_storageService)
+          .handleTaskAction(
+            canonicalTitle: acceptedTaskTitle,
+            taskTitle: acceptedTaskTitle,
+            actionId: TaskActionId.done,
+          );
+      if (!mounted) return;
+      if (TaskAssignmentService.isComposite(row?.taskKind ?? '') &&
+          followUp == TaskActionFollowUp.openSleepRoutinePage) {
         // The pre-sleep routine has no countdown/follow-up of its own —
         // accepting it on the fake-call screen hands the user straight into
         // SleepRoutinePage, same as the notification-action path.
-        await TaskAssignmentService(_storageService).handleTaskAction(
-          canonicalTitle: acceptedTaskTitle,
-          taskTitle: acceptedTaskTitle,
-          actionId: TaskActionId.done,
-        );
-        if (!mounted) return;
         final packsPerDay = await _resolveLatestPacksPerDay();
         if (!mounted) return;
         await Navigator.of(context).push(
@@ -1596,13 +1332,11 @@ class _HomePageState extends State<HomePage> {
           ),
         );
         if (!mounted) return;
-        setState(() {
-          _taskStates[acceptedTaskTitle] = _uiStateFor(TaskActionId.done);
-        });
-        await _loadHomeMetrics();
-        return;
       }
-      await _startTaskFromMandatoryScreen(acceptedTaskTitle);
+      setState(() {
+        _taskStates[acceptedTaskTitle] = _uiStateFor(TaskActionId.done);
+      });
+      await _loadHomeMetrics();
       return;
     }
 
@@ -1615,39 +1349,6 @@ class _HomePageState extends State<HomePage> {
         () => unawaited(_presentMandatoryTaskIfNeeded(isRetry: true)),
       );
     }
-  }
-
-  Future<void> _startTaskFromMandatoryScreen(String taskTitle) async {
-    final now = DateTime.now();
-    final delay = TaskAssignmentService.resolveInitialTaskDelay(taskTitle);
-    final followUpAt = now.add(delay);
-
-    await _storageService.saveTaskResult(
-      taskTitle: taskTitle,
-      taskResult: 'started',
-      completedAt: now,
-    );
-    _taskStartedAt[taskTitle] = now;
-    await _storageService.saveTaskFollowUp(
-      taskTitle: taskTitle,
-      scheduledAt: followUpAt,
-    );
-    await NotificationService.showTaskTimerStartedNotification(
-      taskTitle: taskTitle,
-      duration: delay,
-    );
-    await NotificationService.scheduleTaskFollowUpReminder(
-      taskTitle: taskTitle,
-      delay: delay,
-    );
-    _scheduleLocalFollowUp(taskTitle, followUpAt);
-
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _taskStates[taskTitle] = 'deferred';
-    });
   }
 
   /// How late a planned task may be and still be worth firing. Past this the
@@ -2102,8 +1803,6 @@ class _HomePageState extends State<HomePage> {
             _buildSummaryStats(context),
             const SizedBox(height: 16),
             _buildBreathTrendCard(),
-            const SizedBox(height: 12),
-            _buildQuickLinkButtons(context),
             const SizedBox(height: 24),
             if (!_registrationCompleted)
               _buildCompleteRegistrationButton(context),
@@ -2236,6 +1935,20 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 12),
               _buildMentorReplyArea(context, message, languageCode, answered),
             ],
+            const SizedBox(height: 12),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AIChatPage()),
+                  );
+                },
+                icon: const Icon(Icons.smart_toy_outlined, size: 18),
+                label: Text(context.t('aiMentorButton')),
+              ),
+            ),
           ],
         ),
       ),
@@ -2625,32 +2338,6 @@ class _HomePageState extends State<HomePage> {
           style: const TextStyle(fontSize: 16),
         ),
       ],
-    );
-  }
-
-  Widget _buildQuickLinkButtons(BuildContext context) {
-    // Only the pending-follow-up nudge lives here now -- the violation
-    // report link used to be duplicated here and in the categorized main
-    // menu (Takip ve Raporlar), pointing at the same ProtocolViolationsPage.
-    if (_pendingFollowUps.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton(
-        onPressed: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const TaskFollowUpPage()),
-          );
-          if (!mounted) {
-            return;
-          }
-          await _loadHomeMetrics();
-          await _restorePendingFollowUps();
-        },
-        child: Text(context.t('openTaskFollowUpScreen')),
-      ),
     );
   }
 

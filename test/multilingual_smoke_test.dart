@@ -15,7 +15,7 @@ import 'package:no_smoke/pages/risk_result_page.dart';
 import 'package:no_smoke/pages/smoked_log_consent_page.dart';
 import 'package:no_smoke/pages/snoring_test_page.dart';
 import 'package:no_smoke/pages/survey_review_page.dart';
-import 'package:no_smoke/pages/task_outcome_confirm_page.dart';
+import 'package:no_smoke/pages/task_smoked_confirm_page.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -34,9 +34,9 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 /// sleep_routine_page_test.dart) or require a live, non-empty StorageService
 /// to render meaningfully. Duration-barrier and health-condition-advice
 /// features have no standalone widget of their own (barrier follow-ups
-/// reuse TaskOutcomeConfirmPage; health-condition advice is
+/// reuse TaskSmokedConfirmPage; health-condition advice is
 /// notification-text-only) — both are covered via the mechanisms below
-/// (TaskOutcomeConfirmPage pumps, and the translation-key-existence sweep
+/// (TaskSmokedConfirmPage pumps, and the translation-key-existence sweep
 /// implicitly covers every advice string's translated form).
 class _FakePathProviderPlatform extends PathProviderPlatform {
   @override
@@ -490,7 +490,7 @@ void main() {
       });
 
       testWidgets(
-        'TaskOutcomeConfirmPage renders for varied task titles '
+        'TaskSmokedConfirmPage renders for varied task titles '
         '(incl. duration-barrier tasks)',
         (tester) async {
           final taskTitles = [
@@ -506,7 +506,7 @@ void main() {
             await tester.pumpWidget(
               _wrapWithLocale(
                 code,
-                TaskOutcomeConfirmPage(taskTitle: title),
+                TaskSmokedConfirmPage(taskTitle: title, canonicalTitle: title),
               ),
             );
             await tester.pump();
@@ -514,14 +514,14 @@ void main() {
             final exception = tester.takeException();
             if (exception != null) {
               failures.add(
-                '[$code] TaskOutcomeConfirmPage title="$title" '
+                '[$code] TaskSmokedConfirmPage title="$title" '
                 '-> $exception',
               );
             }
           }
           expect(
             failures.where(
-              (f) => f.startsWith('[$code] TaskOutcomeConfirmPage'),
+              (f) => f.startsWith('[$code] TaskSmokedConfirmPage'),
             ),
             isEmpty,
             reason: failures.join('\n'),
@@ -613,8 +613,12 @@ void main() {
               'HealthRecoveryPage': HealthRecoveryPage(
                 quitDate: DateTime.now().subtract(const Duration(days: 30)),
               ),
-              'TaskOutcomeConfirmPage': const TaskOutcomeConfirmPage(
+              'TaskSmokedConfirmPage': const TaskSmokedConfirmPage(
                 taskTitle:
+                    'Cok uzun bir gorev basligi burada kullanici '
+                    'arayuzunu tasma riskiyle test etmek icin bilhassa '
+                    'uzatilmistir',
+                canonicalTitle:
                     'Cok uzun bir gorev basligi burada kullanici '
                     'arayuzunu tasma riskiyle test etmek icin bilhassa '
                     'uzatilmistir',

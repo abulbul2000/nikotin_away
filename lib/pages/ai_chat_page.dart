@@ -1,5 +1,26 @@
 import 'package:flutter/material.dart';
+
+import '../core/app_texts.dart';
+import '../models/medication.dart';
 import '../services/ai_service.dart';
+import '../services/notification_service.dart';
+import '../services/storage_service.dart';
+import 'subscription_gate_page.dart';
+
+class _ChatMessage {
+  const _ChatMessage({
+    required this.text,
+    required this.fromUser,
+    this.pendingAction,
+  });
+
+  final String text;
+  final bool fromUser;
+  final AiAction? pendingAction;
+
+  _ChatMessage resolved() =>
+      _ChatMessage(text: text, fromUser: fromUser, pendingAction: null);
+}
 
 class AIChatPage extends StatefulWidget {
   const AIChatPage({super.key});
@@ -10,48 +31,240 @@ class AIChatPage extends StatefulWidget {
 
 class _AIChatPageState extends State<AIChatPage> {
   final TextEditingController _controller = TextEditingController();
-  String reply = "";
+  final List<_ChatMessage> _messages = [];
+  final List<AiChatTurn> _history = [];
+  final StorageService _storage = StorageService();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _sending) return;
+
+    setState(() {
+      _messages.add(_ChatMessage(text: text, fromUser: true));
+      _history.add(AiChatTurn(role: 'user', content: text));
+      _controller.clear();
+      _sending = true;
+    });
+
+    try {
+      final result = await sendMessageToAI(_history);
+      if (!mounted) return;
+      setState(() {
+        if (result.reply.isNotEmpty) {
+          _history.add(AiChatTurn(role: 'assistant', content: result.reply));
+        }
+        _messages.add(
+          _ChatMessage(
+            text: result.reply,
+            fromUser: false,
+            pendingAction: result.action,
+          ),
+        );
+      });
+    } on AiSubscriptionRequiredException {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const SubscriptionGatePage()),
+      );
+      return;
+    } on AiServiceException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('aiChatError'))));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _sending = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _applyAction(int index, AiAction action) async {
+    String resultKey;
+    switch (action.name) {
+      case 'set_coach_mode':
+        resultKey = await _applyCoachMode(action.arguments);
+        break;
+      case 'set_medication_times':
+        resultKey = await _applyMedicationTimes(action.arguments);
+        break;
+      default:
+        resultKey = 'aiChatActionFailed';
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _messages[index] = _messages[index].resolved();
+      _messages.add(_ChatMessage(text: context.t(resultKey), fromUser: false));
+    });
+  }
+
+  Future<String> _applyCoachMode(Map<String, dynamic> args) async {
+    final preference = args['preference'] as String?;
+    if (preference == null ||
+        !const ['like', 'neutral', 'dislike', 'off'].contains(preference)) {
+      return 'aiChatActionFailed';
+    }
+    final frequency = args['frequency'] as String?;
+
+    await _storage.saveSetting('duration_barrier_preference', preference);
+    if (frequency != null && const ['az', 'orta', 'cok'].contains(frequency)) {
+      await _storage.saveSetting(
+        'duration_barrier_frequency_preference',
+        frequency,
+      );
+    }
+    await _storage.saveSetting(
+      'duration_barrier_enabled',
+      preference == 'off' ? '0' : '1',
+    );
+    return 'aiChatActionAppliedCoachMode';
+  }
+
+  Future<String> _applyMedicationTimes(Map<String, dynamic> args) async {
+    final name = args['medicationName'] as String?;
+    final rawTimes = args['times'];
+    if (name == null || rawTimes is! List || rawTimes.isEmpty) {
+      return 'aiChatActionFailed';
+    }
+    final times = rawTimes.whereType<String>().toList();
+    if (times.isEmpty) return 'aiChatActionFailed';
+
+    final medications = await _storage.loadMedications();
+    Medication? match;
+    for (final m in medications) {
+      if (m.name.toLowerCase() == name.toLowerCase()) {
+        match = m;
+        break;
+      }
+    }
+    if (match == null) return 'aiChatActionFailed';
+
+    final updated = match.copyWith(times: times);
+    await _storage.saveMedication(updated);
+    final refreshed = await _storage.loadMedications();
+    await NotificationService.scheduleMedicationReminders(refreshed);
+    return 'aiChatActionAppliedMedication';
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Yapay Zekâ Asistanı")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _controller,
-              decoration: const InputDecoration(
-                hintText: "Mesaj yaz...",
-                border: OutlineInputBorder(),
+      appBar: AppBar(title: Text(context.t('aiChatTitle'))),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              context.t('aiChatDisclaimer'),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: () async {
-                final text = _controller.text.trim();
-                if (text.isEmpty) return;
-
-                final aiReply = await sendMessageToAI(text);
-
-                setState(() {
-                  reply = aiReply;
-                });
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final message = _messages[index];
+                return Align(
+                  alignment: message.fromUser
+                      ? AlignmentDirectional.centerEnd
+                      : AlignmentDirectional.centerStart,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: message.fromUser
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : Theme.of(context).colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (message.text.isNotEmpty) Text(message.text),
+                        if (message.pendingAction != null) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              FilledButton(
+                                onPressed: () =>
+                                    _applyAction(index, message.pendingAction!),
+                                child: Text(context.t('aiChatActionApply')),
+                              ),
+                              const SizedBox(width: 8),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _messages[index] = message.resolved();
+                                  });
+                                },
+                                child: Text(context.t('aiChatActionDismiss')),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
               },
-              child: const Text("Gönder"),
             ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Text(
-                  reply,
-                  style: const TextStyle(fontSize: 18),
-                ),
+          ),
+          if (_sending)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: SizedBox(
+                height: 16,
+                width: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
               ),
             ),
-          ],
-        ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    minLines: 1,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: context.t('aiChatHint'),
+                      border: const OutlineInputBorder(),
+                    ),
+                    onSubmitted: (_) => _send(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: _sending ? null : _send,
+                  icon: const Icon(Icons.send),
+                  tooltip: context.t('aiChatSend'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

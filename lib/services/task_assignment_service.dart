@@ -201,18 +201,12 @@ class TaskAssignmentService {
         taskResult: 'started',
         completedAt: now,
       );
-      await _storage.saveTaskFollowUp(
-        taskTitle: taskTitle,
-        scheduledAt: now.add(delay),
-      );
       await _transitionTask(canonicalTitle, TaskLifecycleState.accepted);
       await NotificationService.showTaskTimerStartedNotification(
         taskTitle: taskTitle,
         duration: delay,
       );
-      // The end-of-window question, asked as "did you smoke?" — replaces the
-      // old follow-up, which asked whether the task was completed, the same
-      // moment with the opposite polarity.
+      // The end-of-window question, asked as "did you smoke?".
       await NotificationService.scheduleTaskConfirmationPrompt(
         taskTitle: taskTitle,
         delay: delay,

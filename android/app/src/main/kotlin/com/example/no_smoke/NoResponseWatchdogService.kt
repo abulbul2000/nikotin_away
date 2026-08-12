@@ -5,20 +5,14 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.database.sqlite.SQLiteDatabase
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
 
 class NoResponseWatchdogService : Service() {
     private val handler = Handler(Looper.getMainLooper())
@@ -153,6 +147,11 @@ class NoResponseWatchdogService : Service() {
     /// exactly one, and falls back to a count otherwise, since the
     /// per-task [WatchdogLocalizedText.foregroundBody] template has nowhere
     /// to put a second title.
+    ///
+    /// Tapping this notification must open the app: HomePage already checks
+    /// for a due mandatory task on every resume (_presentMandatoryTaskIfNeeded),
+    /// so simply bringing MainActivity to the front is enough to surface the
+    /// task overlay — no separate route/payload needs threading through.
     private fun ensureForeground(active: List<WatchdogState>) {
         val texts = WatchdogStore.loadLocalizedText(this)
         createChannelIfNeeded(texts.foregroundChannelName)
@@ -160,6 +159,17 @@ class NoResponseWatchdogService : Service() {
             texts.foregroundBody
         } else {
             "${texts.foregroundBody} (${active.size})"
+        }
+        val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        val contentIntent = launchIntent?.let {
+            PendingIntent.getActivity(
+                this,
+                FOREGROUND_NOTIFICATION_ID,
+                it,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
         }
         val notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
@@ -170,6 +180,7 @@ class NoResponseWatchdogService : Service() {
             .setShowWhen(false)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .apply { contentIntent?.let { setContentIntent(it) } }
             .build()
         startForeground(FOREGROUND_NOTIFICATION_ID, notification)
     }
@@ -509,15 +520,22 @@ object WatchdogStore {
 }
 
 object WatchdogViolationNotifier {
+    /// Always queues (never writes protocol_violations directly): the
+    /// SQLite row alone used to leave the matching task_assignments row
+    /// stuck in accepted/delivered forever, because nothing else ever
+    /// transitioned it — the already-scheduled "did you smoke?" prompt kept
+    /// firing on schedule regardless, so the user saw a violation notice
+    /// and a "did you complete it?" question for the same task. Routing
+    /// through the queue means Dart's own drain
+    /// (NotificationService.syncWatchdogViolationsFromNative) is the single
+    /// place that both records the violation AND closes the task/cancels
+    /// the stale prompt.
     fun triggerNoResponseViolation(context: Context, state: WatchdogState) {
         val texts = WatchdogStore.loadLocalizedText(context)
         createViolationChannelIfNeeded(context, texts.violationChannelName)
 
-        val inserted = NativeViolationStore.tryInsertNoResponseViolation(context, state)
-        if (!inserted) {
-            val payload = "no_response_10_min|${state.taskTitle}|${System.currentTimeMillis()}"
-            WatchdogStore.enqueueViolation(context, payload)
-        }
+        val payload = "no_response_10_min|${state.taskTitle}|${System.currentTimeMillis()}"
+        WatchdogStore.enqueueViolation(context, payload)
 
         val id = state.watchdogId.hashCode().let { if (it < 0) -it else it }
         val notification = NotificationCompat.Builder(context, NoResponseWatchdogService.VIOLATION_CHANNEL_ID)
@@ -548,47 +566,5 @@ object WatchdogViolationNotifier {
             description = "10-minute unanswered task violation"
         }
         manager.createNotificationChannel(channel)
-    }
-}
-
-object NativeViolationStore {
-    private const val TABLE = "protocol_violations"
-
-    fun tryInsertNoResponseViolation(context: Context, state: WatchdogState): Boolean {
-        val dbFile = File(File(context.applicationInfo.dataDir, "app_flutter"), "no_smoke.db")
-        if (!dbFile.exists()) {
-            return false
-        }
-
-        return try {
-            SQLiteDatabase.openDatabase(
-                dbFile.absolutePath,
-                null,
-                SQLiteDatabase.OPEN_READWRITE,
-            ).use { db ->
-                val now = System.currentTimeMillis()
-                val values = ContentValues().apply {
-                    put("id", "vio_native_${now}_${state.watchdogId}")
-                    put("type", "no_response_10_min")
-                    put("severity", "high")
-                    put("source", "native_direct")
-                    put("taskTitle", state.taskTitle)
-                    put("details", "10 minutes passed with no response to task notification.")
-                    put("createdAt", formatIsoUtc(now))
-                    put("resolved", 0)
-                }
-
-                db.insert(TABLE, null, values)
-            }
-            true
-        } catch (_: Throwable) {
-            false
-        }
-    }
-
-    private fun formatIsoUtc(millis: Long): String {
-        val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
-        formatter.timeZone = TimeZone.getTimeZone("UTC")
-        return formatter.format(millis)
     }
 }
