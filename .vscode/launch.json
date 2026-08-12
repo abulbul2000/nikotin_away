@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "No Smoke - Flutter Emulator",
+      "name": "Nikotin Away - Flutter Emulator",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",

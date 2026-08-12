@@ -1,4 +1,4 @@
-# No Smoke - Claude Prompt (Tek Parca)
+# Nikotin Away - Claude Prompt (Tek Parca)
 
 NO SMOKE adli Flutter mobil uygulamasini A'dan Z'ye teknik olarak analiz etmeni istiyorum. Uygulama sigara birakma surecini yonetiyor; baslangic anketi, nefes testi, risk puanlama, gorev atama, takip (follow-up), ihlal yonetimi, bildirim zamanlama ve cok dilli arayuz iceriyor. Bana tek dokumanda su ciktilari ver:
 

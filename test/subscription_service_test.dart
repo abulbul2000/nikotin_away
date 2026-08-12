@@ -1,11 +1,23 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:no_smoke/models/subscription_state.dart';
 import 'package:no_smoke/services/storage_service.dart';
 import 'package:no_smoke/services/subscription_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+PurchaseDetails _purchase(PurchaseStatus status) => PurchaseDetails(
+  productID: SubscriptionService.monthlyProductId,
+  verificationData: PurchaseVerificationData(
+    localVerificationData: 'local',
+    serverVerificationData: 'server-token',
+    source: 'google_play',
+  ),
+  transactionDate: null,
+  status: status,
+);
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   @override
@@ -120,5 +132,34 @@ void main() {
     );
 
     expect(decision, AccessDecision.showGate);
+  });
+
+  group('handlePurchase', () {
+    // purchased/restored also call the verifySubscription Cloud Function,
+    // which needs a real Firebase backend this suite doesn't set up — only
+    // the statuses that return before that call are covered here.
+    test('reports pending without touching storage', () async {
+      final outcome = await service.handlePurchase(
+        _purchase(PurchaseStatus.pending),
+      );
+      expect(outcome, PurchaseOutcome.pending);
+      expect(await storage.loadSubscriptionState(), isNull);
+    });
+
+    test('reports cancelled without touching storage', () async {
+      final outcome = await service.handlePurchase(
+        _purchase(PurchaseStatus.canceled),
+      );
+      expect(outcome, PurchaseOutcome.cancelled);
+      expect(await storage.loadSubscriptionState(), isNull);
+    });
+
+    test('reports failed without touching storage', () async {
+      final outcome = await service.handlePurchase(
+        _purchase(PurchaseStatus.error),
+      );
+      expect(outcome, PurchaseOutcome.failed);
+      expect(await storage.loadSubscriptionState(), isNull);
+    });
   });
 }

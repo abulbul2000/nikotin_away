@@ -1,6 +1,6 @@
-# No Smoke - Claude Prompt (Profesyonel Türkçe Sürüm)
+# Nikotin Away - Claude Prompt (Profesyonel Türkçe Sürüm)
 
-No Smoke adlı Flutter mobil uygulamasını uçtan uca teknik ve ürün perspektifiyle analiz etmeni istiyorum. Bu uygulama sigara bırakma sürecini desteklemek için tasarlandı ve şu bileşenleri içeriyor: başlangıç anketi, nefes testi, risk puanlama, görev atama, takip (follow-up), ihlal yönetimi, bildirim planlama ve çok dilli arayüz.
+Nikotin Away adlı Flutter mobil uygulamasını uçtan uca teknik ve ürün perspektifiyle analiz etmeni istiyorum. Bu uygulama sigara bırakma sürecini desteklemek için tasarlandı ve şu bileşenleri içeriyor: başlangıç anketi, nefes testi, risk puanlama, görev atama, takip (follow-up), ihlal yönetimi, bildirim planlama ve çok dilli arayüz.
 
 Tek bir dokümanda aşağıdaki çıktıları üret:
 

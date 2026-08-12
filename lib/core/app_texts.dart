@@ -1666,6 +1666,8 @@ class AppTexts {
     'subscriptionPurchasePending': 'Isleniyor...',
     'subscriptionPurchaseFailed': 'Satin alma tamamlanamadi, tekrar dene.',
     'subscriptionRestoreNotFound': 'Geri yuklenecek bir satin alma bulunamadi.',
+    'subscriptionStoreUnavailable':
+      'Magaza su anda ulasilamaz durumda. Lutfen daha sonra tekrar dene.',
     'savingsPageTitle': 'Tasarruf',
     'savingsMoneySaved': 'Biriken para',
     'savingsCigarettesNotSmoked': 'İçilmeyen sigara',
@@ -3437,6 +3439,8 @@ class AppTexts {
     'subscriptionPurchasePending': 'Processing...',
     'subscriptionPurchaseFailed': 'Purchase could not be completed, try again.',
     'subscriptionRestoreNotFound': 'No purchase was found to restore.',
+    'subscriptionStoreUnavailable':
+      'The store is currently unavailable. Please try again later.',
     'savingsPageTitle': 'Savings',
     'savingsMoneySaved': 'Money saved',
     'savingsCigarettesNotSmoked': 'Cigarettes not smoked',

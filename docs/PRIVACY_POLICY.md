@@ -1,4 +1,4 @@
-# No Smoke — Gizlilik Politikası
+# Nikotin Away — Gizlilik Politikası
 
 **Son güncelleme:** [TARİH GİRİN]
 
@@ -6,7 +6,7 @@
 
 ## 1. Bu Politika Neyi Kapsar
 
-Bu Gizlilik Politikası, **No Smoke** mobil uygulamasının ("Uygulama") kişisel verilerinizi nasıl işlediğini açıklar. Uygulama [GELİŞTİRİCİ/ŞİRKET ADI] ("biz") tarafından geliştirilmiştir. Sorularınız için: [İLETİŞİM E-POSTASI].
+Bu Gizlilik Politikası, **Nikotin Away** mobil uygulamasının ("Uygulama") kişisel verilerinizi nasıl işlediğini açıklar. Uygulama [GELİŞTİRİCİ/ŞİRKET ADI] ("biz") tarafından geliştirilmiştir. Sorularınız için: [İLETİŞİM E-POSTASI].
 
 ## 2. Temel İlke: Verileriniz Varsayılan Olarak Cihazınızda Kalır
 

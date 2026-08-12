@@ -1,4 +1,4 @@
-# No Smoke — Adaptive Behavior Coach: Architecture Roadmap
+# Nikotin Away — Adaptive Behavior Coach: Architecture Roadmap
 
 Status: **Phases 0-9 complete (original roadmap). Roadmap reopened 2026-07-22 under an expanded charter — see "Roadmap Reopened" section near the end of this file. Phases 10, 11, and 12 complete, and all follow-up open items closed out same day (see "Closing Out the Open Items") — Privacy Policy written, Phases 10-12 confirmed live on-device, and a real previously-undiscovered bug (LocationIntelligencePage infinite-hang) found and fixed while confirming Phase 6's geofence-rejection finding with hard evidence. iOS/App Store explicitly out of scope. No phase currently queued.**
 This file is the persistent master tracker requested by the user — update it at the end of every phase so the plan survives context compaction across sessions.
@@ -7,7 +7,7 @@ This file is the persistent master tracker requested by the user — update it a
 
 ## Executive Summary
 
-No Smoke already has more of the requested foundation than a from-scratch read of the request would suggest. It is **not** a simple survey-and-timer app: it already has 14 SQLite tables of behavioral telemetry, a rule-based dynamic-weight-learning risk engine, a smoking-time prediction engine, an unpredictable-moment scheduler (JITAI-style), and a mentor-message layer. The gap is not "build an adaptive coach from zero" — it's **(1) give the user visibility/control over what already runs silently, (2) fill three genuinely-missing subsystems (sleep, location, activity) using the cheapest defensible method for each, and (3) consolidate scattered settings into a real settings/permissions architecture.**
+Nikotin Away already has more of the requested foundation than a from-scratch read of the request would suggest. It is **not** a simple survey-and-timer app: it already has 14 SQLite tables of behavioral telemetry, a rule-based dynamic-weight-learning risk engine, a smoking-time prediction engine, an unpredictable-moment scheduler (JITAI-style), and a mentor-message layer. The gap is not "build an adaptive coach from zero" — it's **(1) give the user visibility/control over what already runs silently, (2) fill three genuinely-missing subsystems (sleep, location, activity) using the cheapest defensible method for each, and (3) consolidate scattered settings into a real settings/permissions architecture.**
 
 The research phase validated several of the user's instincts (JITAI/cue-based intervention, passive phone-sensor sleep estimation, mic-based respiratory assessment as an emerging technique) and pushed back on others (raw location tracking, per-user deep learning, three independent difficulty dials, wearable integration before step-counting exists). Recommendations below explain each call.
 

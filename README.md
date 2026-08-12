@@ -1,6 +1,6 @@
-# No Smoke
+# Nikotin Away
 
-No Smoke, sigara bırakma yolculuğunu desteklemek için geliştirilmiş bir Flutter mobil uygulamasıdır. Uygulama;
+Nikotin Away, sigara bırakma yolculuğunu desteklemek için geliştirilmiş bir Flutter mobil uygulamasıdır. Uygulama;
 
 - başlangıç anketi
 - nefes testi

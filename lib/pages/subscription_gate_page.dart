@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../core/app_texts.dart';
 import '../services/subscription_service.dart';
@@ -11,30 +14,106 @@ import '../widgets/no_smoke_logo.dart';
 /// purchase, or a fresh connectivity check resolving to [allowed] — see
 /// SplashPage/[NoSmokeApp.didChangeAppLifecycleState] for the two places
 /// that route here.
-///
-/// Purchase buttons are wired to real `in_app_purchase` calls in a later
-/// phase; this page's job for now is the gate UI and the "recheck access"
-/// plumbing so callers already have somewhere real to send a locked-out
-/// user.
 class SubscriptionGatePage extends StatefulWidget {
   final bool needsConnectionOnly;
 
-  const SubscriptionGatePage({super.key, this.needsConnectionOnly = false});
+  /// Overridable for tests, which have no real Play Store to talk to —
+  /// production call sites always use the default (a real
+  /// [SubscriptionService] backed by `in_app_purchase`).
+  final SubscriptionService? subscriptionService;
+
+  const SubscriptionGatePage({
+    super.key,
+    this.needsConnectionOnly = false,
+    this.subscriptionService,
+  });
 
   @override
   State<SubscriptionGatePage> createState() => _SubscriptionGatePageState();
 }
 
 class _SubscriptionGatePageState extends State<SubscriptionGatePage> {
+  late final SubscriptionService _subscriptionService =
+      widget.subscriptionService ?? SubscriptionService();
+  StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
+  List<ProductDetails> _products = [];
   bool _checking = false;
+  bool _loadingProducts = false;
+  bool _purchaseInFlight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _purchaseSubscription = _subscriptionService.purchaseStream.listen(
+      _onPurchaseUpdates,
+    );
+    if (!widget.needsConnectionOnly) {
+      unawaited(_loadProducts());
+    }
+  }
+
+  @override
+  void dispose() {
+    _purchaseSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadProducts() async {
+    setState(() => _loadingProducts = true);
+    final products = await _subscriptionService.loadProducts();
+    if (!mounted) return;
+    setState(() {
+      _products = products;
+      _loadingProducts = false;
+    });
+  }
+
+  Future<void> _onPurchaseUpdates(List<PurchaseDetails> purchases) async {
+    for (final purchase in purchases) {
+      final outcome = await _subscriptionService.handlePurchase(purchase);
+      if (!mounted) return;
+      if (outcome == PurchaseOutcome.pending) {
+        continue;
+      }
+      setState(() => _purchaseInFlight = false);
+      if (outcome == PurchaseOutcome.success) {
+        Navigator.of(context).pop();
+        return;
+      }
+      if (outcome == PurchaseOutcome.failed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.t('subscriptionPurchaseFailed'))),
+        );
+      }
+      // Cancelled: silently do nothing, same as any other store purchase
+      // dialog the user backed out of.
+    }
+  }
+
+  Future<void> _buy(ProductDetails product) async {
+    if (_purchaseInFlight) return;
+    setState(() => _purchaseInFlight = true);
+    final started = await _subscriptionService.buy(product);
+    if (!started && mounted) {
+      setState(() => _purchaseInFlight = false);
+    }
+  }
+
+  Future<void> _restore() async {
+    if (_purchaseInFlight) return;
+    setState(() => _purchaseInFlight = true);
+    final started = await _subscriptionService.restore();
+    if (!started && mounted) {
+      setState(() => _purchaseInFlight = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('subscriptionPurchaseFailed'))),
+      );
+    }
+  }
 
   Future<void> _retryConnection() async {
     setState(() => _checking = true);
-    // Re-resolving access here only re-reads the cached subscription_state
-    // row; the real server re-verification lands in the purchase-flow
-    // phase. This still lets a user who just regained connectivity move
-    // on immediately once that phase writes a fresh lastVerifiedAt.
-    final decision = await SubscriptionService().resolveAccess(
+    final decision = await _subscriptionService.resolveAccess(
       hasCompletedInitialSurvey: true,
     );
     if (!mounted) return;
@@ -42,6 +121,13 @@ class _SubscriptionGatePageState extends State<SubscriptionGatePage> {
     if (decision == AccessDecision.allowed) {
       Navigator.of(context).pop();
     }
+  }
+
+  ProductDetails? _productFor(String id) {
+    for (final product in _products) {
+      if (product.id == id) return product;
+    }
+    return null;
   }
 
   @override
@@ -87,18 +173,42 @@ class _SubscriptionGatePageState extends State<SubscriptionGatePage> {
                     ),
                     const SizedBox(height: 24),
                     if (!widget.needsConnectionOnly) ...[
-                      _SubscriptionOptionCard(
-                        title: context.t('subscriptionMonthlyTitle'),
-                        onTap: () {},
-                      ),
-                      const SizedBox(height: 12),
-                      _SubscriptionOptionCard(
-                        title: context.t('subscriptionYearlyTitle'),
-                        onTap: () {},
-                      ),
-                      const SizedBox(height: 20),
+                      if (_loadingProducts)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_products.isEmpty)
+                        Text(
+                          context.t('subscriptionStoreUnavailable'),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: colorScheme.error,
+                            fontSize: 14,
+                          ),
+                        )
+                      else ...[
+                        for (final id in [
+                          SubscriptionService.monthlyProductId,
+                          SubscriptionService.yearlyProductId,
+                        ])
+                          if (_productFor(id) case final product?) ...[
+                            _SubscriptionOptionCard(
+                              title: context.t(
+                                id == SubscriptionService.monthlyProductId
+                                    ? 'subscriptionMonthlyTitle'
+                                    : 'subscriptionYearlyTitle',
+                              ),
+                              price: product.price,
+                              enabled: !_purchaseInFlight,
+                              onTap: () => _buy(product),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                      ],
+                      const SizedBox(height: 8),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: _purchaseInFlight ? null : _restore,
                         child: Text(context.t('subscriptionRestoreButton')),
                       ),
                     ] else
@@ -124,9 +234,16 @@ class _SubscriptionGatePageState extends State<SubscriptionGatePage> {
 
 class _SubscriptionOptionCard extends StatelessWidget {
   final String title;
+  final String price;
+  final bool enabled;
   final VoidCallback onTap;
 
-  const _SubscriptionOptionCard({required this.title, required this.onTap});
+  const _SubscriptionOptionCard({
+    required this.title,
+    required this.price,
+    required this.enabled,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -138,8 +255,9 @@ class _SubscriptionOptionCard extends StatelessWidget {
           title,
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
+        subtitle: Text(price),
         trailing: FilledButton(
-          onPressed: onTap,
+          onPressed: enabled ? onTap : null,
           child: Text(context.t('subscriptionPurchaseButton')),
         ),
       ),

@@ -1,4 +1,4 @@
-# No Smoke Haftalik Anket ve Risk Skorlama Spesifikasyonu
+# Nikotin Away Haftalik Anket ve Risk Skorlama Spesifikasyonu
 
 Bu dokuman, haftalik anketin hangi sorulari toplamasini, bu cevaplarin nasil puanlanacagini ve dinamik risk skoruna nasil etki edecegini tanimlar.
 
