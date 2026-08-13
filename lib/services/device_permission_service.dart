@@ -1,7 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:permission_handler/permission_handler.dart' show openAppSettings;
+import 'package:permission_handler/permission_handler.dart'
+    show openAppSettings;
 
 /// Bridges to MIUI-specific permission screens that have no standard
 /// Android/permission_handler equivalent. Xiaomi/MIUI/HyperOS gate
@@ -106,8 +107,7 @@ class DevicePermissionService {
       return false;
     }
     try {
-      return await _channel.invokeMethod<bool>('hasOverlayPermission') ??
-          false;
+      return await _channel.invokeMethod<bool>('hasOverlayPermission') ?? false;
     } catch (_) {
       return false;
     }
@@ -148,8 +148,9 @@ class DevicePermissionService {
       return false;
     }
     try {
-      return await _channel
-              .invokeMethod<bool>('requestUsageAccessPermission') ??
+      return await _channel.invokeMethod<bool>(
+            'requestUsageAccessPermission',
+          ) ??
           false;
     } catch (_) {
       return false;

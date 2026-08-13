@@ -7,7 +7,10 @@ import 'package:no_smoke/models/noise_check_result.dart';
 List<BreathAcousticSample> _samples(List<double> energies) {
   return [
     for (var i = 0; i < energies.length; i++)
-      BreathAcousticSample(millisecondsSinceStart: i * 100, rmsEnergy: energies[i]),
+      BreathAcousticSample(
+        millisecondsSinceStart: i * 100,
+        rmsEnergy: energies[i],
+      ),
   ];
 }
 
@@ -27,10 +30,19 @@ void main() {
       final base = DateTime(2026, 1, 1);
       final baselines = [
         BreathNoiseBaseline(measuredAt: base, level: 0.01),
-        BreathNoiseBaseline(measuredAt: base.add(const Duration(days: 1)), level: 0.011),
-        BreathNoiseBaseline(measuredAt: base.add(const Duration(days: 2)), level: 0.009),
+        BreathNoiseBaseline(
+          measuredAt: base.add(const Duration(days: 1)),
+          level: 0.011,
+        ),
+        BreathNoiseBaseline(
+          measuredAt: base.add(const Duration(days: 2)),
+          level: 0.009,
+        ),
         // Outlier: door slam during one baseline capture.
-        BreathNoiseBaseline(measuredAt: base.add(const Duration(days: 3)), level: 0.5),
+        BreathNoiseBaseline(
+          measuredAt: base.add(const Duration(days: 3)),
+          level: 0.5,
+        ),
       ];
 
       final reference = engine.computeReferenceLevel(baselines);

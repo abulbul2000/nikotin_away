@@ -28,9 +28,9 @@ Future<bool> offerSmokedLogButton(
   }
   if (!context.mounted) return false;
 
-  final accepted = await Navigator.of(context).push<bool>(
-    MaterialPageRoute(builder: (_) => const SmokedLogConsentPage()),
-  );
+  final accepted = await Navigator.of(
+    context,
+  ).push<bool>(MaterialPageRoute(builder: (_) => const SmokedLogConsentPage()));
   if (accepted != true || !context.mounted) {
     return false;
   }
@@ -159,11 +159,7 @@ class _Section extends StatelessWidget {
   final String title;
   final String body;
 
-  const _Section({
-    required this.icon,
-    required this.title,
-    required this.body,
-  });
+  const _Section({required this.icon, required this.title, required this.body});
 
   @override
   Widget build(BuildContext context) {

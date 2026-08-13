@@ -37,22 +37,25 @@ void main() {
     expect(wakeHourWeight, greaterThan(middayWeight));
   });
 
-  test('suppresses work hours and boosts the hour work ends when smoking is not allowed at work', () {
-    final prediction = engine.predict(
-      profileContext: const {
-        'sleepTime': '23:00',
-        'wakeTime': '07:00',
-        'workStart': '09:00',
-        'workEnd': '17:00',
-        'workplaceSmokingRule': 'Hayır',
-      },
-      packsPerDay: '1 paket',
-    );
+  test(
+    'suppresses work hours and boosts the hour work ends when smoking is not allowed at work',
+    () {
+      final prediction = engine.predict(
+        profileContext: const {
+          'sleepTime': '23:00',
+          'wakeTime': '07:00',
+          'workStart': '09:00',
+          'workEnd': '17:00',
+          'workplaceSmokingRule': 'Hayır',
+        },
+        packsPerDay: '1 paket',
+      );
 
-    final duringWork = prediction.slotForHour(12).weight;
-    final afterWork = prediction.slotForHour(17).weight;
-    expect(afterWork, greaterThan(duringWork));
-  });
+      final duringWork = prediction.slotForHour(12).weight;
+      final afterWork = prediction.slotForHour(17).weight;
+      expect(afterWork, greaterThan(duringWork));
+    },
+  );
 
   test('boosts break windows when smoking is restricted to breaks', () {
     final prediction = engine.predict(
@@ -74,18 +77,24 @@ void main() {
     expect(breakHour, greaterThan(otherWorkHour));
   });
 
-  test('estimated cigarette counts across all 24 hours sum to the daily total', () {
-    final prediction = engine.predict(
-      profileContext: const {'sleepTime': '23:00', 'wakeTime': '07:00'},
-      packsPerDay: '2 paket',
-    );
+  test(
+    'estimated cigarette counts across all 24 hours sum to the daily total',
+    () {
+      final prediction = engine.predict(
+        profileContext: const {'sleepTime': '23:00', 'wakeTime': '07:00'},
+        packsPerDay: '2 paket',
+      );
 
-    final total = prediction.hourly.fold<int>(
-      0,
-      (sum, slot) => sum + slot.estimatedCigarettes,
-    );
-    expect(total, 40); // '2 paket' -> 40 cigarettes/day (packsToLegacyCigarettes)
-  });
+      final total = prediction.hourly.fold<int>(
+        0,
+        (sum, slot) => sum + slot.estimatedCigarettes,
+      );
+      expect(
+        total,
+        40,
+      ); // '2 paket' -> 40 cigarettes/day (packsToLegacyCigarettes)
+    },
+  );
 
   test('confidence increases when weekly survey data is available', () {
     final structuralOnly = engine.predict(
@@ -148,58 +157,67 @@ void main() {
     expect(prediction.averageMinutesBetweenCigarettes, isNull);
   });
 
-  test('averageMinutesBetweenCigarettes spreads smokable minutes evenly, no work restriction', () {
-    final prediction = engine.predict(
-      profileContext: const {
-        'sleepTime': '23:00',
-        'wakeTime': '07:00',
-        'cigarettesPerPack': 20,
-      },
-      packsPerDay: '1 paket', // 20 cigarettes/day
-    );
+  test(
+    'averageMinutesBetweenCigarettes spreads smokable minutes evenly, no work restriction',
+    () {
+      final prediction = engine.predict(
+        profileContext: const {
+          'sleepTime': '23:00',
+          'wakeTime': '07:00',
+          'cigarettesPerPack': 20,
+        },
+        packsPerDay: '1 paket', // 20 cigarettes/day
+      );
 
-    // Awake window: 24h - 8h sleep = 16h = 960 minutes; 960 / 20 = 48.
-    expect(prediction.averageMinutesBetweenCigarettes, 48);
-  });
+      // Awake window: 24h - 8h sleep = 16h = 960 minutes; 960 / 20 = 48.
+      expect(prediction.averageMinutesBetweenCigarettes, 48);
+    },
+  );
 
-  test('averageMinutesBetweenCigarettes shrinks the window when smoking is not allowed at work', () {
-    final prediction = engine.predict(
-      profileContext: const {
-        'sleepTime': '23:00',
-        'wakeTime': '07:00',
-        'workStart': '09:00',
-        'workEnd': '17:00',
-        'workplaceSmokingRule': 'Hayır',
-        'cigarettesPerPack': 20,
-      },
-      packsPerDay: '1 paket', // 20 cigarettes/day
-    );
+  test(
+    'averageMinutesBetweenCigarettes shrinks the window when smoking is not allowed at work',
+    () {
+      final prediction = engine.predict(
+        profileContext: const {
+          'sleepTime': '23:00',
+          'wakeTime': '07:00',
+          'workStart': '09:00',
+          'workEnd': '17:00',
+          'workplaceSmokingRule': 'Hayır',
+          'cigarettesPerPack': 20,
+        },
+        packsPerDay: '1 paket', // 20 cigarettes/day
+      );
 
-    // Awake 960 min - 8h work (480 min) = 480 min smokable; 480 / 20 = 24.
-    expect(prediction.averageMinutesBetweenCigarettes, 24);
-  });
+      // Awake 960 min - 8h work (480 min) = 480 min smokable; 480 / 20 = 24.
+      expect(prediction.averageMinutesBetweenCigarettes, 24);
+    },
+  );
 
-  test('averageMinutesBetweenCigarettes only credits break windows when break-restricted', () {
-    final prediction = engine.predict(
-      profileContext: const {
-        'sleepTime': '23:00',
-        'wakeTime': '07:00',
-        'workStart': '09:00',
-        'workEnd': '17:00',
-        'workplaceSmokingRule': 'Sadece molalarda',
-        'breakWindows': [
-          {'start': '11:00', 'end': '11:15'},
-          {'start': '15:00', 'end': '15:15'},
-        ],
-        'cigarettesPerPack': 20,
-      },
-      packsPerDay: '1 paket', // 20 cigarettes/day
-    );
+  test(
+    'averageMinutesBetweenCigarettes only credits break windows when break-restricted',
+    () {
+      final prediction = engine.predict(
+        profileContext: const {
+          'sleepTime': '23:00',
+          'wakeTime': '07:00',
+          'workStart': '09:00',
+          'workEnd': '17:00',
+          'workplaceSmokingRule': 'Sadece molalarda',
+          'breakWindows': [
+            {'start': '11:00', 'end': '11:15'},
+            {'start': '15:00', 'end': '15:15'},
+          ],
+          'cigarettesPerPack': 20,
+        },
+        packsPerDay: '1 paket', // 20 cigarettes/day
+      );
 
-    // Awake 960 min - (480 min work - 30 min breaks) = 510 min smokable.
-    // 510 / 20 = 25.5 -> rounds to 26.
-    expect(prediction.averageMinutesBetweenCigarettes, 26);
-  });
+      // Awake 960 min - (480 min work - 30 min breaks) = 510 min smokable.
+      // 510 / 20 = 25.5 -> rounds to 26.
+      expect(prediction.averageMinutesBetweenCigarettes, 26);
+    },
+  );
 
   group('calibration against logged events', () {
     SmokingTimePrediction structuralPrior() => engine.predict(
@@ -229,10 +247,7 @@ void main() {
       // Absence of data must never read as evidence of a quiet day.
       expect(calibrated.confidence, prior.confidence);
       expect(calibrated.basis, prior.basis);
-      expect(
-        calibrated.slotForHour(20).weight,
-        prior.slotForHour(20).weight,
-      );
+      expect(calibrated.slotForHour(20).weight, prior.slotForHour(20).weight);
     });
 
     test('a few entries nudge the prior without overturning it', () {

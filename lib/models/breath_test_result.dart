@@ -77,7 +77,9 @@ class BreathTestResult {
       'fev1FvcRatioPercent': fev1FvcRatioPercent,
       'peakFlowIndex': peakFlowIndex,
       'peakFlowAtMs': peakFlowAtMs,
-      'wheezeDetected': wheezeDetected == null ? null : (wheezeDetected! ? 1 : 0),
+      'wheezeDetected': wheezeDetected == null
+          ? null
+          : (wheezeDetected! ? 1 : 0),
       'wheezeSeverityLevel': wheezeSeverityLevel,
       'wheezeSeverityScore': wheezeSeverityScore,
       'wheezeBandEnergyRatio': wheezeBandEnergyRatio,
@@ -108,7 +110,8 @@ class BreathTestResult {
           : (json['wheezeDetected'] as num).toInt() == 1,
       wheezeSeverityLevel: json['wheezeSeverityLevel'] as String?,
       wheezeSeverityScore: (json['wheezeSeverityScore'] as num?)?.toInt(),
-      wheezeBandEnergyRatio: (json['wheezeBandEnergyRatio'] as num?)?.toDouble(),
+      wheezeBandEnergyRatio: (json['wheezeBandEnergyRatio'] as num?)
+          ?.toDouble(),
     );
   }
 }

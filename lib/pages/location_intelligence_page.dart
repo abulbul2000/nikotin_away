@@ -54,15 +54,18 @@ class _LocationIntelligencePageState extends State<LocationIntelligencePage> {
     // initState itself. Awaiting these DB/permission calls *first* pushes
     // everything after past the point where mounting has completed, which
     // is what makes touching `context.t` safe afterward.
-    final enabled = await _service
-        .isEnabled()
-        .timeout(_loadStepTimeout, onTimeout: () => false);
-    final hasBackground = await _service
-        .hasBackgroundPermission()
-        .timeout(_loadStepTimeout, onTimeout: () => false);
-    final places = await _service
-        .loadPlaces()
-        .timeout(_loadStepTimeout, onTimeout: () => const <SignificantPlace>[]);
+    final enabled = await _service.isEnabled().timeout(
+      _loadStepTimeout,
+      onTimeout: () => false,
+    );
+    final hasBackground = await _service.hasBackgroundPermission().timeout(
+      _loadStepTimeout,
+      onTimeout: () => false,
+    );
+    final places = await _service.loadPlaces().timeout(
+      _loadStepTimeout,
+      onTimeout: () => const <SignificantPlace>[],
+    );
 
     if (mounted) {
       await _service
@@ -171,9 +174,7 @@ class _LocationIntelligencePageState extends State<LocationIntelligencePage> {
                             decoration: BoxDecoration(
                               color: Colors.orange.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.orangeAccent,
-                              ),
+                              border: Border.all(color: Colors.orangeAccent),
                             ),
                             child: Text(
                               context.t(

@@ -115,16 +115,19 @@ void main() {
     expect(metrics['monthlyAverage'], 6.5);
   });
 
-  test('persists isProfileCompleted through registration completion flag', () async {
-    final storage = StorageService();
+  test(
+    'persists isProfileCompleted through registration completion flag',
+    () async {
+      final storage = StorageService();
 
-    expect(await storage.loadIsProfileCompleted(), isFalse);
+      expect(await storage.loadIsProfileCompleted(), isFalse);
 
-    await storage.saveInitialRegistrationCompleted(true);
+      await storage.saveInitialRegistrationCompleted(true);
 
-    expect(await storage.loadIsProfileCompleted(), isTrue);
-    expect(await storage.loadInitialRegistrationCompleted(), isTrue);
-  });
+      expect(await storage.loadIsProfileCompleted(), isTrue);
+      expect(await storage.loadInitialRegistrationCompleted(), isTrue);
+    },
+  );
 
   // --- Haftalık kadans iş kuralları ---
 
@@ -199,27 +202,39 @@ void main() {
     expect(await storage.hasWeeklySurveyBeenPromptedToday(), isFalse);
   });
 
-  test('markWeeklySurveyPromptedToday: işaretlendikten sonra true döner', () async {
-    final storage = StorageService();
-    await storage.markWeeklySurveyPromptedToday();
-    expect(await storage.hasWeeklySurveyBeenPromptedToday(), isTrue);
-  });
+  test(
+    'markWeeklySurveyPromptedToday: işaretlendikten sonra true döner',
+    () async {
+      final storage = StorageService();
+      await storage.markWeeklySurveyPromptedToday();
+      expect(await storage.hasWeeklySurveyBeenPromptedToday(), isTrue);
+    },
+  );
 
-  test('markWeeklySurveyPromptedToday: geçmiş tarihten sonra false döner', () async {
-    final storage = StorageService();
-    // Dün için kayıt
-    final yesterday = DateTime.now().subtract(const Duration(days: 1));
-    await storage.saveSetting(
-      'last_weekly_survey_prompt_at',
-      yesterday.toIso8601String(),
-    );
-    expect(await storage.hasWeeklySurveyBeenPromptedToday(), isFalse);
-  });
+  test(
+    'markWeeklySurveyPromptedToday: geçmiş tarihten sonra false döner',
+    () async {
+      final storage = StorageService();
+      // Dün için kayıt
+      final yesterday = DateTime.now().subtract(const Duration(days: 1));
+      await storage.saveSetting(
+        'last_weekly_survey_prompt_at',
+        yesterday.toIso8601String(),
+      );
+      expect(await storage.hasWeeklySurveyBeenPromptedToday(), isFalse);
+    },
+  );
 
-  test('loadLatestConsentDecision: hiç karar verilmemişse null döner', () async {
-    final storage = StorageService();
-    expect(await storage.loadLatestConsentDecision('sleep_intelligence'), isNull);
-  });
+  test(
+    'loadLatestConsentDecision: hiç karar verilmemişse null döner',
+    () async {
+      final storage = StorageService();
+      expect(
+        await storage.loadLatestConsentDecision('sleep_intelligence'),
+        isNull,
+      );
+    },
+  );
 
   test('recordConsentDecision: kaydedilen kararı doğru döner', () async {
     final storage = StorageService();
@@ -228,63 +243,75 @@ void main() {
       granted: true,
       consentTextVersion: 'v1',
     );
-    final decision = await storage.loadLatestConsentDecision('sleep_intelligence');
+    final decision = await storage.loadLatestConsentDecision(
+      'sleep_intelligence',
+    );
     expect(decision, isNotNull);
     expect(decision!['granted'], isTrue);
     expect(decision['consentTextVersion'], 'v1');
     expect(decision['createdAt'], isA<DateTime>());
   });
 
-  test('recordConsentDecision: en son karar (geri çekme dahil) döner', () async {
-    final storage = StorageService();
-    await storage.recordConsentDecision(
-      featureKey: 'location_intelligence',
-      granted: true,
-      consentTextVersion: 'v1',
-    );
-    await storage.recordConsentDecision(
-      featureKey: 'location_intelligence',
-      granted: false,
-      consentTextVersion: 'v1',
-    );
-    final decision = await storage.loadLatestConsentDecision('location_intelligence');
-    expect(decision!['granted'], isFalse);
-  });
+  test(
+    'recordConsentDecision: en son karar (geri çekme dahil) döner',
+    () async {
+      final storage = StorageService();
+      await storage.recordConsentDecision(
+        featureKey: 'location_intelligence',
+        granted: true,
+        consentTextVersion: 'v1',
+      );
+      await storage.recordConsentDecision(
+        featureKey: 'location_intelligence',
+        granted: false,
+        consentTextVersion: 'v1',
+      );
+      final decision = await storage.loadLatestConsentDecision(
+        'location_intelligence',
+      );
+      expect(decision!['granted'], isFalse);
+    },
+  );
 
-  test('recordConsentDecision: farklı özellikler birbirini etkilemez', () async {
-    final storage = StorageService();
-    await storage.recordConsentDecision(
-      featureKey: 'wearable_intelligence',
-      granted: true,
-      consentTextVersion: 'v1',
-    );
-    expect(await storage.loadLatestConsentDecision('sleep_intelligence'), isNull);
-  });
+  test(
+    'recordConsentDecision: farklı özellikler birbirini etkilemez',
+    () async {
+      final storage = StorageService();
+      await storage.recordConsentDecision(
+        featureKey: 'wearable_intelligence',
+        granted: true,
+        consentTextVersion: 'v1',
+      );
+      expect(
+        await storage.loadLatestConsentDecision('sleep_intelligence'),
+        isNull,
+      );
+    },
+  );
 
   test('isRecentlySedentary: yeterli örnek yoksa false döner', () async {
     final storage = StorageService();
     expect(await storage.isRecentlySedentary(), isFalse);
   });
 
-  test('isRecentlySedentary: uzun aralıkta çok az adım varsa true döner', () async {
-    final storage = StorageService();
-    final now = DateTime.now();
-    await storage.saveStepCounterSample(
-      StepCounterSample(
-        id: 'a',
-        createdAt: now.subtract(const Duration(hours: 2)),
-        cumulativeSteps: 1000,
-      ),
-    );
-    await storage.saveStepCounterSample(
-      StepCounterSample(
-        id: 'b',
-        createdAt: now,
-        cumulativeSteps: 1050,
-      ),
-    );
-    expect(await storage.isRecentlySedentary(), isTrue);
-  });
+  test(
+    'isRecentlySedentary: uzun aralıkta çok az adım varsa true döner',
+    () async {
+      final storage = StorageService();
+      final now = DateTime.now();
+      await storage.saveStepCounterSample(
+        StepCounterSample(
+          id: 'a',
+          createdAt: now.subtract(const Duration(hours: 2)),
+          cumulativeSteps: 1000,
+        ),
+      );
+      await storage.saveStepCounterSample(
+        StepCounterSample(id: 'b', createdAt: now, cumulativeSteps: 1050),
+      );
+      expect(await storage.isRecentlySedentary(), isTrue);
+    },
+  );
 
   test('isRecentlySedentary: gerçek adım artışında false döner', () async {
     final storage = StorageService();
@@ -297,26 +324,24 @@ void main() {
       ),
     );
     await storage.saveStepCounterSample(
-      StepCounterSample(
-        id: 'b',
-        createdAt: now,
-        cumulativeSteps: 3500,
-      ),
+      StepCounterSample(id: 'b', createdAt: now, cumulativeSteps: 3500),
     );
     expect(await storage.isRecentlySedentary(), isFalse);
   });
 
   group('buildDailyProgressReport', () {
-    test('reports no evidence on a fresh install with nothing logged',
-        () async {
-      final storage = StorageService();
+    test(
+      'reports no evidence on a fresh install with nothing logged',
+      () async {
+        final storage = StorageService();
 
-      final report = await storage.buildDailyProgressReport();
+        final report = await storage.buildDailyProgressReport();
 
-      expect(report.reductionProgress.hasEvidence, isFalse);
-      expect(report.todaySmokedCount, 0);
-      expect(report.latestCoughTest, isNull);
-    });
+        expect(report.reductionProgress.hasEvidence, isFalse);
+        expect(report.todaySmokedCount, 0);
+        expect(report.latestCoughTest, isNull);
+      },
+    );
 
     test('reflects today\'s logged cigarette count', () async {
       final storage = StorageService();
@@ -452,19 +477,21 @@ void main() {
       expect(state.status, SubscriptionStatus.trial);
     });
 
-    test('startTrialIfNeeded is a no-op once trialStartedAt is already set',
-        () async {
-      final storage = StorageService();
+    test(
+      'startTrialIfNeeded is a no-op once trialStartedAt is already set',
+      () async {
+        final storage = StorageService();
 
-      await storage.startTrialIfNeeded();
-      final first = await storage.loadTrialStartedAt();
+        await storage.startTrialIfNeeded();
+        final first = await storage.loadTrialStartedAt();
 
-      await Future.delayed(const Duration(milliseconds: 5));
-      await storage.startTrialIfNeeded();
-      final second = await storage.loadTrialStartedAt();
+        await Future.delayed(const Duration(milliseconds: 5));
+        await storage.startTrialIfNeeded();
+        final second = await storage.loadTrialStartedAt();
 
-      expect(second, first);
-    });
+        expect(second, first);
+      },
+    );
 
     test('saveSubscriptionState upserts the single current row', () async {
       final storage = StorageService();
@@ -496,11 +523,13 @@ void main() {
       expect(rows, hasLength(1));
     });
 
-    test('loadSubscriptionState returns null when nothing was ever saved',
-        () async {
-      final storage = StorageService();
-      final state = await storage.loadSubscriptionState();
-      expect(state, isNull);
-    });
+    test(
+      'loadSubscriptionState returns null when nothing was ever saved',
+      () async {
+        final storage = StorageService();
+        final state = await storage.loadSubscriptionState();
+        expect(state, isNull);
+      },
+    );
   });
 }

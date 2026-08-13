@@ -17,7 +17,9 @@ import '../engines/wearable_signal_engine.dart';
 /// this is an optional, best-effort signal, never a dependency the rest of
 /// the app can break on.
 class HealthConnectService {
-  static const MethodChannel _channel = MethodChannel('no_smoke/health_connect');
+  static const MethodChannel _channel = MethodChannel(
+    'no_smoke/health_connect',
+  );
 
   final WearableSignalEngine _signalEngine;
 
@@ -51,8 +53,7 @@ class HealthConnectService {
 
   Future<bool> requestPermissions() async {
     try {
-      return (await _channel.invokeMethod<bool>('requestPermissions')) ??
-          false;
+      return (await _channel.invokeMethod<bool>('requestPermissions')) ?? false;
     } catch (_) {
       return false;
     }
@@ -73,15 +74,13 @@ class HealthConnectService {
     DateTime? sleepEnd;
 
     try {
-      final raw = await _channel.invokeMethod<List<Object?>>(
-        'getHeartRateRecords',
-        {
-          'startTimeMillis': now
-              .subtract(heartRateWindow)
-              .millisecondsSinceEpoch,
-          'endTimeMillis': now.millisecondsSinceEpoch,
-        },
-      );
+      final raw = await _channel
+          .invokeMethod<List<Object?>>('getHeartRateRecords', {
+            'startTimeMillis': now
+                .subtract(heartRateWindow)
+                .millisecondsSinceEpoch,
+            'endTimeMillis': now.millisecondsSinceEpoch,
+          });
       final samples = _extractHeartRateSamples(raw);
       if (samples.isNotEmpty) {
         samples.sort((a, b) => b.$1.compareTo(a.$1));
@@ -96,13 +95,11 @@ class HealthConnectService {
     }
 
     try {
-      final raw = await _channel.invokeMethod<List<Object?>>(
-        'getSleepSessions',
-        {
-          'startTimeMillis': now.subtract(sleepWindow).millisecondsSinceEpoch,
-          'endTimeMillis': now.millisecondsSinceEpoch,
-        },
-      );
+      final raw = await _channel
+          .invokeMethod<List<Object?>>('getSleepSessions', {
+            'startTimeMillis': now.subtract(sleepWindow).millisecondsSinceEpoch,
+            'endTimeMillis': now.millisecondsSinceEpoch,
+          });
       final session = _extractLatestSleepSession(raw);
       if (session != null) {
         sleepEnd = session.$2;

@@ -175,7 +175,9 @@ class SmokedLogButtonService {
 
     List<dynamic>? raw;
     try {
-      raw = await _channel.invokeMethod<List<dynamic>>('consumeSmokedLogEvents');
+      raw = await _channel.invokeMethod<List<dynamic>>(
+        'consumeSmokedLogEvents',
+      );
     } catch (_) {
       return const [];
     }
@@ -248,7 +250,8 @@ class SmokedLogButtonService {
         bestId = place.id;
       }
     }
-    if (bestId == null || bestDistance > _placeMatchDegrees * _placeMatchDegrees) {
+    if (bestId == null ||
+        bestDistance > _placeMatchDegrees * _placeMatchDegrees) {
       return null;
     }
     return bestId;

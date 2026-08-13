@@ -222,21 +222,6 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
                       ),
                     );
                   }),
-                  const SizedBox(height: 16),
-                  // Export button (placeholder)
-                  Center(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(context.t('exportComingSoon')),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.download),
-                      label: Text(context.t('exportPDF')),
-                    ),
-                  ),
                 ],
               ),
             ),

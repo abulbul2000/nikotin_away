@@ -49,27 +49,32 @@ void main() {
     expect(latest?.id, message.id);
   });
 
-  test('generateDailyMentorMessage includes a historical note once enough smoking-event history exists', () async {
-    final storage = StorageService();
-    final now = DateTime(2026, 7, 21); // a Tuesday
-    final startOfThisWeek = now.subtract(Duration(days: now.weekday - 1));
-    final lastWeekEveningDay = startOfThisWeek.subtract(const Duration(days: 3));
+  test(
+    'generateDailyMentorMessage includes a historical note once enough smoking-event history exists',
+    () async {
+      final storage = StorageService();
+      final now = DateTime(2026, 7, 21); // a Tuesday
+      final startOfThisWeek = now.subtract(Duration(days: now.weekday - 1));
+      final lastWeekEveningDay = startOfThisWeek.subtract(
+        const Duration(days: 3),
+      );
 
-    // Log several evening cigarettes last week to establish a pattern.
-    await storage.logRecalledSmokingHours(
-      day: lastWeekEveningDay,
-      hours: [19, 20, 21],
-    );
-    await storage.logRecalledSmokingHours(
-      day: lastWeekEveningDay.add(const Duration(days: 1)),
-      hours: [20],
-    );
+      // Log several evening cigarettes last week to establish a pattern.
+      await storage.logRecalledSmokingHours(
+        day: lastWeekEveningDay,
+        hours: [19, 20, 21],
+      );
+      await storage.logRecalledSmokingHours(
+        day: lastWeekEveningDay.add(const Duration(days: 1)),
+        hours: [20],
+      );
 
-    final message = await storage.generateDailyMentorMessage(now: now);
+      final message = await storage.generateDailyMentorMessage(now: now);
 
-    expect(
-      message.text,
-      contains('${MentorMessageCodes.histImprovedPrefix}:evening'),
-    );
-  });
+      expect(
+        message.text,
+        contains('${MentorMessageCodes.histImprovedPrefix}:evening'),
+      );
+    },
+  );
 }

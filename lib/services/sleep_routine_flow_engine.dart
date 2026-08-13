@@ -16,9 +16,9 @@ class SleepRoutineFlowEngine {
   const SleepRoutineFlowEngine();
 
   List<SleepRoutineStep> buildSteps({required bool hasDiscrepancy}) => [
-        SleepRoutineStep.breathTest,
-        SleepRoutineStep.coughTest,
-        if (hasDiscrepancy) SleepRoutineStep.smokingDiscrepancyQuestion,
-        SleepRoutineStep.dailyReport,
-      ];
+    SleepRoutineStep.breathTest,
+    SleepRoutineStep.coughTest,
+    if (hasDiscrepancy) SleepRoutineStep.smokingDiscrepancyQuestion,
+    SleepRoutineStep.dailyReport,
+  ];
 }

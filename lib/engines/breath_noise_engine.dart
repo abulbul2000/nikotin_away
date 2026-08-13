@@ -34,11 +34,9 @@ class BreathNoiseEngine {
     }
     final sortedByRecency = [...allBaselines]
       ..sort((a, b) => b.measuredAt.compareTo(a.measuredAt));
-    final levels = sortedByRecency
-        .take(referenceSampleCount)
-        .map((b) => b.level)
-        .toList()
-      ..sort();
+    final levels =
+        sortedByRecency.take(referenceSampleCount).map((b) => b.level).toList()
+          ..sort();
     return _median(levels);
   }
 

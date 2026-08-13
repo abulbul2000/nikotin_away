@@ -507,9 +507,7 @@ class NotificationService {
   /// A plain notification, not the alarm-style task prompts — this confirms
   /// something that already happened rather than asking for anything, so it
   /// shouldn't compete for attention the way a mandatory task does.
-  static Future<void> showSmokedLogUndoPrompt({
-    required String eventId,
-  }) async {
+  static Future<void> showSmokedLogUndoPrompt({required String eventId}) async {
     final code = await LanguageService.loadSelectedLanguageCode();
     final id = eventId.hashCode & 0x7fffffff;
     await _plugin.show(
@@ -534,10 +532,7 @@ class NotificationService {
         ),
         iOS: const DarwinNotificationDetails(),
       ),
-      payload: jsonEncode({
-        'type': _typeSmokedLogUndo,
-        'eventId': eventId,
-      }),
+      payload: jsonEncode({'type': _typeSmokedLogUndo, 'eventId': eventId}),
     );
   }
 
@@ -1432,13 +1427,12 @@ class NotificationService {
     _ensureIsolateReady();
 
     if (_taskAssignmentActionIds.contains(actionId)) {
-      final followUp = await TaskAssignmentService(
-        StorageService(),
-      ).handleTaskAction(
-        canonicalTitle: canonicalTitle,
-        taskTitle: taskTitle,
-        actionId: actionId,
-      );
+      final followUp = await TaskAssignmentService(StorageService())
+          .handleTaskAction(
+            canonicalTitle: canonicalTitle,
+            taskTitle: taskTitle,
+            actionId: actionId,
+          );
       if (followUp == TaskActionFollowUp.openSosPage) {
         _openSosPage(canonicalTitle);
       } else if (followUp == TaskActionFollowUp.openSleepRoutinePage) {
@@ -1753,6 +1747,7 @@ class NotificationService {
   static Future<void> scheduleFirstTaskTriggerNotification({
     required String taskDescription,
     Duration delay = const Duration(minutes: 10),
+
     /// The `task_assignments` row this notification is for, when one
     /// exists. Threading it through as the watchdogId (rather than the
     /// freshly-generated `wdg_<id>` below) is what lets a native delivery

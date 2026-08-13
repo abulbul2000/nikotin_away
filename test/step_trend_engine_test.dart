@@ -15,7 +15,9 @@ void main() {
     final engine = StepTrendEngine();
 
     test('returns no daily counts with fewer than 2 samples', () {
-      final result = engine.computeDailySteps([_sample(DateTime(2026, 1, 1), 100)]);
+      final result = engine.computeDailySteps([
+        _sample(DateTime(2026, 1, 1), 100),
+      ]);
       expect(result, isEmpty);
     });
 
@@ -147,13 +149,16 @@ void main() {
         );
       });
 
-      test('false when the gap between samples is too short to mean anything', () {
-        final samples = [
-          _sample(DateTime(2026, 1, 1, 10, 0), 1000),
-          _sample(DateTime(2026, 1, 1, 10, 20), 1000),
-        ];
-        expect(engine.isSedentaryWindow(samples), isFalse);
-      });
+      test(
+        'false when the gap between samples is too short to mean anything',
+        () {
+          final samples = [
+            _sample(DateTime(2026, 1, 1, 10, 0), 1000),
+            _sample(DateTime(2026, 1, 1, 10, 20), 1000),
+          ];
+          expect(engine.isSedentaryWindow(samples), isFalse);
+        },
+      );
 
       test('true when a long gap has almost no step increase', () {
         final samples = [

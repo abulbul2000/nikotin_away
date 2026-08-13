@@ -23,10 +23,7 @@ class UiCatalogAlertDialogPreview extends StatelessWidget {
           content: Text(context.t(contentKey)),
           actions: [
             for (final key in actionKeys)
-              TextButton(
-                onPressed: () {},
-                child: Text(context.t(key)),
-              ),
+              TextButton(onPressed: () {}, child: Text(context.t(key))),
           ],
         ),
       ),

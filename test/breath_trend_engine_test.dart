@@ -100,10 +100,8 @@ void main() {
       final base = DateTime(2026, 1, 1);
       final records = List.generate(
         BreathTrendEngine.minimumTestCountForTrend - 1,
-        (i) => _record(
-          completedAt: base.add(Duration(days: i)),
-          breathScore: 50,
-        ),
+        (i) =>
+            _record(completedAt: base.add(Duration(days: i)), breathScore: 50),
       );
 
       final summary = engine.summarize(records, languageCode: 'tr');
@@ -120,7 +118,10 @@ void main() {
       final base = DateTime(2026, 1, 1);
       final records = [
         _record(completedAt: base, breathScore: 40),
-        _record(completedAt: base.add(const Duration(days: 1)), breathScore: 40),
+        _record(
+          completedAt: base.add(const Duration(days: 1)),
+          breathScore: 40,
+        ),
         _record(
           completedAt: base.add(const Duration(days: 20)),
           breathScore: 60,
@@ -137,10 +138,7 @@ void main() {
 
       final summary = engine.summarize(records, languageCode: 'tr');
       expect(summary.hasEnoughDataForTrend, isTrue);
-      expect(
-        summary.direction,
-        BreathProgressDirection.significantImprovement,
-      );
+      expect(summary.direction, BreathProgressDirection.significantImprovement);
       expect(summary.scoreChangeFirstWeekVsLastWeekPercent, greaterThan(10));
     });
 
@@ -148,7 +146,10 @@ void main() {
       final base = DateTime(2026, 1, 1);
       final records = [
         _record(completedAt: base, breathScore: 50),
-        _record(completedAt: base.add(const Duration(days: 1)), breathScore: 50),
+        _record(
+          completedAt: base.add(const Duration(days: 1)),
+          breathScore: 50,
+        ),
         _record(
           completedAt: base.add(const Duration(days: 20)),
           breathScore: 51,
@@ -171,7 +172,10 @@ void main() {
       final base = DateTime(2026, 1, 1);
       final records = [
         _record(completedAt: base, breathScore: 60),
-        _record(completedAt: base.add(const Duration(days: 1)), breathScore: 60),
+        _record(
+          completedAt: base.add(const Duration(days: 1)),
+          breathScore: 60,
+        ),
         _record(
           completedAt: base.add(const Duration(days: 20)),
           breathScore: 40,
@@ -241,10 +245,8 @@ void main() {
       final base = DateTime(2026, 1, 1);
       final records = List.generate(
         10,
-        (i) => _record(
-          completedAt: base.add(Duration(days: i)),
-          breathScore: 50,
-        ),
+        (i) =>
+            _record(completedAt: base.add(Duration(days: i)), breathScore: 50),
       );
 
       final summary = engine.summarize(records, languageCode: 'tr');

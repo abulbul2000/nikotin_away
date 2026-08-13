@@ -29,7 +29,9 @@ const int _macLength = 16;
 /// so it's plain testable.
 Future<String> storagePathFor(String passphrase) async {
   final digest = await Sha256().hash(utf8.encode(passphrase));
-  final hex = digest.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
+  final hex = digest.bytes
+      .map((b) => b.toRadixString(16).padLeft(2, '0'))
+      .join();
   return 'backups/$hex.enc';
 }
 
@@ -221,14 +223,22 @@ class CloudBackupService {
     // no need to close the live connection just to back up.
     final rawDbBytes = await dbFile.readAsBytes();
     final prefsJson = await readBackedUpPrefs();
-    final envelope = encodeBackupEnvelope(dbBytes: rawDbBytes, prefs: prefsJson);
-    final payload = await encryptBackupPayload(envelope, passphrase: passphrase);
+    final envelope = encodeBackupEnvelope(
+      dbBytes: rawDbBytes,
+      prefs: prefsJson,
+    );
+    final payload = await encryptBackupPayload(
+      envelope,
+      passphrase: passphrase,
+    );
 
     final path = await storagePathFor(passphrase);
-    await FirebaseStorage.instance.ref(path).putData(
-      payload,
-      SettableMetadata(contentType: 'application/octet-stream'),
-    );
+    await FirebaseStorage.instance
+        .ref(path)
+        .putData(
+          payload,
+          SettableMetadata(contentType: 'application/octet-stream'),
+        );
   }
 
   /// Downloads and decrypts the backup for [passphrase], then restores the
@@ -241,9 +251,9 @@ class CloudBackupService {
     final path = await storagePathFor(passphrase);
     final Uint8List? payload;
     try {
-      payload = await FirebaseStorage.instance.ref(path).getData(
-        50 * 1024 * 1024,
-      );
+      payload = await FirebaseStorage.instance
+          .ref(path)
+          .getData(50 * 1024 * 1024);
     } on FirebaseException catch (error) {
       if (error.code == 'object-not-found') {
         return false;
@@ -254,7 +264,10 @@ class CloudBackupService {
       return false;
     }
 
-    final decrypted = await decryptBackupPayload(payload, passphrase: passphrase);
+    final decrypted = await decryptBackupPayload(
+      payload,
+      passphrase: passphrase,
+    );
     final decoded = decodeBackupEnvelope(decrypted);
 
     await _storageService.closeDatabaseConnection();

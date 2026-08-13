@@ -133,7 +133,8 @@ class TaskAssignmentService {
   /// the `task_assignments` row id through as that watchdogId precisely so
   /// this lookup works even when two tasks share a title.
   Future<void> syncPendingDeliveryExpirationsFromNative() async {
-    final rows = await AndroidWatchdogService.consumePendingDeliveryExpirations();
+    final rows =
+        await AndroidWatchdogService.consumePendingDeliveryExpirations();
     await applyPendingDeliveryExpirations(rows);
   }
 

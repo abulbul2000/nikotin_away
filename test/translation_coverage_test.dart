@@ -90,8 +90,9 @@ void main() {
 
     for (final code in supported) {
       if (code == 'en') continue;
-      for (final entry in generatedLanguageData[code]?.entries ??
-          const <MapEntry<String, String>>[]) {
+      for (final entry
+          in generatedLanguageData[code]?.entries ??
+              const <MapEntry<String, String>>[]) {
         final english = AppTexts.textForCode('en', entry.key);
         if (english == entry.key) continue; // not an English-defined key
 

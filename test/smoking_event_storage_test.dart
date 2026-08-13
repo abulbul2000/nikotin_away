@@ -38,35 +38,41 @@ void main() {
     expect(events.first.approximate, isFalse);
   });
 
-  test('logRecalledSmokingHours saves one approximate event per hour', () async {
-    final storage = StorageService();
-    final day = DateTime(2026, 7, 21);
+  test(
+    'logRecalledSmokingHours saves one approximate event per hour',
+    () async {
+      final storage = StorageService();
+      final day = DateTime(2026, 7, 21);
 
-    await storage.logRecalledSmokingHours(day: day, hours: [9, 14, 21]);
+      await storage.logRecalledSmokingHours(day: day, hours: [9, 14, 21]);
 
-    final events = await storage.loadSmokingEventsForDay(day);
-    expect(events, hasLength(3));
-    expect(events.every((e) => e.source == 'daily_recall'), isTrue);
-    expect(events.every((e) => e.approximate), isTrue);
-    expect(events.map((e) => e.timestamp.hour).toList(), [9, 14, 21]);
-  });
+      final events = await storage.loadSmokingEventsForDay(day);
+      expect(events, hasLength(3));
+      expect(events.every((e) => e.source == 'daily_recall'), isTrue);
+      expect(events.every((e) => e.approximate), isTrue);
+      expect(events.map((e) => e.timestamp.hour).toList(), [9, 14, 21]);
+    },
+  );
 
-  test('loadSmokingEventsForDay only returns events from that calendar day', () async {
-    final storage = StorageService();
-    await storage.logRecalledSmokingHours(
-      day: DateTime(2026, 7, 20),
-      hours: [10],
-    );
-    await storage.logRecalledSmokingHours(
-      day: DateTime(2026, 7, 21),
-      hours: [11, 12],
-    );
+  test(
+    'loadSmokingEventsForDay only returns events from that calendar day',
+    () async {
+      final storage = StorageService();
+      await storage.logRecalledSmokingHours(
+        day: DateTime(2026, 7, 20),
+        hours: [10],
+      );
+      await storage.logRecalledSmokingHours(
+        day: DateTime(2026, 7, 21),
+        hours: [11, 12],
+      );
 
-    final day21Events = await storage.loadSmokingEventsForDay(
-      DateTime(2026, 7, 21),
-    );
-    expect(day21Events, hasLength(2));
-  });
+      final day21Events = await storage.loadSmokingEventsForDay(
+        DateTime(2026, 7, 21),
+      );
+      expect(day21Events, hasLength(2));
+    },
+  );
 
   test('loadSmokingEvents(since:) filters out older events', () async {
     final storage = StorageService();
@@ -153,32 +159,33 @@ void main() {
       expect(await storage.countSmokingEventsSince(DateTime(2027, 1, 1)), 2);
     });
 
-    test('logSmokingNow returns an id that undoes exactly that record',
-        () async {
-      // The lock-screen quick-log route is a single notification tap with
-      // no hold-to-confirm — an accidental press has no guard until
-      // NotificationService.showSmokedLogUndoPrompt offers this id back.
-      final storage = StorageService();
-      final keptId = await storage.logSmokingNow(
-        timestamp: DateTime(2026, 8, 1, 9, 0),
-      );
-      final undoneId = await storage.logSmokingNow(
-        timestamp: DateTime(2026, 8, 1, 10, 0),
-      );
+    test(
+      'logSmokingNow returns an id that undoes exactly that record',
+      () async {
+        // The lock-screen quick-log route is a single notification tap with
+        // no hold-to-confirm — an accidental press has no guard until
+        // NotificationService.showSmokedLogUndoPrompt offers this id back.
+        final storage = StorageService();
+        final keptId = await storage.logSmokingNow(
+          timestamp: DateTime(2026, 8, 1, 9, 0),
+        );
+        final undoneId = await storage.logSmokingNow(
+          timestamp: DateTime(2026, 8, 1, 10, 0),
+        );
 
-      await storage.deleteSmokingEvent(undoneId);
+        await storage.deleteSmokingEvent(undoneId);
 
-      final events = await storage.loadSmokingEvents(
-        since: DateTime(2026, 8, 1),
-      );
-      expect(events, hasLength(1));
-      expect(events.single.timestamp, DateTime(2026, 8, 1, 9, 0));
-      // keptId's row is the one still there, not incidentally the only one.
-      expect(keptId, isNot(undoneId));
-    });
+        final events = await storage.loadSmokingEvents(
+          since: DateTime(2026, 8, 1),
+        );
+        expect(events, hasLength(1));
+        expect(events.single.timestamp, DateTime(2026, 8, 1, 9, 0));
+        // keptId's row is the one still there, not incidentally the only one.
+        expect(keptId, isNot(undoneId));
+      },
+    );
 
-    test('deleting an id that was already removed is a safe no-op',
-        () async {
+    test('deleting an id that was already removed is a safe no-op', () async {
       final storage = StorageService();
       final id = await storage.logSmokingNow(
         timestamp: DateTime(2026, 8, 2, 9, 0),
@@ -213,9 +220,7 @@ void main() {
           timestamp: DateTime(now.year, now.month, now.day, 13),
         );
 
-        final before = await storage.evaluateTodaySmokingDiscrepancy(
-          now: now,
-        );
+        final before = await storage.evaluateTodaySmokingDiscrepancy(now: now);
         expect(before.loggedCount, 2);
         expect(before.hasDiscrepancy, isTrue);
 

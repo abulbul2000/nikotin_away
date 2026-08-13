@@ -376,7 +376,6 @@ class _HomePageState extends State<HomePage> {
       await _loadHomeMetrics();
       return;
     }
-
   }
 
   /// The in-memory `_taskStates` label a UI badge reads, for an action id
@@ -794,7 +793,9 @@ class _HomePageState extends State<HomePage> {
       final languageCode = Localizations.localeOf(context).languageCode;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(AppTexts.localizeMentorMessage(languageCode, snackCode)),
+          content: Text(
+            AppTexts.localizeMentorMessage(languageCode, snackCode),
+          ),
         ),
       );
     }

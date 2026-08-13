@@ -21,9 +21,8 @@ void main() {
 
   /// Lines of real code — comments explain what used to be here and would
   /// otherwise trip the check.
-  Iterable<String> codeLines(File file) => file
-      .readAsLinesSync()
-      .where((line) => !line.trimLeft().startsWith('//'));
+  Iterable<String> codeLines(File file) =>
+      file.readAsLinesSync().where((line) => !line.trimLeft().startsWith('//'));
 
   test('no physical Alignment where reading direction matters', () {
     final offenders = <String>[];
@@ -50,7 +49,8 @@ void main() {
     final offenders = <String>[];
     for (final file in dartFiles) {
       for (final line in codeLines(file)) {
-        if (line.contains('TextAlign.left') || line.contains('TextAlign.right')) {
+        if (line.contains('TextAlign.left') ||
+            line.contains('TextAlign.right')) {
           offenders.add(file.path);
           break;
         }
@@ -80,8 +80,7 @@ void main() {
     expect(
       offenders,
       isEmpty,
-      reason:
-          'Use EdgeInsetsDirectional.only(start:/end:) instead: $offenders',
+      reason: 'Use EdgeInsetsDirectional.only(start:/end:) instead: $offenders',
     );
   });
 }

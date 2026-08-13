@@ -173,10 +173,7 @@ void main() {
   test('an expired task is never reported to the learning engine', () {
     // Expiry is the system admitting it was too late to ask, so scoring it
     // would penalise the user for the app's own delay.
-    expect(
-      TaskLifecycleState.outcomeFor(TaskLifecycleState.expired),
-      isNull,
-    );
+    expect(TaskLifecycleState.outcomeFor(TaskLifecycleState.expired), isNull);
   });
 
   test('open tasks exclude everything already finished', () async {
@@ -375,12 +372,14 @@ void main() {
 
       final rows = await storage.loadTaskAssignmentsForDay(planDate);
       expect(rows, hasLength(2));
-      expect(rows.every((row) => row.state == TaskLifecycleState.planned),
-          isTrue);
       expect(
-        rows.map((row) => row.canonicalTitle).toSet(),
-        {'ADAPTIVE_NO_SMOKE:30', 'ADAPTIVE_NO_SMOKE:45'},
+        rows.every((row) => row.state == TaskLifecycleState.planned),
+        isTrue,
       );
+      expect(rows.map((row) => row.canonicalTitle).toSet(), {
+        'ADAPTIVE_NO_SMOKE:30',
+        'ADAPTIVE_NO_SMOKE:45',
+      });
     });
 
     test('is idempotent across repeated calls the same day', () async {
@@ -420,10 +419,7 @@ void main() {
       );
 
       await service.planDailyTasks(planDate: planDate, items: [first]);
-      await service.planDailyTasks(
-        planDate: planDate,
-        items: [first, second],
-      );
+      await service.planDailyTasks(planDate: planDate, items: [first, second]);
 
       final rows = await storage.loadTaskAssignmentsForDay(planDate);
       expect(rows, hasLength(2));
@@ -455,49 +451,53 @@ void main() {
       expect(followUp, TaskActionFollowUp.none);
     });
 
-    test('SOS suspends the task and asks the caller to open the SOS page',
-        () async {
-      final storage = StorageService();
-      final service = TaskAssignmentService(storage);
-      await storage.saveTaskAssignment(
-        _task(id: 'sos_1', durationMinutes: 34),
-      );
+    test(
+      'SOS suspends the task and asks the caller to open the SOS page',
+      () async {
+        final storage = StorageService();
+        final service = TaskAssignmentService(storage);
+        await storage.saveTaskAssignment(
+          _task(id: 'sos_1', durationMinutes: 34),
+        );
 
-      final followUp = await service.handleTaskAction(
-        canonicalTitle: 'ADAPTIVE_NO_SMOKE:34',
-        taskTitle: 'ADAPTIVE_NO_SMOKE:34',
-        actionId: TaskActionId.sos,
-      );
+        final followUp = await service.handleTaskAction(
+          canonicalTitle: 'ADAPTIVE_NO_SMOKE:34',
+          taskTitle: 'ADAPTIVE_NO_SMOKE:34',
+          actionId: TaskActionId.sos,
+        );
 
-      final loaded = await storage.loadTaskAssignment('sos_1');
-      expect(loaded!.state, TaskLifecycleState.sosActive);
-      expect(loaded.isTerminal, isFalse);
-      expect(followUp, TaskActionFollowUp.openSosPage);
-    });
+        final loaded = await storage.loadTaskAssignment('sos_1');
+        expect(loaded!.state, TaskLifecycleState.sosActive);
+        expect(loaded.isTerminal, isFalse);
+        expect(followUp, TaskActionFollowUp.openSosPage);
+      },
+    );
 
-    test('confirming "yes I smoked" fails the task and logs a cigarette',
-        () async {
-      final storage = StorageService();
-      final service = TaskAssignmentService(storage);
-      await storage.saveTaskAssignment(
-        _task(id: 'confirm_yes', durationMinutes: 35),
-      );
+    test(
+      'confirming "yes I smoked" fails the task and logs a cigarette',
+      () async {
+        final storage = StorageService();
+        final service = TaskAssignmentService(storage);
+        await storage.saveTaskAssignment(
+          _task(id: 'confirm_yes', durationMinutes: 35),
+        );
 
-      await service.handleTaskAction(
-        canonicalTitle: 'ADAPTIVE_NO_SMOKE:35',
-        taskTitle: 'ADAPTIVE_NO_SMOKE:35',
-        actionId: TaskActionId.confirmSmokedYes,
-      );
+        await service.handleTaskAction(
+          canonicalTitle: 'ADAPTIVE_NO_SMOKE:35',
+          taskTitle: 'ADAPTIVE_NO_SMOKE:35',
+          actionId: TaskActionId.confirmSmokedYes,
+        );
 
-      final loaded = await storage.loadTaskAssignment('confirm_yes');
-      expect(loaded!.state, TaskLifecycleState.failedSmoked);
+        final loaded = await storage.loadTaskAssignment('confirm_yes');
+        expect(loaded!.state, TaskLifecycleState.failedSmoked);
 
-      final recent = await storage.loadRecentAdaptiveTaskEvents(limit: 50);
-      // logSmokingNow doesn't write an adaptive task event itself, so this
-      // just confirms the transition landed on the failure state — the
-      // smoking-log side effect is exercised by SmokedLogStore's own tests.
-      expect(recent, isA<List>());
-    });
+        final recent = await storage.loadRecentAdaptiveTaskEvents(limit: 50);
+        // logSmokingNow doesn't write an adaptive task event itself, so this
+        // just confirms the transition landed on the failure state — the
+        // smoking-log side effect is exercised by SmokedLogStore's own tests.
+        expect(recent, isA<List>());
+      },
+    );
 
     test('confirming "no I did not smoke" succeeds the task', () async {
       final storage = StorageService();
@@ -558,40 +558,37 @@ void main() {
       expect(item.taskKind, TaskKind.sleepRoutine);
     });
 
-    test(
-      'done on a composite task accepts it and asks the caller to open '
-      'SleepRoutinePage, without starting a countdown or confirmation '
-      'prompt',
-      () async {
-        final storage = StorageService();
-        final service = TaskAssignmentService(storage);
-        await storage.saveTaskAssignment(
-          TaskAssignment(
-            id: 'composite_done',
-            planDate: '2026-07-20',
-            canonicalTitle: sleepRoutineCanonicalTitle,
-            durationMinutes: 0,
-            scheduledAt: DateTime(2026, 7, 20, 22, 0),
-            state: TaskLifecycleState.planned,
-            taskKind: TaskKind.sleepRoutine,
-          ),
-        );
-
-        final followUp = await service.handleTaskAction(
+    test('done on a composite task accepts it and asks the caller to open '
+        'SleepRoutinePage, without starting a countdown or confirmation '
+        'prompt', () async {
+      final storage = StorageService();
+      final service = TaskAssignmentService(storage);
+      await storage.saveTaskAssignment(
+        TaskAssignment(
+          id: 'composite_done',
+          planDate: '2026-07-20',
           canonicalTitle: sleepRoutineCanonicalTitle,
-          taskTitle: sleepRoutineCanonicalTitle,
-          actionId: TaskActionId.done,
-        );
+          durationMinutes: 0,
+          scheduledAt: DateTime(2026, 7, 20, 22, 0),
+          state: TaskLifecycleState.planned,
+          taskKind: TaskKind.sleepRoutine,
+        ),
+      );
 
-        expect(followUp, TaskActionFollowUp.openSleepRoutinePage);
-        final loaded = await storage.loadTaskAssignment('composite_done');
-        expect(loaded!.state, TaskLifecycleState.accepted);
-        // No barrier duration accrues for a composite task — accepting it
-        // does not start a no-smoking window like a normal task would.
-        expect(loaded.barrierStartedAt, isNotNull);
-        expect(loaded.barrierEndsAt, loaded.barrierStartedAt);
-      },
-    );
+      final followUp = await service.handleTaskAction(
+        canonicalTitle: sleepRoutineCanonicalTitle,
+        taskTitle: sleepRoutineCanonicalTitle,
+        actionId: TaskActionId.done,
+      );
+
+      expect(followUp, TaskActionFollowUp.openSleepRoutinePage);
+      final loaded = await storage.loadTaskAssignment('composite_done');
+      expect(loaded!.state, TaskLifecycleState.accepted);
+      // No barrier duration accrues for a composite task — accepting it
+      // does not start a no-smoking window like a normal task would.
+      expect(loaded.barrierStartedAt, isNotNull);
+      expect(loaded.barrierEndsAt, loaded.barrierStartedAt);
+    });
 
     test('decline on a composite task follows the same smoked-declined '
         'rule as any other task', () async {
@@ -620,28 +617,30 @@ void main() {
       expect(loaded!.state, TaskLifecycleState.failedDeclined);
     });
 
-    test('completeSleepRoutine transitions the task straight to succeeded',
-        () async {
-      final storage = StorageService();
-      final service = TaskAssignmentService(storage);
-      await storage.saveTaskAssignment(
-        TaskAssignment(
-          id: 'composite_complete',
-          planDate: '2026-07-20',
-          canonicalTitle: sleepRoutineCanonicalTitle,
-          durationMinutes: 0,
-          scheduledAt: DateTime(2026, 7, 20, 22, 0),
-          state: TaskLifecycleState.accepted,
-          taskKind: TaskKind.sleepRoutine,
-        ),
-      );
+    test(
+      'completeSleepRoutine transitions the task straight to succeeded',
+      () async {
+        final storage = StorageService();
+        final service = TaskAssignmentService(storage);
+        await storage.saveTaskAssignment(
+          TaskAssignment(
+            id: 'composite_complete',
+            planDate: '2026-07-20',
+            canonicalTitle: sleepRoutineCanonicalTitle,
+            durationMinutes: 0,
+            scheduledAt: DateTime(2026, 7, 20, 22, 0),
+            state: TaskLifecycleState.accepted,
+            taskKind: TaskKind.sleepRoutine,
+          ),
+        );
 
-      await service.completeSleepRoutine(sleepRoutineCanonicalTitle);
+        await service.completeSleepRoutine(sleepRoutineCanonicalTitle);
 
-      final loaded = await storage.loadTaskAssignment('composite_complete');
-      expect(loaded!.state, TaskLifecycleState.succeeded);
-      expect(loaded.isTerminal, isTrue);
-    });
+        final loaded = await storage.loadTaskAssignment('composite_complete');
+        expect(loaded!.state, TaskLifecycleState.succeeded);
+        expect(loaded.isTerminal, isTrue);
+      },
+    );
   });
 
   group('TaskAssignmentService.enforceDeliveryQueueLimit', () {
@@ -735,8 +734,7 @@ void main() {
       expect(loaded!.taskKind, TaskKind.noSmokeWindow);
     });
 
-    test('saving and loading a sleepRoutine task preserves its kind',
-        () async {
+    test('saving and loading a sleepRoutine task preserves its kind', () async {
       final storage = StorageService();
       await storage.saveTaskAssignment(
         TaskAssignment(
@@ -755,23 +753,24 @@ void main() {
       expect(loaded.canonicalTitle, sleepRoutineCanonicalTitle);
     });
 
-    test('an old row saved before taskKind existed loads as noSmokeWindow',
-        () async {
-      // Simulates a device already on a schema version before taskKind
-      // existed: create the table by hand, without the column, then run it
-      // through the real onUpgrade path by opening it with StorageService.
-      final dir = Directory.systemTemp.createTempSync(
-        'no_smoke_taskkind_migration',
-      );
-      PathProviderPlatform.instance = _FixedPathProviderPlatform(dir.path);
-      final dbPath = '${dir.path}/no_smoke.db';
+    test(
+      'an old row saved before taskKind existed loads as noSmokeWindow',
+      () async {
+        // Simulates a device already on a schema version before taskKind
+        // existed: create the table by hand, without the column, then run it
+        // through the real onUpgrade path by opening it with StorageService.
+        final dir = Directory.systemTemp.createTempSync(
+          'no_smoke_taskkind_migration',
+        );
+        PathProviderPlatform.instance = _FixedPathProviderPlatform(dir.path);
+        final dbPath = '${dir.path}/no_smoke.db';
 
-      final legacyDb = await databaseFactory.openDatabase(
-        dbPath,
-        options: OpenDatabaseOptions(
-          version: 28,
-          onCreate: (db, version) async {
-            await db.execute('''
+        final legacyDb = await databaseFactory.openDatabase(
+          dbPath,
+          options: OpenDatabaseOptions(
+            version: 28,
+            onCreate: (db, version) async {
+              await db.execute('''
               CREATE TABLE task_assignments (
                 id TEXT PRIMARY KEY,
                 planDate TEXT NOT NULL,
@@ -795,31 +794,32 @@ void main() {
                 isCheckIn INTEGER NOT NULL DEFAULT 0
               )
             ''');
-            await db.insert('task_assignments', {
-              'id': 'pre_taskkind_migration',
-              'planDate': '2026-07-20',
-              'canonicalTitle': 'ADAPTIVE_NO_SMOKE:30',
-              'durationMinutes': 30,
-              'scheduledAt': DateTime(2026, 7, 20, 14, 0).toIso8601String(),
-              'state': TaskLifecycleState.planned,
-              'isCheckIn': 0,
-            });
-          },
-        ),
-      );
-      await legacyDb.close();
+              await db.insert('task_assignments', {
+                'id': 'pre_taskkind_migration',
+                'planDate': '2026-07-20',
+                'canonicalTitle': 'ADAPTIVE_NO_SMOKE:30',
+                'durationMinutes': 30,
+                'scheduledAt': DateTime(2026, 7, 20, 14, 0).toIso8601String(),
+                'state': TaskLifecycleState.planned,
+                'isCheckIn': 0,
+              });
+            },
+          ),
+        );
+        await legacyDb.close();
 
-      final storage = StorageService();
-      await storage.closeDatabaseConnection();
-      final loaded = await storage.loadTaskAssignment(
-        'pre_taskkind_migration',
-      );
+        final storage = StorageService();
+        await storage.closeDatabaseConnection();
+        final loaded = await storage.loadTaskAssignment(
+          'pre_taskkind_migration',
+        );
 
-      expect(loaded, isNotNull);
-      expect(loaded!.taskKind, TaskKind.noSmokeWindow);
+        expect(loaded, isNotNull);
+        expect(loaded!.taskKind, TaskKind.noSmokeWindow);
 
-      await storage.closeDatabaseConnection();
-    });
+        await storage.closeDatabaseConnection();
+      },
+    );
   });
 
   group('isCheckIn migration', () {

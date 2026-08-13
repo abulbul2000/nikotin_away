@@ -17,23 +17,20 @@ void main() {
     expect(message.text, MentorMessageCodes.dailyCoachNoHour);
   });
 
-  test(
-    'never names a risky-hour window, even one still ahead today',
-    () {
-      // The mentor used to name the nearest upcoming risky-hour window
-      // ("18:00-20:00 aralığında yanındayım"), but that message is cached
-      // for the rest of the day once generated — read hours later, after
-      // the window has passed, it reads as the mentor not knowing what
-      // time it is. Simplest fix: never name a window at all.
-      final message = builder.buildDailyMessage(
-        riskScore: 30,
-        recentSuccessRate: 0.85,
-        riskyHours: const ['14:00-16:00', '20:00-22:00'],
-        now: DateTime(2026, 1, 1, 10, 0),
-      );
-      expect(message.text, MentorMessageCodes.dailyCoachNoHour);
-    },
-  );
+  test('never names a risky-hour window, even one still ahead today', () {
+    // The mentor used to name the nearest upcoming risky-hour window
+    // ("18:00-20:00 aralığında yanındayım"), but that message is cached
+    // for the rest of the day once generated — read hours later, after
+    // the window has passed, it reads as the mentor not knowing what
+    // time it is. Simplest fix: never name a window at all.
+    final message = builder.buildDailyMessage(
+      riskScore: 30,
+      recentSuccessRate: 0.85,
+      riskyHours: const ['14:00-16:00', '20:00-22:00'],
+      now: DateTime(2026, 1, 1, 10, 0),
+    );
+    expect(message.text, MentorMessageCodes.dailyCoachNoHour);
+  });
 
   test('uses supportive tone and an extra quick reply when struggling', () {
     final message = builder.buildDailyMessage(
@@ -109,21 +106,27 @@ void main() {
     expect(note, isNull);
   });
 
-  test('buildHistoricalNote flags a recurring struggle in the same day part', () {
-    final note = builder.buildHistoricalNote(
-      lastWeekDayPartCounts: const {'evening': 5, 'morning': 1},
-      thisWeekDayPartCounts: const {'evening': 5, 'morning': 0},
-    );
-    expect(note, '${MentorMessageCodes.histWorseningPrefix}:evening');
-  });
+  test(
+    'buildHistoricalNote flags a recurring struggle in the same day part',
+    () {
+      final note = builder.buildHistoricalNote(
+        lastWeekDayPartCounts: const {'evening': 5, 'morning': 1},
+        thisWeekDayPartCounts: const {'evening': 5, 'morning': 0},
+      );
+      expect(note, '${MentorMessageCodes.histWorseningPrefix}:evening');
+    },
+  );
 
-  test('buildHistoricalNote recognizes improvement in the flagged day part', () {
-    final note = builder.buildHistoricalNote(
-      lastWeekDayPartCounts: const {'evening': 5},
-      thisWeekDayPartCounts: const {'evening': 0},
-    );
-    expect(note, '${MentorMessageCodes.histImprovedPrefix}:evening');
-  });
+  test(
+    'buildHistoricalNote recognizes improvement in the flagged day part',
+    () {
+      final note = builder.buildHistoricalNote(
+        lastWeekDayPartCounts: const {'evening': 5},
+        thisWeekDayPartCounts: const {'evening': 0},
+      );
+      expect(note, '${MentorMessageCodes.histImprovedPrefix}:evening');
+    },
+  );
 
   test('dayPartForHour buckets hours correctly', () {
     expect(MentorMessageBuilder.dayPartForHour(6), 'morning');
@@ -148,23 +151,29 @@ void main() {
     );
   });
 
-  test('buildReframedViolationMessage reframes suspicious behavior with a task title', () {
-    final message = builder.buildReframedViolationMessage(
-      violationType: 'suspicious_behavior',
-      taskTitle: '10 dakika sigarasiz kal',
-    );
-    expect(message, isNotNull);
-    expect(
-      message!.text,
-      '${MentorMessageCodes.reframeSuspiciousWithTitle}:10 dakika sigarasiz kal',
-    );
-    expect(message.tone, 'supportive');
-  });
+  test(
+    'buildReframedViolationMessage reframes suspicious behavior with a task title',
+    () {
+      final message = builder.buildReframedViolationMessage(
+        violationType: 'suspicious_behavior',
+        taskTitle: '10 dakika sigarasiz kal',
+      );
+      expect(message, isNotNull);
+      expect(
+        message!.text,
+        '${MentorMessageCodes.reframeSuspiciousWithTitle}:10 dakika sigarasiz kal',
+      );
+      expect(message.tone, 'supportive');
+    },
+  );
 
-  test('buildReframedViolationMessage returns null for an unknown violation type', () {
-    final message = builder.buildReframedViolationMessage(
-      violationType: 'unknown_type',
-    );
-    expect(message, isNull);
-  });
+  test(
+    'buildReframedViolationMessage returns null for an unknown violation type',
+    () {
+      final message = builder.buildReframedViolationMessage(
+        violationType: 'unknown_type',
+      );
+      expect(message, isNull);
+    },
+  );
 }

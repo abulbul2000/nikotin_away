@@ -16,9 +16,11 @@ class ReportEngine {
   final BehaviorEngine _behaviorEngine;
   final StepTrendEngine _stepTrendEngine;
 
-  ReportEngine({BehaviorEngine? behaviorEngine, StepTrendEngine? stepTrendEngine})
-    : _behaviorEngine = behaviorEngine ?? BehaviorEngine(),
-      _stepTrendEngine = stepTrendEngine ?? StepTrendEngine();
+  ReportEngine({
+    BehaviorEngine? behaviorEngine,
+    StepTrendEngine? stepTrendEngine,
+  }) : _behaviorEngine = behaviorEngine ?? BehaviorEngine(),
+       _stepTrendEngine = stepTrendEngine ?? StepTrendEngine();
 
   PeriodReport buildReport({
     required DateTime periodStart,

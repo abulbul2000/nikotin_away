@@ -30,7 +30,6 @@ class BreathTrendEngine {
   static const double _gradualImprovementThresholdPercent = 3;
   static const double _declineThresholdPercent = -3;
 
-
   /// 0-100 arası tek bir "Nefes Skoru". Süre/tutarlılık/güç bileşenlerinin
   /// ağırlıklı ortalaması — her bileşen kendi doğal ölçeğinden önce 0-1
   /// aralığına normalize edilir.
@@ -44,12 +43,15 @@ class BreathTrendEngine {
     required double blowIntensity,
   }) {
     const durationCeilingSeconds = 15.0;
-    final durationSignal = (blowDurationSeconds / durationCeilingSeconds)
-        .clamp(0.0, 1.0);
+    final durationSignal = (blowDurationSeconds / durationCeilingSeconds).clamp(
+      0.0,
+      1.0,
+    );
     final stabilitySignal = blowStability.clamp(0.0, 1.0);
     final intensitySignal = blowIntensity.clamp(0.0, 1.0);
 
-    final score = (durationSignal * blowDurationWeight) +
+    final score =
+        (durationSignal * blowDurationWeight) +
         (stabilitySignal * stabilityWeight) +
         (intensitySignal * intensityWeight);
     return (score * 100).clamp(0, 100).toDouble();
@@ -104,10 +106,16 @@ class BreathTrendEngine {
           languageCode,
         );
       } else {
-        insight = AppTexts.textForCode(languageCode, 'breathInsightNotEnoughSpan');
+        insight = AppTexts.textForCode(
+          languageCode,
+          'breathInsightNotEnoughSpan',
+        );
       }
     } else {
-      insight = AppTexts.textForCode(languageCode, 'breathInsightNotEnoughTests');
+      insight = AppTexts.textForCode(
+        languageCode,
+        'breathInsightNotEnoughTests',
+      );
     }
 
     final bestRecord = clean.isEmpty
@@ -159,8 +167,9 @@ class BreathTrendEngine {
       windowDays: days,
       testCount: inWindow.length,
       averageScore: _average(inWindow.map((r) => r.breathScore)),
-      averageBlowDurationSeconds:
-          _average(inWindow.map((r) => r.blowDurationSeconds)),
+      averageBlowDurationSeconds: _average(
+        inWindow.map((r) => r.blowDurationSeconds),
+      ),
       averageStability: _average(inWindow.map((r) => r.blowStability)),
     );
   }
@@ -225,11 +234,15 @@ class BreathTrendEngine {
     final rounded = changePercent.abs().round();
     switch (direction) {
       case BreathProgressDirection.significantImprovement:
-        return AppTexts.textForCode(languageCode, 'breathInsightSignificantImprovement')
-            .replaceAll('{percent}', '$rounded');
+        return AppTexts.textForCode(
+          languageCode,
+          'breathInsightSignificantImprovement',
+        ).replaceAll('{percent}', '$rounded');
       case BreathProgressDirection.gradualImprovement:
-        return AppTexts.textForCode(languageCode, 'breathInsightGradualImprovement')
-            .replaceAll('{percent}', '$rounded');
+        return AppTexts.textForCode(
+          languageCode,
+          'breathInsightGradualImprovement',
+        ).replaceAll('{percent}', '$rounded');
       case BreathProgressDirection.stable:
         return AppTexts.textForCode(languageCode, 'breathInsightStable');
       case BreathProgressDirection.decline:

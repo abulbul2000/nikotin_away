@@ -122,20 +122,17 @@ void main() {
       expect(result.peakFlowAtMs, isNull);
     });
 
-    test(
-      'breathScore/riskContribution are identical whether or not spirometry '
-      'is passed — spirometry is presentation-only and must never silently '
-      'enter the risk formula',
-      () {
-        final withSpirometry = build(spirometry: spirometry);
-        final withoutSpirometry = build();
+    test('breathScore/riskContribution are identical whether or not spirometry '
+        'is passed — spirometry is presentation-only and must never silently '
+        'enter the risk formula', () {
+      final withSpirometry = build(spirometry: spirometry);
+      final withoutSpirometry = build();
 
-        expect(withSpirometry.breathScore, withoutSpirometry.breathScore);
-        expect(
-          withSpirometry.riskContribution,
-          withoutSpirometry.riskContribution,
-        );
-      },
-    );
+      expect(withSpirometry.breathScore, withoutSpirometry.breathScore);
+      expect(
+        withSpirometry.riskContribution,
+        withoutSpirometry.riskContribution,
+      );
+    });
   });
 }

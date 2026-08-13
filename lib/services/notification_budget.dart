@@ -139,8 +139,7 @@ class NotificationBudget {
       return const BudgetDecision.allow();
     }
 
-    if (lastSentAt != null &&
-        at.difference(lastSentAt).abs() < minimumGap) {
+    if (lastSentAt != null && at.difference(lastSentAt).abs() < minimumGap) {
       return const BudgetDecision.deny(BudgetDenial.tooSoon);
     }
 

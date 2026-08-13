@@ -6,9 +6,7 @@ import 'package:flutter/material.dart';
 class SuccessCheckOverlay {
   static Future<void> show(BuildContext context) async {
     final overlay = Overlay.of(context);
-    final entry = OverlayEntry(
-      builder: (_) => const _SuccessCheckAnimation(),
-    );
+    final entry = OverlayEntry(builder: (_) => const _SuccessCheckAnimation());
     overlay.insert(entry);
     await Future.delayed(const Duration(milliseconds: 900));
     entry.remove();
@@ -19,8 +17,7 @@ class _SuccessCheckAnimation extends StatefulWidget {
   const _SuccessCheckAnimation();
 
   @override
-  State<_SuccessCheckAnimation> createState() =>
-      _SuccessCheckAnimationState();
+  State<_SuccessCheckAnimation> createState() => _SuccessCheckAnimationState();
 }
 
 class _SuccessCheckAnimationState extends State<_SuccessCheckAnimation>

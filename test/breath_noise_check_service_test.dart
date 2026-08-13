@@ -18,7 +18,10 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
 List<BreathAcousticSample> _samples(List<double> energies) {
   return [
     for (var i = 0; i < energies.length; i++)
-      BreathAcousticSample(millisecondsSinceStart: i * 100, rmsEnergy: energies[i]),
+      BreathAcousticSample(
+        millisecondsSinceStart: i * 100,
+        rmsEnergy: energies[i],
+      ),
   ];
 }
 
@@ -89,8 +92,8 @@ void main() {
     expect(afterPreTest.length, 1);
 
     await service.evaluateDuringAttempt(_samples([0.09, 0.091, 0.089]));
-    final afterDuringAttempt =
-        await storageService.loadRecentBreathNoiseBaselines();
+    final afterDuringAttempt = await storageService
+        .loadRecentBreathNoiseBaselines();
     // Still just the one from the pre-test check — the mid-attempt check
     // must not add a second baseline entry.
     expect(afterDuringAttempt.length, 1);

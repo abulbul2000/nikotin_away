@@ -32,7 +32,8 @@ void main() {
         );
       }
 
-      final highAvg = highDurations.reduce((a, b) => a + b) / highDurations.length;
+      final highAvg =
+          highDurations.reduce((a, b) => a + b) / highDurations.length;
       final lowAvg = lowDurations.reduce((a, b) => a + b) / lowDurations.length;
 
       expect(highAvg, lessThan(lowAvg));
@@ -63,34 +64,37 @@ void main() {
       expect(moments, sorted);
     });
 
-    test('flags suspicious behavior with strong movement during risky window', () {
-      final service = DisciplineProtocolService();
-      final start = DateTime(2026, 7, 14, 19, 0);
-      final end = DateTime(2026, 7, 14, 19, 20);
+    test(
+      'flags suspicious behavior with strong movement during risky window',
+      () {
+        final service = DisciplineProtocolService();
+        final start = DateTime(2026, 7, 14, 19, 0);
+        final end = DateTime(2026, 7, 14, 19, 20);
 
-      final events = [
-        SensorUsageEvent(
-          id: 'e1',
-          createdAt: DateTime(2026, 7, 14, 19, 5),
-          activityState: 'walking',
-          accelerometerMagnitude: 2.2,
-          gyroscopeMagnitude: 1.9,
-          screenUnlockCount: 4,
-          appUsageMinutes: 3,
-          idleMinutes: 0,
-          charging: false,
-        ),
-      ];
+        final events = [
+          SensorUsageEvent(
+            id: 'e1',
+            createdAt: DateTime(2026, 7, 14, 19, 5),
+            activityState: 'walking',
+            accelerometerMagnitude: 2.2,
+            gyroscopeMagnitude: 1.9,
+            screenUnlockCount: 4,
+            appUsageMinutes: 3,
+            idleMinutes: 0,
+            charging: false,
+          ),
+        ];
 
-      final result = service.isSuspiciousDuringTask(
-        events: events,
-        riskyHours: const ['18:00-20:00'],
-        startAt: start,
-        endAt: end,
-      );
+        final result = service.isSuspiciousDuringTask(
+          events: events,
+          riskyHours: const ['18:00-20:00'],
+          startAt: start,
+          endAt: end,
+        );
 
-      expect(result, isTrue);
-    });
+        expect(result, isTrue);
+      },
+    );
 
     test('does not flag suspicious behavior for idle low-motion data', () {
       final service = DisciplineProtocolService();
@@ -148,7 +152,10 @@ void main() {
       final starts = plan.items.map((i) => i.scheduledAt).toList()
         ..sort((a, b) => a.compareTo(b));
       for (var i = 1; i < starts.length; i++) {
-        expect(starts[i].difference(starts[i - 1]).inMinutes, greaterThanOrEqualTo(240));
+        expect(
+          starts[i].difference(starts[i - 1]).inMinutes,
+          greaterThanOrEqualTo(240),
+        );
       }
     });
 

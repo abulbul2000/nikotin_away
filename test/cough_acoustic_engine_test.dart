@@ -49,10 +49,7 @@ void main() {
       'a single burst spanning many above-threshold samples counts once',
       () {
         // One 400ms burst at 20ms steps is ~20 consecutive loud samples.
-        final samples = _streamWithBursts(
-          [5000],
-          burstDurationMs: 400,
-        );
+        final samples = _streamWithBursts([5000], burstDurationMs: 400);
         expect(engine.findCoughEvents(samples).length, 1);
       },
     );
@@ -155,10 +152,13 @@ void main() {
       expect(result.earlyBurstRatio, 1.0);
     });
 
-    test('earlyBurstRatio is 0.0 when all coughs land after the first third', () {
-      final result = engine.analyze(_streamWithBursts([15000, 20000, 25000]));
-      expect(result.earlyBurstRatio, 0.0);
-    });
+    test(
+      'earlyBurstRatio is 0.0 when all coughs land after the first third',
+      () {
+        final result = engine.analyze(_streamWithBursts([15000, 20000, 25000]));
+        expect(result.earlyBurstRatio, 0.0);
+      },
+    );
 
     test('earlyBurstRatio reflects a mixed pattern', () {
       // 1 of 2 coughs in the first third -> 0.5.
@@ -170,14 +170,14 @@ void main() {
       final quiet = engine.analyze(
         _streamWithBursts([5000], burstEnergy: 0.05),
       );
-      final loud = engine.analyze(
-        _streamWithBursts([5000], burstEnergy: 0.4),
-      );
+      final loud = engine.analyze(_streamWithBursts([5000], burstEnergy: 0.4));
       expect(loud.peakIntensityScore!, greaterThan(quiet.peakIntensityScore!));
     });
 
     test('severityScore/severityLevel are consistent with coughCount', () {
-      final result = engine.analyze(_streamWithBursts([2000, 8000, 15000, 22000]));
+      final result = engine.analyze(
+        _streamWithBursts([2000, 8000, 15000, 22000]),
+      );
       expect(result.coughCount, 4);
       expect(result.severityScore, engine.severityScore(4, 30));
       expect(result.severityLevel, engine.severityLevel(result.severityScore));

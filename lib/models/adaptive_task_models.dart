@@ -105,13 +105,16 @@ class AdaptiveTaskState {
       difficultyLevel: (json['difficultyLevel'] as num?)?.toDouble() ?? 1,
       dailyTaskCapacity: (json['dailyTaskCapacity'] as num?)?.toDouble() ?? 5,
       postponeRate: (json['postponeRate'] as num?)?.toDouble() ?? 0.25,
-      movingSuccessRate: (json['movingSuccessRate'] as num?)?.toDouble() ?? 0.45,
-      movingFailureRate: (json['movingFailureRate'] as num?)?.toDouble() ?? 0.25,
+      movingSuccessRate:
+          (json['movingSuccessRate'] as num?)?.toDouble() ?? 0.45,
+      movingFailureRate:
+          (json['movingFailureRate'] as num?)?.toDouble() ?? 0.25,
       avgResponseMinutes: (json['avgResponseMinutes'] as num?)?.toDouble() ?? 7,
       successStreak: (json['successStreak'] as num?)?.toInt() ?? 0,
       failureStreak: (json['failureStreak'] as num?)?.toInt() ?? 0,
       updatedAt:
-          DateTime.tryParse((json['updatedAt'] as String?) ?? '') ?? DateTime.now(),
+          DateTime.tryParse((json['updatedAt'] as String?) ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -188,7 +191,8 @@ class AdaptiveHourlyProfileEntry {
       deferCount: (json['deferCount'] as num?)?.toInt() ?? 0,
       avgResponseMinutes: (json['avgResponseMinutes'] as num?)?.toDouble() ?? 7,
       updatedAt:
-          DateTime.tryParse((json['updatedAt'] as String?) ?? '') ?? DateTime.now(),
+          DateTime.tryParse((json['updatedAt'] as String?) ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -297,7 +301,9 @@ class AdaptiveTaskPlan {
       targetTaskCount: (json['targetTaskCount'] as num).toInt(),
       baseDurationMinutes: (json['baseDurationMinutes'] as num).toInt(),
       items: ((json['items'] as List?) ?? const [])
-          .map((raw) => AdaptiveTaskPlanItem.fromJson(raw as Map<String, dynamic>))
+          .map(
+            (raw) => AdaptiveTaskPlanItem.fromJson(raw as Map<String, dynamic>),
+          )
           .toList(),
     );
   }

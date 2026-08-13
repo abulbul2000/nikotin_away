@@ -56,7 +56,10 @@ class DisciplineProtocolService {
         : successRate >= 0.55
         ? 0.8
         : 1.0;
-    final compressed = max(minMinutes, (baseMinutes * compressionFactor).round());
+    final compressed = max(
+      minMinutes,
+      (baseMinutes * compressionFactor).round(),
+    );
 
     // Add larger jitter at higher success levels for unpredictability.
     final jitterRange = successRate >= 0.85
@@ -198,9 +201,13 @@ class DisciplineProtocolService {
         continue;
       }
 
-      final riskyWindowActive = _isHourInRiskWindow(event.createdAt.hour, riskyHours);
+      final riskyWindowActive = _isHourInRiskWindow(
+        event.createdAt.hour,
+        riskyHours,
+      );
       final intenseMotion =
-          event.accelerometerMagnitude >= 1.8 || event.gyroscopeMagnitude >= 1.8;
+          event.accelerometerMagnitude >= 1.8 ||
+          event.gyroscopeMagnitude >= 1.8;
       final phoneSpike =
           event.screenUnlockCount >= 12 || event.appUsageMinutes >= 20;
       final nonIdle = event.activityState.toLowerCase().trim() != 'idle';
@@ -259,8 +266,9 @@ class DisciplineProtocolService {
     required String raw,
   }) {
     final value = raw.trim();
-    final match = RegExp(r'(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?')
-        .firstMatch(value);
+    final match = RegExp(
+      r'(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?',
+    ).firstMatch(value);
     if (match == null) {
       return null;
     }
@@ -296,8 +304,9 @@ class DisciplineProtocolService {
 
   bool _isHourInRiskWindow(int hour, List<String> riskyHours) {
     for (final raw in riskyHours) {
-      final match = RegExp(r'(\d{1,2})(?::\d{2})?\s*-\s*(\d{1,2})(?::\d{2})?')
-          .firstMatch(raw.trim());
+      final match = RegExp(
+        r'(\d{1,2})(?::\d{2})?\s*-\s*(\d{1,2})(?::\d{2})?',
+      ).firstMatch(raw.trim());
       if (match == null) {
         continue;
       }
@@ -401,7 +410,10 @@ class DisciplineProtocolService {
           (barrierMinutes +
                   strainOffset +
                   (_random.nextInt(jitterSpan * 2 + 1) - jitterSpan))
-              .clamp(SmokingIntervalService.minBarrierMinutes, barrierMinutes * 2)
+              .clamp(
+                SmokingIntervalService.minBarrierMinutes,
+                barrierMinutes * 2,
+              )
               .toInt();
 
       items.add(

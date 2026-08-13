@@ -61,7 +61,10 @@ class BreathBadge {
     'unlockedAt': unlockedAt?.toIso8601String(),
   };
 
-  static BreathBadge fromJsonState(BreathBadge base, Map<String, dynamic> json) {
+  static BreathBadge fromJsonState(
+    BreathBadge base,
+    Map<String, dynamic> json,
+  ) {
     return base.copyWith(
       unlocked: json['unlocked'] as bool? ?? false,
       unlockedAt: json['unlockedAt'] != null

@@ -19,7 +19,8 @@ void main() {
     expect(
       source,
       contains('readMotionThenDecide'),
-      reason: 'the screen-on branch must sample motion before enqueuing activity',
+      reason:
+          'the screen-on branch must sample motion before enqueuing activity',
     );
   });
 

@@ -288,10 +288,7 @@ class _SubscriptionOptionCard extends StatelessWidget {
     return Card(
       color: colorScheme.surfaceContainerHighest,
       child: ListTile(
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
         subtitle: Text(price),
         trailing: FilledButton(
           onPressed: enabled ? onTap : null,

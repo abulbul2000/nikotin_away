@@ -156,7 +156,8 @@ class CoughAcousticEngine {
     double? averageInterval;
     if (count >= 2) {
       final totalSpanMs =
-          events.last.millisecondsSinceStart - events.first.millisecondsSinceStart;
+          events.last.millisecondsSinceStart -
+          events.first.millisecondsSinceStart;
       averageInterval = (totalSpanMs / (count - 1)) / 1000.0;
     }
 

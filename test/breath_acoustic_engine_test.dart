@@ -68,13 +68,16 @@ void main() {
   group('findExhaleOnsetMs / findExhaleOffsetMs', () {
     final engine = BreathAcousticEngine();
 
-    test('detects onset shortly after energy rises above the calibrated baseline', () {
-      final samples = _silenceThenLoudThenSilence();
-      final onset = engine.findExhaleOnsetMs(samples);
-      expect(onset, isNotNull);
-      expect(onset, greaterThanOrEqualTo(1500));
-      expect(onset, lessThan(1700));
-    });
+    test(
+      'detects onset shortly after energy rises above the calibrated baseline',
+      () {
+        final samples = _silenceThenLoudThenSilence();
+        final onset = engine.findExhaleOnsetMs(samples);
+        expect(onset, isNotNull);
+        expect(onset, greaterThanOrEqualTo(1500));
+        expect(onset, lessThan(1700));
+      },
+    );
 
     test('detects offset shortly after energy drops back down', () {
       final samples = _silenceThenLoudThenSilence();
@@ -90,48 +93,63 @@ void main() {
       expect(engine.findExhaleOnsetMs(samples), isNull);
     });
 
-    test('returns null offset when energy never drops back down after onset', () {
-      final samples = _silenceThenLoudThenSilence(trailingSilenceMs: 0);
-      final onset = engine.findExhaleOnsetMs(samples)!;
-      expect(engine.findExhaleOffsetMs(samples, onset), isNull);
-    });
-
     test(
-      'a loud tap/handling-noise spike in the very first sample does not '
-      'poison the baseline and block later real-exhale detection '
-      '(regression: real-device recorder startup noise)',
+      'returns null offset when energy never drops back down after onset',
       () {
-        final samples = <BreathAcousticSample>[
-          // Recorder startup latency means the very first chunk can arrive
-          // carrying the tap/handling noise from the user pressing "start",
-          // wildly higher than the room's real noise floor.
-          const BreathAcousticSample(
-            millisecondsSinceStart: 1010,
-            rmsEnergy: 0.20,
-          ),
-          ..._silenceThenLoudThenSilence(silenceEnergy: 0.012, loudEnergy: 0.15),
-        ];
-        final result = engine.analyze(samples);
-        expect(result.exhaleDetected, isTrue);
+        final samples = _silenceThenLoudThenSilence(trailingSilenceMs: 0);
+        final onset = engine.findExhaleOnsetMs(samples)!;
+        expect(engine.findExhaleOffsetMs(samples, onset), isNull);
       },
     );
 
-    test('ignores brief spikes shorter than the debounce window (no false onset)', () {
+    test('a loud tap/handling-noise spike in the very first sample does not '
+        'poison the baseline and block later real-exhale detection '
+        '(regression: real-device recorder startup noise)', () {
       final samples = <BreathAcousticSample>[
-        ...List.generate(
-          60,
-          (i) => BreathAcousticSample(
-            millisecondsSinceStart: i * 20,
+        // Recorder startup latency means the very first chunk can arrive
+        // carrying the tap/handling noise from the user pressing "start",
+        // wildly higher than the room's real noise floor.
+        const BreathAcousticSample(
+          millisecondsSinceStart: 1010,
+          rmsEnergy: 0.20,
+        ),
+        ..._silenceThenLoudThenSilence(silenceEnergy: 0.012, loudEnergy: 0.15),
+      ];
+      final result = engine.analyze(samples);
+      expect(result.exhaleDetected, isTrue);
+    });
+
+    test(
+      'ignores brief spikes shorter than the debounce window (no false onset)',
+      () {
+        final samples = <BreathAcousticSample>[
+          ...List.generate(
+            60,
+            (i) => BreathAcousticSample(
+              millisecondsSinceStart: i * 20,
+              rmsEnergy: 0.001,
+            ),
+          ),
+          const BreathAcousticSample(
+            millisecondsSinceStart: 1300,
+            rmsEnergy: 0.3,
+          ),
+          const BreathAcousticSample(
+            millisecondsSinceStart: 1320,
+            rmsEnergy: 0.3,
+          ),
+          const BreathAcousticSample(
+            millisecondsSinceStart: 1340,
             rmsEnergy: 0.001,
           ),
-        ),
-        const BreathAcousticSample(millisecondsSinceStart: 1300, rmsEnergy: 0.3),
-        const BreathAcousticSample(millisecondsSinceStart: 1320, rmsEnergy: 0.3),
-        const BreathAcousticSample(millisecondsSinceStart: 1340, rmsEnergy: 0.001),
-        const BreathAcousticSample(millisecondsSinceStart: 1360, rmsEnergy: 0.001),
-      ];
-      expect(engine.findExhaleOnsetMs(samples), isNull);
-    });
+          const BreathAcousticSample(
+            millisecondsSinceStart: 1360,
+            rmsEnergy: 0.001,
+          ),
+        ];
+        expect(engine.findExhaleOnsetMs(samples), isNull);
+      },
+    );
   });
 
   group('analyze', () {
@@ -210,7 +228,9 @@ void main() {
 
     test('a quieter exhale yields lower intensity than a loud one', () {
       final loud = engine.analyze(_silenceThenLoudThenSilence(loudEnergy: 0.3));
-      final quiet = engine.analyze(_silenceThenLoudThenSilence(loudEnergy: 0.05));
+      final quiet = engine.analyze(
+        _silenceThenLoudThenSilence(loudEnergy: 0.05),
+      );
       expect(loud.exhaleDetected, isTrue);
       expect(quiet.exhaleDetected, isTrue);
       expect(quiet.blowIntensity, lessThan(loud.blowIntensity!));
@@ -362,16 +382,13 @@ void main() {
       },
     );
 
-    test(
-      'a short, entirely front-loaded exhale has a ratio near 100%',
-      () {
-        // Whole exhale finishes inside the first second.
-        final samples = constantExhale(durationMs: 600, energy: 0.2);
-        final estimate = engine.estimateSpirometry(samples, 0, 600)!;
+    test('a short, entirely front-loaded exhale has a ratio near 100%', () {
+      // Whole exhale finishes inside the first second.
+      final samples = constantExhale(durationMs: 600, energy: 0.2);
+      final estimate = engine.estimateSpirometry(samples, 0, 600)!;
 
-        expect(estimate.fev1FvcRatioPercent, closeTo(100, 0.5));
-      },
-    );
+      expect(estimate.fev1FvcRatioPercent, closeTo(100, 0.5));
+    });
 
     test(
       'a long, tapering exhale has a lower ratio than a short sharp one',
@@ -391,8 +408,11 @@ void main() {
             ),
           ),
         ];
-        final taperingEstimate =
-            engine.estimateSpirometry(tapering, 0, tapering.last.millisecondsSinceStart)!;
+        final taperingEstimate = engine.estimateSpirometry(
+          tapering,
+          0,
+          tapering.last.millisecondsSinceStart,
+        )!;
 
         expect(
           taperingEstimate.fev1FvcRatioPercent,
@@ -417,8 +437,14 @@ void main() {
       final samples = [
         const BreathAcousticSample(millisecondsSinceStart: 0, rmsEnergy: 0.2),
         const BreathAcousticSample(millisecondsSinceStart: 900, rmsEnergy: 0.2),
-        const BreathAcousticSample(millisecondsSinceStart: 1100, rmsEnergy: 0.2),
-        const BreathAcousticSample(millisecondsSinceStart: 2000, rmsEnergy: 0.2),
+        const BreathAcousticSample(
+          millisecondsSinceStart: 1100,
+          rmsEnergy: 0.2,
+        ),
+        const BreathAcousticSample(
+          millisecondsSinceStart: 2000,
+          rmsEnergy: 0.2,
+        ),
       ];
       final estimate = engine.estimateSpirometry(samples, 0, 2000)!;
 

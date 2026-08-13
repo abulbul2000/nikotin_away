@@ -79,23 +79,24 @@ void main() {
     expect(find.byType(CravingSosPage), findsNothing);
   });
 
-  testWidgets('opened from a task, SOS asks when to resume rather than closing', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _wrap(const CravingSosPage(taskCanonicalTitle: 'ADAPTIVE_NO_SMOKE:30')),
-    );
-    await tester.pump(const Duration(milliseconds: 300));
+  testWidgets(
+    'opened from a task, SOS asks when to resume rather than closing',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(const CravingSosPage(taskCanonicalTitle: 'ADAPTIVE_NO_SMOKE:30')),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
 
-    await tester.tap(find.byKey(const ValueKey('sos_dismiss_button')));
-    await tester.pump();
+      await tester.tap(find.byKey(const ValueKey('sos_dismiss_button')));
+      await tester.pump();
 
-    // The task is suspended, not finished — cancelling it outright would make
-    // SOS the cheapest way to never answer one.
-    expect(find.byKey(const ValueKey('sos_resume_30')), findsOneWidget);
-    expect(find.byKey(const ValueKey('sos_resume_60')), findsOneWidget);
-    expect(find.byKey(const ValueKey('sos_resume_120')), findsOneWidget);
-  });
+      // The task is suspended, not finished — cancelling it outright would make
+      // SOS the cheapest way to never answer one.
+      expect(find.byKey(const ValueKey('sos_resume_30')), findsOneWidget);
+      expect(find.byKey(const ValueKey('sos_resume_60')), findsOneWidget);
+      expect(find.byKey(const ValueKey('sos_resume_120')), findsOneWidget);
+    },
+  );
 
   testWidgets('the suggestion step offers something concrete to do', (
     tester,

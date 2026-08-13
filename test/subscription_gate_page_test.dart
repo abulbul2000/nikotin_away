@@ -87,24 +87,21 @@ void main() {
     },
   );
 
-  testWidgets(
-    'shows a "continue for free" option instead of a hard lock',
-    (tester) async {
-      await tester.pumpWidget(
-        _wrap(
-          SubscriptionGatePage(
-            subscriptionService: _FakeSubscriptionService(),
-          ),
-        ),
-      );
-      await tester.pump();
+  testWidgets('shows a "continue for free" option instead of a hard lock', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        SubscriptionGatePage(subscriptionService: _FakeSubscriptionService()),
+      ),
+    );
+    await tester.pump();
 
-      expect(find.byType(PopScope), findsNothing);
-      expect(
-        find.byKey(const ValueKey('subscription_gate_continue_free')),
-        findsOneWidget,
-      );
-      expect(find.text('Ucretsiz Devam Et'), findsOneWidget);
-    },
-  );
+    expect(find.byType(PopScope), findsNothing);
+    expect(
+      find.byKey(const ValueKey('subscription_gate_continue_free')),
+      findsOneWidget,
+    );
+    expect(find.text('Ucretsiz Devam Et'), findsOneWidget);
+  });
 }

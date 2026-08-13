@@ -99,30 +99,38 @@ void main() {
     }
   }
 
-  testWidgets('tapping Zorlanıyorum reveals the follow-up question and its 3 buttons', (
-    tester,
-  ) async {
-    await pumpUntilMentorCard(tester);
+  testWidgets(
+    'tapping Zorlanıyorum reveals the follow-up question and its 3 buttons',
+    (tester) async {
+      await pumpUntilMentorCard(tester);
 
-    final strugglingButton = find.widgetWithText(
-      OutlinedButton,
-      'Zorlanıyorum',
-    );
-    expect(strugglingButton, findsOneWidget);
+      final strugglingButton = find.widgetWithText(
+        OutlinedButton,
+        'Zorlanıyorum',
+      );
+      expect(strugglingButton, findsOneWidget);
 
-    await tester.tap(strugglingButton);
-    await tester.pump();
+      await tester.tap(strugglingButton);
+      await tester.pump();
 
-    expect(find.text('Ne tür yardım istersin?'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, 'Görevleri azalt'), findsOneWidget);
-    expect(find.widgetWithText(OutlinedButton, 'Bariyeri gevşet'), findsOneWidget);
-    expect(
-      find.widgetWithText(OutlinedButton, 'Sadece konuşmak istedim'),
-      findsOneWidget,
-    );
-    // The original quick-reply buttons are gone now that we're answered.
-    expect(find.widgetWithText(OutlinedButton, 'İyiyim'), findsNothing);
-  }, skip: true); // see comment above main()
+      expect(find.text('Ne tür yardım istersin?'), findsOneWidget);
+      expect(
+        find.widgetWithText(OutlinedButton, 'Görevleri azalt'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(OutlinedButton, 'Bariyeri gevşet'),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(OutlinedButton, 'Sadece konuşmak istedim'),
+        findsOneWidget,
+      );
+      // The original quick-reply buttons are gone now that we're answered.
+      expect(find.widgetWithText(OutlinedButton, 'İyiyim'), findsNothing);
+    },
+    skip: true,
+  ); // see comment above main()
 
   testWidgets('tapping Görevleri azalt shows the ack text and a SnackBar', (
     tester,
@@ -135,13 +143,13 @@ void main() {
     await tester.tap(find.widgetWithText(OutlinedButton, 'Görevleri azalt'));
     await tester.pump();
 
-    expect(
-      find.textContaining('görevlerini azalttım'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('görevlerini azalttım'), findsOneWidget);
     expect(find.byType(SnackBar), findsOneWidget);
     // The follow-up buttons are gone now that a choice was made.
-    expect(find.widgetWithText(OutlinedButton, 'Bariyeri gevşet'), findsNothing);
+    expect(
+      find.widgetWithText(OutlinedButton, 'Bariyeri gevşet'),
+      findsNothing,
+    );
   }, skip: true); // see comment above main()
 
   testWidgets('tapping İyiyim never shows a follow-up question', (

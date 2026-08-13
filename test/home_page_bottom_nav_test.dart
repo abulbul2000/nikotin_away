@@ -88,9 +88,8 @@ void main() {
     await tester.pumpWidget(_wrap());
     await tester.pump();
 
-    IndexedStack stack() => tester.widget<IndexedStack>(
-      find.byType(IndexedStack),
-    );
+    IndexedStack stack() =>
+        tester.widget<IndexedStack>(find.byType(IndexedStack));
 
     expect(stack().index, 0);
 
@@ -107,19 +106,20 @@ void main() {
     expect(stack().index, 3);
   });
 
-  testWidgets('settings tab renders SettingsPage body without a nested Scaffold', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_wrap());
-    await tester.pump();
+  testWidgets(
+    'settings tab renders SettingsPage body without a nested Scaffold',
+    (tester) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pump();
 
-    await tester.tap(find.text('Ayarlar'));
-    await tester.pump();
+      await tester.tap(find.text('Ayarlar'));
+      await tester.pump();
 
-    // Only HomePage's own Scaffold should exist — SettingsPage's body is
-    // shown directly inside the IndexedStack, not wrapped in a second one.
-    expect(find.byType(Scaffold), findsOneWidget);
-  });
+      // Only HomePage's own Scaffold should exist — SettingsPage's body is
+      // shown directly inside the IndexedStack, not wrapped in a second one.
+      expect(find.byType(Scaffold), findsOneWidget);
+    },
+  );
 
   testWidgets('craving SOS button remains visible regardless of selected tab', (
     tester,

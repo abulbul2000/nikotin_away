@@ -13,7 +13,8 @@ class OnboardingPermissionResult {
 }
 
 class PermissionService {
-  static Future<OnboardingPermissionResult> requestOnboardingPermissions() async {
+  static Future<OnboardingPermissionResult>
+  requestOnboardingPermissions() async {
     final telemetryGranted = await ensureTelemetryPermissions();
     final notificationsGranted =
         await NotificationService.ensureNotificationPermission();

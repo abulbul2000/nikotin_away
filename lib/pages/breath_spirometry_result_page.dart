@@ -215,10 +215,7 @@ class _BreathSpirometryResultPageState
             ),
             child: Text(
               context.t('breathScoreDisclaimer'),
-              style: const TextStyle(
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
-              ),
+              style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic),
             ),
           ),
           const SizedBox(height: 24),

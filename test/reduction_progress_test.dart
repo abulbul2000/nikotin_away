@@ -71,29 +71,35 @@ void main() {
     }
   }
 
-  test('an install with no data reports nothing rather than three zeros', () async {
-    final progress = await StorageService().loadReductionProgress(now: today);
+  test(
+    'an install with no data reports nothing rather than three zeros',
+    () async {
+      final progress = await StorageService().loadReductionProgress(now: today);
 
-    // The counter this replaced would happily print a number here. Saying
-    // "we don't know yet" is the honest answer on day one.
-    expect(progress.hasEvidence, isFalse);
-    expect(progress.targetStreakDays, 0);
-    expect(progress.cigarettesAvoided, 0);
-  });
+      // The counter this replaced would happily print a number here. Saying
+      // "we don't know yet" is the honest answer on day one.
+      expect(progress.hasEvidence, isFalse);
+      expect(progress.targetStreakDays, 0);
+      expect(progress.cigarettesAvoided, 0);
+    },
+  );
 
-  test('days under target build a streak, a day over it ends the streak', () async {
-    final storage = StorageService();
-    final target = await _impliedTarget(storage, today);
+  test(
+    'days under target build a streak, a day over it ends the streak',
+    () async {
+      final storage = StorageService();
+      final target = await _impliedTarget(storage, today);
 
-    // Three good days, then one over target further back.
-    await logCigarettes(storage, daysAgo: 0, count: target);
-    await logCigarettes(storage, daysAgo: 1, count: target);
-    await logCigarettes(storage, daysAgo: 2, count: target);
-    await logCigarettes(storage, daysAgo: 3, count: target + 5);
+      // Three good days, then one over target further back.
+      await logCigarettes(storage, daysAgo: 0, count: target);
+      await logCigarettes(storage, daysAgo: 1, count: target);
+      await logCigarettes(storage, daysAgo: 2, count: target);
+      await logCigarettes(storage, daysAgo: 3, count: target + 5);
 
-    final progress = await storage.loadReductionProgress(now: today);
-    expect(progress.targetStreakDays, 3);
-  });
+      final progress = await storage.loadReductionProgress(now: today);
+      expect(progress.targetStreakDays, 3);
+    },
+  );
 
   test('a gap in the data stops the streak instead of extending it', () async {
     final storage = StorageService();
@@ -156,8 +162,18 @@ void main() {
   test('task outcomes carry the streak for users who never log', () async {
     final storage = StorageService();
 
-    await logTaskOutcome(storage, daysAgo: 0, outcome: AdaptiveTaskOutcome.success, count: 3);
-    await logTaskOutcome(storage, daysAgo: 1, outcome: AdaptiveTaskOutcome.success, count: 3);
+    await logTaskOutcome(
+      storage,
+      daysAgo: 0,
+      outcome: AdaptiveTaskOutcome.success,
+      count: 3,
+    );
+    await logTaskOutcome(
+      storage,
+      daysAgo: 1,
+      outcome: AdaptiveTaskOutcome.success,
+      count: 3,
+    );
 
     final progress = await storage.loadReductionProgress(now: today);
 
@@ -170,7 +186,12 @@ void main() {
     final storage = StorageService();
     final target = await _impliedTarget(storage, today);
 
-    await logTaskOutcome(storage, daysAgo: 0, outcome: AdaptiveTaskOutcome.success, count: 4);
+    await logTaskOutcome(
+      storage,
+      daysAgo: 0,
+      outcome: AdaptiveTaskOutcome.success,
+      count: 4,
+    );
     await logCigarettes(storage, daysAgo: 0, count: target + 10);
 
     final progress = await storage.loadReductionProgress(now: today);
@@ -182,33 +203,55 @@ void main() {
   test('mostly-failed tasks do not count as a met target', () async {
     final storage = StorageService();
 
-    await logTaskOutcome(storage, daysAgo: 0, outcome: AdaptiveTaskOutcome.smoked, count: 3);
-    await logTaskOutcome(storage, daysAgo: 0, outcome: AdaptiveTaskOutcome.success, count: 1);
+    await logTaskOutcome(
+      storage,
+      daysAgo: 0,
+      outcome: AdaptiveTaskOutcome.smoked,
+      count: 3,
+    );
+    await logTaskOutcome(
+      storage,
+      daysAgo: 0,
+      outcome: AdaptiveTaskOutcome.success,
+      count: 1,
+    );
 
     final progress = await storage.loadReductionProgress(now: today);
     expect(progress.targetStreakDays, 0);
   });
 
-  test('interval progress is zero on day one and grows with the barrier', () async {
-    final storage = StorageService();
-    final progress = await storage.loadReductionProgress(now: today);
+  test(
+    'interval progress is zero on day one and grows with the barrier',
+    () async {
+      final storage = StorageService();
+      final progress = await storage.loadReductionProgress(now: today);
 
-    // The seeded barrier already sits a quarter above the natural gap, so
-    // the very first reading is a real 25% — the user is being asked to
-    // wait longer than they used to from the start.
-    expect(progress.naturalIntervalMinutes, greaterThan(0));
-    expect(progress.currentBarrierMinutes, greaterThan(progress.naturalIntervalMinutes));
-    expect(progress.intervalProgress, closeTo(0.25, 0.02));
-  });
+      // The seeded barrier already sits a quarter above the natural gap, so
+      // the very first reading is a real 25% — the user is being asked to
+      // wait longer than they used to from the start.
+      expect(progress.naturalIntervalMinutes, greaterThan(0));
+      expect(
+        progress.currentBarrierMinutes,
+        greaterThan(progress.naturalIntervalMinutes),
+      );
+      expect(progress.intervalProgress, closeTo(0.25, 0.02));
+    },
+  );
 
-  test('a barrier below the natural gap reports no progress, not negative', () async {
-    final storage = StorageService();
-    await storage.saveSetting('current_barrier_minutes', '5');
-    await storage.saveSetting('current_barrier_week_start', today.toIso8601String());
+  test(
+    'a barrier below the natural gap reports no progress, not negative',
+    () async {
+      final storage = StorageService();
+      await storage.saveSetting('current_barrier_minutes', '5');
+      await storage.saveSetting(
+        'current_barrier_week_start',
+        today.toIso8601String(),
+      );
 
-    final progress = await storage.loadReductionProgress(now: today);
-    expect(progress.intervalProgress, 0);
-  });
+      final progress = await storage.loadReductionProgress(now: today);
+      expect(progress.intervalProgress, 0);
+    },
+  );
 }
 
 Future<int> _impliedTarget(StorageService storage, DateTime now) async {

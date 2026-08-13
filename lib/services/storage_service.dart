@@ -394,7 +394,11 @@ class StorageService {
     }
     final now = DateTime.now();
     await saveSubscriptionState(
-      (existing ?? SubscriptionState(status: SubscriptionStatus.trial, updatedAt: now))
+      (existing ??
+              SubscriptionState(
+                status: SubscriptionStatus.trial,
+                updatedAt: now,
+              ))
           .copyWith(
             trialStartedAt: now,
             status: SubscriptionStatus.trial,
@@ -644,7 +648,12 @@ class StorageService {
     // task. Added via ALTER rather than only in the CREATE above so
     // installs already on this table (created before this column existed)
     // pick it up too.
-    await _ensureTableColumn(db, _taskAssignmentsTable, 'isCheckIn', 'INTEGER NOT NULL DEFAULT 0');
+    await _ensureTableColumn(
+      db,
+      _taskAssignmentsTable,
+      'isCheckIn',
+      'INTEGER NOT NULL DEFAULT 0',
+    );
     // 29: taskKind — what shape completing the task takes (see TaskKind).
     // Same ALTER-for-existing-installs reasoning as isCheckIn above.
     await _ensureTableColumn(
@@ -671,8 +680,18 @@ class StorageService {
     // 30: the "Zorlanıyorum" follow-up question/options/answer, added via
     // ALTER (not the CREATE above) so installs already on this table pick
     // it up too.
-    await _ensureTableColumn(db, _mentorMessagesTable, 'followUpQuestion', 'TEXT');
-    await _ensureTableColumn(db, _mentorMessagesTable, 'followUpQuickReplies', 'TEXT');
+    await _ensureTableColumn(
+      db,
+      _mentorMessagesTable,
+      'followUpQuestion',
+      'TEXT',
+    );
+    await _ensureTableColumn(
+      db,
+      _mentorMessagesTable,
+      'followUpQuickReplies',
+      'TEXT',
+    );
     await _ensureTableColumn(db, _mentorMessagesTable, 'followUpReply', 'TEXT');
   }
 
@@ -839,7 +858,12 @@ class StorageService {
         snoreLikely INTEGER NOT NULL
       )
     ''');
-    await _ensureTableColumn(db, _snoringProbeTable, 'severityScore', 'INTEGER');
+    await _ensureTableColumn(
+      db,
+      _snoringProbeTable,
+      'severityScore',
+      'INTEGER',
+    );
     await _ensureTableColumn(db, _snoringProbeTable, 'severityLevel', 'TEXT');
   }
 
@@ -851,7 +875,10 @@ class StorageService {
     final rows = await db.query(
       _snoringProbeTable,
       where: 'createdAt >= ? AND createdAt <= ?',
-      whereArgs: [start.toUtc().toIso8601String(), end.toUtc().toIso8601String()],
+      whereArgs: [
+        start.toUtc().toIso8601String(),
+        end.toUtc().toIso8601String(),
+      ],
       orderBy: 'createdAt ASC',
     );
     return rows
@@ -1085,10 +1112,30 @@ class StorageService {
     ''');
     // Acoustic wheeze finding (see WheezeDetectionEngine.analyze) — nullable,
     // same reasoning as breath_test_results' wheeze columns.
-    await _ensureTableColumn(db, _coughTestRecordsTable, 'wheezeDetected', 'INTEGER');
-    await _ensureTableColumn(db, _coughTestRecordsTable, 'wheezeSeverityLevel', 'TEXT');
-    await _ensureTableColumn(db, _coughTestRecordsTable, 'wheezeSeverityScore', 'INTEGER');
-    await _ensureTableColumn(db, _coughTestRecordsTable, 'wheezeBandEnergyRatio', 'REAL');
+    await _ensureTableColumn(
+      db,
+      _coughTestRecordsTable,
+      'wheezeDetected',
+      'INTEGER',
+    );
+    await _ensureTableColumn(
+      db,
+      _coughTestRecordsTable,
+      'wheezeSeverityLevel',
+      'TEXT',
+    );
+    await _ensureTableColumn(
+      db,
+      _coughTestRecordsTable,
+      'wheezeSeverityScore',
+      'INTEGER',
+    );
+    await _ensureTableColumn(
+      db,
+      _coughTestRecordsTable,
+      'wheezeBandEnergyRatio',
+      'REAL',
+    );
   }
 
   /// User-facing breath test record (score/duration/stability/intensity +
@@ -1408,14 +1455,19 @@ class StorageService {
       final decoded = jsonDecode(raw);
       return decoded is List<dynamic> ? decoded : null;
     } catch (error, stackTrace) {
-      debugPrint('[StorageService] Failed to decode $field as JSON list: $error');
+      debugPrint(
+        '[StorageService] Failed to decode $field as JSON list: $error',
+      );
       debugPrintStack(stackTrace: stackTrace);
       return null;
     }
   }
 
   /// Best-effort JSON-map decode counterpart to [_tryDecodeJsonList].
-  Map<String, dynamic>? _tryDecodeJsonMap(String? raw, {required String field}) {
+  Map<String, dynamic>? _tryDecodeJsonMap(
+    String? raw, {
+    required String field,
+  }) {
     if (raw == null || raw.isEmpty) {
       return null;
     }
@@ -1423,7 +1475,9 @@ class StorageService {
       final decoded = jsonDecode(raw);
       return decoded is Map<String, dynamic> ? decoded : null;
     } catch (error, stackTrace) {
-      debugPrint('[StorageService] Failed to decode $field as JSON map: $error');
+      debugPrint(
+        '[StorageService] Failed to decode $field as JSON map: $error',
+      );
       debugPrintStack(stackTrace: stackTrace);
       return null;
     }
@@ -1701,8 +1755,9 @@ class StorageService {
       orderBy: 'measuredAt DESC',
       limit: limit,
     );
-    final baselines =
-        rows.map((row) => BreathNoiseBaseline.fromJson(row)).toList();
+    final baselines = rows
+        .map((row) => BreathNoiseBaseline.fromJson(row))
+        .toList();
     return baselines.reversed.toList();
   }
 
@@ -1765,11 +1820,11 @@ class StorageService {
             .toDouble(),
         gyroscopeMagnitude: (row['gyroscopeMagnitude'] as num).toDouble(),
         ambientMeanDecibel:
-          (row['ambientMeanDecibel'] as num?)?.toDouble() ?? 0,
+            (row['ambientMeanDecibel'] as num?)?.toDouble() ?? 0,
         ambientPeakDecibel:
-          (row['ambientPeakDecibel'] as num?)?.toDouble() ?? 0,
+            (row['ambientPeakDecibel'] as num?)?.toDouble() ?? 0,
         mealSoundLikelihood:
-          (row['mealSoundLikelihood'] as num?)?.toDouble() ?? 0,
+            (row['mealSoundLikelihood'] as num?)?.toDouble() ?? 0,
         screenUnlockCount: (row['screenUnlockCount'] as num).toInt(),
         appUsageMinutes: (row['appUsageMinutes'] as num).toInt(),
         idleMinutes: (row['idleMinutes'] as num).toInt(),
@@ -1799,11 +1854,11 @@ class StorageService {
             .toDouble(),
         gyroscopeMagnitude: (row['gyroscopeMagnitude'] as num).toDouble(),
         ambientMeanDecibel:
-          (row['ambientMeanDecibel'] as num?)?.toDouble() ?? 0,
+            (row['ambientMeanDecibel'] as num?)?.toDouble() ?? 0,
         ambientPeakDecibel:
-          (row['ambientPeakDecibel'] as num?)?.toDouble() ?? 0,
+            (row['ambientPeakDecibel'] as num?)?.toDouble() ?? 0,
         mealSoundLikelihood:
-          (row['mealSoundLikelihood'] as num?)?.toDouble() ?? 0,
+            (row['mealSoundLikelihood'] as num?)?.toDouble() ?? 0,
         screenUnlockCount: (row['screenUnlockCount'] as num).toInt(),
         appUsageMinutes: (row['appUsageMinutes'] as num).toInt(),
         idleMinutes: (row['idleMinutes'] as num).toInt(),
@@ -1869,7 +1924,9 @@ class StorageService {
       return (sleepTime: fallbackSleepTime, wakeTime: fallbackWakeTime);
     }
     final interval =
-        int.tryParse((await loadSetting('sleep_probe_interval_minutes')) ?? '') ??
+        int.tryParse(
+          (await loadSetting('sleep_probe_interval_minutes')) ?? '',
+        ) ??
         45;
 
     final probes = await loadSleepProbeEventsBetween(
@@ -1891,7 +1948,10 @@ class StorageService {
 
   Future<List<SignificantPlace>> loadSignificantPlaces() async {
     final db = await database;
-    final rows = await db.query(_significantPlacesTable, orderBy: 'visitCount DESC');
+    final rows = await db.query(
+      _significantPlacesTable,
+      orderBy: 'visitCount DESC',
+    );
     return rows.map((row) {
       return SignificantPlace(
         id: row['id'] as String,
@@ -2104,7 +2164,9 @@ class StorageService {
       orderBy: 'hour ASC',
     );
     if (rows.isNotEmpty) {
-      return rows.map((row) => AdaptiveHourlyProfileEntry.fromJson(row)).toList();
+      return rows
+          .map((row) => AdaptiveHourlyProfileEntry.fromJson(row))
+          .toList();
     }
 
     final seeded = List<AdaptiveHourlyProfileEntry>.generate(
@@ -2164,8 +2226,8 @@ class StorageService {
             scheduledAt: DateTime.parse(row['scheduledAt'] as String),
             respondedAt: DateTime.parse(row['respondedAt'] as String),
             outcome: row['outcome'] as String,
-            plannedDurationMinutes:
-                (row['plannedDurationMinutes'] as num).toInt(),
+            plannedDurationMinutes: (row['plannedDurationMinutes'] as num)
+                .toInt(),
             responseDelayMinutes: (row['responseDelayMinutes'] as num).toInt(),
             hourBucket: (row['hourBucket'] as num).toInt(),
           ),
@@ -2251,7 +2313,7 @@ class StorageService {
 
     final breakWindows =
         (profile['breakWindows'] as List<Map<String, String>>? ??
-            const <Map<String, String>>[]);
+        const <Map<String, String>>[]);
 
     return SmokingWindowInput(
       wakeTime: (profile['wakeTime'] as String?) ?? '07:00',
@@ -2301,9 +2363,7 @@ class StorageService {
     final evolved = _smokingIntervalService.evolveWeeklyBarrierMinutes(
       currentMinutes: stored,
       goodWeek: _smokingIntervalService.isGoodWeek(
-        loggedCigarettes: await countSmokingEventsSince(
-          weekStart,
-        ),
+        loggedCigarettes: await countSmokingEventsSince(weekStart),
         targetCigarettes: target * 7,
         taskSuccessRate: await taskSuccessRateSince(weekStart),
       ),
@@ -2375,9 +2435,7 @@ class StorageService {
       // A logged count is direct evidence and outranks task outcomes. Task
       // outcomes are the fallback for the many users who never press the
       // quick-log button; the 0.6 threshold matches the weekly review's.
-      final metTarget = smoked != null
-          ? smoked <= target
-          : successRate! >= 0.6;
+      final metTarget = smoked != null ? smoked <= target : successRate! >= 0.6;
       if (streakOpen) {
         if (metTarget) {
           streak++;
@@ -2533,10 +2591,7 @@ class StorageService {
     return raw != '0';
   }
 
-  Future<void> setNotificationKindEnabled(
-    String kindName,
-    bool enabled,
-  ) async {
+  Future<void> setNotificationKindEnabled(String kindName, bool enabled) async {
     await saveSetting(
       'notification_kind_enabled_$kindName',
       enabled ? '1' : '0',
@@ -2591,7 +2646,8 @@ class StorageService {
     required DateTime sleepAt,
     required List<String> riskyHours,
   }) async {
-    final todayKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final todayKey =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final cachedDate = await loadSetting(_adaptivePlanDateKey);
     if (cachedDate == todayKey) {
       final cachedJson = await loadSetting(_adaptivePlanJsonKey);
@@ -2622,12 +2678,15 @@ class StorageService {
     final barrierMinutes = await loadCurrentBarrierMinutes(now: now);
     final reliefUntilRaw = await loadSetting(_mentorTaskReliefUntilKey);
     final reliefDateRaw = await loadSetting(_mentorBarrierReliefDateKey);
-    final effectiveBarrierMinutes = MentorReliefService.applyBarrierReliefIfActive(
-      baseMinutes: barrierMinutes,
-      now: now,
-      reliefDate: reliefDateRaw == null ? null : DateTime.tryParse(reliefDateRaw),
-      minBarrierMinutes: SmokingIntervalService.minBarrierMinutes,
-    );
+    final effectiveBarrierMinutes =
+        MentorReliefService.applyBarrierReliefIfActive(
+          baseMinutes: barrierMinutes,
+          now: now,
+          reliefDate: reliefDateRaw == null
+              ? null
+              : DateTime.tryParse(reliefDateRaw),
+          minBarrierMinutes: SmokingIntervalService.minBarrierMinutes,
+        );
     final baseTaskCount = _smokingIntervalService.dailyTaskCount(
       input: windowInput,
       movingSuccessRate: state.movingSuccessRate,
@@ -2637,7 +2696,9 @@ class StorageService {
     final effectiveTaskCount = MentorReliefService.applyTaskReliefIfActive(
       baseCount: baseTaskCount,
       now: now,
-      reliefUntil: reliefUntilRaw == null ? null : DateTime.tryParse(reliefUntilRaw),
+      reliefUntil: reliefUntilRaw == null
+          ? null
+          : DateTime.tryParse(reliefUntilRaw),
     );
     final plan = _disciplineProtocolService.buildDailyAdaptivePlan(
       now: now,
@@ -2762,26 +2823,20 @@ class StorageService {
   /// notifications on *every* app open with no persisted memory of having
   /// already done so that day, the other half of the same duplicate-
   /// notification bug the title-based guard above fixes.
-  Future<bool> hasEnsuredMinimumTaskNotificationsToday({
-    DateTime? now,
-  }) async {
+  Future<bool> hasEnsuredMinimumTaskNotificationsToday({DateTime? now}) async {
     final todayKey = _todayKey(now ?? DateTime.now());
     final cachedDate = await loadSetting(_minimumTaskNotificationsDateKey);
     return cachedDate == todayKey;
   }
 
-  Future<void> markMinimumTaskNotificationsEnsuredToday({
-    DateTime? now,
-  }) async {
+  Future<void> markMinimumTaskNotificationsEnsuredToday({DateTime? now}) async {
     await saveSetting(
       _minimumTaskNotificationsDateKey,
       _todayKey(now ?? DateTime.now()),
     );
   }
 
-  Future<Duration> resolveAdaptivePostponeDelay({
-    int baseMinutes = 10,
-  }) async {
+  Future<Duration> resolveAdaptivePostponeDelay({int baseMinutes = 10}) async {
     final state = await loadAdaptiveTaskState();
     return _disciplineProtocolService.computeAdaptivePostponeDelay(
       state: state,
@@ -2798,9 +2853,13 @@ class StorageService {
   }) async {
     final responded = respondedAt ?? DateTime.now();
     final scheduled =
-        scheduledAt ?? responded.subtract(Duration(minutes: plannedDurationMinutes));
-    final responseDelay =
-      responded.difference(scheduled).inMinutes.clamp(1, 720).toInt();
+        scheduledAt ??
+        responded.subtract(Duration(minutes: plannedDurationMinutes));
+    final responseDelay = responded
+        .difference(scheduled)
+        .inMinutes
+        .clamp(1, 720)
+        .toInt();
 
     final state = await loadAdaptiveTaskState();
     final hourly = await loadAdaptiveHourlyProfile();
@@ -3163,7 +3222,7 @@ class StorageService {
           (data['durationBarrierCommands'] as List<dynamic>? ?? const [])
               .map((item) => item.toString())
               .toList(),
-        durationBarrierHistoryCount:
+      durationBarrierHistoryCount:
           (data['durationBarrierHistoryCount'] as num?)?.toInt() ?? 0,
       commandSuccessScores:
           (data['commandSuccessScores'] as Map<String, dynamic>? ??
@@ -3388,7 +3447,8 @@ class StorageService {
     );
     final relevant = logged
         .where((event) {
-          final weekend = event.timestamp.weekday == DateTime.saturday ||
+          final weekend =
+              event.timestamp.weekday == DateTime.saturday ||
               event.timestamp.weekday == DateTime.sunday;
           return weekend == isWeekend;
         })
@@ -3519,8 +3579,7 @@ class StorageService {
     if (state == TaskLifecycleState.postponed && postponeMinutes != null) {
       updated = updated.copyWith(
         postponeCount: existing.postponeCount + 1,
-        totalPostponedMinutes:
-            existing.totalPostponedMinutes + postponeMinutes,
+        totalPostponedMinutes: existing.totalPostponedMinutes + postponeMinutes,
         scheduledAt: now.add(Duration(minutes: postponeMinutes)),
       );
     }
@@ -3649,7 +3708,12 @@ class StorageService {
     required List<int> hours,
   }) async {
     for (final hour in hours) {
-      final timestamp = DateTime(day.year, day.month, day.day, hour.clamp(0, 23));
+      final timestamp = DateTime(
+        day.year,
+        day.month,
+        day.day,
+        hour.clamp(0, 23),
+      );
       await saveSmokingEvent(
         SmokingEvent(
           id: 'smoke_recall_${timestamp.millisecondsSinceEpoch}_$hour',
@@ -3673,7 +3737,11 @@ class StorageService {
       orderBy: 'timestamp DESC',
       limit: limit,
     );
-    return rows.map((row) => SmokingEvent.fromJson(row)).toList().reversed.toList();
+    return rows
+        .map((row) => SmokingEvent.fromJson(row))
+        .toList()
+        .reversed
+        .toList();
   }
 
   Future<List<SmokingEvent>> loadSmokingEventsForDay(DateTime day) {
@@ -3683,10 +3751,7 @@ class StorageService {
       final rows = await db.query(
         _smokingEventsTable,
         where: 'timestamp >= ? AND timestamp < ?',
-        whereArgs: [
-          startOfDay.toIso8601String(),
-          endOfDay.toIso8601String(),
-        ],
+        whereArgs: [startOfDay.toIso8601String(), endOfDay.toIso8601String()],
         orderBy: 'timestamp ASC',
       );
       return rows.map((row) => SmokingEvent.fromJson(row)).toList();
@@ -3767,7 +3832,10 @@ class StorageService {
   /// (see buildAdaptiveNoSmokePlan's daily cache), so easing today's plan
   /// retroactively would either be a no-op or collide with tasks the user
   /// already saw. Starting tomorrow needs no cache invalidation at all.
-  Future<void> applyMentorFollowUpChoice(String messageId, String choice) async {
+  Future<void> applyMentorFollowUpChoice(
+    String messageId,
+    String choice,
+  ) async {
     final now = DateTime.now();
     final tomorrow = DateTime(now.year, now.month, now.day + 1);
     switch (choice) {
@@ -4129,14 +4197,14 @@ class StorageService {
 
     final breathResults = await loadBreathTestResults(limit: 50);
     final latestBreathScore = breathResults.isNotEmpty
-      ? breathResults.last.breathScore
-      : _legacyBreathScoreEstimate(breathRecords);
+        ? breathResults.last.breathScore
+        : _legacyBreathScoreEstimate(breathRecords);
     final breathTrendAnalysis = _breathTestEngine.analyzeTrend(breathResults);
 
     final behaviorRisk =
-      (dynamicCoreRisk + personalizedAdjustment + profileAdjustment)
-        .clamp(0, 100)
-        .toDouble();
+        (dynamicCoreRisk + personalizedAdjustment + profileAdjustment)
+            .clamp(0, 100)
+            .toDouble();
 
     final weeklyPayload =
         (latestContext['weeklyPayload'] as Map<String, dynamic>?) ??
@@ -4256,7 +4324,9 @@ class StorageService {
 
     final wearableRiskAdjustment = await _loadCachedWearableRiskAdjustment();
     if (wearableRiskAdjustment > 0) {
-      dynamicRisk = (dynamicRisk + wearableRiskAdjustment).clamp(0, 100).toInt();
+      dynamicRisk = (dynamicRisk + wearableRiskAdjustment)
+          .clamp(0, 100)
+          .toInt();
     }
 
     // Cough test + snoring test signals — bounded adjustments applied the
@@ -4531,14 +4601,16 @@ class StorageService {
     }
 
     final sorted = [...taskHistory]..sort((a, b) => a.date.compareTo(b.date));
-    final recent =
-        sorted.length > 14 ? sorted.sublist(sorted.length - 14) : sorted;
+    final recent = sorted.length > 14
+        ? sorted.sublist(sorted.length - 14)
+        : sorted;
     final successCount = recent.where((item) => item.completed).length;
     final successRate = successCount / recent.length;
 
     var risk = ((1 - successRate) * 100).round();
-    final streakWindow =
-        recent.length > 5 ? recent.sublist(recent.length - 5) : recent;
+    final streakWindow = recent.length > 5
+        ? recent.sublist(recent.length - 5)
+        : recent;
     if (streakWindow.every((item) => item.completed)) {
       risk -= 4;
     } else if (streakWindow.every((item) => !item.completed)) {

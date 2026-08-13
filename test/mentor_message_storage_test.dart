@@ -102,34 +102,37 @@ void main() {
     expect(messages.last.id, 'older');
   });
 
-  test('attachMentorFollowUpQuestion sets the question and 3 options', () async {
-    final storage = StorageService();
-    await storage.saveMentorMessage(
-      MentorMessage(
-        id: 'm3',
-        createdAt: DateTime(2026, 7, 21, 21, 0),
-        type: 'daily',
-        text: 'MENTOR_DAILY_SUPPORTIVE',
-        tone: 'supportive',
-        quickReplies: const ['QUICK_REPLY_OK', 'QUICK_REPLY_STRUGGLING'],
-        read: false,
-      ),
-    );
+  test(
+    'attachMentorFollowUpQuestion sets the question and 3 options',
+    () async {
+      final storage = StorageService();
+      await storage.saveMentorMessage(
+        MentorMessage(
+          id: 'm3',
+          createdAt: DateTime(2026, 7, 21, 21, 0),
+          type: 'daily',
+          text: 'MENTOR_DAILY_SUPPORTIVE',
+          tone: 'supportive',
+          quickReplies: const ['QUICK_REPLY_OK', 'QUICK_REPLY_STRUGGLING'],
+          read: false,
+        ),
+      );
 
-    await storage.attachMentorFollowUpQuestion('m3');
+      await storage.attachMentorFollowUpQuestion('m3');
 
-    final loaded = await storage.loadLatestMentorMessage();
-    expect(
-      loaded!.followUpQuestion,
-      MentorMessageCodes.followUpStrugglingQuestion,
-    );
-    expect(loaded.followUpQuickReplies, [
-      MentorMessageCodes.quickReplyReduceTasks,
-      MentorMessageCodes.quickReplyEaseBarrier,
-      MentorMessageCodes.quickReplyJustTalking,
-    ]);
-    expect(loaded.followUpReply, isNull);
-  });
+      final loaded = await storage.loadLatestMentorMessage();
+      expect(
+        loaded!.followUpQuestion,
+        MentorMessageCodes.followUpStrugglingQuestion,
+      );
+      expect(loaded.followUpQuickReplies, [
+        MentorMessageCodes.quickReplyReduceTasks,
+        MentorMessageCodes.quickReplyEaseBarrier,
+        MentorMessageCodes.quickReplyJustTalking,
+      ]);
+      expect(loaded.followUpReply, isNull);
+    },
+  );
 
   test(
     'applyMentorFollowUpChoice(reduceTasks) grants relief starting tomorrow',
@@ -158,17 +161,10 @@ void main() {
       );
       expect(reliefUntilRaw, isNotNull);
       final reliefUntil = DateTime.parse(reliefUntilRaw!);
-      final tomorrow = DateTime(
-        before.year,
-        before.month,
-        before.day + 1,
-      );
+      final tomorrow = DateTime(before.year, before.month, before.day + 1);
       // Must start tomorrow (not today) and last roughly 7 days from there.
       expect(reliefUntil.isAfter(tomorrow), isTrue);
-      expect(
-        reliefUntil.difference(tomorrow).inDays,
-        7,
-      );
+      expect(reliefUntil.difference(tomorrow).inDays, 7);
 
       final loaded = await storage.loadLatestMentorMessage();
       expect(loaded!.followUpReply, MentorMessageCodes.quickReplyReduceTasks);
@@ -202,11 +198,7 @@ void main() {
       );
       expect(reliefDateRaw, isNotNull);
       final reliefDate = DateTime.parse(reliefDateRaw!);
-      final tomorrow = DateTime(
-        before.year,
-        before.month,
-        before.day + 1,
-      );
+      final tomorrow = DateTime(before.year, before.month, before.day + 1);
       expect(reliefDate.year, tomorrow.year);
       expect(reliefDate.month, tomorrow.month);
       expect(reliefDate.day, tomorrow.day);
@@ -245,47 +237,44 @@ void main() {
     },
   );
 
-  test(
-    "today's cached adaptive plan is unaffected by a relief granted today "
-    '(relief only ever starts tomorrow)',
-    () async {
-      final storage = StorageService();
-      final now = DateTime(2026, 7, 21, 10, 0);
-      final sleepAt = DateTime(2026, 7, 21, 23, 0);
+  test("today's cached adaptive plan is unaffected by a relief granted today "
+      '(relief only ever starts tomorrow)', () async {
+    final storage = StorageService();
+    final now = DateTime(2026, 7, 21, 10, 0);
+    final sleepAt = DateTime(2026, 7, 21, 23, 0);
 
-      final firstPlan = await storage.buildAdaptiveNoSmokePlan(
-        now: now,
-        sleepAt: sleepAt,
-        riskyHours: const [],
-      );
+    final firstPlan = await storage.buildAdaptiveNoSmokePlan(
+      now: now,
+      sleepAt: sleepAt,
+      riskyHours: const [],
+    );
 
-      await storage.saveMentorMessage(
-        MentorMessage(
-          id: 'm7',
-          createdAt: now,
-          type: 'daily',
-          text: 'MENTOR_DAILY_SUPPORTIVE',
-          tone: 'supportive',
-          quickReplies: const [],
-          read: true,
-        ),
-      );
-      await storage.applyMentorFollowUpChoice(
-        'm7',
-        MentorMessageCodes.quickReplyReduceTasks,
-      );
+    await storage.saveMentorMessage(
+      MentorMessage(
+        id: 'm7',
+        createdAt: now,
+        type: 'daily',
+        text: 'MENTOR_DAILY_SUPPORTIVE',
+        tone: 'supportive',
+        quickReplies: const [],
+        read: true,
+      ),
+    );
+    await storage.applyMentorFollowUpChoice(
+      'm7',
+      MentorMessageCodes.quickReplyReduceTasks,
+    );
 
-      final secondPlan = await storage.buildAdaptiveNoSmokePlan(
-        now: now,
-        sleepAt: sleepAt,
-        riskyHours: const [],
-      );
+    final secondPlan = await storage.buildAdaptiveNoSmokePlan(
+      now: now,
+      sleepAt: sleepAt,
+      riskyHours: const [],
+    );
 
-      // Same calendar day, so the plan must come from cache unchanged —
-      // proves the relief really does wait until tomorrow rather than
-      // silently reshaping a day whose tasks may already be delivered.
-      expect(secondPlan.items.length, firstPlan.items.length);
-      expect(secondPlan.targetTaskCount, firstPlan.targetTaskCount);
-    },
-  );
+    // Same calendar day, so the plan must come from cache unchanged —
+    // proves the relief really does wait until tomorrow rather than
+    // silently reshaping a day whose tasks may already be delivered.
+    expect(secondPlan.items.length, firstPlan.items.length);
+    expect(secondPlan.targetTaskCount, firstPlan.targetTaskCount);
+  });
 }

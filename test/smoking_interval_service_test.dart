@@ -113,20 +113,14 @@ void main() {
   group('weekly evolution', () {
     test('a good week stretches the barrier', () {
       expect(
-        service.evolveWeeklyBarrierMinutes(
-          currentMinutes: 30,
-          goodWeek: true,
-        ),
+        service.evolveWeeklyBarrierMinutes(currentMinutes: 30, goodWeek: true),
         35, // 30 * 1.15
       );
     });
 
     test('a bad week pulls it back by the same step', () {
       expect(
-        service.evolveWeeklyBarrierMinutes(
-          currentMinutes: 30,
-          goodWeek: false,
-        ),
+        service.evolveWeeklyBarrierMinutes(currentMinutes: 30, goodWeek: false),
         26, // 30 * 0.85, rounded
       );
     });
@@ -222,10 +216,7 @@ void main() {
     });
 
     test('blocks the whole shift when the workplace forbids it', () {
-      expect(
-        service.blockedTaskWindows(_example()),
-        [('09:00', '17:00')],
-      );
+      expect(service.blockedTaskWindows(_example()), [('09:00', '17:00')]);
     });
 
     test('leaves the breaks open, blocking only around them', () {
@@ -264,10 +255,7 @@ void main() {
       service.impliedDailyTarget(input: input, barrierMinutes: 30),
       16, // 480 / 30
     );
-    expect(
-      service.impliedDailyTarget(input: input, barrierMinutes: 52),
-      9,
-    );
+    expect(service.impliedDailyTarget(input: input, barrierMinutes: 52), 9);
   });
 
   group('daily task count', () {

@@ -11,7 +11,7 @@ class AppTexts {
     'watchdogForegroundBody': 'Görev yanıtı bekleniyor',
     'watchdogViolationTitle': 'Nikotin Away Hatırlatma',
     'watchdogViolationBody':
-      '10 dakika yanıt alamadık. {taskTitle} görevini kaçırmış olabilirsin, sorun değil.',
+        '10 dakika yanıt alamadık. {taskTitle} görevini kaçırmış olabilirsin, sorun değil.',
     'watchdogForegroundChannel': 'Arka plan servisi',
     'watchdogViolationChannel': 'Nikotin Away Hatırlatmaları',
     'selectLanguage': 'Dil Sec',
@@ -63,12 +63,14 @@ class AppTexts {
     'medicationsPageTitle': 'Ilaclarim',
     'medicationsEmptyState': 'Henuz ilac eklemediniz.',
     'medicationDeleteConfirmTitle': 'Ilaci sil',
-    'medicationDeleteConfirmMessage': 'Bu ilaci ve hatirlatmalarini silmek istediginize emin misiniz?',
+    'medicationDeleteConfirmMessage':
+        'Bu ilaci ve hatirlatmalarini silmek istediginize emin misiniz?',
     'medicationSavedConfirmation': 'Ilac kaydedildi',
     'medicationReminderTitle': 'Ilac hatirlatmasi',
     'medicationReminderBody': '{name} ilacinizi alma vakti geldi.',
     'overlayPermissionTitle': 'Gorev ekranini goster',
-    'overlayPermissionMessage': 'Gorev ekraninin, telefon kilitli olmasa bile diger uygulamalarin ustunde acilabilmesi icin "diger uygulamalarin ustunde goster" iznine ihtiyacimiz var. Simdi ayar ekranini acalim mi?',
+    'overlayPermissionMessage':
+        'Gorev ekraninin, telefon kilitli olmasa bile diger uygulamalarin ustunde acilabilmesi icin "diger uygulamalarin ustunde goster" iznine ihtiyacimiz var. Simdi ayar ekranini acalim mi?',
     'smokedLogButtonRow': 'Sigara Ictim butonu',
     'smokedLogButtonTitle': 'Sigara Ictim Butonu',
     'smokedLogButtonDescription':
@@ -141,7 +143,8 @@ class AppTexts {
     'permissionSetupOptionalNote':
         'Izinleri daha sonra Ayarlar bolumunden de duzenleyebilirsiniz.',
     'packsPerDayQuestion': 'Gunde kac paket sigara iciyorsunuz?',
-    'firstCigaretteWhen': 'Ilk sigarayi uyandiktan ne kadar sure sonra iciyorsunuz?',
+    'firstCigaretteWhen':
+        'Ilk sigarayi uyandiktan ne kadar sure sonra iciyorsunuz?',
     'firstCigarette10to30': 'Uyandiktan 10-30 dk sonra',
     'maxSmokeFreeDuration': 'Sigarasiz kalabildigin maksimum sure',
     'smokeFree30to60': '30-60 dakika',
@@ -169,13 +172,14 @@ class AppTexts {
     'weeklySurveyPromptAsk': 'Haftalik anketi simdi doldurmak ister misiniz?',
     'shareProgressTitle': 'Ilerlemeni paylas',
     'shareProgressMessage':
-      'Haftalik degerlendirmeni tamamladin. Ilerlemeni arkadaslarinla paylasmak ister misin?',
+        'Haftalik degerlendirmeni tamamladin. Ilerlemeni arkadaslarinla paylasmak ister misin?',
     'shareProgressSkip': 'Gec',
     'shareProgressAction': 'Paylas',
     'shareProgressText':
-      'Nikotin Away ile sigarayi birakma surecimi takip ediyorum. Guncel risk skorum: {score}/100 ({level}).',
+        'Nikotin Away ile sigarayi birakma surecimi takip ediyorum. Guncel risk skorum: {score}/100 ({level}).',
     'saveErrorRetry': 'Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.',
-    'loadErrorRetry': 'Veriler yuklenirken bir hata olustu. Lutfen tekrar deneyin.',
+    'loadErrorRetry':
+        'Veriler yuklenirken bir hata olustu. Lutfen tekrar deneyin.',
     'smokeFreeStreak': 'Sigara İçmeme Serisi',
     'reductionCardTitle': 'Azaltma İlerlemen',
     'reductionStreakLabel': 'Hedefi tutturduğun gün',
@@ -195,8 +199,6 @@ class AppTexts {
     'longitudinalAnalysis': 'Zaman Serisine Dayalı Analiz',
     'statistics': 'İstatistikler',
     'recentTests': 'Son Testler',
-    'exportComingSoon': 'PDF dışa aktarma yakında geliyor.',
-    'exportPDF': 'PDF Olarak Dışa Aktar',
     'workDaysLabel': 'Çalıştığın günler',
     'dayMonShort': 'Pzt',
     'dayTueShort': 'Sal',
@@ -224,44 +226,46 @@ class AppTexts {
     'notSpecified': 'Belirtilmedi',
     'unknownValue': 'Bilinmiyor',
     'breathRestInstruction':
-      'Kısa dinlenme: Normal nefes alın.\nSonraki denemeye hazırlanın.',
+        'Kısa dinlenme: Normal nefes alın.\nSonraki denemeye hazırlanın.',
     'breathActiveInstruction':
-      '1. Dik oturun ve rahatlayın.\n2. Daireye dokunup burnunuzdan ciğerlerinizi tamamen dolduracak şekilde derin bir nefes alın, kısa bir süre tutun.\n3. Nefesinizi ANİDEN ve olabildiğince güçlü, tek seferde verin.\n4. Verme işlemi bitince daireye tekrar dokunun.\n\n3 deneme yapılacak, en iyi skor kaydedilir.',
+        '1. Dik oturun ve rahatlayın.\n2. Daireye dokunup burnunuzdan ciğerlerinizi tamamen dolduracak şekilde derin bir nefes alın, kısa bir süre tutun.\n3. Nefesinizi ANİDEN ve olabildiğince güçlü, tek seferde verin.\n4. Verme işlemi bitince daireye tekrar dokunun.\n\n3 deneme yapılacak, en iyi skor kaydedilir.',
     'breathExerciseDisclaimer':
-      'Bu bir spirometre degildir. Kendi ilerlemeni takip etmen icin bir olcum.',
+        'Bu bir spirometre degildir. Kendi ilerlemeni takip etmen icin bir olcum.',
     'breathSpirometryResultTitle': 'Nefes Testi Sonucu',
     'breathScoreLabel': 'Nefes Skoru',
     'breathScoreDisclaimer':
-      'Bu skor kendi gecmisine gore bir karsilastirmadir; tibbi bir olcum degildir.',
+        'Bu skor kendi gecmisine gore bir karsilastirmadir; tibbi bir olcum degildir.',
     'breathSpirometryEstimateDisclaimer':
-      'Bu bir tıbbi tanı aracı değildir. Sağlıkla ilgili bir endişeniz varsa doktorunuza danışın.',
+        'Bu bir tıbbi tanı aracı değildir. Sağlıkla ilgili bir endişeniz varsa doktorunuza danışın.',
     'micRationaleTitle': 'Mikrofon izni',
     'micRationaleMessage':
-      'Nefes verme suresini otomatik olcmek icin mikrofonu kullanabiliriz. Ses hicbir zaman kaydedilmez veya saklanmaz; yalnizca anlik ses seviyesi olculur. Izin vermezsen testi elle (dokunarak) bitirebilirsin.',
+        'Nefes verme suresini otomatik olcmek icin mikrofonu kullanabiliriz. Ses hicbir zaman kaydedilmez veya saklanmaz; yalnizca anlik ses seviyesi olculur. Izin vermezsen testi elle (dokunarak) bitirebilirsin.',
     'restingLabel': 'Dinlenme',
     'secondsLeftLabel': 'saniye kaldi',
     'tapCircleToFinish': 'Bitirince daireye dokunun',
-    'breathListeningHint': 'Dinleniyor... nefesinizi verin, otomatik algılanacak',
+    'breathListeningHint':
+        'Dinleniyor... nefesinizi verin, otomatik algılanacak',
     'breathStepSitRelax': 'Dik oturun ve rahatlayın.',
-    'breathStepDeepBreath': 'Ciğerlerinizi tamamen doldurana kadar derin nefes alın.',
+    'breathStepDeepBreath':
+        'Ciğerlerinizi tamamen doldurana kadar derin nefes alın.',
     'breathStepHold': 'Kısa bir süre nefesinizi tutun.',
     'breathStepExhale':
-      'Mikrofona doğru ANİDEN ve olabildiğince güçlü üfleyin nefesiniz bitene kadar — yavaş değil, tek seferde.',
+        'Mikrofona doğru ANİDEN ve olabildiğince güçlü üfleyin nefesiniz bitene kadar — yavaş değil, tek seferde.',
     'breathStepExhaleFinishHint': 'Nefesiniz otomatik olarak algılanacak.',
     'breathStepOkAction': 'Devam',
     'breathAutoNextAttemptInstruction':
-      'Dik oturun ve rahatlayın. Ciğerlerinizi tamamen doldurana kadar derin nefes alın. Kısa bir süre tutun. Mikrofona doğru aniden ve olabildiğince güçlü üfleyin. Nefesiniz otomatik olarak algılanacak.',
+        'Dik oturun ve rahatlayın. Ciğerlerinizi tamamen doldurana kadar derin nefes alın. Kısa bir süre tutun. Mikrofona doğru aniden ve olabildiğince güçlü üfleyin. Nefesiniz otomatik olarak algılanacak.',
     'breathNoiseCheckListening': 'Ortam dinleniyor...',
     'breathNoiseWarningTitle': 'Ortam gürültülü olabilir',
     'breathNoiseWarningMessage':
-      'Ortamda biraz gürültü var. Sonuç yine de kaydedilir ama daha sessiz bir yerde daha güvenilir olur. Nasıl devam etmek istersin?',
+        'Ortamda biraz gürültü var. Sonuç yine de kaydedilir ama daha sessiz bir yerde daha güvenilir olur. Nasıl devam etmek istersin?',
     'breathNoiseLoudTitle': 'Ortam çok gürültülü',
     'breathNoiseLoudMessage':
-      'Ortam gürültüsü test için oldukça yüksek. Devam edebilirsin ama sonuç "gürültülü ortamda alındı" olarak işaretlenecek ve ilerleme grafiğinde ayrıca gösterilecek. Sessiz bir yere geçmeni öneririz.',
+        'Ortam gürültüsü test için oldukça yüksek. Devam edebilirsin ama sonuç "gürültülü ortamda alındı" olarak işaretlenecek ve ilerleme grafiğinde ayrıca gösterilecek. Sessiz bir yere geçmeni öneririz.',
     'breathNoiseContinueAnyway': 'Devam Et',
     'breathNoiseRetry': 'Tekrar Dene',
     'breathNoiseDuringAttemptWarning':
-      'Test sırasında ortam sesi arttı — bu deneme gürültülü olarak işaretlendi.',
+        'Test sırasında ortam sesi arttı — bu deneme gürültülü olarak işaretlendi.',
     'breathFeedbackTooShort': 'Ciğerlerini tam boşaltmayı dene.',
     'breathFeedbackLowStability': 'Sabit bir güçle üflemeye çalış.',
     'breathFeedbackWeakSignal': 'Telefonu ağzına biraz daha yaklaştır.',
@@ -270,7 +274,7 @@ class AppTexts {
     'breathAnalysisPageTitle': 'Nefes Analizi',
     'breathAnalysisEmptyTitle': 'Henüz veri yok',
     'breathAnalysisEmptyBody':
-      'İlk nefes testini tamamladığında burada ilerlemeni gösteren bir grafik ve özet göreceksin.',
+        'İlk nefes testini tamamladığında burada ilerlemeni gösteren bir grafik ve özet göreceksin.',
     'breathAnalysisEmptyCta': 'Nefes testini başlat',
     'breathAnalysisNotEnoughDataTitle': 'Trend için birkaç test daha gerekiyor',
     'breathAnalysisScoreChartTitle': 'Nefes Skoru — Son 30 Gün',
@@ -293,25 +297,25 @@ class AppTexts {
     'breathBadgePersonalRecordDesc': 'Kendi en iyi skorunu geçtin.',
     'disciplineDisclosureTitle': 'Nasil destek oluyoruz?',
     'disciplineDisclosureMessage':
-      'Nikotin Away, seni sigarayi birakma surecinde desteklemek icin bazı arka plan mekanizmalari kullanir:\n\n'
-      '- Bir gorev hatırlatmasina zamaninda yanit vermezsen, bunu cihazinda bir uyum kaydi olarak not ederiz.\n'
-      '- Aktif bir gorev sirasinda, telefon hareketi ve kullanim oruntülerinden (hareket sensorleri ve mikrofon araciligiyla) olasi riskli anlari tahmin etmeye calisiriz. Ses kaydedilmez veya saklanmaz; yalnizca ortam ses seviyesi olculur.\n'
-      '- Bazi gorev hatirlatmalari dikkatini cekmek icin tam ekran uyari olarak gorunebilir.\n'
-      '- Gorevlendirme bildirimleri seni gercek bir telefon gorusmesi sirasinda rahatsiz etmesin diye, o an gorusme yapip yapmadigini kontrol ederiz; icerigi veya numarayi hicbir zaman okumayiz.\n\n'
-      'Bu veriler varsayilan olarak yalnizca cihazinda saklanir ve seni desteklemek disinda bir amacla kullanilmaz. Ayarlar > Bulut Yedekleme uzerinden kendi belirledigin bir sifreyle istege bagli, sifreli bir yedekleme acabilirsin; bu sifreyi biz de goremeyiz, sadece sen bilirsin. Devam ederek bunu onaylamis olursun; mikrofon, hareket ve telefon durumu izinlerini bir sonraki adimda ayrica onaylayabilir ya da reddedebilirsin.',
+        'Nikotin Away, seni sigarayi birakma surecinde desteklemek icin bazı arka plan mekanizmalari kullanir:\n\n'
+        '- Bir gorev hatırlatmasina zamaninda yanit vermezsen, bunu cihazinda bir uyum kaydi olarak not ederiz.\n'
+        '- Aktif bir gorev sirasinda, telefon hareketi ve kullanim oruntülerinden (hareket sensorleri ve mikrofon araciligiyla) olasi riskli anlari tahmin etmeye calisiriz. Ses kaydedilmez veya saklanmaz; yalnizca ortam ses seviyesi olculur.\n'
+        '- Bazi gorev hatirlatmalari dikkatini cekmek icin tam ekran uyari olarak gorunebilir.\n'
+        '- Gorevlendirme bildirimleri seni gercek bir telefon gorusmesi sirasinda rahatsiz etmesin diye, o an gorusme yapip yapmadigini kontrol ederiz; icerigi veya numarayi hicbir zaman okumayiz.\n\n'
+        'Bu veriler varsayilan olarak yalnizca cihazinda saklanir ve seni desteklemek disinda bir amacla kullanilmaz. Ayarlar > Bulut Yedekleme uzerinden kendi belirledigin bir sifreyle istege bagli, sifreli bir yedekleme acabilirsin; bu sifreyi biz de goremeyiz, sadece sen bilirsin. Devam ederek bunu onaylamis olursun; mikrofon, hareket ve telefon durumu izinlerini bir sonraki adimda ayrica onaylayabilir ya da reddedebilirsin.',
     'disciplineDisclosureAcknowledge': 'Anladim, devam et',
     'cravingSosButton': 'Krizdeyim',
     'surveyDraftFoundTitle': 'Kaldigin yerden devam et',
     'surveyDraftFoundMessage':
-      'Daha once yarım bıraktıgın bir anket bulduk. Kaldıgın yerden devam etmek ister misin?',
+        'Daha once yarım bıraktıgın bir anket bulduk. Kaldıgın yerden devam etmek ister misin?',
     'surveyDraftResume': 'Devam et',
     'surveyDraftDiscard': 'Bastan basla',
     'breathAttemptImplausible':
-      'Bu deneme gecerli gorunmuyor (cok kisa ya da cok uzun). Lutfen tekrar deneyin.',
+        'Bu deneme gecerli gorunmuyor (cok kisa ya da cok uzun). Lutfen tekrar deneyin.',
     'breathAttemptDiscardedBackgrounded':
-      'Uygulama arka plana alindigi icin bu deneme iptal edildi. Lutfen tekrar deneyin.',
+        'Uygulama arka plana alindigi icin bu deneme iptal edildi. Lutfen tekrar deneyin.',
     'completeRegistrationError':
-      'Kaydı tamamlanırken bir hata oluştu. Lütfen tekrar deneyin.',
+        'Kaydı tamamlanırken bir hata oluştu. Lütfen tekrar deneyin.',
     'cigaretteUnit': 'sigara',
     'dayUnit': 'gün',
     'exhaleCapacity': 'Nefes Verme Kapasitesi (Exhale)',
@@ -348,7 +352,7 @@ class AppTexts {
     'initialRecordTitle': 'Baslangic Kaydi',
     'lessThanOnePack': '1 paketten az',
     'notificationPermissionRequired':
-      'Bildirim izni olmadan hatirlaticilar calismayabilir.',
+        'Bildirim izni olmadan hatirlaticilar calismayabilir.',
     'onePack': '1 paket',
     'onlyBreaks': 'Sadece mola saatlerinde',
     'onlyBreaksBetweenLectures': 'Sadece ders aralarinda',
@@ -356,7 +360,7 @@ class AppTexts {
     'openSettings': 'Ayarlari Ac',
     'packsApproxQuestion': 'Yaklasik kac paket?',
     'permissionsRetryMessage':
-      'Gerekli izinler olmadan uygulama ozellikleri sinirli calisir.',
+        'Gerekli izinler olmadan uygulama ozellikleri sinirli calisir.',
     'permissionsRetryTitle': 'Izinleri tekrar dene',
     'professionEngineer': 'Muhendis',
     'professionFreelance': 'Serbest',
@@ -383,7 +387,7 @@ class AppTexts {
     'schoolTypeLabel': 'Okul turu',
     'schoolTypeUniversity': 'Universite',
     'sensorPermissionRecommended':
-      'Daha dogru takip icin hareket/sensor izni onerilir.',
+        'Daha dogru takip icin hareket/sensor izni onerilir.',
     'sevenPlusPack': '7+ paket',
     'sixPack': '6 paket',
     'sleepTime': 'Uyku saati',
@@ -395,7 +399,7 @@ class AppTexts {
     'stressHigh': 'Yuksek',
     'interventionIntensityTitle': 'Mudahale siddeti',
     'interventionIntensityHint':
-      'Uygulamanin seni gun icinde ne siklikla uyarip gorevlendirecegini secer.',
+        'Uygulamanin seni gun icinde ne siklikla uyarip gorevlendirecegini secer.',
     'triggerTitleHint': 'Bunlardan hangileri seni sigara icmeye tetikliyor?',
     'interventionIntensityGentle': 'Nazik',
     'interventionIntensityBalanced': 'Dengeli',
@@ -406,17 +410,14 @@ class AppTexts {
     'threePlusPack': '3+ paket',
     'twoCig': '2 adet',
     'twoPack': '2 paket',
-    'validationChainCountRequired':
-      'Lutfen ardisik icim adedini secin.',
-    'validationChainHabitRequired':
-      'Lutfen ardisik icim durumunu secin.',
+    'validationChainCountRequired': 'Lutfen ardisik icim adedini secin.',
+    'validationChainHabitRequired': 'Lutfen ardisik icim durumunu secin.',
     'validationFirstCigaretteRequired':
-      'Lutfen ilk sigarayi ne zaman ictiginizi secin.',
-    'validationFixHighlightedFields':
-      'Lutfen isaretli alanlari duzeltin.',
+        'Lutfen ilk sigarayi ne zaman ictiginizi secin.',
+    'validationFixHighlightedFields': 'Lutfen isaretli alanlari duzeltin.',
     'validationSleepTimeRequired': 'Lutfen uyku saatini secin.',
     'validationSmokeYearsRange':
-      'Sigara suresi 0 ile 90 yil arasinda olmalidir.',
+        'Sigara suresi 0 ile 90 yil arasinda olmalidir.',
     'validationWakeTimeRequired': 'Lutfen uyanis saatini secin.',
     'wakeTime': 'Uyanis saati',
     'workEnd': 'Mesai bitis',
@@ -446,7 +447,8 @@ class AppTexts {
     'surveyMode_protective': 'rahat',
     'weeklyLapseCount': 'Bu hafta kaç kez hedefini aştın?',
     'weeklyCravingPeak': 'En zorlandığın an ne kadar zorluydu? (0-10)',
-    'weeklyWithdrawalHint': 'Bu hafta yaşadıklarını işaretle. Hiçbiri yoksa boş bırak.',
+    'weeklyWithdrawalHint':
+        'Bu hafta yaşadıklarını işaretle. Hiçbiri yoksa boş bırak.',
     'weeklyWithdrawal_irritability': 'Sinirlilik',
     'weeklyWithdrawal_anxiety': 'Huzursuzluk',
     'weeklyWithdrawal_sleepProblem': 'Uyku sorunu',
@@ -463,13 +465,19 @@ class AppTexts {
     'weeklyTrigger_alcohol': 'Alkol',
     'weeklyOutlookTitle': 'Bu Haftaki Bakışın',
     'weeklySurveyGeneralStatus': 'Genel Durum',
-    'copdDisclaimerNotDiagnostic': 'Bu bölüm tanı testi değildir. KOAH tanısı için spirometri ve doktor değerlendirmesi gerekir. Sonuçlar takip amaçlıdır.',
-    'breathInsightNotEnoughTests': 'İlerlemeni görmek için birkaç test daha yap.',
-    'breathInsightNotEnoughSpan': 'İlerlemeni karşılaştırmak için biraz daha zamana yayılmış testler gerekiyor.',
-    'breathInsightSignificantImprovement': 'Belirgin iyileşme — üfleme skorun %{percent} arttı.',
-    'breathInsightGradualImprovement': 'Yavaş ama istikrarlı bir ilerleme var — %{percent} artış.',
+    'copdDisclaimerNotDiagnostic':
+        'Bu bölüm tanı testi değildir. KOAH tanısı için spirometri ve doktor değerlendirmesi gerekir. Sonuçlar takip amaçlıdır.',
+    'breathInsightNotEnoughTests':
+        'İlerlemeni görmek için birkaç test daha yap.',
+    'breathInsightNotEnoughSpan':
+        'İlerlemeni karşılaştırmak için biraz daha zamana yayılmış testler gerekiyor.',
+    'breathInsightSignificantImprovement':
+        'Belirgin iyileşme — üfleme skorun %{percent} arttı.',
+    'breathInsightGradualImprovement':
+        'Yavaş ama istikrarlı bir ilerleme var — %{percent} artış.',
     'breathInsightStable': 'Sabit seyrediyor, önemli bir değişim yok.',
-    'breathInsightDecline': 'Bu hafta biraz düşük görünüyor — hasta veya yorgunsan bu normal olabilir. Solunum şikayetin varsa doktoruna danış.',
+    'breathInsightDecline':
+        'Bu hafta biraz düşük görünüyor — hasta veya yorgunsan bu normal olabilir. Solunum şikayetin varsa doktoruna danış.',
     'channelNamePostponeChoice': 'Görev erteleme seçimi',
     'channelNameTaskConfirm': 'Görev sonu onayı',
     'channelNameHealthTip': 'Sağlık tavsiyesi',
@@ -484,18 +492,25 @@ class AppTexts {
     'channelNameMovementReminder': 'Hareket hatırlatıcı',
     'channelNameCoachSuggestion': 'Koç önerisi',
     'channelNameLocationReminder': 'Nikotin Away Konum Hatırlatıcı',
-    'channelDescriptionLocationReminder': 'Sık gidilen bir yere varıldığında gösterilen hatırlatma',
+    'channelDescriptionLocationReminder':
+        'Sık gidilen bir yere varıldığında gösterilen hatırlatma',
     'taskOverlayChannelName': 'Nikotin Away Görev Ekranı',
     'taskOverlayChannelDescription': 'Odak ekranı gösterilirken aktif',
     'taskOverlayForegroundBody': 'Görev ekranı gösteriliyor',
     'channelNameSmokedLogQuickAction': 'Nikotin Away Hızlı Kayıt',
-    'channelDescriptionSmokedLogQuickAction': 'Sigara içtim butonu ekranda dururken aktif',
+    'channelDescriptionSmokedLogQuickAction':
+        'Sigara içtim butonu ekranda dururken aktif',
     'registrationMissingFields': 'Lütfen eksik alanları doldurun.',
-    'registrationProfileCreationFailed': 'Profil oluşturulamadı. Lütfen tekrar deneyin.',
-    'registrationRiskAnalysisFailed': 'Risk analizi oluşturulamadı. Lütfen tekrar deneyin.',
-    'registrationFlagSaveFailed': 'Kayıt bayrağı kaydedilemedi. Lütfen tekrar deneyin.',
-    'breathTestSaveFailed': 'Nefes testi sonucu kaydedilemedi. Lütfen tekrar deneyin.',
-    'barrierStartedInstruction': 'Lütfen önümüzdeki {duration} boyunca sigara içmeyin. Elinizde sigara varsa hemen söndürün.',
+    'registrationProfileCreationFailed':
+        'Profil oluşturulamadı. Lütfen tekrar deneyin.',
+    'registrationRiskAnalysisFailed':
+        'Risk analizi oluşturulamadı. Lütfen tekrar deneyin.',
+    'registrationFlagSaveFailed':
+        'Kayıt bayrağı kaydedilemedi. Lütfen tekrar deneyin.',
+    'breathTestSaveFailed':
+        'Nefes testi sonucu kaydedilemedi. Lütfen tekrar deneyin.',
+    'barrierStartedInstruction':
+        'Lütfen önümüzdeki {duration} boyunca sigara içmeyin. Elinizde sigara varsa hemen söndürün.',
     'severityLevel0': 'Hiç yok',
     'severityLevel1': 'Çok az',
     'severityLevel2': 'Az',
@@ -510,8 +525,7 @@ class AppTexts {
     'weeklyRespHint':
         'Son bir haftayı düşünerek yanıtla. Bu bir tanı testi değil, '
         'zaman içindeki değişimi görmek için.',
-    'weeklyCoughExample':
-        'Sabah kalkınca ya da gün içinde öksürüyor musun?',
+    'weeklyCoughExample': 'Sabah kalkınca ya da gün içinde öksürüyor musun?',
     'weeklyBreathlessnessStairsExample':
         'Bir kat merdiven çıkınca durup nefeslenmen gerekiyor mu?',
     'weeklySleepImpact': 'Uykuna etkisi',
@@ -521,7 +535,8 @@ class AppTexts {
     'weeklyEnergyImpactExample':
         'Gün içinde eskisine göre daha çabuk yoruluyor musun?',
     'mmrcPlain0': 'Nefes darlığı yaşamıyorum.',
-    'mmrcPlain1': 'Sadece hızlı yürürken ya da hafif yokuşta nefesim daralıyor.',
+    'mmrcPlain1':
+        'Sadece hızlı yürürken ya da hafif yokuşta nefesim daralıyor.',
     'mmrcPlain2':
         'Düz yolda kendi hızımda yürürken yaşıtlarımdan geride kalıyorum.',
     'mmrcPlain3':
@@ -581,9 +596,10 @@ class AppTexts {
     'weeklyWheeze': 'Hırıltı/wheeze',
     'weeklyLunchTime': 'Tahmini öğle yemeği saati',
     'weeklyDinnerTime': 'Tahmini akşam yemeği saati',
-    'weeklyProfileChanged': 'İlk profile göre iş/uyku/çalışma düzeni değişti mi?',
+    'weeklyProfileChanged':
+        'İlk profile göre iş/uyku/çalışma düzeni değişti mi?',
     'weeklyQuickModeInfo':
-      'Hızlı mod seçili. Temel sorulara göre risk otomatik hesaplanır. İstersen Detaylı moda geçip tüm parametreleri düzenleyebilirsin.',
+        'Hızlı mod seçili. Temel sorulara göre risk otomatik hesaplanır. İstersen Detaylı moda geçip tüm parametreleri düzenleyebilirsin.',
     'durationBarrierTitle': 'Sigara İçmeme Süresi Tercihi',
     'durationBarrierHow': 'Sigara içmeme süresini nasıl buluyorsun?',
     'durationBarrierLike': 'Beğeniyorum',
@@ -596,11 +612,11 @@ class AppTexts {
     'respStable': 'Stabil',
     'dailyBreathMandatoryTitle': 'Gunluk nefes testi gerekli',
     'dailyBreathMandatoryContent':
-      'Gelisimi dogru takip etmek icin her gun en az 1 profesyonel nefes testi yapilmali. Simdi testi baslatalim.',
+        'Gelisimi dogru takip etmek icin her gun en az 1 profesyonel nefes testi yapilmali. Simdi testi baslatalim.',
     'dailyBreathMandatoryStart': 'Testi Baslat',
     'weeklyMandatoryTitle': 'Haftalik anket zorunlu',
     'weeklyMandatoryContent':
-      'Risk skorunun guncel kalmasi icin en az 7 gunde bir haftalik anket doldurmalisin.',
+        'Risk skorunun guncel kalmasi icin en az 7 gunde bir haftalik anket doldurmalisin.',
     'weeklyMandatoryGo': 'Ankete git',
     'commandSaved': 'Komut tamamlandi olarak kaydedildi.',
     'barrierStartedTitle': 'Sigara içmeme süresi başladı',
@@ -610,15 +626,15 @@ class AppTexts {
     'smokeFreeCounterRemaining': 'Kalan sure',
     'barrierEvaluationTitle': 'Sigara içmeme süresi değerlendirme',
     'barrierEvaluationPromptNoMinutes':
-      'Sigara içmeme süresi tamamlandı. Başarılı oldun mu?',
+        'Sigara içmeme süresi tamamlandı. Başarılı oldun mu?',
     'barrierEvaluationPromptMinutes':
-      'dakikalık sigara içmeme süresi bitti. Başarılı oldun mu?',
+        'dakikalık sigara içmeme süresi bitti. Başarılı oldun mu?',
     'barrierFail': 'Basarisiz',
     'barrierSuccess': 'Basarili',
     'barrierSavedSuccess':
-      'Sigara içmeme süresi başarılı kaydedildi. Sonraki süreler buna göre ayarlanacak.',
+        'Sigara içmeme süresi başarılı kaydedildi. Sonraki süreler buna göre ayarlanacak.',
     'barrierSavedFailure':
-      'Sigara içmeme süresi başarısız kaydedildi. Sonraki süreler uyuma göre güncellenecek.',
+        'Sigara içmeme süresi başarısız kaydedildi. Sonraki süreler uyuma göre güncellenecek.',
     'commandDeferred10': 'Komut 10 dakika ertelendi.',
     'barrierDeferred10': 'Sigara içmeme süresi 10 dakika ertelendi.',
     'weeklyRiskLine': 'Haftalik anket riski',
@@ -651,11 +667,10 @@ class AppTexts {
     'aiChatSend': 'Gonder',
     'aiChatError': 'Mesaj gonderilemedi, tekrar deneyin.',
     'aiChatDailyLimitReached':
-      'Bugunluk mesaj hakkin doldu, yarin tekrar yazabilirsin.',
-    'aiChatAuthNotReady':
-      'Kimlik dogrulanamadi, birazdan tekrar dene.',
+        'Bugunluk mesaj hakkin doldu, yarin tekrar yazabilirsin.',
+    'aiChatAuthNotReady': 'Kimlik dogrulanamadi, birazdan tekrar dene.',
     'aiChatDisclaimer':
-      'Bu bir yapay zeka asistanidir, tibbi tavsiye vermez. Saglik konularinda doktorunuza danisin.',
+        'Bu bir yapay zeka asistanidir, tibbi tavsiye vermez. Saglik konularinda doktorunuza danisin.',
     'aiChatActionApply': 'Uygula',
     'aiChatActionDismiss': 'Vazgec',
     'aiChatActionFailed': 'Bu degisiklik uygulanamadi.',
@@ -669,7 +684,7 @@ class AppTexts {
     'mentorReplySentPrefix': 'Yanitin',
     'miuiPermissionTitle': 'Bir izin daha gerekiyor',
     'miuiPermissionMessage':
-      'Telefonun görevlendirme ekranini kilitli ekranda da gosterebilmesi icin {brand} telefonlarda ek bir izin gerekiyor. Simdi ayar ekranini acalim mi?',
+        'Telefonun görevlendirme ekranini kilitli ekranda da gosterebilmesi icin {brand} telefonlarda ek bir izin gerekiyor. Simdi ayar ekranini acalim mi?',
     'miuiPermissionOpen': 'Ayarlari Ac',
     'miuiPermissionSkip': 'Daha Sonra',
     'settingsTitle': 'Ayarlar',
@@ -680,36 +695,39 @@ class AppTexts {
     'cloudBackupRow': 'Bulut Yedekleme',
     'cloudBackupRowSubtitle': 'Verilerini sifreli olarak buluta yedekle',
     'cloudBackupPhoneChangeWarning':
-      'Telefonunu degistirirsen veya uygulamayi silersen, verilerini geri alman icin tek yol onceden buradan bir yedek almis olman. Bulut Yedekleme kapaliysa telefon degisiminde tum veriler kalici olarak kaybolur.',
+        'Telefonunu degistirirsen veya uygulamayi silersen, verilerini geri alman icin tek yol onceden buradan bir yedek almis olman. Bulut Yedekleme kapaliysa telefon degisiminde tum veriler kalici olarak kaybolur.',
     'cloudRestoreRow': 'Bulut Yedeginden Geri Yukle',
-    'cloudRestoreRowSubtitle': 'Daha once yedeklediginiz verileri bu cihaza geri getir',
+    'cloudRestoreRowSubtitle':
+        'Daha once yedeklediginiz verileri bu cihaza geri getir',
     'cloudBackupPassphraseHint':
-      'Simdi yeni bir sifre belirle. Bu sifre yalnizca sende saklanir, biz hicbir zaman goremeyiz. Sifreyi unutursan yedegini geri getiremeyiz, guvenli bir yere not al.',
+        'Simdi yeni bir sifre belirle. Bu sifre yalnizca sende saklanir, biz hicbir zaman goremeyiz. Sifreyi unutursan yedegini geri getiremeyiz, guvenli bir yere not al.',
     'cloudBackupPassphraseLabel': 'Yeni sifre (en az 6 karakter)',
     'cloudRestorePassphraseHint':
-      'Daha once yedeklerken belirledigin sifreyi gir. Yanlis sifre girersen yedegin bulunamaz.',
+        'Daha once yedeklerken belirledigin sifreyi gir. Yanlis sifre girersen yedegin bulunamaz.',
     'cloudRestorePassphraseLabel': 'Yedekleme sifren',
     'cloudBackupPassphraseTooShort': 'Sifre en az 6 karakter olmali.',
     'cloudBackupInProgress': 'Isleniyor, lutfen bekleyin...',
     'cloudBackupSuccess': 'Yedekleme tamamlandi.',
     'cloudBackupFailed': 'Yedekleme basarisiz oldu. Lutfen tekrar deneyin.',
     'cloudRestoreConfirmMessage':
-      'Bu cihazdaki mevcut verilerin yerine yedekteki veriler yazilacak. Devam etmek istiyor musun?',
-    'cloudRestoreSuccess': 'Geri yukleme tamamlandi. Uygulamayi yeniden baslat.',
+        'Bu cihazdaki mevcut verilerin yerine yedekteki veriler yazilacak. Devam etmek istiyor musun?',
+    'cloudRestoreSuccess':
+        'Geri yukleme tamamlandi. Uygulamayi yeniden baslat.',
     'cloudRestoreNotFound': 'Bu sifreyle eslesen bir yedek bulunamadi.',
     'cloudRestoreFailed': 'Geri yukleme basarisiz oldu. Sifreni kontrol et.',
     'settingsPermissionsRow': 'Izin Merkezi',
-    'settingsPermissionsRowSubtitle': 'Hangi izinleri neden kullandigimizi gorun',
+    'settingsPermissionsRowSubtitle':
+        'Hangi izinleri neden kullandigimizi gorun',
     'settingsResetDataRow': 'Verilerimi Sifirla',
     'settingsResetDataSubtitle': 'Tum kayitlarini kalici olarak siler',
     'settingsResetDataConfirmTitle': 'Emin misin?',
     'settingsResetDataConfirmMessage':
-      'Tum sigara kayitlarin, anket sonuclarin ve ilerlemen kalici olarak silinecek. Bu islem geri alinamaz.',
+        'Tum sigara kayitlarin, anket sonuclarin ve ilerlemen kalici olarak silinecek. Bu islem geri alinamaz.',
     'settingsResetDataConfirmAction': 'Evet, Sil',
     'settingsResetDataDone': 'Verilerin silindi.',
     'permissionsCenterTitle': 'Izin Merkezi',
     'permissionsCenterIntro':
-      'Bu izinleri neden istedigimizi ve nasil kullandigimizi asagida bulabilirsin. Hepsi opsiyoneldir, istedigin zaman kapatabilirsin.',
+        'Bu izinleri neden istedigimizi ve nasil kullandigimizi asagida bulabilirsin. Hepsi opsiyoneldir, istedigin zaman kapatabilirsin.',
     'permissionStatusGranted': 'Verildi',
     'permissionStatusDenied': 'Verilmedi',
     'permissionActionRequest': 'Izin Ver',
@@ -717,151 +735,156 @@ class AppTexts {
     'permissionActionManage': 'Ayarlardan Yonet',
     'permissionNotificationsTitle': 'Bildirimler',
     'permissionNotificationsDescription':
-      'Gorev hatirlatmalari, nefes testi ve mentorundan gelen mesajlar icin kullanilir.',
+        'Gorev hatirlatmalari, nefes testi ve mentorundan gelen mesajlar icin kullanilir.',
     'permissionNotificationsPurpose':
-      'Neden: Sana dogru zamanda destek olabilmemiz icin gerekli.',
+        'Neden: Sana dogru zamanda destek olabilmemiz icin gerekli.',
     'permissionMicrophoneTitle': 'Mikrofon',
     'permissionMicrophoneDescription':
-      'Gunluk nefes testinde akcigerlerinin durumunu olcmek icin kullanilir.',
+        'Gunluk nefes testinde akcigerlerinin durumunu olcmek icin kullanilir.',
     'permissionMicrophonePurpose':
-      'Neden: Ses sadece cihazinda islenir, kaydedilmez veya paylasilmaz.',
+        'Neden: Ses sadece cihazinda islenir, kaydedilmez veya paylasilmaz.',
     'permissionActivityTitle': 'Fiziksel Aktivite',
     'permissionActivityDescription':
-      'Hareketlerini anlayarak sana daha uygun zamanlarda destek onerileri sunmak ve gunluk adim sayini takip etmek icin kullanilir.',
+        'Hareketlerini anlayarak sana daha uygun zamanlarda destek onerileri sunmak ve gunluk adim sayini takip etmek icin kullanilir.',
     'permissionActivityPurpose':
-      'Neden: Aktivite ve adim verilerin cihazindan disari cikmaz.',
+        'Neden: Aktivite ve adim verilerin cihazindan disari cikmaz.',
     'permissionPhoneTitle': 'Telefon Durumu',
     'permissionPhoneDescription':
-      'Sahte destek aramasinin gercek bir arama ile cakismamasi icin kullanilir.',
+        'Sahte destek aramasinin gercek bir arama ile cakismamasi icin kullanilir.',
     'permissionPhonePurpose':
-      'Neden: Arama numaralarini veya icerigini asla okumayiz.',
+        'Neden: Arama numaralarini veya icerigini asla okumayiz.',
     'permissionExactAlarmTitle': 'Kesin Zamanlama',
     'permissionExactAlarmDescription':
-      'Hatirlatmalarin ve mentor mesajlarinin tam zamaninda gelmesini saglar.',
+        'Hatirlatmalarin ve mentor mesajlarinin tam zamaninda gelmesini saglar.',
     'permissionExactAlarmPurpose':
-      'Neden: Android bu izni sistem ayarlarindan yonetir.',
+        'Neden: Android bu izni sistem ayarlarindan yonetir.',
     'permissionExactAlarmAlreadyGranted': 'Bu izin zaten verilmis.',
     'permissionMiuiTitle': 'Xiaomi Ek Izni',
     'permissionMiuiDescription':
-      'Sahte destek aramasinin kilitli ekranda da gorunebilmesi icin Xiaomi telefonlarda gereklidir.',
+        'Sahte destek aramasinin kilitli ekranda da gorunebilmesi icin Xiaomi telefonlarda gereklidir.',
     'permissionMiuiPurpose':
-      'Neden: MIUI, diger Android telefonlardan farkli bir izin sistemi kullanir.',
+        'Neden: MIUI, diger Android telefonlardan farkli bir izin sistemi kullanir.',
     'permissionLocationTitle': 'Konum',
     'permissionLocationDescription':
-      'Sik gittigin yerleri ogrenip vardiginda kisa bir hatirlatma gostermek icin kullanilir (Konum Zekasi ozelligi, varsayilan kapali).',
+        'Sik gittigin yerleri ogrenip vardiginda kisa bir hatirlatma gostermek icin kullanilir (Konum Zekasi ozelligi, varsayilan kapali).',
     'permissionLocationPurpose':
-      'Neden: Ham konum gecmisi hicbir zaman kaydedilmez. Detaylar ve acma/kapama icin dokunun.',
+        'Neden: Ham konum gecmisi hicbir zaman kaydedilmez. Detaylar ve acma/kapama icin dokunun.',
     'permissionBackgroundTitle': 'Arka Planda Calisma',
     'permissionBackgroundDescription':
-      'Bazi telefon ureticileri pil tasarrufu icin arka plan uygulamalarini kisitlar. Bu, hatirlatmalarin, uyku/konum/adim takibinin ve destek aramalarinin zamaninda calismasini engelleyebilir.',
+        'Bazi telefon ureticileri pil tasarrufu icin arka plan uygulamalarini kisitlar. Bu, hatirlatmalarin, uyku/konum/adim takibinin ve destek aramalarinin zamaninda calismasini engelleyebilir.',
     'permissionBackgroundPurpose':
-      'Neden: Uygulamanin pil optimizasyonundan muaf tutulmasi, arka plan ozelliklerinin guvenilir calismasini saglar.',
+        'Neden: Uygulamanin pil optimizasyonundan muaf tutulmasi, arka plan ozelliklerinin guvenilir calismasini saglar.',
     'permissionBackgroundOpenSettingsAction': 'Arka Plan Ayarlarini Ac',
     'settingsCoachModeRow': 'Kocluk Modu',
-    'settingsCoachModeRowSubtitle': 'Sana ne kadar sik ve ne kadar zorlayici destek olsun',
+    'settingsCoachModeRowSubtitle':
+        'Sana ne kadar sik ve ne kadar zorlayici destek olsun',
     'coachModeTitle': 'Kocluk Modu',
     'coachModeIntro':
-      'Uygulamanin seni ne siklikta ve ne kadar zorlayici sekilde destekleyecegini sec. Istedigin zaman degistirebilirsin.',
+        'Uygulamanin seni ne siklikta ve ne kadar zorlayici sekilde destekleyecegini sec. Istedigin zaman degistirebilirsin.',
     'coachModeEasyTitle': 'Kolay',
-    'coachModeEasyDescription': 'Az sayida, yumusak hatirlatma. Kendi hizinda ilerlemek isteyenler icin.',
+    'coachModeEasyDescription':
+        'Az sayida, yumusak hatirlatma. Kendi hizinda ilerlemek isteyenler icin.',
     'coachModeNormalTitle': 'Normal',
-    'coachModeNormalDescription': 'Dengeli siklikta destek. Cogu kullanici icin onerilen mod.',
+    'coachModeNormalDescription':
+        'Dengeli siklikta destek. Cogu kullanici icin onerilen mod.',
     'coachModeHardTitle': 'Zor',
-    'coachModeHardDescription': 'Sik ve kararli hatirlatmalar. Daha fazla disiplin isteyenler icin.',
+    'coachModeHardDescription':
+        'Sik ve kararli hatirlatmalar. Daha fazla disiplin isteyenler icin.',
     'coachModeCustomLabel': 'Ozel',
-    'coachModeCustomDescription': 'Gelismis ayarlardan kendin belirledigin bir kombinasyon.',
+    'coachModeCustomDescription':
+        'Gelismis ayarlardan kendin belirledigin bir kombinasyon.',
     'coachModeAdvancedToggle': 'Gelismis Ayarlar',
     'coachModeSavedConfirmation': 'Kocluk modu guncellendi.',
     'settingsSleepIntelligenceRow': 'Uyku Zekasi',
     'sleepIntelligenceTitle': 'Uyku Zekasi',
     'sleepIntelligenceDescription':
-      'Acik oldugunda, telefonun ekran ve sarj durumunu gece boyunca birkac kez kontrol ederek uyku saatlerini tahmin etmeye calisir. Bu tahmin, risk degerlendirmeni daha dogru hale getirmek icin kullanilir.',
+        'Acik oldugunda, telefonun ekran ve sarj durumunu gece boyunca birkac kez kontrol ederek uyku saatlerini tahmin etmeye calisir. Bu tahmin, risk degerlendirmeni daha dogru hale getirmek icin kullanilir.',
     'sleepIntelligencePurpose':
-      'Neden: Sadece ekran acik/kapali ve sarjda olup olmadigin kontrol edilir, baska hicbir sey okunmaz. Yeterli veri yoksa anket sirasinda verdigin uyku saatlerine geri donulur.',
+        'Neden: Sadece ekran acik/kapali ve sarjda olup olmadigin kontrol edilir, baska hicbir sey okunmaz. Yeterli veri yoksa anket sirasinda verdigin uyku saatlerine geri donulur.',
     'sleepIntelligenceEnabledConfirmation': 'Uyku zekasi acildi.',
     'sleepIntelligenceDisabledConfirmation': 'Uyku zekasi kapatildi.',
     'settingsSnoringDetectionRow': 'Horlama Testi (Deneysel)',
     'snoringDetectionTitle': 'Horlama Testi (Deneysel)',
     'snoringDetectionDescription':
-      'Acik oldugunda, uyku saatlerinde birkac saniyelik kisa ses ornekleri alinip cihaz uzerinde analiz edilir; horlamaya benzer ritmik bir ses paterni olup olmadigina bakilir. Ses kaydi hicbir zaman diske yazilmaz veya disariya gonderilmez, sadece sonuc (evet/hayir) kaydedilir.',
+        'Acik oldugunda, uyku saatlerinde birkac saniyelik kisa ses ornekleri alinip cihaz uzerinde analiz edilir; horlamaya benzer ritmik bir ses paterni olup olmadigina bakilir. Ses kaydi hicbir zaman diske yazilmaz veya disariya gonderilmez, sadece sonuc (evet/hayir) kaydedilir.',
     'snoringDetectionPurpose':
-      'Neden: Horlama, uyku kalitesini ve dolayisiyla ertesi gunku sigara riskini etkileyebilir. Bu ozellik icin once Uyku Zekasi ozelligi acik olmalidir, cunku ayni gece dongusunu kullanir.',
+        'Neden: Horlama, uyku kalitesini ve dolayisiyla ertesi gunku sigara riskini etkileyebilir. Bu ozellik icin once Uyku Zekasi ozelligi acik olmalidir, cunku ayni gece dongusunu kullanir.',
     'snoringDetectionEnabledConfirmation': 'Horlama testi acildi.',
     'snoringDetectionDisabledConfirmation': 'Horlama testi kapatildi.',
     'snoringDetectionRequiresSleepIntelligence':
-      'Once Uyku Zekasini acmalisin, horlama testi onun uzerine calisir.',
+        'Once Uyku Zekasini acmalisin, horlama testi onun uzerine calisir.',
     'snoringDetectionLastNightCount': 'Son gece horlama paterni sayisi',
     'snoringResultNotificationTitle': 'Dun geceki horlama testi',
     'snoringResultNotificationBodyDetected':
-      'Dun gece {count} kez horlamaya benzer bir ses paterni tespit edildi. Detaylar icin Ayarlar > Horlama Testi\'ne bakabilirsin.',
+        'Dun gece {count} kez horlamaya benzer bir ses paterni tespit edildi. Detaylar icin Ayarlar > Horlama Testi\'ne bakabilirsin.',
     'snoringResultNotificationBodyClear':
-      'Dun gece horlamaya benzer bir ses paterni tespit edilmedi.',
+        'Dun gece horlamaya benzer bir ses paterni tespit edilmedi.',
     'snoringSeverityNone': 'Horlama tespit edilmedi.',
     'snoringSeverityMild': 'Hafif duzeyde horlama tespit edildi.',
     'snoringSeverityModerate': 'Orta duzeyde horlama tespit edildi.',
     'snoringSeveritySevere': 'Belirgin duzeyde horlama tespit edildi.',
     'snoringAdviceMild':
-      'Hafif horlama genelde gecicidir. Yan yatarak uyumak ve alkolden kacinmak faydali olabilir.',
+        'Hafif horlama genelde gecicidir. Yan yatarak uyumak ve alkolden kacinmak faydali olabilir.',
     'snoringAdviceModerate':
-      'Orta duzeyde horlama birkac gecedir surmesi halinde, kilo ve uyku pozisyonu gibi yasam tarzi onlemlerinin yaninda bir doktora danismani oneririz.',
+        'Orta duzeyde horlama birkac gecedir surmesi halinde, kilo ve uyku pozisyonu gibi yasam tarzi onlemlerinin yaninda bir doktora danismani oneririz.',
     'snoringAdviceSevere':
-      'Belirgin duzeyde horlama tespit edildi. Bu durum devam ederse lutfen bir doktora danis; bu uygulama tibbi tani veya tedavi onerisi vermez.',
+        'Belirgin duzeyde horlama tespit edildi. Bu durum devam ederse lutfen bir doktora danis; bu uygulama tibbi tani veya tedavi onerisi vermez.',
     'snoringHomeSummaryCardTitle': 'Dun geceki horlama',
     'snoringHomeSummaryCardBodyDetected':
-      'Dun gece {count} kez horlamaya benzer bir ses paterni tespit edildi.',
+        'Dun gece {count} kez horlamaya benzer bir ses paterni tespit edildi.',
     'snoringHomeSummaryCardBodyClear':
-      'Dun gece horlamaya benzer bir ses paterni tespit edilmedi.',
+        'Dun gece horlamaya benzer bir ses paterni tespit edilmedi.',
     'snoringTestTitle': 'Horlama Testi',
     'snoringTestInstructions':
-      '60 saniye boyunca mikrofonu acik tutacagiz. Ses hicbir zaman kaydedilmez veya disariya gonderilmez, sadece horlama paterni analiz edilir.',
+        '60 saniye boyunca mikrofonu acik tutacagiz. Ses hicbir zaman kaydedilmez veya disariya gonderilmez, sadece horlama paterni analiz edilir.',
     'snoringTestStartButton': 'Testi Baslat',
     'snoringTestListening': 'Dinleniyor...',
     'snoringTestResultTitle': 'Test Sonucu',
     'menuSnoringTest': 'Horlama Testi',
     'coughTestTitle': 'Oksuruk Testi',
     'coughTestIntro':
-      '30 saniye boyunca mikrofonu acik tutacagiz ve bu surede kac kez oksurdugunu sayacagiz.',
+        '30 saniye boyunca mikrofonu acik tutacagiz ve bu surede kac kez oksurdugunu sayacagiz.',
     'coughTestInstructions':
-      'Sessiz bir ortamda basla ve normal sekilde nefes al/oksur. Ses hicbir zaman kaydedilmez veya disariya gonderilmez, sadece oksuruk sayisi hesaplanir.',
+        'Sessiz bir ortamda basla ve normal sekilde nefes al/oksur. Ses hicbir zaman kaydedilmez veya disariya gonderilmez, sadece oksuruk sayisi hesaplanir.',
     'coughTestStartButton': 'Testi Baslat',
     'coughTestListening': 'Dinleniyor...',
     'coughTestResultTitle': 'Test Sonucu',
     'coughTestResultCount': '{count} oksuruk tespit edildi',
     'coughGeneralAdvice':
-      'Oksurugun birkac gundur surmesi halinde bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
+        'Oksurugun birkac gundur surmesi halinde bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
     'coughTestNotificationTitle': 'Oksuruk testi sonucun',
     'wheezeFindingSectionTitle': 'Ses Paterni Notu',
     'breathUnusualSoundDetected':
-      'Bu testte olagandisi bir ses paterni duyuldu.',
+        'Bu testte olagandisi bir ses paterni duyuldu.',
     'breathUnusualSoundAdvice':
-      'Tekrarlarsa bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
+        'Tekrarlarsa bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
     'wheezeTestNotificationTitle': 'Nefes testi notu',
     'breathNotDetectedRetryTitle': 'Nefes algilanamadi',
     'breathNotDetectedRetryMessage':
-      'Mikrofon nefesini net algilayamadi. Tekrar denemek ister misin?',
+        'Mikrofon nefesini net algilayamadi. Tekrar denemek ister misin?',
     'coughNotDetectedRetryTitle': 'Oksuruk algilanamadi',
     'coughNotDetectedRetryMessage':
-      'Mikrofon bir oksuruk algilamadi. Tekrar denemek ister misin?',
+        'Mikrofon bir oksuruk algilamadi. Tekrar denemek ister misin?',
     'retryAttemptButton': 'Tekrar Dene',
     'keepResultAnywayButton': 'Yine de Devam Et',
     'coughTestRequiredForWeeklySurvey': 'Testi Yap',
     'coughTestRequiredDialogTitle': 'Oksuruk testi gerekiyor',
     'coughTestRequiredDialogMessage':
-      'Haftalik anketi kaydetmeden once bu hafta bir oksuruk testi yapmis olman gerekiyor. Simdi yapmak ister misin?',
+        'Haftalik anketi kaydetmeden once bu hafta bir oksuruk testi yapmis olman gerekiyor. Simdi yapmak ister misin?',
     'coughTestSkip': 'Vazgec',
     'menuCoughTest': 'Oksuruk Testi',
     'settingsWearableIntelligenceRow': 'Bileklik Verisi (Deneysel)',
     'wearableIntelligenceTitle': 'Bileklik Verisi (Deneysel)',
     'wearableIntelligenceDescription':
-      'Acik oldugunda, Health Connect uzerinden -eger bir akilli saat/bileklik uygulaman varsa- nabiz ve uyku verini okumaya calisir. Uygulama saatinle dogrudan konusmaz, sadece Health Connect deposunda zaten var olan veriyi okur.',
+        'Acik oldugunda, Health Connect uzerinden -eger bir akilli saat/bileklik uygulaman varsa- nabiz ve uyku verini okumaya calisir. Uygulama saatinle dogrudan konusmaz, sadece Health Connect deposunda zaten var olan veriyi okur.',
     'wearableIntelligencePurpose':
-      'Neden: Ani nabiz yukselmeleri, riskli anlari daha erken fark etmemize yardimci olabilir. Saatin/bilekligin yoksa veya senkronize veri yoksa bu kart bos gorunur, baska hicbir sey degismez.',
+        'Neden: Ani nabiz yukselmeleri, riskli anlari daha erken fark etmemize yardimci olabilir. Saatin/bilekligin yoksa veya senkronize veri yoksa bu kart bos gorunur, baska hicbir sey degismez.',
     'wearableIntelligenceEnabledConfirmation': 'Bileklik verisi acildi.',
     'wearableIntelligenceDisabledConfirmation': 'Bileklik verisi kapatildi.',
     'wearableIntelligenceUnavailable':
-      'Health Connect bu cihazda bulunamadi. Yuklemek ister misin?',
+        'Health Connect bu cihazda bulunamadi. Yuklemek ister misin?',
     'wearableIntelligencePermissionDenied':
-      'Health Connect izni verilmedi, ozellik acilamadi.',
+        'Health Connect izni verilmedi, ozellik acilamadi.',
     'wearableIntelligenceInstallAction': 'Health Connect\'i Yukle',
     'wearableIntelligenceLatestHeartRate': 'Son nabiz',
     'wearableIntelligenceLastSleep': 'Son uyku suresi',
@@ -869,338 +892,337 @@ class AppTexts {
     'coachCommandTitle': 'Öneri',
     'sedentaryReminderTitle': 'Biraz hareket vakti',
     'sedentaryReminderBody':
-      'Bir sure hareketsiz gorunuyorsun. Kisa bir yuruyus, hem bacaklarina hem de sigara isteklerine iyi gelir.',
+        'Bir sure hareketsiz gorunuyorsun. Kisa bir yuruyus, hem bacaklarina hem de sigara isteklerine iyi gelir.',
     'healthTipTitle': 'Saglik Tavsiyesi',
     'healthTipHypertension1':
-      'Sigara, kan basincini aninda yukseltir. Su an biraz derin nefes almak tansiyonuna iyi gelir.',
+        'Sigara, kan basincini aninda yukseltir. Su an biraz derin nefes almak tansiyonuna iyi gelir.',
     'healthTipHypertension2':
-      'Tuzu azaltmak ve sigarasiz kalmak, tansiyonun icin birlikte calisir. Bugun bir sigarayi daha erteleyebilirsin.',
+        'Tuzu azaltmak ve sigarasiz kalmak, tansiyonun icin birlikte calisir. Bugun bir sigarayi daha erteleyebilirsin.',
     'healthTipAsthma1':
-      'Sigara dumani, hava yollarini daraltarak astim ataklarini tetikleyebilir. Temiz hava alabilecegin bir yere cik.',
+        'Sigara dumani, hava yollarini daraltarak astim ataklarini tetikleyebilir. Temiz hava alabilecegin bir yere cik.',
     'healthTipAsthma2':
-      'Nefesin daraldiginda sigaraya degil, yavas ve derin nefes egzersizine yonel.',
+        'Nefesin daraldiginda sigaraya degil, yavas ve derin nefes egzersizine yonel.',
     'healthTipDiabetes1':
-      'Sigara, kan sekerini dengelemeyi zorlastirir. Bir bardak su icip birkaç dakika beklemeyi dene.',
+        'Sigara, kan sekerini dengelemeyi zorlastirir. Bir bardak su icip birkaç dakika beklemeyi dene.',
     'healthTipDiabetes2':
-      'Sigarasiz gecen her saat, dolasimindaki kan sekeri kontrolune küçük bir katki.',
+        'Sigarasiz gecen her saat, dolasimindaki kan sekeri kontrolune küçük bir katki.',
     'healthTipCopd1':
-      'KOAH ile sigara bir arada gitmez. Şu anki istegin, birkaç dakika icinde azalacak.',
+        'KOAH ile sigara bir arada gitmez. Şu anki istegin, birkaç dakika icinde azalacak.',
     'healthTipCopd2':
-      'Kisa bir nefes egzersizi, akcigerlerine sigaradan cok daha fazla iyilik yapar.',
+        'Kisa bir nefes egzersizi, akcigerlerine sigaradan cok daha fazla iyilik yapar.',
     'healthTipHeartDisease1':
-      'Sigara, kalbini gereksiz yere hizlandirir. Sakin bir nefes molasi kalbin icin daha iyi bir secim.',
+        'Sigara, kalbini gereksiz yere hizlandirir. Sakin bir nefes molasi kalbin icin daha iyi bir secim.',
     'healthTipHeartDisease2':
-      'Kalp sagligin icin attigin en degerli adim, şu anki sigarayi icmemek.',
+        'Kalp sagligin icin attigin en degerli adim, şu anki sigarayi icmemek.',
     'healthTipHypertension3':
-      'Sigara içtiğin her an damarların büzülür. Şimdi ayağa kalkıp birkaç adım atmak tam tersini yapar.',
+        'Sigara içtiğin her an damarların büzülür. Şimdi ayağa kalkıp birkaç adım atmak tam tersini yapar.',
     'healthTipHypertension4':
-      'Tansiyonun sabahları en oynak olduğu saatte. Bugünün ilk sigarasını geciktirmek en çok bu saatte işe yarar.',
+        'Tansiyonun sabahları en oynak olduğu saatte. Bugünün ilk sigarasını geciktirmek en çok bu saatte işe yarar.',
     'healthTipHypertension5':
-      'Bir bardak su iç ve iki dakika bekle. İstek genelde bu süre içinde geçer, tansiyonun ise sakin kalır.',
+        'Bir bardak su iç ve iki dakika bekle. İstek genelde bu süre içinde geçer, tansiyonun ise sakin kalır.',
     'healthTipHypertension6':
-      'Yürüyüş, tansiyon için sigaranın vaat ettiği rahatlamayı gerçekten verir. On dakika yeter.',
+        'Yürüyüş, tansiyon için sigaranın vaat ettiği rahatlamayı gerçekten verir. On dakika yeter.',
     'healthTipHypertension7':
-      'Öfkelendiğinde tansiyon da sigara isteği de birlikte yükselir. Önce nefesini yavaşlat, karar sonra gelsin.',
+        'Öfkelendiğinde tansiyon da sigara isteği de birlikte yükselir. Önce nefesini yavaşlat, karar sonra gelsin.',
     'healthTipHypertension8':
-      'Kahveyle sigarayı birlikte içmek tansiyonuna iki yönlü yüklenir. Bugün kahveyi sigarasız dene.',
+        'Kahveyle sigarayı birlikte içmek tansiyonuna iki yönlü yüklenir. Bugün kahveyi sigarasız dene.',
     'healthTipHypertension9':
-      'Tuzlu atıştırmalık, sigara isteğini de tansiyonu da tetikler. Elin uzanırken bunu hatırla.',
+        'Tuzlu atıştırmalık, sigara isteğini de tansiyonu da tetikler. Elin uzanırken bunu hatırla.',
     'healthTipHypertension10':
-      'Sigarasız geçen her saat, kalbinin aynı kanı daha az zorlanarak pompaladığı bir saattir.',
+        'Sigarasız geçen her saat, kalbinin aynı kanı daha az zorlanarak pompaladığı bir saattir.',
     'healthTipHypertension11':
-      'Tansiyon ilacını düzenli almak önemli, ama sigara onun işini zorlaştırır. İkisi aynı yöne çalışsın.',
+        'Tansiyon ilacını düzenli almak önemli, ama sigara onun işini zorlaştırır. İkisi aynı yöne çalışsın.',
     'healthTipHypertension12':
-      'Şu an istek geldiyse, üç dakika sonra tekrar sor kendine. Çoğu zaman cevap değişir.',
+        'Şu an istek geldiyse, üç dakika sonra tekrar sor kendine. Çoğu zaman cevap değişir.',
     'healthTipHypertension13':
-      'Merdiveni asansöre tercih etmek, tansiyonun için sigarayı bırakmanın küçük kardeşidir.',
+        'Merdiveni asansöre tercih etmek, tansiyonun için sigarayı bırakmanın küçük kardeşidir.',
     'healthTipHypertension14':
-      'Stresli bir görüşmeden sonra sigara arıyorsan, aslında aradığın şey nefeslenmek.',
+        'Stresli bir görüşmeden sonra sigara arıyorsan, aslında aradığın şey nefeslenmek.',
     'healthTipHypertension15':
-      'Sıcak duş, sigaranın verdiği gevşemenin aynısını tansiyonunu yükseltmeden verir.',
+        'Sıcak duş, sigaranın verdiği gevşemenin aynısını tansiyonunu yükseltmeden verir.',
     'healthTipHypertension16':
-      'Akşam sigarası uykunu böler, bölünen uyku da tansiyonu yükseltir. Zincir buradan kırılıyor.',
+        'Akşam sigarası uykunu böler, bölünen uyku da tansiyonu yükseltir. Zincir buradan kırılıyor.',
     'healthTipHypertension17':
-      'Bugün hedefinin altında kaldıysan, damarların bunu zaten fark etti.',
+        'Bugün hedefinin altında kaldıysan, damarların bunu zaten fark etti.',
     'healthTipHypertension18':
-      'Sigara istediğinde ellerini meşgul et. Tansiyonun bu birkaç dakikayı sana borçlu.',
+        'Sigara istediğinde ellerini meşgul et. Tansiyonun bu birkaç dakikayı sana borçlu.',
     'healthTipHypertension19':
-      'Yemekten sonraki sigara alışkanlığın en güçlü olduğu an. Sofradan kalkıp yürümeyi dene.',
+        'Yemekten sonraki sigara alışkanlığın en güçlü olduğu an. Sofradan kalkıp yürümeyi dene.',
     'healthTipHypertension20':
-      'Bir kişiye bugünkü hedefini söyle. Söylenen hedef, tutulan hedef olur.',
+        'Bir kişiye bugünkü hedefini söyle. Söylenen hedef, tutulan hedef olur.',
     'healthTipHypertension21':
-      'Tansiyonun için en iyi haber: bıraktığın gün değil, azalttığın her gün sayılıyor.',
+        'Tansiyonun için en iyi haber: bıraktığın gün değil, azalttığın her gün sayılıyor.',
     'healthTipHypertension22':
-      'Nefesini dörde kadar sayarak al, altıya kadar say vererek. Bunu üç kez yap.',
+        'Nefesini dörde kadar sayarak al, altıya kadar say vererek. Bunu üç kez yap.',
     'healthTipHypertension23':
-      'Sigara molası yerine pencere molası ver. Aynı ara, farklı sonuç.',
+        'Sigara molası yerine pencere molası ver. Aynı ara, farklı sonuç.',
     'healthTipHypertension24':
-      'Kolundaki tansiyon aleti sigarayı görmez ama etkisini ölçer.',
+        'Kolundaki tansiyon aleti sigarayı görmez ama etkisini ölçer.',
     'healthTipHypertension25':
-      'Bugün içmediğin sigara, yarınki ölçümünde görünecek.',
+        'Bugün içmediğin sigara, yarınki ölçümünde görünecek.',
     'healthTipHypertension26':
-      'Alkolle birlikte sigara isteği katlanır, tansiyon da öyle. İkisini ayır.',
+        'Alkolle birlikte sigara isteği katlanır, tansiyon da öyle. İkisini ayır.',
     'healthTipHypertension27':
-      'Yorgunluk sigara isteği gibi hissettirir. Önce on dakika otur, sonra karar ver.',
+        'Yorgunluk sigara isteği gibi hissettirir. Önce on dakika otur, sonra karar ver.',
     'healthTipHypertension28':
-      'Sabah kalkınca bir bardak su, günün ilk sigarasını geciktirmenin en kolay yolu.',
+        'Sabah kalkınca bir bardak su, günün ilk sigarasını geciktirmenin en kolay yolu.',
     'healthTipHypertension29':
-      'Tansiyonunu düşüren şey tek bir büyük karar değil, üst üste gelen küçük ertelemeler.',
+        'Tansiyonunu düşüren şey tek bir büyük karar değil, üst üste gelen küçük ertelemeler.',
     'healthTipHypertension30':
-      'Bugünün hedefini tutturduysan, bunu yarın da yapabilirsin. Kanıtı sensin.',
+        'Bugünün hedefini tutturduysan, bunu yarın da yapabilirsin. Kanıtı sensin.',
     'healthTipHypertension31':
-      'Tansiyon ilacını sabah aç karnına almadan önce sigarayı ertelemek, ikisinin birlikte çalışmasına yardım eder.',
+        'Tansiyon ilacını sabah aç karnına almadan önce sigarayı ertelemek, ikisinin birlikte çalışmasına yardım eder.',
     'healthTipHypertension32':
-      'Baş ağrısı ve baş dönmesi bazen yüksek tansiyonun habercisidir; sigara bunu daha da kötüleştirir. Şimdi dinlen.',
+        'Baş ağrısı ve baş dönmesi bazen yüksek tansiyonun habercisidir; sigara bunu daha da kötüleştirir. Şimdi dinlen.',
     'healthTipHypertension33':
-      'Gece geç saatte sigara, sabah tansiyon ölçümünü yükseltir. Bu akşamki sigarayı atlamak yarın fark yaratır.',
+        'Gece geç saatte sigara, sabah tansiyon ölçümünü yükseltir. Bu akşamki sigarayı atlamak yarın fark yaratır.',
     'healthTipAsthma3':
-      'Duman, hava yollarını saatlerce hassas bırakır. Şimdi içmezsen gece daha rahat nefes alırsın.',
+        'Duman, hava yollarını saatlerce hassas bırakır. Şimdi içmezsen gece daha rahat nefes alırsın.',
     'healthTipAsthma4':
-      'Göğsün sıkıştığında sigara onu açmaz, daraltır. Nefes egzersizi tam tersini yapar.',
+        'Göğsün sıkıştığında sigara onu açmaz, daraltır. Nefes egzersizi tam tersini yapar.',
     'healthTipAsthma5':
-      'Soğuk havada sigara, hava yollarına iki kat yüklenir. Bugün içeride kal ve ertele.',
+        'Soğuk havada sigara, hava yollarına iki kat yüklenir. Bugün içeride kal ve ertele.',
     'healthTipAsthma6':
-      'Astım için en kötü kombinasyon: duman ve toz. Bulunduğun yeri havalandır.',
+        'Astım için en kötü kombinasyon: duman ve toz. Bulunduğun yeri havalandır.',
     'healthTipAsthma7':
-      'Öksürüğün sabah artıyorsa, gece içilen sigarayla ilgili olabilir. Bir gece dene, farkı gör.',
+        'Öksürüğün sabah artıyorsa, gece içilen sigarayla ilgili olabilir. Bir gece dene, farkı gör.',
     'healthTipAsthma8':
-      'Nefes darlığında panik isteği büyütür. Omuzlarını gevşet, nefesini uzat.',
+        'Nefes darlığında panik isteği büyütür. Omuzlarını gevşet, nefesini uzat.',
     'healthTipAsthma9':
-      'Egzersiz astımını tetikliyorsa sigara bu eşiği daha da düşürür. Bugün bir sigara az.',
+        'Egzersiz astımını tetikliyorsa sigara bu eşiği daha da düşürür. Bugün bir sigara az.',
     'healthTipAsthma10':
-      'Sigarasız geçen her gün, kurtarıcı ilacına daha az ihtiyaç duyduğun bir gündür.',
+        'Sigarasız geçen her gün, kurtarıcı ilacına daha az ihtiyaç duyduğun bir gündür.',
     'healthTipAsthma11':
-      'Duman kokusu kıyafetinde kalır ve seni tekrar tetikler. Üstünü değiştir, isteği kes.',
-    'healthTipAsthma12':
-      'Hırıltı duyduğunda sigara değil, temiz hava ara.',
+        'Duman kokusu kıyafetinde kalır ve seni tekrar tetikler. Üstünü değiştir, isteği kes.',
+    'healthTipAsthma12': 'Hırıltı duyduğunda sigara değil, temiz hava ara.',
     'healthTipAsthma13':
-      'Polen mevsiminde hava yolların zaten yüklü. Bu hafta ertelemeler daha çok işe yarar.',
+        'Polen mevsiminde hava yolların zaten yüklü. Bu hafta ertelemeler daha çok işe yarar.',
     'healthTipAsthma14':
-      'Sigara isteği geldiğinde ağzından değil, burnundan yavaşça nefes al.',
+        'Sigara isteği geldiğinde ağzından değil, burnundan yavaşça nefes al.',
     'healthTipAsthma15':
-      'Astımlı biri için en değerli kazanç, gece kesintisiz uyumak. Akşam sigarası onu çalıyor.',
+        'Astımlı biri için en değerli kazanç, gece kesintisiz uyumak. Akşam sigarası onu çalıyor.',
     'healthTipAsthma16':
-      'Bugün içmediğin sigara, merdivende bir basamak fazla demek.',
+        'Bugün içmediğin sigara, merdivende bir basamak fazla demek.',
     'healthTipAsthma17':
-      'Kapalı alanda içilen sigara, hava yollarına açık alandakinden çok daha ağır gelir.',
+        'Kapalı alanda içilen sigara, hava yollarına açık alandakinden çok daha ağır gelir.',
     'healthTipAsthma18':
-      'Nefesin daraldığında oturup öne eğil ve yavaş nefes ver. Bu his geçecek.',
+        'Nefesin daraldığında oturup öne eğil ve yavaş nefes ver. Bu his geçecek.',
     'healthTipAsthma19':
-      'Sigara isteği ortalama üç dakika sürer. Astım atağı ise saatler. Hangisini beklemek daha kolay?',
+        'Sigara isteği ortalama üç dakika sürer. Astım atağı ise saatler. Hangisini beklemek daha kolay?',
     'healthTipAsthma20':
-      'Yatak odanı dumandan uzak tut. Uyurken hava yolların dinlenmeli.',
+        'Yatak odanı dumandan uzak tut. Uyurken hava yolların dinlenmeli.',
     'healthTipAsthma21':
-      'Bir sigarayı ertelediğinde sadece istek geçmez, nefesin de yerine gelir.',
+        'Bir sigarayı ertelediğinde sadece istek geçmez, nefesin de yerine gelir.',
     'healthTipAsthma22':
-      'Stres astımı da tetikler, sigarayı da. Kaynağı aynı, çözümü de aynı: yavaş nefes.',
+        'Stres astımı da tetikler, sigarayı da. Kaynağı aynı, çözümü de aynı: yavaş nefes.',
     'healthTipAsthma23':
-      'Bugün öksürüğün az mı? Bu tesadüf değil, dünkü kararların.',
+        'Bugün öksürüğün az mı? Bu tesadüf değil, dünkü kararların.',
     'healthTipAsthma24':
-      'Sigara dumanı, ilacının etkisini de zayıflatır. İkisini yarıştırma.',
+        'Sigara dumanı, ilacının etkisini de zayıflatır. İkisini yarıştırma.',
     'healthTipAsthma25':
-      'Nefes testinde bir saniyelik artış bile hava yollarının açıldığını gösterir.',
+        'Nefes testinde bir saniyelik artış bile hava yollarının açıldığını gösterir.',
     'healthTipAsthma26':
-      'Yürürken nefesin yetmiyorsa yavaşla, dur, nefeslen. Sigara bu sıralamayı bozar.',
+        'Yürürken nefesin yetmiyorsa yavaşla, dur, nefeslen. Sigara bu sıralamayı bozar.',
     'healthTipAsthma27':
-      'Evde biri sigara içiyorsa senin hava yolların da içiyor. Bunu konuşmaya değer.',
+        'Evde biri sigara içiyorsa senin hava yolların da içiyor. Bunu konuşmaya değer.',
     'healthTipAsthma28':
-      'Sıcak buhar, göğsündeki sıkışmayı sigaradan çok daha iyi açar.',
+        'Sıcak buhar, göğsündeki sıkışmayı sigaradan çok daha iyi açar.',
     'healthTipAsthma29':
-      'Bugünkü hedefin altında kalmak, bu gece daha az uyanmak demek.',
+        'Bugünkü hedefin altında kalmak, bu gece daha az uyanmak demek.',
     'healthTipAsthma30':
-      'Hava yolların iyileşmeyi hemen başlatır. Bir günün bile karşılığı var.',
+        'Hava yolların iyileşmeyi hemen başlatır. Bir günün bile karşılığı var.',
     'healthTipAsthma31':
-      'Soğuk hava ve sigara dumanı birlikte hava yollarını daha çok daraltır. Kalın bir eşarpla nefes al, sigarayı erteleyebilirsin.',
+        'Soğuk hava ve sigara dumanı birlikte hava yollarını daha çok daraltır. Kalın bir eşarpla nefes al, sigarayı erteleyebilirsin.',
     'healthTipAsthma32':
-      'Öksürük krizinden hemen sonra sigara istemek yaygındır ama tam da o an akciğerlerinin en çok dinlenmeye ihtiyacı olan an.',
+        'Öksürük krizinden hemen sonra sigara istemek yaygındır ama tam da o an akciğerlerinin en çok dinlenmeye ihtiyacı olan an.',
     'healthTipAsthma33':
-      'Nefes darlığı geceleri artıyorsa, akşamki son sigarayı atlamak uyku kalitesini doğrudan etkiler.',
+        'Nefes darlığı geceleri artıyorsa, akşamki son sigarayı atlamak uyku kalitesini doğrudan etkiler.',
     'healthTipDiabetes3':
-      'Sigara, insülinin işini zorlaştırır. Şimdi içmemek, bugünkü şekerini daha öngörülebilir kılar.',
+        'Sigara, insülinin işini zorlaştırır. Şimdi içmemek, bugünkü şekerini daha öngörülebilir kılar.',
     'healthTipDiabetes4':
-      'Yemekten sonraki sigara, şeker yükselmesinin üstüne binen ikinci bir yüktür.',
+        'Yemekten sonraki sigara, şeker yükselmesinin üstüne binen ikinci bir yüktür.',
     'healthTipDiabetes5':
-      'Ayaklarındaki dolaşım en çok sigaradan etkilenir. Bugün bir sigara az, bir adım fazla.',
+        'Ayaklarındaki dolaşım en çok sigaradan etkilenir. Bugün bir sigara az, bir adım fazla.',
     'healthTipDiabetes6':
-      'Kan şekerin düştüğünde sigara isteği artar. Önce bir şeyler ye, sonra tekrar düşün.',
+        'Kan şekerin düştüğünde sigara isteği artar. Önce bir şeyler ye, sonra tekrar düşün.',
     'healthTipDiabetes7':
-      'Sigarasız geçen her hafta, vücudunun kendi insülinini daha iyi kullandığı bir haftadır.',
+        'Sigarasız geçen her hafta, vücudunun kendi insülinini daha iyi kullandığı bir haftadır.',
     'healthTipDiabetes8':
-      'Yürüyüş hem şekerini hem sigara isteğini aynı anda düşürür. İki iş, tek çaba.',
+        'Yürüyüş hem şekerini hem sigara isteğini aynı anda düşürür. İki iş, tek çaba.',
     'healthTipDiabetes9':
-      'Yaraların geç iyileşiyorsa sigara bunun büyük bir payı. Azaltmak fark ediyor.',
+        'Yaraların geç iyileşiyorsa sigara bunun büyük bir payı. Azaltmak fark ediyor.',
     'healthTipDiabetes10':
-      'Şekerli içecekle sigara birlikte gelir. Birini bıraktığında diğeri de zayıflar.',
+        'Şekerli içecekle sigara birlikte gelir. Birini bıraktığında diğeri de zayıflar.',
     'healthTipDiabetes11':
-      'Sabah şekerin yüksekse, dünkü akşam sigarasına da bakmaya değer.',
+        'Sabah şekerin yüksekse, dünkü akşam sigarasına da bakmaya değer.',
     'healthTipDiabetes12':
-      'Sigara, göz damarlarını da zorlar. Bugün ertelediğin her sigara oraya da yazılıyor.',
+        'Sigara, göz damarlarını da zorlar. Bugün ertelediğin her sigara oraya da yazılıyor.',
     'healthTipDiabetes13':
-      'İstek geldiğinde bir bardak su iç. Susuzluk da şeker de isteği büyütür.',
+        'İstek geldiğinde bir bardak su iç. Susuzluk da şeker de isteği büyütür.',
     'healthTipDiabetes14':
-      'Stres şekerini yükseltir, sigara stresi geçirmez sadece erteler.',
+        'Stres şekerini yükseltir, sigara stresi geçirmez sadece erteler.',
     'healthTipDiabetes15':
-      'Ayak kontrolünü yaparken şunu düşün: dolaşımına en çok yardım eden şey azaltmak.',
+        'Ayak kontrolünü yaparken şunu düşün: dolaşımına en çok yardım eden şey azaltmak.',
     'healthTipDiabetes16':
-      'Sigara isteği üç dakika sürer. Şeker dalgalanması saatler. Kısa olanı bekle.',
+        'Sigara isteği üç dakika sürer. Şeker dalgalanması saatler. Kısa olanı bekle.',
     'healthTipDiabetes17':
-      'Bugün hedefini tutturduysan, pankreasın da bunu fark etti.',
+        'Bugün hedefini tutturduysan, pankreasın da bunu fark etti.',
     'healthTipDiabetes18':
-      'Böbreklerin sigaradan da şekerden de yorulur. İkisini birden azaltmak en iyi hediye.',
+        'Böbreklerin sigaradan da şekerden de yorulur. İkisini birden azaltmak en iyi hediye.',
     'healthTipDiabetes19':
-      'Öğün atlamak isteği büyütür. Düzenli yemek, sigarayı ertelemeyi kolaylaştırır.',
+        'Öğün atlamak isteği büyütür. Düzenli yemek, sigarayı ertelemeyi kolaylaştırır.',
     'healthTipDiabetes20':
-      'Akşam yürüyüşü, hem gece şekerini hem gece sigarasını devre dışı bırakır.',
+        'Akşam yürüyüşü, hem gece şekerini hem gece sigarasını devre dışı bırakır.',
     'healthTipDiabetes21':
-      'Sigarayı azaltmak, ilaçlarının aynı işi daha az çabayla yapması demek.',
+        'Sigarayı azaltmak, ilaçlarının aynı işi daha az çabayla yapması demek.',
     'healthTipDiabetes22':
-      'Ellerini meşgul et: bir şey soy, bir şey karıştır. İstek geçecek.',
+        'Ellerini meşgul et: bir şey soy, bir şey karıştır. İstek geçecek.',
     'healthTipDiabetes23':
-      'Tatlı isteği ve sigara isteği aynı anda gelirse, önce su ve on dakika.',
+        'Tatlı isteği ve sigara isteği aynı anda gelirse, önce su ve on dakika.',
     'healthTipDiabetes24':
-      'Uykusuzluk hem şekerini hem isteğini bozar. Bu gece erken yat.',
+        'Uykusuzluk hem şekerini hem isteğini bozar. Bu gece erken yat.',
     'healthTipDiabetes25':
-      'Bugün içilmeyen sigara, damarlarında hemen etkisini gösteriyor.',
+        'Bugün içilmeyen sigara, damarlarında hemen etkisini gösteriyor.',
     'healthTipDiabetes26':
-      'Kahvaltıyı atlayıp sigara içmek, güne şekerini iki kez zorlayarak başlamak demek.',
+        'Kahvaltıyı atlayıp sigara içmek, güne şekerini iki kez zorlayarak başlamak demek.',
     'healthTipDiabetes27':
-      'Arkadaş ortamında hem tatlı hem sigara gelir. Bir tanesine hazırlıklı git.',
+        'Arkadaş ortamında hem tatlı hem sigara gelir. Bir tanesine hazırlıklı git.',
     'healthTipDiabetes28':
-      'Şekerini ölçerken sigara sayını da düşün. İkisi aynı grafiğin parçası.',
+        'Şekerini ölçerken sigara sayını da düşün. İkisi aynı grafiğin parçası.',
     'healthTipDiabetes29':
-      'Azaltmak, bırakmanın küçük hâli değil; kendi başına kazanç.',
+        'Azaltmak, bırakmanın küçük hâli değil; kendi başına kazanç.',
     'healthTipDiabetes30':
-      'Bir haftadır hedefinin altındaysan, bunu vücudun çoktan hissediyor.',
+        'Bir haftadır hedefinin altındaysan, bunu vücudun çoktan hissediyor.',
     'healthTipDiabetes31':
-      'Sigara, ayaklarındaki küçük damarları daraltır; diyabette bu iyileşmeyi zaten yavaşlatıyor. Bir sigara daha eksiltmek yardımcı olur.',
+        'Sigara, ayaklarındaki küçük damarları daraltır; diyabette bu iyileşmeyi zaten yavaşlatıyor. Bir sigara daha eksiltmek yardımcı olur.',
     'healthTipDiabetes32':
-      'Kan şekerin düşükken sigara isteği artabilir. Önce bir şeyler ye, istek genelde onunla birlikte azalır.',
+        'Kan şekerin düşükken sigara isteği artabilir. Önce bir şeyler ye, istek genelde onunla birlikte azalır.',
     'healthTipDiabetes33':
-      'Düzenli ölçüm yapıyorsan, sigarasız geçen günlerdeki farkı zamanla kendin göreceksin.',
+        'Düzenli ölçüm yapıyorsan, sigarasız geçen günlerdeki farkı zamanla kendin göreceksin.',
     'healthTipCopd3':
-      'KOAH\'ta her sigara, kaybedilen kapasitenin üstüne biner. Bugünkü erteleme kalıcı bir kazanç.',
+        'KOAH\'ta her sigara, kaybedilen kapasitenin üstüne biner. Bugünkü erteleme kalıcı bir kazanç.',
     'healthTipCopd4':
-      'Nefesin daraldığında öne eğilip dudak büzerek nefes ver. Sigaradan hızlı rahatlatır.',
+        'Nefesin daraldığında öne eğilip dudak büzerek nefes ver. Sigaradan hızlı rahatlatır.',
     'healthTipCopd5':
-      'Sabah balgamı fazlaysa, gece içilen sigarayla ilgisi var. Bir gece dene.',
+        'Sabah balgamı fazlaysa, gece içilen sigarayla ilgisi var. Bir gece dene.',
     'healthTipCopd6':
-      'Alevlenmelerin çoğu sigarayla başlar. Bugün içmemek, bu ayı hastanesiz geçirmene yardım eder.',
+        'Alevlenmelerin çoğu sigarayla başlar. Bugün içmemek, bu ayı hastanesiz geçirmene yardım eder.',
     'healthTipCopd7':
-      'Merdiven çıkarken durup nefeslenmek zayıflık değil, doğru teknik. Sigara bu tekniği bozar.',
+        'Merdiven çıkarken durup nefeslenmek zayıflık değil, doğru teknik. Sigara bu tekniği bozar.',
     'healthTipCopd8':
-      'Akciğerlerin iyileşmeyi bugün başlatabilir. Yaşın ya da süren fark etmez.',
+        'Akciğerlerin iyileşmeyi bugün başlatabilir. Yaşın ya da süren fark etmez.',
     'healthTipCopd9':
-      'Soğuk hava hava yollarını daraltır. Sigarayla birleşince iki kat zorlar. Bugün içeride kal.',
+        'Soğuk hava hava yollarını daraltır. Sigarayla birleşince iki kat zorlar. Bugün içeride kal.',
     'healthTipCopd10':
-      'Sigara isteği üç dakika sürer. Nefes darlığı ise günü alır. Üç dakikayı bekle.',
+        'Sigara isteği üç dakika sürer. Nefes darlığı ise günü alır. Üç dakikayı bekle.',
     'healthTipCopd11':
-      'Balgamının rengi değişiyorsa doktoruna söyle. Bu arada bir sigara az iç.',
+        'Balgamının rengi değişiyorsa doktoruna söyle. Bu arada bir sigara az iç.',
     'healthTipCopd12':
-      'Kısa yürüyüşler akciğer kapasiteni korur. Sigara molası yerine yürüyüş molası ver.',
+        'Kısa yürüyüşler akciğer kapasiteni korur. Sigara molası yerine yürüyüş molası ver.',
     'healthTipCopd13':
-      'Gece nefes darlığıyla uyanıyorsan, akşam sigarası bunun en kolay değiştirilebilir sebebi.',
+        'Gece nefes darlığıyla uyanıyorsan, akşam sigarası bunun en kolay değiştirilebilir sebebi.',
     'healthTipCopd14':
-      'Nefes egzersizini yaparken sayı tut. Ölçülen ilerleme, hissedilenden daha inandırıcı.',
+        'Nefes egzersizini yaparken sayı tut. Ölçülen ilerleme, hissedilenden daha inandırıcı.',
     'healthTipCopd15':
-      'Sigarasız geçen her gün, öksürüğünün biraz daha azaldığı bir gündür.',
+        'Sigarasız geçen her gün, öksürüğünün biraz daha azaldığı bir gündür.',
     'healthTipCopd16':
-      'Evi havalandırmak, akciğerlerine bugün verebileceğin en kolay iyilik.',
+        'Evi havalandırmak, akciğerlerine bugün verebileceğin en kolay iyilik.',
     'healthTipCopd17':
-      'Konuşurken nefesin yetmiyorsa, bu geri kazanılabilir bir şey. Azaltmakla başlıyor.',
+        'Konuşurken nefesin yetmiyorsa, bu geri kazanılabilir bir şey. Azaltmakla başlıyor.',
     'healthTipCopd18':
-      'Ağır yemek sonrası nefesin daralır. Sigarayı da ekleme, biraz yürü.',
+        'Ağır yemek sonrası nefesin daralır. Sigarayı da ekleme, biraz yürü.',
     'healthTipCopd19':
-      'Bugün hedefinin altında kaldıysan, akciğerlerin bunu bir hafta boyunca hatırlayacak.',
+        'Bugün hedefinin altında kaldıysan, akciğerlerin bunu bir hafta boyunca hatırlayacak.',
     'healthTipCopd20':
-      'Duman, hava yollarındaki temizleyici tüycükleri felç eder. Onlar birkaç saatte toparlanır.',
+        'Duman, hava yollarındaki temizleyici tüycükleri felç eder. Onlar birkaç saatte toparlanır.',
     'healthTipCopd21':
-      'Nefes testinde bir saniye artış küçük görünür ama merdivende hissedilir.',
+        'Nefes testinde bir saniye artış küçük görünür ama merdivende hissedilir.',
     'healthTipCopd22':
-      'Kalabalık ve dumanlı yerlerden uzak dur. Hava yolların bugün zaten çalışıyor.',
+        'Kalabalık ve dumanlı yerlerden uzak dur. Hava yolların bugün zaten çalışıyor.',
     'healthTipCopd23':
-      'Sigara isteği panikle büyür. Otur, dudak büzerek ver, tekrar değerlendir.',
+        'Sigara isteği panikle büyür. Otur, dudak büzerek ver, tekrar değerlendir.',
     'healthTipCopd24':
-      'Grip aşını yaptırdıysan iyi. Sigarayı azaltmak onun etkisini destekler.',
+        'Grip aşını yaptırdıysan iyi. Sigarayı azaltmak onun etkisini destekler.',
     'healthTipCopd25':
-      'Su içmek balgamı inceltir ve öksürmeyi kolaylaştırır. Sigara tam tersini yapar.',
+        'Su içmek balgamı inceltir ve öksürmeyi kolaylaştırır. Sigara tam tersini yapar.',
     'healthTipCopd26':
-      'Bugün bir sigara az içtiysen, bu gece bir kez az uyanabilirsin.',
+        'Bugün bir sigara az içtiysen, bu gece bir kez az uyanabilirsin.',
     'healthTipCopd27':
-      'Ev işlerini parçalara böl ve aralarda nefeslen. Bu, sigara molasının yerini alabilir.',
+        'Ev işlerini parçalara böl ve aralarda nefeslen. Bu, sigara molasının yerini alabilir.',
     'healthTipCopd28':
-      'Akciğer kapasiten yavaş iyileşir ama geri gider de. Yön senin elinde.',
+        'Akciğer kapasiten yavaş iyileşir ama geri gider de. Yön senin elinde.',
     'healthTipCopd29':
-      'Nefes darlığı arttığında ilk yapılacak şey durmak, ikinci şey yavaş nefes vermek.',
+        'Nefes darlığı arttığında ilk yapılacak şey durmak, ikinci şey yavaş nefes vermek.',
     'healthTipCopd30':
-      'Azaltarak gitmek de bir yol. Akciğerlerin her adımı sayıyor.',
+        'Azaltarak gitmek de bir yol. Akciğerlerin her adımı sayıyor.',
     'healthTipCopd31':
-      'Sabah balgam söktürme zorluğu genelde gece içilen son sigaralardan gelir. Onları erteleyerek başla.',
+        'Sabah balgam söktürme zorluğu genelde gece içilen son sigaralardan gelir. Onları erteleyerek başla.',
     'healthTipCopd32':
-      'Merdiven çıkarken nefesin daraldıysa, şu an sigara değil dinlenme zamanı.',
+        'Merdiven çıkarken nefesin daraldıysa, şu an sigara değil dinlenme zamanı.',
     'healthTipCopd33':
-      'KOAH ilaçların sigarayla birlikte daha az işe yarar. İlacı aldığın saatte sigarayı atlamak, ilacın gerçekten çalışmasını sağlar.',
+        'KOAH ilaçların sigarayla birlikte daha az işe yarar. İlacı aldığın saatte sigarayı atlamak, ilacın gerçekten çalışmasını sağlar.',
     'healthTipHeartDisease3':
-      'Sigara, kalbinin oksijen ihtiyacını artırırken damarları daraltır. Şu an içmemek ikisini de düzeltir.',
+        'Sigara, kalbinin oksijen ihtiyacını artırırken damarları daraltır. Şu an içmemek ikisini de düzeltir.',
     'healthTipHeartDisease4':
-      'Göğsünde baskı hissedersen dur ve dinlen. Bu bir sigara zamanı değil.',
+        'Göğsünde baskı hissedersen dur ve dinlen. Bu bir sigara zamanı değil.',
     'healthTipHeartDisease5':
-      'Sigarasız geçen ilk gün bile kalp krizi riskini düşürmeye başlar.',
+        'Sigarasız geçen ilk gün bile kalp krizi riskini düşürmeye başlar.',
     'healthTipHeartDisease6':
-      'Nabzın hızlandığında sigara onu daha da hızlandırır. Nefesini yavaşlat.',
+        'Nabzın hızlandığında sigara onu daha da hızlandırır. Nefesini yavaşlat.',
     'healthTipHeartDisease7':
-      'Yürüyüş kalbini güçlendirir, sigara yorar. Bugün hangisini seçeceğin belli.',
+        'Yürüyüş kalbini güçlendirir, sigara yorar. Bugün hangisini seçeceğin belli.',
     'healthTipHeartDisease8':
-      'Sabah saatleri kalp için en riskli zaman. Günün ilk sigarasını geciktir.',
+        'Sabah saatleri kalp için en riskli zaman. Günün ilk sigarasını geciktir.',
     'healthTipHeartDisease9':
-      'Merdiven çıkarken zorlanıyorsan bu geri kazanılabilir. Azaltmakla başlar.',
+        'Merdiven çıkarken zorlanıyorsan bu geri kazanılabilir. Azaltmakla başlar.',
     'healthTipHeartDisease10':
-      'Sigara kanı koyulaştırır ve pıhtı riskini artırır. Bugün içmediğin her sigara sayılıyor.',
+        'Sigara kanı koyulaştırır ve pıhtı riskini artırır. Bugün içmediğin her sigara sayılıyor.',
     'healthTipHeartDisease11':
-      'Stres kalbini de sigara isteğini de tetikler. Kaynağı çözmek ikisini birden çözer.',
+        'Stres kalbini de sigara isteğini de tetikler. Kaynağı çözmek ikisini birden çözer.',
     'healthTipHeartDisease12':
-      'Kalp ilaçların sigarayla yarışmak zorunda kalmasın.',
+        'Kalp ilaçların sigarayla yarışmak zorunda kalmasın.',
     'healthTipHeartDisease13':
-      'Bacaklarında yürürken ağrı oluyorsa damarların konuşuyor. Dinle.',
+        'Bacaklarında yürürken ağrı oluyorsa damarların konuşuyor. Dinle.',
     'healthTipHeartDisease14':
-      'Ağır yemek sonrası kalp zaten çalışıyor. Üstüne sigara ekleme.',
+        'Ağır yemek sonrası kalp zaten çalışıyor. Üstüne sigara ekleme.',
     'healthTipHeartDisease15':
-      'Sigara isteği geldiğinde iki dakika ayakta yürü. Kalbin bu takası kabul eder.',
+        'Sigara isteği geldiğinde iki dakika ayakta yürü. Kalbin bu takası kabul eder.',
     'healthTipHeartDisease16':
-      'Kolesterol ve sigara birlikte damar duvarına yüklenir. Birini azaltmak diğerini hafifletir.',
+        'Kolesterol ve sigara birlikte damar duvarına yüklenir. Birini azaltmak diğerini hafifletir.',
     'healthTipHeartDisease17':
-      'Bugün hedefinin altında kaldıysan, kalbin bugün daha az attı.',
+        'Bugün hedefinin altında kaldıysan, kalbin bugün daha az attı.',
     'healthTipHeartDisease18':
-      'Uyku kalbini onarır. Akşam sigarası o onarımı böler.',
+        'Uyku kalbini onarır. Akşam sigarası o onarımı böler.',
     'healthTipHeartDisease19':
-      'Nefes egzersizi nabzını düşürür, sigara yükseltir. Aynı üç dakika, zıt sonuç.',
+        'Nefes egzersizi nabzını düşürür, sigara yükseltir. Aynı üç dakika, zıt sonuç.',
     'healthTipHeartDisease20':
-      'Tuz ve sigara birlikte tansiyonu iter. Bugün ikisinden birini geri çek.',
+        'Tuz ve sigara birlikte tansiyonu iter. Bugün ikisinden birini geri çek.',
     'healthTipHeartDisease21':
-      'Kalp için en iyi haber: hasar durduğu anda onarım başlar.',
+        'Kalp için en iyi haber: hasar durduğu anda onarım başlar.',
     'healthTipHeartDisease22':
-      'Soğukta yürürken kalp daha çok çalışır. Sigarayı buna ekleme.',
+        'Soğukta yürürken kalp daha çok çalışır. Sigarayı buna ekleme.',
     'healthTipHeartDisease23':
-      'Bir sigarayı ertelediğinde kalbin o dakikalarda daha rahat kan pompalıyor.',
+        'Bir sigarayı ertelediğinde kalbin o dakikalarda daha rahat kan pompalıyor.',
     'healthTipHeartDisease24':
-      'Alkolle sigara birlikte nabzı iki yönden zorlar. Ayrı tut.',
+        'Alkolle sigara birlikte nabzı iki yönden zorlar. Ayrı tut.',
     'healthTipHeartDisease25':
-      'Bugünkü yürüyüşün, bu haftanın en iyi kalp kararı olabilir.',
+        'Bugünkü yürüyüşün, bu haftanın en iyi kalp kararı olabilir.',
     'healthTipHeartDisease26':
-      'Sigara isteği geldiğinde nabzını say. Sayarken istek genelde geçer.',
+        'Sigara isteği geldiğinde nabzını say. Sayarken istek genelde geçer.',
     'healthTipHeartDisease27':
-      'Kalp sağlığı için azaltmak, bırakmaya giden yolun tamamı kadar değerli.',
+        'Kalp sağlığı için azaltmak, bırakmaya giden yolun tamamı kadar değerli.',
     'healthTipHeartDisease28':
-      'Göğüs ağrın değişiyorsa doktoruna söyle. Bu arada bir sigara az.',
+        'Göğüs ağrın değişiyorsa doktoruna söyle. Bu arada bir sigara az.',
     'healthTipHeartDisease29':
-      'Damarların esnekliğini geri kazanabilir. Bu, azalttığın her gün biraz daha olur.',
+        'Damarların esnekliğini geri kazanabilir. Bu, azalttığın her gün biraz daha olur.',
     'healthTipHeartDisease30':
-      'Kalbin bugüne kadar durmadan çalıştı. Bugün ona bir sigara borcun yok.',
+        'Kalbin bugüne kadar durmadan çalıştı. Bugün ona bir sigara borcun yok.',
     'healthTipHeartDisease31':
-      'Göğsünde baskı hissettiğinde sigara değil, oturup yavaş nefes almak kalbini rahatlatır.',
+        'Göğsünde baskı hissettiğinde sigara değil, oturup yavaş nefes almak kalbini rahatlatır.',
     'healthTipHeartDisease32':
-      'Sigara sonrası kalp atışındaki hızlanma dakikalarca sürer. O dakikaları hiç yaşamamayı seçebilirsin.',
+        'Sigara sonrası kalp atışındaki hızlanma dakikalarca sürer. O dakikaları hiç yaşamamayı seçebilirsin.',
     'healthTipHeartDisease33':
-      'Kalp ilaçlarını düzenli alıyorsan, sigarayı azaltmak onların etkisini güçlendirir, zayıflatmaz.',
+        'Kalp ilaçlarını düzenli alıyorsan, sigarayı azaltmak onların etkisini güçlendirir, zayıflatmaz.',
     'menuReports': 'Raporlar',
     'reportsTitle': 'Raporlar',
     'reportsWeeklyTab': 'Haftalik',
@@ -1222,14 +1244,15 @@ class AppTexts {
     'reportsTotalSteps': 'Toplam adim',
     'reportsAvgStepsPerDay': 'Gunluk ortalama adim',
     'settingsLocationIntelligenceRow': 'Konum Zekasi',
-    'settingsLocationIntelligenceRowSubtitle': 'Sik gittigin yerleri ogrenerek destek ol',
+    'settingsLocationIntelligenceRowSubtitle':
+        'Sik gittigin yerleri ogrenerek destek ol',
     'locationIntelligenceTitle': 'Konum Zekasi',
     'locationIntelligenceIntro':
-      'Acik oldugunda, uygulama zamanla en fazla 8 sik gittigin yeri ogrenir (ornegin ev, is). Bu yerlerden birine vardiginda kisa bir hatirlatma gosterilir. Ham konum gecmisi hicbir zaman kaydedilmez, sadece bu az sayidaki yerin kabaca konumu tutulur.',
+        'Acik oldugunda, uygulama zamanla en fazla 8 sik gittigin yeri ogrenir (ornegin ev, is). Bu yerlerden birine vardiginda kisa bir hatirlatma gosterilir. Ham konum gecmisi hicbir zaman kaydedilmez, sadece bu az sayidaki yerin kabaca konumu tutulur.',
     'locationIntelligencePurpose':
-      'Neden: Bildirim gostermek ve risk degerlendirmene katki saglamak icin. Ayarlar > Verilerimi Sifirla ile bu veriler de silinir.',
+        'Neden: Bildirim gostermek ve risk degerlendirmene katki saglamak icin. Ayarlar > Verilerimi Sifirla ile bu veriler de silinir.',
     'locationIntelligenceBackgroundWarning':
-      'Ana izin verildi ama arka plan izni verilmedi. Uygulama kapaliyken vardigin yerler algilanamaz. Ayarlar > Uygulamalar > Nikotin Away > Izinler > Konum bolumunden "Her zaman izin ver" secebilirsin.',
+        'Ana izin verildi ama arka plan izni verilmedi. Uygulama kapaliyken vardigin yerler algilanamaz. Ayarlar > Uygulamalar > Nikotin Away > Izinler > Konum bolumunden "Her zaman izin ver" secebilirsin.',
     'locationIntelligenceEnabledConfirmation': 'Konum zekasi acildi.',
     'locationIntelligenceDisabledConfirmation': 'Konum zekasi kapatildi.',
     'locationIntelligencePlacesTitle': 'Ogrenilen Yerler',
@@ -1237,12 +1260,14 @@ class AppTexts {
     'locationIntelligencePlaceRow': 'Yer',
     'locationIntelligenceVisitCount': 'ziyaret',
     'locationArrivalNotificationTitle': 'Buradasin',
-    'locationArrivalNotificationBody': 'Sik gittigin bir yerdesin. Kendine iyi bak.',
-    'smokingLoggedConfirmation': 'Kaydedildi. Bu, ne zaman zorlandigini daha iyi anlamamiza yardimci olur.',
+    'locationArrivalNotificationBody':
+        'Sik gittigin bir yerdesin. Kendine iyi bak.',
+    'smokingLoggedConfirmation':
+        'Kaydedildi. Bu, ne zaman zorlandigini daha iyi anlamamiza yardimci olur.',
     'undo': 'Geri al',
     'dailyCheckInTitle': 'Gunluk Degerlendirme',
     'dailyCheckInIntro':
-      'Gunu kapatmadan once kisa bir degerlendirme yapalim. Bu, seni gereksiz yere gun boyu rahatsiz etmeden en dogru destegi vermemizi saglar.',
+        'Gunu kapatmadan once kisa bir degerlendirme yapalim. Bu, seni gereksiz yere gun boyu rahatsiz etmeden en dogru destegi vermemizi saglar.',
     'breathExerciseCardTitle': 'Nefes Egzersizi',
     'dailyCheckInHoursQuestion': 'Bugun yaklasik hangi saatlerde sigara ictin?',
     'dailyCheckInDidNotSmoke': 'Bugun hic icmedim',
@@ -1267,7 +1292,7 @@ class AppTexts {
     'catLikeTotal': 'CAT-benzeri toplam',
     'warningDaysTotal': 'Uyari gunleri toplami',
     'respFollowUpNote':
-      'Not: Bu izlem tani koymaz; belirti kotulesirse klinik degerlendirme alin.',
+        'Not: Bu izlem tani koymaz; belirti kotulesirse klinik degerlendirme alin.',
     'trendChartsTitle': 'Trend Grafikler',
     'weeklyRiskTrendTitle': 'Haftalik risk trendi (son 12 olcum)',
     'noWeeklyDataForChart': 'Grafik icin yeterli haftalik veri yok.',
@@ -1322,10 +1347,10 @@ class AppTexts {
     'surveyModeQuick': 'Hızlı (15 sn)',
     'surveyModeDetailed': 'Detaylı',
     'surveyModeAutoDetailedHint':
-      'Geçen hafta risk yüksek görünüyor. İstersen Detaylı moda geçerek daha ince ayar yapabilirsin.',
+        'Geçen hafta risk yüksek görünüyor. İstersen Detaylı moda geçerek daha ince ayar yapabilirsin.',
     'weeklyQuickRespTitle': 'Hızlı Solunum Kontrolü',
     'weeklyQuickRespHint':
-      'Kısa modda da solunum durumunu daha doğru yansıtmak için 3 alan doldur.',
+        'Kısa modda da solunum durumunu daha doğru yansıtmak için 3 alan doldur.',
     'adaptiveSummary': 'Uyarlanabilir ozet',
     'addNote': 'Not ekle',
     'backToHome': 'Ana sayfaya don',
@@ -1432,73 +1457,120 @@ class AppTexts {
     'taskNoSmoke60': '60 dakika sigarasiz kal',
     'taskNoSmoke90': '90 dakika sigarasiz kal',
     'adaptiveNoSmokeTaskTemplate':
-      'Onumuzdeki {duration} boyunca sigara icmeyin. Elinizde sigara varsa hemen sondurun.',
+        'Onumuzdeki {duration} boyunca sigara icmeyin. Elinizde sigara varsa hemen sondurun.',
     'adaptiveNoSmokeWindowTemplate':
-      'Onumuzdeki {duration} boyunca sigara icmeyin, {window} penceresi oncesi hazir ol.',
+        'Onumuzdeki {duration} boyunca sigara icmeyin, {window} penceresi oncesi hazir ol.',
     'checkInPrompt': 'Devam ediyor musunuz?',
-    'coachReductionTier75': 'Bugun hedef: duneden en az 1 sigara az, ilk sigarayi 90 dakika ertele.',
-    'coachReductionTier60': 'Bugun hedef: duneden en az 2 sigara az, her sigara oncesi 10 dakika bekle.',
-    'coachReductionTier40': 'Bugun hedef: duneden en az 3 sigara az, oglen sonrasi 1 sigarayi atla.',
-    'coachReductionTierBase': 'Bugun hedef: mevcut azalmayi koru, riski saatlerde sigara yerine su + sakiz uygula.',
-    'coachBreathDeclining': 'NEFES: Bugun 2 nefes testi yap, her testten sonra 2 dakika yavas nefes uygula.',
-    'coachBreathImproving': 'NEFES: Kazanimi koru, risk saatinden once 1 nefes rutini tamamla.',
-    'coachBreathStable': 'NEFES: Kriz aninda 2 dakika nefes + 1 bardak su uygula.',
-    'coachTrackReduceToday': 'TAKIP: Bugun toplam adedi dunun en az 2 altinda tamamla.',
-    'coachTrackCompleteThree': 'TAKIP: Bugun secilen gorevlerin en az 3 tanesini tamamlandi isaretle.',
-    'coachPrepWindowTemplate': 'HAZIRLIK: {window} oncesinde su + sakiz + kisa yuruyus planini hazirla.',
-    'coachTriggerDelayTemplate': 'TETIKLEYICI: {trigger} aninda 3 dakika ertele, sonra yeniden karar ver.',
-    'coachFocusRiskHourTemplate': 'ODAK: En riskli saat {hour} icin bildirimleri acik tut.',
-    'coachWeeklyTargetTemplate': 'HEDEF: Haftalik risk hedefini {percent} altina indir.',
-    'coachTriggerStressCommand': 'TETIKLEYICI-STRES: Stres aninda 90 saniye nefes + 1 bardak su, sonra yeniden karar ver.',
-    'coachTriggerCoffeeCommand': 'TETIKLEYICI-KAHVE: Kahveyi 30 dakika geciktir, kahve ile sigarayi baglama.',
-    'coachTriggerAlcoholCommand': 'TETIKLEYICI-ALKOL: Alkol gunlerinde ilk teklifte sigaraya hayir de, sakiz/su alternatifi kullan.',
-    'coachTriggerSocialCommand': 'TETIKLEYICI-SOSYAL: Sosyal ortama girmeden once hedefini destek kisina mesajla.',
-    'coachCrisisProtocol': 'KRIZ: Ilk istek dalgasinda 3 dakika ertele, ikinci dalgada 4D protokolunu uygula.',
-    'coachSupportSingleGoal': 'DESTEK: Bugun tek hedef sec ve tamamlayinca uygulamada isaretle.',
-    'coachHintHighRisk': 'Yuksek risk donemindesiniz: ilk sigarayi mutlaka erteleyin.',
-    'coachHintMedRisk': 'Orta-yuksek risk: tetikleyici aninda nefes + su rutini uygulayin.',
-    'coachHintLowRisk': 'Ritmi koruyun: bugun en az bir gorevi tamamlama hedefi koyun.',
-    'coachHintWindowTemplate': 'En riskli pencere: {window}. Bu saatten once hazirlik yapin.',
-    'coachHintTriggerTemplate': 'Tahmini tetikleyici: {trigger}. Alternatif davranis belirleyin.',
-    'coachRiskDaypart_high_morning_0': 'SABAH: Ilk sigarayi 90 dakika ertele, once 1 bardak su ic.',
-    'coachRiskDaypart_high_morning_1': 'KRIZ: 4D protokolunu uygula (ertele-nefes-su-dikkat dagit).',
-    'coachRiskDaypart_high_day_0': 'OGLE: Yemek sonrasi 7 dakika yuruyus yap, sonra karar ver.',
-    'coachRiskDaypart_high_day_1': 'TETIK: Kahve ile sigarayi ayir, kahveyi 30 dakika geciktir.',
-    'coachRiskDaypart_high_evening_0': 'AKSAM: Sosyal ortamda ilk teklife hayir de, 3 dakika ertele.',
-    'coachRiskDaypart_high_evening_1': 'DESTEK: Risk saatinden once destek kisina tek satir mesaj gonder.',
-    'coachRiskDaypart_high_night_0': 'GECE: Bu saatten sonra sigara yok, acil kriz rutini uygula.',
-    'coachRiskDaypart_high_night_1': 'GEVSEME: 3 dakika yavas nefes + su ile gunu kapat.',
-    'coachRiskDaypart_medium_morning_0': 'SABAH: Ilk sigarayi 45 dakika ertele.',
-    'coachRiskDaypart_medium_morning_1': 'RUTIN: Kahve oncesi 2 dakika nefes egzersizi yap.',
+    'coachReductionTier75':
+        'Bugun hedef: duneden en az 1 sigara az, ilk sigarayi 90 dakika ertele.',
+    'coachReductionTier60':
+        'Bugun hedef: duneden en az 2 sigara az, her sigara oncesi 10 dakika bekle.',
+    'coachReductionTier40':
+        'Bugun hedef: duneden en az 3 sigara az, oglen sonrasi 1 sigarayi atla.',
+    'coachReductionTierBase':
+        'Bugun hedef: mevcut azalmayi koru, riski saatlerde sigara yerine su + sakiz uygula.',
+    'coachBreathDeclining':
+        'NEFES: Bugun 2 nefes testi yap, her testten sonra 2 dakika yavas nefes uygula.',
+    'coachBreathImproving':
+        'NEFES: Kazanimi koru, risk saatinden once 1 nefes rutini tamamla.',
+    'coachBreathStable':
+        'NEFES: Kriz aninda 2 dakika nefes + 1 bardak su uygula.',
+    'coachTrackReduceToday':
+        'TAKIP: Bugun toplam adedi dunun en az 2 altinda tamamla.',
+    'coachTrackCompleteThree':
+        'TAKIP: Bugun secilen gorevlerin en az 3 tanesini tamamlandi isaretle.',
+    'coachPrepWindowTemplate':
+        'HAZIRLIK: {window} oncesinde su + sakiz + kisa yuruyus planini hazirla.',
+    'coachTriggerDelayTemplate':
+        'TETIKLEYICI: {trigger} aninda 3 dakika ertele, sonra yeniden karar ver.',
+    'coachFocusRiskHourTemplate':
+        'ODAK: En riskli saat {hour} icin bildirimleri acik tut.',
+    'coachWeeklyTargetTemplate':
+        'HEDEF: Haftalik risk hedefini {percent} altina indir.',
+    'coachTriggerStressCommand':
+        'TETIKLEYICI-STRES: Stres aninda 90 saniye nefes + 1 bardak su, sonra yeniden karar ver.',
+    'coachTriggerCoffeeCommand':
+        'TETIKLEYICI-KAHVE: Kahveyi 30 dakika geciktir, kahve ile sigarayi baglama.',
+    'coachTriggerAlcoholCommand':
+        'TETIKLEYICI-ALKOL: Alkol gunlerinde ilk teklifte sigaraya hayir de, sakiz/su alternatifi kullan.',
+    'coachTriggerSocialCommand':
+        'TETIKLEYICI-SOSYAL: Sosyal ortama girmeden once hedefini destek kisina mesajla.',
+    'coachCrisisProtocol':
+        'KRIZ: Ilk istek dalgasinda 3 dakika ertele, ikinci dalgada 4D protokolunu uygula.',
+    'coachSupportSingleGoal':
+        'DESTEK: Bugun tek hedef sec ve tamamlayinca uygulamada isaretle.',
+    'coachHintHighRisk':
+        'Yuksek risk donemindesiniz: ilk sigarayi mutlaka erteleyin.',
+    'coachHintMedRisk':
+        'Orta-yuksek risk: tetikleyici aninda nefes + su rutini uygulayin.',
+    'coachHintLowRisk':
+        'Ritmi koruyun: bugun en az bir gorevi tamamlama hedefi koyun.',
+    'coachHintWindowTemplate':
+        'En riskli pencere: {window}. Bu saatten once hazirlik yapin.',
+    'coachHintTriggerTemplate':
+        'Tahmini tetikleyici: {trigger}. Alternatif davranis belirleyin.',
+    'coachRiskDaypart_high_morning_0':
+        'SABAH: Ilk sigarayi 90 dakika ertele, once 1 bardak su ic.',
+    'coachRiskDaypart_high_morning_1':
+        'KRIZ: 4D protokolunu uygula (ertele-nefes-su-dikkat dagit).',
+    'coachRiskDaypart_high_day_0':
+        'OGLE: Yemek sonrasi 7 dakika yuruyus yap, sonra karar ver.',
+    'coachRiskDaypart_high_day_1':
+        'TETIK: Kahve ile sigarayi ayir, kahveyi 30 dakika geciktir.',
+    'coachRiskDaypart_high_evening_0':
+        'AKSAM: Sosyal ortamda ilk teklife hayir de, 3 dakika ertele.',
+    'coachRiskDaypart_high_evening_1':
+        'DESTEK: Risk saatinden once destek kisina tek satir mesaj gonder.',
+    'coachRiskDaypart_high_night_0':
+        'GECE: Bu saatten sonra sigara yok, acil kriz rutini uygula.',
+    'coachRiskDaypart_high_night_1':
+        'GEVSEME: 3 dakika yavas nefes + su ile gunu kapat.',
+    'coachRiskDaypart_medium_morning_0':
+        'SABAH: Ilk sigarayi 45 dakika ertele.',
+    'coachRiskDaypart_medium_morning_1':
+        'RUTIN: Kahve oncesi 2 dakika nefes egzersizi yap.',
     'coachRiskDaypart_medium_day_0': 'OGLE: Her sigara oncesi 10 dakika bekle.',
-    'coachRiskDaypart_medium_day_1': 'ATLA: Bugun ogleden sonra 1 sigarayi atla.',
-    'coachRiskDaypart_medium_evening_0': 'AKSAM: Riskli saatte sakiz/su alternatifi uygula.',
-    'coachRiskDaypart_medium_evening_1': 'TAKIP: Gun sonu sayiminda hedefi kontrol et.',
-    'coachRiskDaypart_medium_night_0': 'GECE: Son sigaradan sonra su ic, tekrar sigara icme.',
-    'coachRiskDaypart_medium_night_1': 'PLAN: Yarin ilk sigara saatini simdiden 15 dakika geciktir.',
-    'coachRiskDaypart_low_morning_0': 'SABAH: Ilk sigarayi en az 25 dakika ertele.',
-    'coachRiskDaypart_low_morning_1': 'KORU: Nefes kazancini korumak icin su + nefes rutini yap.',
-    'coachRiskDaypart_low_day_0': 'OGLE: Sadece planli saatlerde karar ver, otomatik yakma yok.',
-    'coachRiskDaypart_low_day_1': 'KORU: Oglen sonrasi 1 sigara yerine 5 dakika yuruyus yap.',
-    'coachRiskDaypart_low_evening_0': 'AKSAM: Sosyal tetikleyicilerde 3 dakika erteleme uygula.',
-    'coachRiskDaypart_low_evening_1': 'KORU: Gun sonu notuna bugun ise yarayan yontemi yaz.',
-    'coachRiskDaypart_low_night_0': 'GECE: Bu saatten sonra sigarayi kapat, kriz olursa nefes uygula.',
-    'coachRiskDaypart_low_night_1': 'KORU: Yarin icin risk saatine tek bir onlem yaz.',
+    'coachRiskDaypart_medium_day_1':
+        'ATLA: Bugun ogleden sonra 1 sigarayi atla.',
+    'coachRiskDaypart_medium_evening_0':
+        'AKSAM: Riskli saatte sakiz/su alternatifi uygula.',
+    'coachRiskDaypart_medium_evening_1':
+        'TAKIP: Gun sonu sayiminda hedefi kontrol et.',
+    'coachRiskDaypart_medium_night_0':
+        'GECE: Son sigaradan sonra su ic, tekrar sigara icme.',
+    'coachRiskDaypart_medium_night_1':
+        'PLAN: Yarin ilk sigara saatini simdiden 15 dakika geciktir.',
+    'coachRiskDaypart_low_morning_0':
+        'SABAH: Ilk sigarayi en az 25 dakika ertele.',
+    'coachRiskDaypart_low_morning_1':
+        'KORU: Nefes kazancini korumak icin su + nefes rutini yap.',
+    'coachRiskDaypart_low_day_0':
+        'OGLE: Sadece planli saatlerde karar ver, otomatik yakma yok.',
+    'coachRiskDaypart_low_day_1':
+        'KORU: Oglen sonrasi 1 sigara yerine 5 dakika yuruyus yap.',
+    'coachRiskDaypart_low_evening_0':
+        'AKSAM: Sosyal tetikleyicilerde 3 dakika erteleme uygula.',
+    'coachRiskDaypart_low_evening_1':
+        'KORU: Gun sonu notuna bugun ise yarayan yontemi yaz.',
+    'coachRiskDaypart_low_night_0':
+        'GECE: Bu saatten sonra sigarayi kapat, kriz olursa nefes uygula.',
+    'coachRiskDaypart_low_night_1':
+        'KORU: Yarin icin risk saatine tek bir onlem yaz.',
     'taskNoteCraving': 'Kriz anini not et',
     'taskNotNowButton': 'Simdi degil',
     'taskOutcomeNo': 'Hayir',
     'taskOutcomeQuestion': 'Gorevi basariyla tamamladin mi?',
     'taskOutcomeYes': 'Evet',
     'taskPlanOneDayDelayAllCravings':
-      '1 gun sigarasiz kalma gorevi: bugun tum kriz anlarinda sigarayi erteleyin.',
+        '1 gun sigarasiz kalma gorevi: bugun tum kriz anlarinda sigarayi erteleyin.',
     'taskPlanOneDayDelayFirst90':
-      '1 gun sigarasiz kalma gorevi: ilk sigarayi en az 90 dakika erteleyin.',
+        '1 gun sigarasiz kalma gorevi: ilk sigarayi en az 90 dakika erteleyin.',
     'taskPlanOneWeekCompleteAll':
-      '1 hafta sigarasiz kalma hedefi: 7 gun boyunca tum gorevleri tamamlayin.',
+        '1 hafta sigarasiz kalma hedefi: 7 gun boyunca tum gorevleri tamamlayin.',
     'taskPlanTwoDaysBreathAndWater':
-      '2 gun sigarasiz kalma plani: kriz aninda 10 derin nefes + su uygulayin.',
+        '2 gun sigarasiz kalma plani: kriz aninda 10 derin nefes + su uygulayin.',
     'taskPlanTwoDaysDelayTriggers':
-      '2 gun sigarasiz kalma gorevi: 48 saat boyunca tetikleyicilerde sigarayi erteleyin.',
+        '2 gun sigarasiz kalma gorevi: 48 saat boyunca tetikleyicilerde sigarayi erteleyin.',
     'taskReasonCadence': 'Gorev ritmi',
     'taskReasonCardTitle': 'Neden bu gorev?',
     'taskReasonCause': 'Neden',
@@ -1593,76 +1665,74 @@ class AppTexts {
     'taskFollowUpActionNo': 'Hayir',
     'disciplineCommand': 'Su andan itibaren sigara icme',
     'disciplineCommandBody':
-      'Protokol aktif. Bildirim kapanmasi icin gorevi baslat.',
+        'Protokol aktif. Bildirim kapanmasi icin gorevi baslat.',
     'breathReminderTitle': 'Nefes Testi',
     'breathReminderBody': 'Gunluk nefes testi zamani geldi.',
     'breathReminderDriving':
-      'Suruste guvenliginiz icin hatirlatma kisa sure ertelendi.',
+        'Suruste guvenliginiz icin hatirlatma kisa sure ertelendi.',
     'breathReminderWorkout':
-      'Aktivite tamamlaninca hatirlatma tekrar gonderilecek.',
+        'Aktivite tamamlaninca hatirlatma tekrar gonderilecek.',
     'breathReminderPostMeal':
-      'Yemek sonrasi sigarayi ertelemek icin nefes rutinini simdi uygula.',
+        'Yemek sonrasi sigarayi ertelemek icin nefes rutinini simdi uygula.',
     'taskFollowUpTitlePush': 'Gorev Takibi',
     'taskFollowUpQuestion': 'Gorevi basariyla tamamladiniz mi?',
     'taskFollowUpQuestionDriving':
-      'Surus sonrasi cevaplayin: Gorevi basariyla tamamladiniz mi?',
+        'Surus sonrasi cevaplayin: Gorevi basariyla tamamladiniz mi?',
     'taskFollowUpQuestionWorkout':
-      'Aktivite sonrasi cevaplayin: Gorevi basariyla tamamladiniz mi?',
+        'Aktivite sonrasi cevaplayin: Gorevi basariyla tamamladiniz mi?',
     'taskFollowUpQuestionPostMeal':
-      'Yemek sonrasi sigara istegini yonetebildiniz mi?',
+        'Yemek sonrasi sigara istegini yonetebildiniz mi?',
     'postMealShieldCommand':
-      'Yemek sonrasi 10 dakika ertele + su + sakiz rutini uygula.',
-    'contextReasonDriving':
-      'Bildirim surus/ulasim durumu nedeniyle ertelendi',
-    'contextReasonWorkout':
-      'Bildirim kosu/egzersiz durumu nedeniyle ertelendi',
+        'Yemek sonrasi 10 dakika ertele + su + sakiz rutini uygula.',
+    'contextReasonDriving': 'Bildirim surus/ulasim durumu nedeniyle ertelendi',
+    'contextReasonWorkout': 'Bildirim kosu/egzersiz durumu nedeniyle ertelendi',
     'contextReasonEating':
-      'Bildirim yemek penceresi nedeniyle yemek sonrasina kaydirildi',
+        'Bildirim yemek penceresi nedeniyle yemek sonrasina kaydirildi',
     'contextReasonNormal': 'Bildirim normal plana gore ayarlandi',
     'taskEscalationTitle': 'Gorev guncellendi',
     'taskEscalationBodyPrefix':
-      '15 saniye icinde yanit alinmadi. 10 dakika sonra gorev tekrarlanacak:',
+        '15 saniye icinde yanit alinmadi. 10 dakika sonra gorev tekrarlanacak:',
     'taskTimerStartedBody': 'Gorev basladi:',
     'taskTimerDuration': 'Sayac',
     'minutesShort': 'dakika',
     'oneHourLabel': '1 saat',
     'postponeReminderPromptTitle': 'Ne zaman hatirlatayim?',
     'postponeReminderPromptMessage':
-      'Gorevi erteliyorsunuz. Size ne zaman tekrar hatirlatmami istersiniz?',
+        'Gorevi erteliyorsunuz. Size ne zaman tekrar hatirlatmami istersiniz?',
     'sleepActivityAdvisoryTitle': 'Hala ayakta misin?',
     'sleepActivityAdvisoryBody':
-      'Uyku saatinde uyanik oldugunu fark ettik. Bugunku gorevlerini zaten tamamladin, sadece dinlenmeyi unutma.',
+        'Uyku saatinde uyanik oldugunu fark ettik. Bugunku gorevlerini zaten tamamladin, sadece dinlenmeyi unutma.',
     'weeklySurveyReminderTitle': 'Haftalik anket zamani',
     'weeklySurveyReminderBody':
-      'Risk skorunu guncellemek icin haftalik anketi doldurman gerekiyor.',
+        'Risk skorunu guncellemek icin haftalik anketi doldurman gerekiyor.',
     'trialInfoTitle': '14 Gunluk Ucretsiz Deneme',
     'trialInfoMessage':
-      'Nikotin Away uygulamasini 14 gun boyunca, Yapay Zeka Mentoru dahil tum ozellikleriyle ucretsiz deneyebilirsin. 14 gun sonunda devam etmek icin abonelik gerekir.',
+        'Nikotin Away uygulamasini 14 gun boyunca, Yapay Zeka Mentoru dahil tum ozellikleriyle ucretsiz deneyebilirsin. 14 gun sonunda devam etmek icin abonelik gerekir.',
     'subscriptionGateTitle': 'Deneme Suresi Doldu',
     'subscriptionGateMessage':
-      '14 gunluk ucretsiz deneme suren sona erdi. Yapay Zeka Mentoru, gorev sistemi, nefes/oksuruk testleri ve konum/uyku zekasi gibi ozellikler icin abonelik gerekir; temel ozelliklerle ucretsiz devam edebilirsin.',
+        '14 gunluk ucretsiz deneme suren sona erdi. Yapay Zeka Mentoru, gorev sistemi, nefes/oksuruk testleri ve konum/uyku zekasi gibi ozellikler icin abonelik gerekir; temel ozelliklerle ucretsiz devam edebilirsin.',
     'subscriptionMonthlyTitle': 'Aylik',
     'subscriptionYearlyTitle': 'Yillik',
     'subscriptionPurchaseButton': 'Satin Al',
     'subscriptionRestoreButton': 'Satin Alimi Geri Yukle',
     'subscriptionContinueFreeButton': 'Ucretsiz Devam Et',
     'subscriptionNeedsConnection':
-      'Abonelik durumunu dogrulamak icin internet baglantisi gerekiyor. Baglaninca otomatik olarak tekrar denenecek.',
+        'Abonelik durumunu dogrulamak icin internet baglantisi gerekiyor. Baglaninca otomatik olarak tekrar denenecek.',
     'subscriptionRetryButton': 'Tekrar Dene',
     'subscriptionPurchasePending': 'Isleniyor...',
     'subscriptionPurchaseFailed': 'Satin alma tamamlanamadi, tekrar dene.',
     'subscriptionRestoreNotFound': 'Geri yuklenecek bir satin alma bulunamadi.',
     'subscriptionStoreUnavailable':
-      'Magaza su anda ulasilamaz durumda. Lutfen daha sonra tekrar dene.',
+        'Magaza su anda ulasilamaz durumda. Lutfen daha sonra tekrar dene.',
     'premiumUpsellTitle': 'Premium Ozellik',
     'premiumUpsellDismiss': 'Vazgec',
     'premiumUpsellUpgrade': 'Yukselt',
     'premiumUpsellAiMentor':
-      'Yapay Zeka Mentoru bir abonelik veya deneme suresi gerektirir.',
+        'Yapay Zeka Mentoru bir abonelik veya deneme suresi gerektirir.',
     'premiumUpsellBreathTests':
-      'Nefes ve oksuruk testleri bir abonelik veya deneme suresi gerektirir.',
+        'Nefes ve oksuruk testleri bir abonelik veya deneme suresi gerektirir.',
     'premiumUpsellLocationIntelligence':
-      'Konum Zekasi bir abonelik veya deneme suresi gerektirir.',
+        'Konum Zekasi bir abonelik veya deneme suresi gerektirir.',
     'savingsPageTitle': 'Tasarruf',
     'savingsMoneySaved': 'Biriken para',
     'savingsCigarettesNotSmoked': 'İçilmeyen sigara',
@@ -1696,39 +1766,43 @@ class AppTexts {
     'recoveryYear10Desc': 'Akciğer kanseri riski yaklaşık yarıya iner.',
 
     'mentorDailyCoachHourTemplate':
-      'Bu ara gerçekten iyi gidiyorsun. Bugün özellikle {hour} aralığına dikkat et, gerisini zaten götürüyorsun.',
-    'mentorDailyCoachNoHour': 'Bu ara gerçekten iyi gidiyorsun. Bu tempoyu koruyalım.',
+        'Bu ara gerçekten iyi gidiyorsun. Bugün özellikle {hour} aralığına dikkat et, gerisini zaten götürüyorsun.',
+    'mentorDailyCoachNoHour':
+        'Bu ara gerçekten iyi gidiyorsun. Bu tempoyu koruyalım.',
     'mentorDailySupportive':
-      'Son günler senin için kolay geçmiyor gibi görünüyor, bunu görüyorum. Bugün mükemmel olması gerekmiyor — sadece bir sonraki anı atlatmaya odaklan.',
-    'mentorDailyNeutralHourTemplate': 'Bugün nasıl gidiyor? {hour} aralığında yanındayım.',
+        'Son günler senin için kolay geçmiyor gibi görünüyor, bunu görüyorum. Bugün mükemmel olması gerekmiyor — sadece bir sonraki anı atlatmaya odaklan.',
+    'mentorDailyNeutralHourTemplate':
+        'Bugün nasıl gidiyor? {hour} aralığında yanındayım.',
     'mentorDailyNeutralNoHour': 'Bugün nasıl gidiyor? ',
-    'mentorBreathImprovingNote': 'Son nefes testlerin de iyiye gidiyor, bunu fark ettim — devam et.',
+    'mentorBreathImprovingNote':
+        'Son nefes testlerin de iyiye gidiyor, bunu fark ettim — devam et.',
     'mentorWeeklyCoachTemplate':
-      'Bu hafta gerçekten güçlüydün — {count} görevi tamamladın. Bu ivmeyi haftaya da taşıyalım.',
+        'Bu hafta gerçekten güçlüydün — {count} görevi tamamladın. Bu ivmeyi haftaya da taşıyalım.',
     'mentorWeeklySupportive':
-      'Bu hafta zorlu geçti, farkındayım. Sayılar önemli değil şu an — önemli olan hâlâ burada olman.',
+        'Bu hafta zorlu geçti, farkındayım. Sayılar önemli değil şu an — önemli olan hâlâ burada olman.',
     'mentorWeeklyNeutralTemplate':
-      'Bu haftaki risk seviyen: {level}. Detaylı bir haftalık anketle daha net bir resim çıkarabiliriz.',
+        'Bu haftaki risk seviyen: {level}. Detaylı bir haftalık anketle daha net bir resim çıkarabiliriz.',
     'mentorHistImprovedTemplate':
-      'Geçen hafta {daypart} zorlanmıştın — bu hafta o saatlerde hiç kayıt yok, harika gidiyor.',
+        'Geçen hafta {daypart} zorlanmıştın — bu hafta o saatlerde hiç kayıt yok, harika gidiyor.',
     'mentorHistWorseningTemplate':
-      'Geçen hafta {daypart} zorlanmıştın, bu hafta da benzer görünüyor. Birlikte bu saatlere özel bir plan yapalım mı?',
+        'Geçen hafta {daypart} zorlanmıştın, bu hafta da benzer görünüyor. Birlikte bu saatlere özel bir plan yapalım mı?',
     'mentorHistSimilarTemplate':
-      'Geçen hafta {daypart} zorlanmıştın, bu hafta biraz daha iyi görünüyorsun.',
+        'Geçen hafta {daypart} zorlanmıştın, bu hafta biraz daha iyi görünüyorsun.',
     'mentorDayPartMorning': 'sabahları',
     'mentorDayPartAfternoon': 'öğleden sonraları',
     'mentorDayPartEvening': 'akşamları',
     'mentorDayPartNight': 'geceleri',
     'mentorReframeSuspiciousWithTitleTemplate':
-      'Az önce bir şeyler ters gitmiş gibi göründü ("{title}" sırasında). İyi misin? İstersen birlikte kısa bir nefes molası verelim.',
+        'Az önce bir şeyler ters gitmiş gibi göründü ("{title}" sırasında). İyi misin? İstersen birlikte kısa bir nefes molası verelim.',
     'mentorReframeSuspiciousNoTitle':
-      'Az önce bir şeyler ters gitmiş gibi göründü. İyi misin? İstersen birlikte kısa bir nefes molası verelim.',
+        'Az önce bir şeyler ters gitmiş gibi göründü. İyi misin? İstersen birlikte kısa bir nefes molası verelim.',
     'mentorReframeWillpower':
-      'Bu sefer olmadı, sorun değil — bu bir başarısızlık değil, sürecin bir parçası. Yarın yeniden deneriz.',
-    'mentorReframeDeferredStart': 'Şimdi uygun değilse anlıyorum, 10 dakika sonra tekrar hatırlatacağım.',
+        'Bu sefer olmadı, sorun değil — bu bir başarısızlık değil, sürecin bir parçası. Yarın yeniden deneriz.',
+    'mentorReframeDeferredStart':
+        'Şimdi uygun değilse anlıyorum, 10 dakika sonra tekrar hatırlatacağım.',
     'mentorReframeFollowupDeferred': 'Tamam, biraz sonra tekrar soracağım.',
     'mentorReframeDurationBarrier':
-      'Bu hedef sana göre biraz uzun geldi sanırım. Bir dahaki sefere daha kısa bir süreyle başlayalım — küçük adımlar da ilerlemedir.',
+        'Bu hedef sana göre biraz uzun geldi sanırım. Bir dahaki sefere daha kısa bir süreyle başlayalım — küçük adımlar da ilerlemedir.',
     'quickReplyOk': 'İyiyim',
     'quickReplyStruggling': 'Zorlanıyorum',
     'quickReplyNoTalk': 'Konuşmak istemiyorum',
@@ -1744,13 +1818,14 @@ class AppTexts {
     'mentorFollowupAckReduceTasks':
         'Yarından itibaren bir hafta boyunca görevlerini azalttım, kendine iyi bak.',
     'mentorFollowupAckEaseBarrier': 'Yarın için bariyeri biraz gevşettim.',
-    'mentorFollowupAckJustTalking': 'Buradayım, ne zaman istersen yazabilirsin.',
+    'mentorFollowupAckJustTalking':
+        'Buradayım, ne zaman istersen yazabilirsin.',
     'sleepRoutineTitle': 'Uyku Öncesi Rutin',
     'sleepRoutineIntro': 'Uyumadan önce 4 kısa adım',
     'sleepRoutineStepIndicator': 'Adım {current} / {total}',
     'sleepRoutineDiscrepancyQuestionTitle': 'Bugün kaç sigara içtin?',
     'sleepRoutineDiscrepancyQuestionBody':
-      'Kayıtlarda {count} eksik görünüyor, unuttuğun var mı?',
+        'Kayıtlarda {count} eksik görünüyor, unuttuğun var mı?',
     'sleepRoutineDiscrepancyNoneButton': 'Hayır, doğru logladım',
     'sleepRoutineDiscrepancyConfirmButton': 'Eklediklerimi kaydet',
     'sleepRoutineReportTitle': 'Bugünkü İlerleme',
@@ -1767,7 +1842,7 @@ class AppTexts {
     'watchdogForegroundBody': 'Waiting for task response',
     'watchdogViolationTitle': 'Nikotin Away Reminder',
     'watchdogViolationBody':
-      'No response for 10 minutes. You may have missed the {taskTitle} task — that\'s okay.',
+        'No response for 10 minutes. You may have missed the {taskTitle} task — that\'s okay.',
     'watchdogForegroundChannel': 'Background service',
     'watchdogViolationChannel': 'Nikotin Away Reminders',
     'selectLanguage': 'Select language',
@@ -1819,12 +1894,14 @@ class AppTexts {
     'medicationsPageTitle': 'My Medications',
     'medicationsEmptyState': 'You haven\'t added any medications yet.',
     'medicationDeleteConfirmTitle': 'Delete medication',
-    'medicationDeleteConfirmMessage': 'Are you sure you want to delete this medication and its reminders?',
+    'medicationDeleteConfirmMessage':
+        'Are you sure you want to delete this medication and its reminders?',
     'medicationSavedConfirmation': 'Medication saved',
     'medicationReminderTitle': 'Medication reminder',
     'medicationReminderBody': 'It\'s time to take your {name}.',
     'overlayPermissionTitle': 'Show the task screen',
-    'overlayPermissionMessage': 'For the task screen to open over other apps even when the phone isn\'t locked, we need the "display over other apps" permission. Open the settings screen now?',
+    'overlayPermissionMessage':
+        'For the task screen to open over other apps even when the phone isn\'t locked, we need the "display over other apps" permission. Open the settings screen now?',
     'smokedLogButtonRow': 'I Smoked button',
     'smokedLogButtonTitle': 'I Smoked Button',
     'smokedLogButtonDescription':
@@ -1905,10 +1982,10 @@ class AppTexts {
         'how long the screen has been on and whether audio is playing, but '
         'this permission makes that guess far more accurate.',
     'permissionSetupContinueAnyway': 'Continue for now',
-    'permissionSetupOptionalNote':
-        'You can change these later from Settings.',
+    'permissionSetupOptionalNote': 'You can change these later from Settings.',
     'packsPerDayQuestion': 'How many packs of cigarettes do you smoke per day?',
-    'firstCigaretteWhen': 'How long after waking up do you smoke your first cigarette?',
+    'firstCigaretteWhen':
+        'How long after waking up do you smoke your first cigarette?',
     'firstCigarette10to30': '10-30 minutes after waking',
     'maxSmokeFreeDuration': 'Longest smoke-free duration',
     'smokeFree30to60': '30-60 minutes',
@@ -1933,16 +2010,18 @@ class AppTexts {
     'validationGenderRequired': 'Please select a gender.',
     'hello': 'Hello',
     'weeklySavePrompt': 'Save your status for this week.',
-    'weeklySurveyPromptAsk': 'Would you like to complete the weekly survey now?',
+    'weeklySurveyPromptAsk':
+        'Would you like to complete the weekly survey now?',
     'shareProgressTitle': 'Share your progress',
     'shareProgressMessage':
-      'You just completed your weekly check-in. Want to share your progress with friends?',
+        'You just completed your weekly check-in. Want to share your progress with friends?',
     'shareProgressSkip': 'Skip',
     'shareProgressAction': 'Share',
     'shareProgressText':
-      'I\'m tracking my quit-smoking journey with Nikotin Away. My current risk score: {score}/100 ({level}).',
+        'I\'m tracking my quit-smoking journey with Nikotin Away. My current risk score: {score}/100 ({level}).',
     'saveErrorRetry': 'An error occurred while saving. Please try again.',
-    'loadErrorRetry': 'Something went wrong loading this data. Please try again.',
+    'loadErrorRetry':
+        'Something went wrong loading this data. Please try again.',
     'smokeFreeStreak': 'Smoke-Free Streak',
     'reductionCardTitle': 'Your Reduction Progress',
     'reductionStreakLabel': 'Days on target',
@@ -1962,8 +2041,6 @@ class AppTexts {
     'longitudinalAnalysis': 'Longitudinal Analysis',
     'statistics': 'Statistics',
     'recentTests': 'Recent Tests',
-    'exportComingSoon': 'PDF export coming soon.',
-    'exportPDF': 'Export as PDF',
     'workDaysLabel': 'Working days',
     'dayMonShort': 'Mon',
     'dayTueShort': 'Tue',
@@ -1991,55 +2068,59 @@ class AppTexts {
     'notSpecified': 'Not specified',
     'unknownValue': 'Unknown',
     'breathRestInstruction':
-      'Short rest: Breathe normally.\nPrepare for the next attempt.',
+        'Short rest: Breathe normally.\nPrepare for the next attempt.',
     'breathActiveInstruction':
-      '1. Sit upright and relax.\n2. Tap the circle, breathe in deeply through your nose until your lungs are full, and hold briefly.\n3. Blow out SUDDENLY and as hard as you can, in one burst.\n4. Tap the circle again when you\'re done.\n\n3 attempts will be performed, best score is saved.',
+        '1. Sit upright and relax.\n2. Tap the circle, breathe in deeply through your nose until your lungs are full, and hold briefly.\n3. Blow out SUDDENLY and as hard as you can, in one burst.\n4. Tap the circle again when you\'re done.\n\n3 attempts will be performed, best score is saved.',
     'breathExerciseDisclaimer':
-      'This is not a spirometer. It\'s a measurement to help you track your own progress.',
+        'This is not a spirometer. It\'s a measurement to help you track your own progress.',
     'breathSpirometryResultTitle': 'Breath Test Result',
     'breathScoreLabel': 'Breath Score',
     'breathScoreDisclaimer':
-      'This score is a comparison against your own history; it is not a medical measurement.',
+        'This score is a comparison against your own history; it is not a medical measurement.',
     'breathSpirometryEstimateDisclaimer':
-      'This is not a medical diagnostic tool. If you have a health concern, consult your doctor.',
+        'This is not a medical diagnostic tool. If you have a health concern, consult your doctor.',
     'micRationaleTitle': 'Microphone permission',
     'micRationaleMessage':
-      'We can use the microphone to automatically time your exhale. Audio is never recorded or stored — only the momentary sound level is measured. If you decline, you can still finish the test manually by tapping.',
+        'We can use the microphone to automatically time your exhale. Audio is never recorded or stored — only the momentary sound level is measured. If you decline, you can still finish the test manually by tapping.',
     'restingLabel': 'Resting',
     'secondsLeftLabel': 'seconds left',
     'tapCircleToFinish': 'Tap the circle when you\'re done',
-    'breathListeningHint': 'Listening... exhale, it will be detected automatically',
+    'breathListeningHint':
+        'Listening... exhale, it will be detected automatically',
     'breathStepSitRelax': 'Sit upright and relax.',
-    'breathStepDeepBreath': 'Breathe in deeply until your lungs are completely full.',
+    'breathStepDeepBreath':
+        'Breathe in deeply until your lungs are completely full.',
     'breathStepHold': 'Hold your breath briefly.',
     'breathStepExhale':
-      'Blow into the microphone SUDDENLY and as hard as you can until your breath is done — not slow, all at once.',
+        'Blow into the microphone SUDDENLY and as hard as you can until your breath is done — not slow, all at once.',
     'breathStepExhaleFinishHint': 'Your breath will be detected automatically.',
     'breathStepOkAction': 'Continue',
     'breathAutoNextAttemptInstruction':
-      'Sit upright and relax. Breathe in deeply until your lungs are completely full. Hold briefly. Blow into the microphone suddenly and as hard as you can. Your breath will be detected automatically.',
+        'Sit upright and relax. Breathe in deeply until your lungs are completely full. Hold briefly. Blow into the microphone suddenly and as hard as you can. Your breath will be detected automatically.',
     'breathNoiseCheckListening': 'Listening to your surroundings...',
     'breathNoiseWarningTitle': 'It might be noisy',
     'breathNoiseWarningMessage':
-      "There's some background noise. The result will still be saved, but it will be more reliable in a quieter spot. How would you like to continue?",
+        "There's some background noise. The result will still be saved, but it will be more reliable in a quieter spot. How would you like to continue?",
     'breathNoiseLoudTitle': "It's quite noisy",
     'breathNoiseLoudMessage':
-      'The background noise is fairly high for this test. You can continue, but the result will be marked as "recorded in a noisy environment" and shown separately on your progress chart. We recommend moving somewhere quieter.',
+        'The background noise is fairly high for this test. You can continue, but the result will be marked as "recorded in a noisy environment" and shown separately on your progress chart. We recommend moving somewhere quieter.',
     'breathNoiseContinueAnyway': 'Continue Anyway',
     'breathNoiseRetry': 'Try Again',
     'breathNoiseDuringAttemptWarning':
-      'Background noise increased during the test — this attempt was marked as noisy.',
+        'Background noise increased during the test — this attempt was marked as noisy.',
     'breathFeedbackTooShort': 'Try to empty your lungs completely.',
     'breathFeedbackLowStability': 'Try blowing with a steady, even force.',
     'breathFeedbackWeakSignal': 'Bring the phone a bit closer to your mouth.',
-    'breathFeedbackBetterThanBefore': 'That attempt was stronger than your last one!',
+    'breathFeedbackBetterThanBefore':
+        'That attempt was stronger than your last one!',
     'breathFeedbackGoodAttempt': 'Good attempt.',
     'breathAnalysisPageTitle': 'Breath Analysis',
     'breathAnalysisEmptyTitle': 'No data yet',
     'breathAnalysisEmptyBody':
-      "Once you complete your first breath test, you'll see a chart and summary of your progress here.",
+        "Once you complete your first breath test, you'll see a chart and summary of your progress here.",
     'breathAnalysisEmptyCta': 'Start a breath test',
-    'breathAnalysisNotEnoughDataTitle': 'A few more tests are needed for a trend',
+    'breathAnalysisNotEnoughDataTitle':
+        'A few more tests are needed for a trend',
     'breathAnalysisScoreChartTitle': 'Breath Score — Last 30 Days',
     'breathAnalysisChartRawLabel': 'Test',
     'breathAnalysisChartAverageLabel': '7-day average',
@@ -2060,25 +2141,25 @@ class AppTexts {
     'breathBadgePersonalRecordDesc': 'Beat your own best score.',
     'disciplineDisclosureTitle': 'How do we support you?',
     'disciplineDisclosureMessage':
-      'Nikotin Away uses a few background mechanisms to support you through quitting:\n\n'
-      '- If you don\'t respond to a task reminder in time, we note it on your device as a compliance record.\n'
-      '- During an active task, we try to estimate possible risky moments from phone motion and usage patterns (via motion sensors and the microphone). Audio is never recorded or stored — only the ambient sound level is measured.\n'
-      '- Some task reminders may appear as full-screen alerts to get your attention.\n'
-      '- So task notifications don\'t interrupt a real phone call, we check whether you\'re currently on one; we never read call content or numbers.\n\n'
-      'By default, this data stays only on your device and is never used for anything other than supporting you. In Settings > Cloud Backup you can optionally turn on an encrypted backup protected by a passphrase you choose — we can never read that passphrase either, only you know it. Continuing means you acknowledge this; you can still separately allow or deny the microphone, motion, and phone-state permissions in the next step.',
+        'Nikotin Away uses a few background mechanisms to support you through quitting:\n\n'
+        '- If you don\'t respond to a task reminder in time, we note it on your device as a compliance record.\n'
+        '- During an active task, we try to estimate possible risky moments from phone motion and usage patterns (via motion sensors and the microphone). Audio is never recorded or stored — only the ambient sound level is measured.\n'
+        '- Some task reminders may appear as full-screen alerts to get your attention.\n'
+        '- So task notifications don\'t interrupt a real phone call, we check whether you\'re currently on one; we never read call content or numbers.\n\n'
+        'By default, this data stays only on your device and is never used for anything other than supporting you. In Settings > Cloud Backup you can optionally turn on an encrypted backup protected by a passphrase you choose — we can never read that passphrase either, only you know it. Continuing means you acknowledge this; you can still separately allow or deny the microphone, motion, and phone-state permissions in the next step.',
     'disciplineDisclosureAcknowledge': 'I understand, continue',
     'cravingSosButton': 'Craving now',
     'surveyDraftFoundTitle': 'Continue where you left off',
     'surveyDraftFoundMessage':
-      'We found a survey you didn\'t finish earlier. Would you like to continue from where you left off?',
+        'We found a survey you didn\'t finish earlier. Would you like to continue from where you left off?',
     'surveyDraftResume': 'Continue',
     'surveyDraftDiscard': 'Start over',
     'breathAttemptImplausible':
-      'That attempt doesn\'t look valid (too short or too long). Please try again.',
+        'That attempt doesn\'t look valid (too short or too long). Please try again.',
     'breathAttemptDiscardedBackgrounded':
-      'This attempt was discarded because the app was backgrounded. Please try again.',
+        'This attempt was discarded because the app was backgrounded. Please try again.',
     'completeRegistrationError':
-      'An error occurred while completing registration. Please try again.',
+        'An error occurred while completing registration. Please try again.',
     'cigaretteUnit': 'cigarettes',
     'dayUnit': 'day',
     'exhaleCapacity': 'Exhale Capacity',
@@ -2139,13 +2220,19 @@ class AppTexts {
     'weeklyTrigger_alcohol': 'Alcohol',
     'weeklyOutlookTitle': 'Where You Stand This Week',
     'weeklySurveyGeneralStatus': 'General Status',
-    'copdDisclaimerNotDiagnostic': 'This section is not a diagnostic test. A COPD diagnosis requires spirometry and a doctor\'s evaluation. Results are for tracking purposes only.',
-    'breathInsightNotEnoughTests': 'Take a few more tests to see your progress.',
-    'breathInsightNotEnoughSpan': 'You need tests spread over a bit more time to compare your progress.',
-    'breathInsightSignificantImprovement': 'Significant improvement — your blow score rose {percent}%.',
-    'breathInsightGradualImprovement': 'Slow but steady progress — {percent}% higher.',
+    'copdDisclaimerNotDiagnostic':
+        'This section is not a diagnostic test. A COPD diagnosis requires spirometry and a doctor\'s evaluation. Results are for tracking purposes only.',
+    'breathInsightNotEnoughTests':
+        'Take a few more tests to see your progress.',
+    'breathInsightNotEnoughSpan':
+        'You need tests spread over a bit more time to compare your progress.',
+    'breathInsightSignificantImprovement':
+        'Significant improvement — your blow score rose {percent}%.',
+    'breathInsightGradualImprovement':
+        'Slow but steady progress — {percent}% higher.',
     'breathInsightStable': 'Holding steady, no significant change.',
-    'breathInsightDecline': 'This week looks a bit lower — that can be normal if you\'re sick or tired. Talk to your doctor if you have breathing complaints.',
+    'breathInsightDecline':
+        'This week looks a bit lower — that can be normal if you\'re sick or tired. Talk to your doctor if you have breathing complaints.',
     'channelNamePostponeChoice': 'Task postpone choice',
     'channelNameTaskConfirm': 'Task completion confirmation',
     'channelNameHealthTip': 'Health tip',
@@ -2160,18 +2247,25 @@ class AppTexts {
     'channelNameMovementReminder': 'Movement reminder',
     'channelNameCoachSuggestion': 'Coach suggestion',
     'channelNameLocationReminder': 'Nikotin Away Location Reminder',
-    'channelDescriptionLocationReminder': 'Reminder shown on arrival at a frequently visited place',
+    'channelDescriptionLocationReminder':
+        'Reminder shown on arrival at a frequently visited place',
     'taskOverlayChannelName': 'Nikotin Away Task Screen',
     'taskOverlayChannelDescription': 'Active while the focus screen is showing',
     'taskOverlayForegroundBody': 'Task screen showing',
     'channelNameSmokedLogQuickAction': 'Nikotin Away Quick Log',
-    'channelDescriptionSmokedLogQuickAction': 'Active while the "I Smoked" button is on screen',
+    'channelDescriptionSmokedLogQuickAction':
+        'Active while the "I Smoked" button is on screen',
     'registrationMissingFields': 'Please fill in the missing fields.',
-    'registrationProfileCreationFailed': 'Could not create profile. Please try again.',
-    'registrationRiskAnalysisFailed': 'Could not create risk analysis. Please try again.',
-    'registrationFlagSaveFailed': 'Could not save registration flag. Please try again.',
-    'breathTestSaveFailed': 'Could not save breath test result. Please try again.',
-    'barrierStartedInstruction': 'Please do not smoke for the next {duration}. If you have a cigarette in your hand, put it out now.',
+    'registrationProfileCreationFailed':
+        'Could not create profile. Please try again.',
+    'registrationRiskAnalysisFailed':
+        'Could not create risk analysis. Please try again.',
+    'registrationFlagSaveFailed':
+        'Could not save registration flag. Please try again.',
+    'breathTestSaveFailed':
+        'Could not save breath test result. Please try again.',
+    'barrierStartedInstruction':
+        'Please do not smoke for the next {duration}. If you have a cigarette in your hand, put it out now.',
     'severityLevel0': 'Not at all',
     'severityLevel1': 'Barely',
     'severityLevel2': 'A little',
@@ -2199,8 +2293,7 @@ class AppTexts {
         'I get short of breath hurrying on the flat or up a slight hill.',
     'mmrcPlain2':
         'I walk slower than people my age on the flat, or have to stop.',
-    'mmrcPlain3':
-        'I stop for breath after about 100 metres on the flat.',
+    'mmrcPlain3': 'I stop for breath after about 100 metres on the flat.',
     'mmrcPlain4':
         'I am too breathless to leave the house, or breathless dressing.',
     'weeklyCravingAvg': 'Average craving (0-10)',
@@ -2257,39 +2350,40 @@ class AppTexts {
     'weeklyLunchTime': 'Estimated lunch time',
     'weeklyDinnerTime': 'Estimated dinner time',
     'weeklyProfileChanged':
-      'Has work/sleep/routine changed since the initial profile?',
+        'Has work/sleep/routine changed since the initial profile?',
     'weeklyQuickModeInfo':
-      'Quick mode selected. Risk is computed from core answers. You can switch to Detailed mode to adjust all parameters.',
+        'Quick mode selected. Risk is computed from core answers. You can switch to Detailed mode to adjust all parameters.',
     'durationBarrierTitle': 'Smoke-free duration preference',
     'durationBarrierHow': 'How do you feel about smoke-free durations?',
     'durationBarrierLike': 'I like it',
     'durationBarrierNeutral': 'Neutral',
     'durationBarrierDislike': 'I do not like it',
     'durationBarrierOff': 'I do not want it',
-    'durationBarrierFrequencyHow': 'How often should smoke-free durations appear?',
+    'durationBarrierFrequencyHow':
+        'How often should smoke-free durations appear?',
     'respClinicalReview': 'Clinical review recommended',
     'respMonitorCloser': 'Monitor closer',
     'respStable': 'Stable',
     'dailyBreathMandatoryTitle': 'Daily breath test required',
     'dailyBreathMandatoryContent':
-      'To track progress accurately, at least one professional breath test should be done daily. Let us start now.',
+        'To track progress accurately, at least one professional breath test should be done daily. Let us start now.',
     'dailyBreathMandatoryStart': 'Start Test',
     'weeklyMandatoryTitle': 'Weekly survey required',
     'weeklyMandatoryContent':
-      'To keep your risk score up to date, complete the weekly survey at least once every 7 days.',
+        'To keep your risk score up to date, complete the weekly survey at least once every 7 days.',
     'weeklyMandatoryGo': 'Go to survey',
     'commandSaved': 'Command marked as completed.',
     'barrierEvaluationTitle': 'Smoke-free duration evaluation',
     'barrierEvaluationPromptNoMinutes':
-      'Smoke-free duration completed. Were you successful?',
+        'Smoke-free duration completed. Were you successful?',
     'barrierEvaluationPromptMinutes':
-      'minute smoke-free duration ended. Were you successful?',
+        'minute smoke-free duration ended. Were you successful?',
     'barrierFail': 'Failed',
     'barrierSuccess': 'Successful',
     'barrierSavedSuccess':
-      'Smoke-free duration saved as successful. Next durations will be tuned accordingly.',
+        'Smoke-free duration saved as successful. Next durations will be tuned accordingly.',
     'barrierSavedFailure':
-      'Smoke-free duration saved as failed. Next durations will be adjusted to your adherence.',
+        'Smoke-free duration saved as failed. Next durations will be adjusted to your adherence.',
     'commandDeferred10': 'Command deferred by 10 minutes.',
     'barrierDeferred10': 'Smoke-free duration deferred by 10 minutes.',
     'weeklyRiskLine': 'Weekly survey risk',
@@ -2323,14 +2417,15 @@ class AppTexts {
     'aiChatActionAppliedPermission': 'Permission request opened.',
     'aiChatMicTooltip': 'Hold and speak',
     'aiChatListening': 'Listening...',
-    'aiChatMicPermissionDenied': 'Microphone permission is required for voice input.',
+    'aiChatMicPermissionDenied':
+        'Microphone permission is required for voice input.',
     'aiChatMicUnavailable': 'Voice input is not available on this device.',
     'aiChatError': 'Could not send message, try again.',
     'aiChatDailyLimitReached':
-      'You\'ve reached today\'s message limit, try again tomorrow.',
+        'You\'ve reached today\'s message limit, try again tomorrow.',
     'aiChatAuthNotReady': 'Could not verify your identity, try again shortly.',
     'aiChatDisclaimer':
-      'This is an AI assistant, not medical advice. Consult your doctor for health matters.',
+        'This is an AI assistant, not medical advice. Consult your doctor for health matters.',
     'aiChatActionApply': 'Apply',
     'aiChatActionDismiss': 'Dismiss',
     'aiChatActionFailed': 'This change could not be applied.',
@@ -2339,7 +2434,7 @@ class AppTexts {
     'mentorReplySentPrefix': 'Your reply',
     'miuiPermissionTitle': 'One more permission needed',
     'miuiPermissionMessage':
-      '{brand} phones need an extra permission for the task screen to show up over a locked screen. Open the settings screen now?',
+        '{brand} phones need an extra permission for the task screen to show up over a locked screen. Open the settings screen now?',
     'miuiPermissionOpen': 'Open Settings',
     'miuiPermissionSkip': 'Later',
     'settingsTitle': 'Settings',
@@ -2350,21 +2445,23 @@ class AppTexts {
     'cloudBackupRow': 'Cloud Backup',
     'cloudBackupRowSubtitle': 'Back up your data to the cloud, encrypted',
     'cloudBackupPhoneChangeWarning':
-      'If you change phones or uninstall the app, the only way to get your data back is having made a backup here beforehand. If Cloud Backup is off, changing phones means losing all your data permanently.',
+        'If you change phones or uninstall the app, the only way to get your data back is having made a backup here beforehand. If Cloud Backup is off, changing phones means losing all your data permanently.',
     'cloudRestoreRow': 'Restore From Cloud Backup',
-    'cloudRestoreRowSubtitle': 'Bring your previously backed-up data to this device',
+    'cloudRestoreRowSubtitle':
+        'Bring your previously backed-up data to this device',
     'cloudBackupPassphraseHint':
-      'Choose a new passphrase now. It is stored only on your device -- we can never see it. If you forget it, we cannot restore your backup, so write it down somewhere safe.',
+        'Choose a new passphrase now. It is stored only on your device -- we can never see it. If you forget it, we cannot restore your backup, so write it down somewhere safe.',
     'cloudBackupPassphraseLabel': 'New passphrase (at least 6 characters)',
     'cloudRestorePassphraseHint':
-      'Enter the passphrase you chose when you backed up. The wrong passphrase means your backup cannot be found.',
+        'Enter the passphrase you chose when you backed up. The wrong passphrase means your backup cannot be found.',
     'cloudRestorePassphraseLabel': 'Your backup passphrase',
-    'cloudBackupPassphraseTooShort': 'Passphrase must be at least 6 characters.',
+    'cloudBackupPassphraseTooShort':
+        'Passphrase must be at least 6 characters.',
     'cloudBackupInProgress': 'Working, please wait...',
     'cloudBackupSuccess': 'Backup complete.',
     'cloudBackupFailed': 'Backup failed. Please try again.',
     'cloudRestoreConfirmMessage':
-      'The data currently on this device will be replaced with the backup. Do you want to continue?',
+        'The data currently on this device will be replaced with the backup. Do you want to continue?',
     'cloudRestoreSuccess': 'Restore complete. Please restart the app.',
     'cloudRestoreNotFound': 'No backup matches this passphrase.',
     'cloudRestoreFailed': 'Restore failed. Please check your passphrase.',
@@ -2374,12 +2471,12 @@ class AppTexts {
     'settingsResetDataSubtitle': 'Permanently deletes all your records',
     'settingsResetDataConfirmTitle': 'Are you sure?',
     'settingsResetDataConfirmMessage':
-      'All your smoking logs, survey results and progress will be permanently deleted. This cannot be undone.',
+        'All your smoking logs, survey results and progress will be permanently deleted. This cannot be undone.',
     'settingsResetDataConfirmAction': 'Yes, Delete',
     'settingsResetDataDone': 'Your data has been deleted.',
     'permissionsCenterTitle': 'Permissions Center',
     'permissionsCenterIntro':
-      'Here\'s why we ask for each permission and how we use it. All of them are optional and can be turned off anytime.',
+        'Here\'s why we ask for each permission and how we use it. All of them are optional and can be turned off anytime.',
     'permissionStatusGranted': 'Granted',
     'permissionStatusDenied': 'Not granted',
     'permissionActionRequest': 'Grant',
@@ -2387,150 +2484,155 @@ class AppTexts {
     'permissionActionManage': 'Manage in Settings',
     'permissionNotificationsTitle': 'Notifications',
     'permissionNotificationsDescription':
-      'Used for task reminders, breath tests, and messages from your mentor.',
+        'Used for task reminders, breath tests, and messages from your mentor.',
     'permissionNotificationsPurpose':
-      'Why: needed so we can support you at the right moment.',
+        'Why: needed so we can support you at the right moment.',
     'permissionMicrophoneTitle': 'Microphone',
     'permissionMicrophoneDescription':
-      'Used in the daily breath test to measure your lung condition.',
+        'Used in the daily breath test to measure your lung condition.',
     'permissionMicrophonePurpose':
-      'Why: audio is processed only on your device, never recorded or shared.',
+        'Why: audio is processed only on your device, never recorded or shared.',
     'permissionActivityTitle': 'Physical Activity',
     'permissionActivityDescription':
-      'Used to understand your movement so we can suggest support at better times, and to track your daily step count.',
+        'Used to understand your movement so we can suggest support at better times, and to track your daily step count.',
     'permissionActivityPurpose':
-      'Why: your activity and step data never leave your device.',
+        'Why: your activity and step data never leave your device.',
     'permissionPhoneTitle': 'Phone State',
     'permissionPhoneDescription':
-      'Used to keep the fake support call from colliding with a real call.',
-    'permissionPhonePurpose':
-      'Why: we never read call numbers or content.',
+        'Used to keep the fake support call from colliding with a real call.',
+    'permissionPhonePurpose': 'Why: we never read call numbers or content.',
     'permissionExactAlarmTitle': 'Exact Timing',
     'permissionExactAlarmDescription':
-      'Makes sure reminders and mentor messages arrive exactly on time.',
+        'Makes sure reminders and mentor messages arrive exactly on time.',
     'permissionExactAlarmPurpose':
-      'Why: Android manages this permission from system settings.',
+        'Why: Android manages this permission from system settings.',
     'permissionExactAlarmAlreadyGranted': 'This permission is already granted.',
     'permissionMiuiTitle': 'Xiaomi Extra Permission',
     'permissionMiuiDescription':
-      'Required on Xiaomi phones so the fake support call can show over the lock screen.',
+        'Required on Xiaomi phones so the fake support call can show over the lock screen.',
     'permissionMiuiPurpose':
-      'Why: MIUI uses a different permission system than other Android phones.',
+        'Why: MIUI uses a different permission system than other Android phones.',
     'permissionLocationTitle': 'Location',
     'permissionLocationDescription':
-      'Used to learn places you visit often and show a short reminder when you arrive (Location Intelligence feature, off by default).',
+        'Used to learn places you visit often and show a short reminder when you arrive (Location Intelligence feature, off by default).',
     'permissionLocationPurpose':
-      'Why: your raw location history is never recorded. Tap for details and to turn it on/off.',
+        'Why: your raw location history is never recorded. Tap for details and to turn it on/off.',
     'permissionBackgroundTitle': 'Background Operation',
     'permissionBackgroundDescription':
-      'Some phone manufacturers restrict background apps to save battery. This can stop reminders, sleep/location/step tracking, and support calls from working on time.',
+        'Some phone manufacturers restrict background apps to save battery. This can stop reminders, sleep/location/step tracking, and support calls from working on time.',
     'permissionBackgroundPurpose':
-      'Why: exempting the app from battery optimization keeps background features working reliably.',
+        'Why: exempting the app from battery optimization keeps background features working reliably.',
     'permissionBackgroundOpenSettingsAction': 'Open Background Settings',
     'settingsCoachModeRow': 'Coach Mode',
-    'settingsCoachModeRowSubtitle': 'How often and how firmly the app should push you',
+    'settingsCoachModeRowSubtitle':
+        'How often and how firmly the app should push you',
     'coachModeTitle': 'Coach Mode',
     'coachModeIntro':
-      'Choose how often and how firmly the app should support you. You can change this anytime.',
+        'Choose how often and how firmly the app should support you. You can change this anytime.',
     'coachModeEasyTitle': 'Easy',
-    'coachModeEasyDescription': 'Few, gentle reminders. For going at your own pace.',
+    'coachModeEasyDescription':
+        'Few, gentle reminders. For going at your own pace.',
     'coachModeNormalTitle': 'Normal',
-    'coachModeNormalDescription': 'Balanced support frequency. Recommended for most users.',
+    'coachModeNormalDescription':
+        'Balanced support frequency. Recommended for most users.',
     'coachModeHardTitle': 'Hard',
-    'coachModeHardDescription': 'Frequent, firm reminders. For extra discipline.',
+    'coachModeHardDescription':
+        'Frequent, firm reminders. For extra discipline.',
     'coachModeCustomLabel': 'Custom',
-    'coachModeCustomDescription': 'A combination you set yourself in Advanced Settings.',
+    'coachModeCustomDescription':
+        'A combination you set yourself in Advanced Settings.',
     'coachModeAdvancedToggle': 'Advanced Settings',
     'coachModeSavedConfirmation': 'Coach mode updated.',
     'settingsSleepIntelligenceRow': 'Sleep Intelligence',
     'sleepIntelligenceTitle': 'Sleep Intelligence',
     'sleepIntelligenceDescription':
-      'When on, the app checks your phone\'s screen and charging state a few times overnight to estimate your sleep hours. This estimate is used to make your risk assessment more accurate.',
+        'When on, the app checks your phone\'s screen and charging state a few times overnight to estimate your sleep hours. This estimate is used to make your risk assessment more accurate.',
     'sleepIntelligencePurpose':
-      'Why: only whether the screen is on/off and charging is checked, nothing else is read. If there isn\'t enough data, it falls back to the sleep time you gave in the survey.',
+        'Why: only whether the screen is on/off and charging is checked, nothing else is read. If there isn\'t enough data, it falls back to the sleep time you gave in the survey.',
     'sleepIntelligenceEnabledConfirmation': 'Sleep intelligence turned on.',
     'sleepIntelligenceDisabledConfirmation': 'Sleep intelligence turned off.',
     'settingsSnoringDetectionRow': 'Snoring Test (Experimental)',
     'snoringDetectionTitle': 'Snoring Test (Experimental)',
     'snoringDetectionDescription':
-      'When on, a few seconds of audio are sampled during your sleep hours and analyzed on-device for a rhythmic, snore-like sound pattern. The recording is never written to disk or sent anywhere -- only the result (yes/no) is stored.',
+        'When on, a few seconds of audio are sampled during your sleep hours and analyzed on-device for a rhythmic, snore-like sound pattern. The recording is never written to disk or sent anywhere -- only the result (yes/no) is stored.',
     'snoringDetectionPurpose':
-      'Why: snoring can affect sleep quality and, in turn, next-day smoking risk. Sleep Intelligence must be on first for this feature, since it runs on the same overnight cycle.',
+        'Why: snoring can affect sleep quality and, in turn, next-day smoking risk. Sleep Intelligence must be on first for this feature, since it runs on the same overnight cycle.',
     'snoringDetectionEnabledConfirmation': 'Snoring test turned on.',
     'snoringDetectionDisabledConfirmation': 'Snoring test turned off.',
     'snoringDetectionRequiresSleepIntelligence':
-      'Turn on Sleep Intelligence first -- the snoring test runs on top of it.',
+        'Turn on Sleep Intelligence first -- the snoring test runs on top of it.',
     'snoringDetectionLastNightCount': 'Snore-like patterns detected last night',
     'snoringResultNotificationTitle': 'Last night\'s snoring test',
     'snoringResultNotificationBodyDetected':
-      'A snore-like sound pattern was detected {count} times last night. See Settings > Snoring Test for details.',
+        'A snore-like sound pattern was detected {count} times last night. See Settings > Snoring Test for details.',
     'snoringResultNotificationBodyClear':
-      'No snore-like sound pattern was detected last night.',
+        'No snore-like sound pattern was detected last night.',
     'snoringSeverityNone': 'No snoring detected.',
     'snoringSeverityMild': 'A mild level of snoring was detected.',
     'snoringSeverityModerate': 'A moderate level of snoring was detected.',
     'snoringSeveritySevere': 'A pronounced level of snoring was detected.',
     'snoringAdviceMild':
-      'Mild snoring is usually temporary. Sleeping on your side and avoiding alcohol can help.',
+        'Mild snoring is usually temporary. Sleeping on your side and avoiding alcohol can help.',
     'snoringAdviceModerate':
-      'If moderate snoring has lasted several nights, alongside lifestyle steps like weight and sleep position, we recommend seeing a doctor.',
+        'If moderate snoring has lasted several nights, alongside lifestyle steps like weight and sleep position, we recommend seeing a doctor.',
     'snoringAdviceSevere':
-      'A pronounced level of snoring was detected. If this continues, please see a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
+        'A pronounced level of snoring was detected. If this continues, please see a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
     'snoringHomeSummaryCardTitle': 'Last night\'s snoring',
     'snoringHomeSummaryCardBodyDetected':
-      'A snore-like sound pattern was detected {count} times last night.',
+        'A snore-like sound pattern was detected {count} times last night.',
     'snoringHomeSummaryCardBodyClear':
-      'No snore-like sound pattern was detected last night.',
+        'No snore-like sound pattern was detected last night.',
     'snoringTestTitle': 'Snoring Test',
     'snoringTestInstructions':
-      'We\'ll keep the microphone on for 60 seconds. Sound is never recorded or sent anywhere, only the snoring pattern is analyzed.',
+        'We\'ll keep the microphone on for 60 seconds. Sound is never recorded or sent anywhere, only the snoring pattern is analyzed.',
     'snoringTestStartButton': 'Start Test',
     'snoringTestListening': 'Listening...',
     'snoringTestResultTitle': 'Test Result',
     'menuSnoringTest': 'Snoring Test',
     'coughTestTitle': 'Cough Test',
     'coughTestIntro':
-      'We\'ll keep the microphone on for 30 seconds and count how many times you cough.',
+        'We\'ll keep the microphone on for 30 seconds and count how many times you cough.',
     'coughTestInstructions':
-      'Start somewhere quiet and breathe/cough normally. Audio is never recorded or sent anywhere -- only the cough count is computed.',
+        'Start somewhere quiet and breathe/cough normally. Audio is never recorded or sent anywhere -- only the cough count is computed.',
     'coughTestStartButton': 'Start Test',
     'coughTestListening': 'Listening...',
     'coughTestResultTitle': 'Test Result',
     'coughTestResultCount': '{count} coughs detected',
     'coughGeneralAdvice':
-      'If the cough has lasted several days, we recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
+        'If the cough has lasted several days, we recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
     'coughTestNotificationTitle': 'Your cough test result',
     'wheezeFindingSectionTitle': 'Sound Pattern Note',
-    'breathUnusualSoundDetected': 'An unusual sound pattern was heard in this test.',
+    'breathUnusualSoundDetected':
+        'An unusual sound pattern was heard in this test.',
     'breathUnusualSoundAdvice':
-      'If it recurs, we recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
+        'If it recurs, we recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
     'wheezeTestNotificationTitle': 'Breath test note',
     'breathNotDetectedRetryTitle': 'Breath not detected',
     'breathNotDetectedRetryMessage':
-      "The microphone couldn't clearly detect your breath. Want to try again?",
+        "The microphone couldn't clearly detect your breath. Want to try again?",
     'coughNotDetectedRetryTitle': 'Cough not detected',
     'coughNotDetectedRetryMessage':
-      "The microphone didn't detect a cough. Want to try again?",
+        "The microphone didn't detect a cough. Want to try again?",
     'retryAttemptButton': 'Try Again',
     'keepResultAnywayButton': 'Continue Anyway',
     'coughTestRequiredForWeeklySurvey': 'Take the Test',
     'coughTestRequiredDialogTitle': 'Cough test required',
     'coughTestRequiredDialogMessage':
-      'You need to take a cough test this week before saving the weekly survey. Take it now?',
+        'You need to take a cough test this week before saving the weekly survey. Take it now?',
     'coughTestSkip': 'Skip',
     'menuCoughTest': 'Cough Test',
     'settingsWearableIntelligenceRow': 'Wearable Data (Experimental)',
     'wearableIntelligenceTitle': 'Wearable Data (Experimental)',
     'wearableIntelligenceDescription':
-      'When on, the app tries to read heart-rate and sleep data through Health Connect — if you have a smartwatch/wearable app syncing to it. The app never talks to your watch directly, it only reads what\'s already in Health Connect.',
+        'When on, the app tries to read heart-rate and sleep data through Health Connect — if you have a smartwatch/wearable app syncing to it. The app never talks to your watch directly, it only reads what\'s already in Health Connect.',
     'wearableIntelligencePurpose':
-      'Why: a sudden heart-rate spike can help catch a risky moment earlier. If you have no wearable or no synced data, this card just stays empty — nothing else changes.',
+        'Why: a sudden heart-rate spike can help catch a risky moment earlier. If you have no wearable or no synced data, this card just stays empty — nothing else changes.',
     'wearableIntelligenceEnabledConfirmation': 'Wearable data turned on.',
     'wearableIntelligenceDisabledConfirmation': 'Wearable data turned off.',
     'wearableIntelligenceUnavailable':
-      'Health Connect wasn\'t found on this device. Install it?',
+        'Health Connect wasn\'t found on this device. Install it?',
     'wearableIntelligencePermissionDenied':
-      'Health Connect permission was not granted, feature could not be turned on.',
+        'Health Connect permission was not granted, feature could not be turned on.',
     'wearableIntelligenceInstallAction': 'Install Health Connect',
     'wearableIntelligenceLatestHeartRate': 'Latest heart rate',
     'wearableIntelligenceLastSleep': 'Last sleep duration',
@@ -2538,338 +2640,338 @@ class AppTexts {
     'coachCommandTitle': 'A suggestion',
     'sedentaryReminderTitle': 'Time to move a bit',
     'sedentaryReminderBody':
-      'You\'ve been still for a while. A short walk is good for your legs and for cravings alike.',
+        'You\'ve been still for a while. A short walk is good for your legs and for cravings alike.',
     'healthTipTitle': 'Health Tip',
     'healthTipHypertension1':
-      'Smoking raises your blood pressure instantly. A few deep breaths right now will help it more.',
+        'Smoking raises your blood pressure instantly. A few deep breaths right now will help it more.',
     'healthTipHypertension2':
-      'Less salt and no cigarette work together for your blood pressure. You can put off one more today.',
+        'Less salt and no cigarette work together for your blood pressure. You can put off one more today.',
     'healthTipAsthma1':
-      'Cigarette smoke narrows your airways and can trigger an asthma attack. Step somewhere with fresh air.',
+        'Cigarette smoke narrows your airways and can trigger an asthma attack. Step somewhere with fresh air.',
     'healthTipAsthma2':
-      'When your breathing feels tight, reach for a slow deep-breathing exercise instead of a cigarette.',
+        'When your breathing feels tight, reach for a slow deep-breathing exercise instead of a cigarette.',
     'healthTipDiabetes1':
-      'Smoking makes blood sugar harder to keep steady. Try a glass of water and a few minutes\' wait instead.',
+        'Smoking makes blood sugar harder to keep steady. Try a glass of water and a few minutes\' wait instead.',
     'healthTipDiabetes2':
-      'Every smoke-free hour is a small win for your blood sugar control.',
+        'Every smoke-free hour is a small win for your blood sugar control.',
     'healthTipCopd1':
-      'COPD and smoking don\'t mix. This urge will fade on its own within a few minutes.',
+        'COPD and smoking don\'t mix. This urge will fade on its own within a few minutes.',
     'healthTipCopd2':
-      'A short breathing exercise does your lungs far more good than a cigarette ever could.',
+        'A short breathing exercise does your lungs far more good than a cigarette ever could.',
     'healthTipHeartDisease1':
-      'Smoking speeds up your heart for no reason. A calm breathing break is the better choice for it.',
+        'Smoking speeds up your heart for no reason. A calm breathing break is the better choice for it.',
     'healthTipHeartDisease2':
-      'The most valuable thing you can do for your heart right now is skip this cigarette.',
+        'The most valuable thing you can do for your heart right now is skip this cigarette.',
     'healthTipHypertension3':
-      'Every cigarette tightens your blood vessels. Standing up and walking a few steps does the opposite.',
+        'Every cigarette tightens your blood vessels. Standing up and walking a few steps does the opposite.',
     'healthTipHypertension4':
-      'Blood pressure swings most in the morning. Delaying today\'s first cigarette matters most right now.',
+        'Blood pressure swings most in the morning. Delaying today\'s first cigarette matters most right now.',
     'healthTipHypertension5':
-      'Drink a glass of water and wait two minutes. The urge usually passes in that time; your blood pressure stays calm.',
+        'Drink a glass of water and wait two minutes. The urge usually passes in that time; your blood pressure stays calm.',
     'healthTipHypertension6':
-      'A walk actually delivers the relief a cigarette only promises. Ten minutes is enough.',
+        'A walk actually delivers the relief a cigarette only promises. Ten minutes is enough.',
     'healthTipHypertension7':
-      'Anger raises your blood pressure and your craving together. Slow your breathing first; decide after.',
+        'Anger raises your blood pressure and your craving together. Slow your breathing first; decide after.',
     'healthTipHypertension8':
-      'Coffee and a cigarette together push your blood pressure from two directions. Try the coffee alone today.',
+        'Coffee and a cigarette together push your blood pressure from two directions. Try the coffee alone today.',
     'healthTipHypertension9':
-      'Salty snacks trigger both the craving and your blood pressure. Remember that as you reach out.',
+        'Salty snacks trigger both the craving and your blood pressure. Remember that as you reach out.',
     'healthTipHypertension10':
-      'Every smoke-free hour is an hour your heart moves the same blood with less strain.',
+        'Every smoke-free hour is an hour your heart moves the same blood with less strain.',
     'healthTipHypertension11':
-      'Taking your blood pressure medicine regularly matters, but smoking works against it. Let them pull the same way.',
+        'Taking your blood pressure medicine regularly matters, but smoking works against it. Let them pull the same way.',
     'healthTipHypertension12':
-      'If the urge just hit, ask yourself again in three minutes. The answer usually changes.',
+        'If the urge just hit, ask yourself again in three minutes. The answer usually changes.',
     'healthTipHypertension13':
-      'Choosing the stairs over the lift is the little sibling of quitting, for your blood pressure.',
+        'Choosing the stairs over the lift is the little sibling of quitting, for your blood pressure.',
     'healthTipHypertension14':
-      'If you want a cigarette after a tense meeting, what you actually want is to catch your breath.',
+        'If you want a cigarette after a tense meeting, what you actually want is to catch your breath.',
     'healthTipHypertension15':
-      'A warm shower gives the same loosening a cigarette does, without raising your blood pressure.',
+        'A warm shower gives the same loosening a cigarette does, without raising your blood pressure.',
     'healthTipHypertension16':
-      'An evening cigarette breaks your sleep, and broken sleep raises blood pressure. This is where the chain breaks.',
+        'An evening cigarette breaks your sleep, and broken sleep raises blood pressure. This is where the chain breaks.',
     'healthTipHypertension17':
-      'If you stayed under your target today, your blood vessels have already noticed.',
+        'If you stayed under your target today, your blood vessels have already noticed.',
     'healthTipHypertension18':
-      'Keep your hands busy when the urge comes. Your blood pressure owes you these few minutes.',
+        'Keep your hands busy when the urge comes. Your blood pressure owes you these few minutes.',
     'healthTipHypertension19':
-      'The after-meal cigarette is where habit is strongest. Try getting up and walking instead.',
+        'The after-meal cigarette is where habit is strongest. Try getting up and walking instead.',
     'healthTipHypertension20':
-      'Tell one person today\'s target. A target spoken out loud is a target kept.',
+        'Tell one person today\'s target. A target spoken out loud is a target kept.',
     'healthTipHypertension21':
-      'The good news for your blood pressure: it isn\'t only the day you quit that counts, but every day you cut down.',
+        'The good news for your blood pressure: it isn\'t only the day you quit that counts, but every day you cut down.',
     'healthTipHypertension22':
-      'Breathe in for a count of four, out for a count of six. Do it three times.',
+        'Breathe in for a count of four, out for a count of six. Do it three times.',
     'healthTipHypertension23':
-      'Take a window break instead of a smoke break. Same pause, different outcome.',
+        'Take a window break instead of a smoke break. Same pause, different outcome.',
     'healthTipHypertension24':
-      'The cuff on your arm can\'t see the cigarette, but it measures what it did.',
+        'The cuff on your arm can\'t see the cigarette, but it measures what it did.',
     'healthTipHypertension25':
-      'The cigarette you skip today shows up in tomorrow\'s reading.',
+        'The cigarette you skip today shows up in tomorrow\'s reading.',
     'healthTipHypertension26':
-      'Alcohol multiplies the craving, and your blood pressure with it. Keep them apart.',
+        'Alcohol multiplies the craving, and your blood pressure with it. Keep them apart.',
     'healthTipHypertension27':
-      'Tiredness disguises itself as a craving. Sit for ten minutes first, then decide.',
+        'Tiredness disguises itself as a craving. Sit for ten minutes first, then decide.',
     'healthTipHypertension28':
-      'A glass of water on waking is the easiest way to push back the day\'s first cigarette.',
+        'A glass of water on waking is the easiest way to push back the day\'s first cigarette.',
     'healthTipHypertension29':
-      'What lowers your blood pressure isn\'t one big decision but small delays stacked together.',
+        'What lowers your blood pressure isn\'t one big decision but small delays stacked together.',
     'healthTipHypertension30':
-      'If you hit today\'s target, you can do it tomorrow too. You\'re the proof.',
+        'If you hit today\'s target, you can do it tomorrow too. You\'re the proof.',
     'healthTipHypertension31':
-      'Delaying a cigarette before your morning blood-pressure pill on an empty stomach helps them work together.',
+        'Delaying a cigarette before your morning blood-pressure pill on an empty stomach helps them work together.',
     'healthTipHypertension32':
-      'A headache or dizziness can be a sign your pressure is running high — smoking makes it worse. Rest first.',
+        'A headache or dizziness can be a sign your pressure is running high — smoking makes it worse. Rest first.',
     'healthTipHypertension33':
-      'A late-night cigarette shows up in tomorrow morning\'s reading. Skipping tonight\'s makes a difference by morning.',
+        'A late-night cigarette shows up in tomorrow morning\'s reading. Skipping tonight\'s makes a difference by morning.',
     'healthTipAsthma3':
-      'Smoke leaves your airways irritable for hours. Skipping this one means easier breathing tonight.',
+        'Smoke leaves your airways irritable for hours. Skipping this one means easier breathing tonight.',
     'healthTipAsthma4':
-      'When your chest tightens, a cigarette narrows it further. A breathing exercise does the opposite.',
+        'When your chest tightens, a cigarette narrows it further. A breathing exercise does the opposite.',
     'healthTipAsthma5':
-      'In cold air a cigarette hits your airways twice as hard. Stay in and put it off today.',
+        'In cold air a cigarette hits your airways twice as hard. Stay in and put it off today.',
     'healthTipAsthma6':
-      'Smoke and dust are the worst pairing for asthma. Air out the room you\'re in.',
+        'Smoke and dust are the worst pairing for asthma. Air out the room you\'re in.',
     'healthTipAsthma7':
-      'If your cough is worse in the morning, the night-time cigarette may be why. Try one night without and see.',
+        'If your cough is worse in the morning, the night-time cigarette may be why. Try one night without and see.',
     'healthTipAsthma8':
-      'Panic makes breathlessness feel bigger. Drop your shoulders and lengthen your breath.',
+        'Panic makes breathlessness feel bigger. Drop your shoulders and lengthen your breath.',
     'healthTipAsthma9':
-      'If exercise sets off your asthma, smoking lowers that threshold further. One cigarette fewer today.',
+        'If exercise sets off your asthma, smoking lowers that threshold further. One cigarette fewer today.',
     'healthTipAsthma10':
-      'Every smoke-free day is a day you reach for your reliever less.',
+        'Every smoke-free day is a day you reach for your reliever less.',
     'healthTipAsthma11':
-      'Smoke clings to your clothes and re-triggers you. Change your top and cut the loop.',
+        'Smoke clings to your clothes and re-triggers you. Change your top and cut the loop.',
     'healthTipAsthma12':
-      'When you hear a wheeze, look for fresh air, not a cigarette.',
+        'When you hear a wheeze, look for fresh air, not a cigarette.',
     'healthTipAsthma13':
-      'In pollen season your airways are already loaded. Delaying pays off more this week.',
+        'In pollen season your airways are already loaded. Delaying pays off more this week.',
     'healthTipAsthma14':
-      'When the urge comes, breathe slowly through your nose rather than your mouth.',
+        'When the urge comes, breathe slowly through your nose rather than your mouth.',
     'healthTipAsthma15':
-      'For someone with asthma the best win is a night without waking. The evening cigarette steals it.',
+        'For someone with asthma the best win is a night without waking. The evening cigarette steals it.',
     'healthTipAsthma16':
-      'The cigarette you skipped today is one more stair you\'ll manage.',
+        'The cigarette you skipped today is one more stair you\'ll manage.',
     'healthTipAsthma17':
-      'Smoking indoors is far heavier on your airways than outdoors.',
+        'Smoking indoors is far heavier on your airways than outdoors.',
     'healthTipAsthma18':
-      'When breathing tightens, sit, lean forward, and breathe out slowly. It will pass.',
+        'When breathing tightens, sit, lean forward, and breathe out slowly. It will pass.',
     'healthTipAsthma19':
-      'A craving lasts about three minutes. An asthma flare lasts hours. Which is easier to wait out?',
+        'A craving lasts about three minutes. An asthma flare lasts hours. Which is easier to wait out?',
     'healthTipAsthma20':
-      'Keep your bedroom smoke-free. Your airways need the night off.',
+        'Keep your bedroom smoke-free. Your airways need the night off.',
     'healthTipAsthma21':
-      'When you put off a cigarette, the urge isn\'t the only thing that passes — your breath comes back too.',
+        'When you put off a cigarette, the urge isn\'t the only thing that passes — your breath comes back too.',
     'healthTipAsthma22':
-      'Stress triggers both asthma and the urge. Same source, same answer: slow breathing.',
+        'Stress triggers both asthma and the urge. Same source, same answer: slow breathing.',
     'healthTipAsthma23':
-      'Coughing less today? That isn\'t chance — it\'s yesterday\'s decisions.',
+        'Coughing less today? That isn\'t chance — it\'s yesterday\'s decisions.',
     'healthTipAsthma24':
-      'Cigarette smoke weakens what your medicine does. Don\'t make them compete.',
+        'Cigarette smoke weakens what your medicine does. Don\'t make them compete.',
     'healthTipAsthma25':
-      'Even a one-second gain on the breathing test means your airways are opening.',
+        'Even a one-second gain on the breathing test means your airways are opening.',
     'healthTipAsthma26':
-      'If you run out of breath walking, slow down, stop, recover. A cigarette breaks that sequence.',
+        'If you run out of breath walking, slow down, stop, recover. A cigarette breaks that sequence.',
     'healthTipAsthma27':
-      'If someone smokes at home, your airways smoke too. That\'s worth a conversation.',
+        'If someone smokes at home, your airways smoke too. That\'s worth a conversation.',
     'healthTipAsthma28':
-      'Warm steam opens the tightness in your chest far better than a cigarette.',
+        'Warm steam opens the tightness in your chest far better than a cigarette.',
     'healthTipAsthma29':
-      'Staying under today\'s target means waking less tonight.',
+        'Staying under today\'s target means waking less tonight.',
     'healthTipAsthma30':
-      'Your airways start recovering immediately. Even one day pays back.',
+        'Your airways start recovering immediately. Even one day pays back.',
     'healthTipAsthma31':
-      'Cold air and smoke together narrow your airways more than either alone. Wrap up warm and let this one pass.',
+        'Cold air and smoke together narrow your airways more than either alone. Wrap up warm and let this one pass.',
     'healthTipAsthma32':
-      'Wanting a cigarette right after a coughing fit is common — but that\'s exactly when your lungs need rest most.',
+        'Wanting a cigarette right after a coughing fit is common — but that\'s exactly when your lungs need rest most.',
     'healthTipAsthma33':
-      'If breathlessness gets worse at night, skipping the last evening cigarette directly improves your sleep.',
+        'If breathlessness gets worse at night, skipping the last evening cigarette directly improves your sleep.',
     'healthTipDiabetes3':
-      'Smoking makes insulin\'s job harder. Skipping this one keeps today\'s numbers more predictable.',
+        'Smoking makes insulin\'s job harder. Skipping this one keeps today\'s numbers more predictable.',
     'healthTipDiabetes4':
-      'The after-meal cigarette lands on top of a rise your body is already handling.',
+        'The after-meal cigarette lands on top of a rise your body is already handling.',
     'healthTipDiabetes5':
-      'Circulation in your feet suffers most from smoking. One cigarette fewer, one step more today.',
+        'Circulation in your feet suffers most from smoking. One cigarette fewer, one step more today.',
     'healthTipDiabetes6':
-      'Cravings get stronger when your blood sugar drops. Eat something first, then reconsider.',
+        'Cravings get stronger when your blood sugar drops. Eat something first, then reconsider.',
     'healthTipDiabetes7':
-      'Every smoke-free week is a week your body uses its own insulin better.',
+        'Every smoke-free week is a week your body uses its own insulin better.',
     'healthTipDiabetes8':
-      'A walk lowers your blood sugar and your craving at once. Two jobs, one effort.',
+        'A walk lowers your blood sugar and your craving at once. Two jobs, one effort.',
     'healthTipDiabetes9':
-      'If cuts heal slowly, smoking is a big part of why. Cutting down changes it.',
+        'If cuts heal slowly, smoking is a big part of why. Cutting down changes it.',
     'healthTipDiabetes10':
-      'The sugary drink and the cigarette travel together. Drop one and the other weakens.',
+        'The sugary drink and the cigarette travel together. Drop one and the other weakens.',
     'healthTipDiabetes11':
-      'If your morning number is high, last night\'s cigarette is worth looking at too.',
+        'If your morning number is high, last night\'s cigarette is worth looking at too.',
     'healthTipDiabetes12':
-      'Smoking strains the vessels in your eyes too. Every cigarette you skip counts there as well.',
+        'Smoking strains the vessels in your eyes too. Every cigarette you skip counts there as well.',
     'healthTipDiabetes13':
-      'Drink water when the urge comes. Thirst and blood sugar both make it feel bigger.',
+        'Drink water when the urge comes. Thirst and blood sugar both make it feel bigger.',
     'healthTipDiabetes14':
-      'Stress raises your blood sugar, and a cigarette doesn\'t resolve stress — it postpones it.',
+        'Stress raises your blood sugar, and a cigarette doesn\'t resolve stress — it postpones it.',
     'healthTipDiabetes15':
-      'While you check your feet, remember: cutting down is what helps that circulation most.',
+        'While you check your feet, remember: cutting down is what helps that circulation most.',
     'healthTipDiabetes16':
-      'A craving lasts three minutes. A blood sugar swing lasts hours. Wait out the short one.',
+        'A craving lasts three minutes. A blood sugar swing lasts hours. Wait out the short one.',
     'healthTipDiabetes17':
-      'If you hit today\'s target, your pancreas noticed too.',
+        'If you hit today\'s target, your pancreas noticed too.',
     'healthTipDiabetes18':
-      'Your kidneys tire from both smoking and blood sugar. Easing both is the best gift.',
+        'Your kidneys tire from both smoking and blood sugar. Easing both is the best gift.',
     'healthTipDiabetes19':
-      'Skipping meals makes the urge bigger. Eating regularly makes delaying easier.',
+        'Skipping meals makes the urge bigger. Eating regularly makes delaying easier.',
     'healthTipDiabetes20':
-      'An evening walk takes out both the night-time number and the night-time cigarette.',
+        'An evening walk takes out both the night-time number and the night-time cigarette.',
     'healthTipDiabetes21':
-      'Cutting down means your medicines do the same work with less effort.',
+        'Cutting down means your medicines do the same work with less effort.',
     'healthTipDiabetes22':
-      'Keep your hands busy — peel something, stir something. The urge will pass.',
+        'Keep your hands busy — peel something, stir something. The urge will pass.',
     'healthTipDiabetes23':
-      'If a sweet craving and a cigarette craving arrive together, water and ten minutes first.',
+        'If a sweet craving and a cigarette craving arrive together, water and ten minutes first.',
     'healthTipDiabetes24':
-      'Poor sleep worsens both your numbers and your cravings. Turn in early tonight.',
+        'Poor sleep worsens both your numbers and your cravings. Turn in early tonight.',
     'healthTipDiabetes25':
-      'The cigarette not smoked today shows up in your vessels right away.',
+        'The cigarette not smoked today shows up in your vessels right away.',
     'healthTipDiabetes26':
-      'Skipping breakfast for a cigarette starts your day by straining your blood sugar twice.',
+        'Skipping breakfast for a cigarette starts your day by straining your blood sugar twice.',
     'healthTipDiabetes27':
-      'Sweets and cigarettes both show up in company. Go in with a plan for one of them.',
+        'Sweets and cigarettes both show up in company. Go in with a plan for one of them.',
     'healthTipDiabetes28':
-      'When you check your sugar, think about your cigarette count too. They\'re on the same chart.',
+        'When you check your sugar, think about your cigarette count too. They\'re on the same chart.',
     'healthTipDiabetes29':
-      'Cutting down isn\'t a lesser version of quitting — it\'s a gain in itself.',
+        'Cutting down isn\'t a lesser version of quitting — it\'s a gain in itself.',
     'healthTipDiabetes30':
-      'If you\'ve been under target for a week, your body already feels it.',
+        'If you\'ve been under target for a week, your body already feels it.',
     'healthTipDiabetes31':
-      'Smoking narrows the small vessels in your feet, and diabetes already slows healing there. One fewer cigarette helps.',
+        'Smoking narrows the small vessels in your feet, and diabetes already slows healing there. One fewer cigarette helps.',
     'healthTipDiabetes32':
-      'Low blood sugar can make cravings feel stronger. Eat something first — the urge usually settles with it.',
+        'Low blood sugar can make cravings feel stronger. Eat something first — the urge usually settles with it.',
     'healthTipDiabetes33':
-      'If you track your readings regularly, you\'ll see the difference smoke-free days make over time.',
+        'If you track your readings regularly, you\'ll see the difference smoke-free days make over time.',
     'healthTipCopd3':
-      'With COPD every cigarette adds to capacity already lost. Today\'s delay is a lasting gain.',
+        'With COPD every cigarette adds to capacity already lost. Today\'s delay is a lasting gain.',
     'healthTipCopd4':
-      'When breathing tightens, lean forward and breathe out through pursed lips. It works faster than a cigarette.',
+        'When breathing tightens, lean forward and breathe out through pursed lips. It works faster than a cigarette.',
     'healthTipCopd5':
-      'More phlegm in the morning is linked to the night-time cigarette. Try one night without.',
+        'More phlegm in the morning is linked to the night-time cigarette. Try one night without.',
     'healthTipCopd6':
-      'Most flare-ups start with a cigarette. Skipping today helps you get through the month without one.',
+        'Most flare-ups start with a cigarette. Skipping today helps you get through the month without one.',
     'healthTipCopd7':
-      'Stopping to catch your breath on stairs is technique, not weakness. Smoking undoes it.',
+        'Stopping to catch your breath on stairs is technique, not weakness. Smoking undoes it.',
     'healthTipCopd8':
-      'Your lungs can start recovering today. Your age and history don\'t change that.',
+        'Your lungs can start recovering today. Your age and history don\'t change that.',
     'healthTipCopd9':
-      'Cold air narrows your airways; a cigarette doubles it. Stay in today.',
+        'Cold air narrows your airways; a cigarette doubles it. Stay in today.',
     'healthTipCopd10':
-      'A craving lasts three minutes. Breathlessness takes the day. Wait out the three minutes.',
+        'A craving lasts three minutes. Breathlessness takes the day. Wait out the three minutes.',
     'healthTipCopd11':
-      'If your phlegm changes colour, tell your doctor. In the meantime, one cigarette fewer.',
+        'If your phlegm changes colour, tell your doctor. In the meantime, one cigarette fewer.',
     'healthTipCopd12':
-      'Short walks protect your lung capacity. Take a walking break instead of a smoke break.',
+        'Short walks protect your lung capacity. Take a walking break instead of a smoke break.',
     'healthTipCopd13':
-      'If breathlessness wakes you at night, the evening cigarette is the easiest cause to change.',
+        'If breathlessness wakes you at night, the evening cigarette is the easiest cause to change.',
     'healthTipCopd14':
-      'Count while you do your breathing exercise. Measured progress convinces more than felt progress.',
+        'Count while you do your breathing exercise. Measured progress convinces more than felt progress.',
     'healthTipCopd15':
-      'Every smoke-free day is a day your cough eases a little further.',
+        'Every smoke-free day is a day your cough eases a little further.',
     'healthTipCopd16':
-      'Airing out the house is the easiest kindness you can do your lungs today.',
+        'Airing out the house is the easiest kindness you can do your lungs today.',
     'healthTipCopd17':
-      'If you run short of breath while talking, that\'s recoverable. It starts with cutting down.',
+        'If you run short of breath while talking, that\'s recoverable. It starts with cutting down.',
     'healthTipCopd18':
-      'Breathing gets harder after a heavy meal. Don\'t add a cigarette — walk a little.',
+        'Breathing gets harder after a heavy meal. Don\'t add a cigarette — walk a little.',
     'healthTipCopd19':
-      'If you stayed under target today, your lungs will remember it for a week.',
+        'If you stayed under target today, your lungs will remember it for a week.',
     'healthTipCopd20':
-      'Smoke paralyses the tiny hairs that clean your airways. They recover within hours.',
+        'Smoke paralyses the tiny hairs that clean your airways. They recover within hours.',
     'healthTipCopd21':
-      'One extra second on the breathing test looks small but shows up on the stairs.',
+        'One extra second on the breathing test looks small but shows up on the stairs.',
     'healthTipCopd22':
-      'Stay away from crowded, smoky places. Your airways are working hard enough today.',
+        'Stay away from crowded, smoky places. Your airways are working hard enough today.',
     'healthTipCopd23':
-      'Panic inflates a craving. Sit, breathe out through pursed lips, then reassess.',
+        'Panic inflates a craving. Sit, breathe out through pursed lips, then reassess.',
     'healthTipCopd24':
-      'Good that you\'ve had your flu jab. Cutting down supports what it does.',
+        'Good that you\'ve had your flu jab. Cutting down supports what it does.',
     'healthTipCopd25':
-      'Water thins phlegm and makes clearing it easier. Smoking does the opposite.',
+        'Water thins phlegm and makes clearing it easier. Smoking does the opposite.',
     'healthTipCopd26':
-      'One cigarette fewer today can mean one fewer waking tonight.',
+        'One cigarette fewer today can mean one fewer waking tonight.',
     'healthTipCopd27':
-      'Break chores into pieces and rest between them. That can replace the smoke break.',
+        'Break chores into pieces and rest between them. That can replace the smoke break.',
     'healthTipCopd28':
-      'Lung capacity recovers slowly, but it also declines. The direction is yours.',
+        'Lung capacity recovers slowly, but it also declines. The direction is yours.',
     'healthTipCopd29':
-      'When breathlessness rises, the first thing is to stop and the second is to breathe out slowly.',
+        'When breathlessness rises, the first thing is to stop and the second is to breathe out slowly.',
     'healthTipCopd30':
-      'Cutting down is a route too. Your lungs count every step of it.',
+        'Cutting down is a route too. Your lungs count every step of it.',
     'healthTipCopd31':
-      'Morning difficulty clearing phlegm usually traces back to the last cigarettes the night before. Start by skipping those.',
+        'Morning difficulty clearing phlegm usually traces back to the last cigarettes the night before. Start by skipping those.',
     'healthTipCopd32':
-      'Breathless on the stairs? That\'s a signal to rest, not to smoke.',
+        'Breathless on the stairs? That\'s a signal to rest, not to smoke.',
     'healthTipCopd33':
-      'Your COPD medicine works less well alongside smoking. Skipping a cigarette around your dose lets it actually work.',
+        'Your COPD medicine works less well alongside smoking. Skipping a cigarette around your dose lets it actually work.',
     'healthTipHeartDisease3':
-      'Smoking raises your heart\'s oxygen demand while narrowing the vessels. Skipping this fixes both.',
+        'Smoking raises your heart\'s oxygen demand while narrowing the vessels. Skipping this fixes both.',
     'healthTipHeartDisease4':
-      'If you feel pressure in your chest, stop and rest. This is not a moment for a cigarette.',
+        'If you feel pressure in your chest, stop and rest. This is not a moment for a cigarette.',
     'healthTipHeartDisease5':
-      'Even the first smoke-free day starts lowering your heart attack risk.',
+        'Even the first smoke-free day starts lowering your heart attack risk.',
     'healthTipHeartDisease6':
-      'When your pulse climbs, a cigarette pushes it higher. Slow your breathing instead.',
+        'When your pulse climbs, a cigarette pushes it higher. Slow your breathing instead.',
     'healthTipHeartDisease7':
-      'Walking strengthens your heart; smoking tires it. Today\'s choice is clear.',
+        'Walking strengthens your heart; smoking tires it. Today\'s choice is clear.',
     'healthTipHeartDisease8':
-      'Mornings are the riskiest hours for your heart. Push back the day\'s first cigarette.',
+        'Mornings are the riskiest hours for your heart. Push back the day\'s first cigarette.',
     'healthTipHeartDisease9':
-      'If stairs are getting harder, that\'s recoverable. It starts with cutting down.',
+        'If stairs are getting harder, that\'s recoverable. It starts with cutting down.',
     'healthTipHeartDisease10':
-      'Smoking thickens your blood and raises clot risk. Every cigarette you skip today counts.',
+        'Smoking thickens your blood and raises clot risk. Every cigarette you skip today counts.',
     'healthTipHeartDisease11':
-      'Stress triggers your heart and your craving alike. Addressing the source addresses both.',
+        'Stress triggers your heart and your craving alike. Addressing the source addresses both.',
     'healthTipHeartDisease12':
-      'Don\'t make your heart medicines compete with a cigarette.',
+        'Don\'t make your heart medicines compete with a cigarette.',
     'healthTipHeartDisease13':
-      'Pain in your legs when walking is your arteries talking. Listen.',
+        'Pain in your legs when walking is your arteries talking. Listen.',
     'healthTipHeartDisease14':
-      'Your heart is already working after a heavy meal. Don\'t add a cigarette.',
+        'Your heart is already working after a heavy meal. Don\'t add a cigarette.',
     'healthTipHeartDisease15':
-      'When the urge comes, walk for two minutes. Your heart accepts that trade.',
+        'When the urge comes, walk for two minutes. Your heart accepts that trade.',
     'healthTipHeartDisease16':
-      'Cholesterol and smoking press on the artery wall together. Easing one lightens the other.',
+        'Cholesterol and smoking press on the artery wall together. Easing one lightens the other.',
     'healthTipHeartDisease17':
-      'If you stayed under target today, your heart beat fewer times for it.',
+        'If you stayed under target today, your heart beat fewer times for it.',
     'healthTipHeartDisease18':
-      'Sleep repairs your heart. The evening cigarette interrupts the repair.',
+        'Sleep repairs your heart. The evening cigarette interrupts the repair.',
     'healthTipHeartDisease19':
-      'A breathing exercise lowers your pulse; a cigarette raises it. Same three minutes, opposite result.',
+        'A breathing exercise lowers your pulse; a cigarette raises it. Same three minutes, opposite result.',
     'healthTipHeartDisease20':
-      'Salt and smoking push your blood pressure together. Pull back on one today.',
+        'Salt and smoking push your blood pressure together. Pull back on one today.',
     'healthTipHeartDisease21':
-      'The best news for your heart: repair starts the moment the damage stops.',
+        'The best news for your heart: repair starts the moment the damage stops.',
     'healthTipHeartDisease22':
-      'Your heart works harder walking in the cold. Don\'t add a cigarette.',
+        'Your heart works harder walking in the cold. Don\'t add a cigarette.',
     'healthTipHeartDisease23':
-      'When you put off a cigarette, your heart pumps easier for those minutes.',
+        'When you put off a cigarette, your heart pumps easier for those minutes.',
     'healthTipHeartDisease24':
-      'Alcohol and cigarettes strain your pulse from two directions. Keep them apart.',
+        'Alcohol and cigarettes strain your pulse from two directions. Keep them apart.',
     'healthTipHeartDisease25':
-      'Today\'s walk might be the best decision your heart gets this week.',
+        'Today\'s walk might be the best decision your heart gets this week.',
     'healthTipHeartDisease26':
-      'Count your pulse when the urge comes. It usually passes while you count.',
+        'Count your pulse when the urge comes. It usually passes while you count.',
     'healthTipHeartDisease27':
-      'For your heart, cutting down is as valuable as the whole road to quitting.',
+        'For your heart, cutting down is as valuable as the whole road to quitting.',
     'healthTipHeartDisease28':
-      'If your chest pain changes, tell your doctor. In the meantime, one cigarette fewer.',
+        'If your chest pain changes, tell your doctor. In the meantime, one cigarette fewer.',
     'healthTipHeartDisease29':
-      'Your arteries can regain flexibility. It happens a little more with every day you cut down.',
+        'Your arteries can regain flexibility. It happens a little more with every day you cut down.',
     'healthTipHeartDisease30':
-      'Your heart hasn\'t stopped once. You don\'t owe it a cigarette today.',
+        'Your heart hasn\'t stopped once. You don\'t owe it a cigarette today.',
     'healthTipHeartDisease31':
-      'Feeling pressure in your chest calls for sitting down and resting, not a cigarette.',
+        'Feeling pressure in your chest calls for sitting down and resting, not a cigarette.',
     'healthTipHeartDisease32':
-      'The jump in heart rate after smoking lasts several minutes. You can choose to skip that entirely.',
+        'The jump in heart rate after smoking lasts several minutes. You can choose to skip that entirely.',
     'healthTipHeartDisease33':
-      'If you take heart medication regularly, cutting down makes it work harder for you, not against it.',
+        'If you take heart medication regularly, cutting down makes it work harder for you, not against it.',
     'menuReports': 'Reports',
     'reportsTitle': 'Reports',
     'reportsWeeklyTab': 'Weekly',
@@ -2891,27 +2993,32 @@ class AppTexts {
     'reportsTotalSteps': 'Total steps',
     'reportsAvgStepsPerDay': 'Daily average steps',
     'settingsLocationIntelligenceRow': 'Location Intelligence',
-    'settingsLocationIntelligenceRowSubtitle': 'Learn your frequent places to support you better',
+    'settingsLocationIntelligenceRowSubtitle':
+        'Learn your frequent places to support you better',
     'locationIntelligenceTitle': 'Location Intelligence',
     'locationIntelligenceIntro':
-      'When on, the app gradually learns up to 8 places you visit often (e.g. home, work). A short reminder is shown when you arrive at one of them. Your raw location history is never recorded — only the rough location of this small set of places is kept.',
+        'When on, the app gradually learns up to 8 places you visit often (e.g. home, work). A short reminder is shown when you arrive at one of them. Your raw location history is never recorded — only the rough location of this small set of places is kept.',
     'locationIntelligencePurpose':
-      'Why: to show the reminder and contribute to your risk assessment. Settings > Reset My Data also clears this data.',
+        'Why: to show the reminder and contribute to your risk assessment. Settings > Reset My Data also clears this data.',
     'locationIntelligenceBackgroundWarning':
-      'The main permission was granted but background permission was not. Arrivals can\'t be detected while the app is closed. You can choose "Allow all the time" from Settings > Apps > Nikotin Away > Permissions > Location.',
-    'locationIntelligenceEnabledConfirmation': 'Location intelligence turned on.',
-    'locationIntelligenceDisabledConfirmation': 'Location intelligence turned off.',
+        'The main permission was granted but background permission was not. Arrivals can\'t be detected while the app is closed. You can choose "Allow all the time" from Settings > Apps > Nikotin Away > Permissions > Location.',
+    'locationIntelligenceEnabledConfirmation':
+        'Location intelligence turned on.',
+    'locationIntelligenceDisabledConfirmation':
+        'Location intelligence turned off.',
     'locationIntelligencePlacesTitle': 'Learned Places',
     'locationIntelligenceNoPlacesYet': 'No place learned yet.',
     'locationIntelligencePlaceRow': 'Place',
     'locationIntelligenceVisitCount': 'visits',
     'locationArrivalNotificationTitle': 'You\'re here',
-    'locationArrivalNotificationBody': 'You\'re at a place you visit often. Take care of yourself.',
-    'smokingLoggedConfirmation': 'Logged. This helps us understand when things are hardest for you.',
+    'locationArrivalNotificationBody':
+        'You\'re at a place you visit often. Take care of yourself.',
+    'smokingLoggedConfirmation':
+        'Logged. This helps us understand when things are hardest for you.',
     'undo': 'Undo',
     'dailyCheckInTitle': 'Daily Check-in',
     'dailyCheckInIntro':
-      'Before you wind down, let\'s do a quick check-in. This lets us support you well without interrupting your day.',
+        'Before you wind down, let\'s do a quick check-in. This lets us support you well without interrupting your day.',
     'breathExerciseCardTitle': 'Breathing Exercise',
     'dailyCheckInHoursQuestion': 'Roughly when did you smoke today?',
     'dailyCheckInDidNotSmoke': 'I didn\'t smoke today',
@@ -2936,7 +3043,7 @@ class AppTexts {
     'catLikeTotal': 'CAT-like total',
     'warningDaysTotal': 'Total warning days',
     'respFollowUpNote':
-      'Note: This follow-up does not diagnose; seek clinical evaluation if symptoms worsen.',
+        'Note: This follow-up does not diagnose; seek clinical evaluation if symptoms worsen.',
     'trendChartsTitle': 'Trend Charts',
     'weeklyRiskTrendTitle': 'Weekly risk trend (last 12 points)',
     'noWeeklyDataForChart': 'Not enough weekly data for chart.',
@@ -2975,8 +3082,7 @@ class AppTexts {
     'achievementInterval50Desc':
         'Your gap between cigarettes is 50% longer than it was.',
     'achievementInterval100Title': 'Twice as Long',
-    'achievementInterval100Desc':
-        'Your gap between cigarettes has doubled.',
+    'achievementInterval100Desc': 'Your gap between cigarettes has doubled.',
     'riskChange': 'Risk change',
     'weeklyImprovementPeriod': 'Weekly improvement period',
     'planDayLabel': 'Plan day',
@@ -2991,10 +3097,10 @@ class AppTexts {
     'surveyModeQuick': 'Quick (15 sec)',
     'surveyModeDetailed': 'Detailed',
     'surveyModeAutoDetailedHint':
-      'Last week looks high-risk. You can switch to Detailed mode for finer adjustment.',
+        'Last week looks high-risk. You can switch to Detailed mode for finer adjustment.',
     'weeklyQuickRespTitle': 'Quick Respiratory Check',
     'weeklyQuickRespHint':
-      'Fill 3 fields in quick mode to better reflect your respiratory status.',
+        'Fill 3 fields in quick mode to better reflect your respiratory status.',
     'adaptiveSummary': 'Adaptive summary',
     'addNote': 'Add note',
     'asthma': 'Asthma',
@@ -3067,7 +3173,7 @@ class AppTexts {
     'noSurveyYet': 'No survey yet.',
     'noTaskToday': 'No task today.',
     'notificationPermissionRequired':
-      'Reminders may not work without notification permission.',
+        'Reminders may not work without notification permission.',
     'onePack': '1 pack',
     'onlyBreaks': 'Only during breaks',
     'onlyBreaksBetweenLectures': 'Only between lectures',
@@ -3078,7 +3184,7 @@ class AppTexts {
     'packChangeDaily': 'Daily pack change',
     'packsApproxQuestion': 'Approximately how many packs?',
     'permissionsRetryMessage':
-      'App features are limited without required permissions.',
+        'App features are limited without required permissions.',
     'permissionsRetryTitle': 'Retry permissions',
     'pointShort': 'pts',
     'predictedRiskTime': 'Predicted risk time',
@@ -3122,7 +3228,7 @@ class AppTexts {
     'riskyTriggers': 'Risky triggers',
     'secShort': 'sec',
     'sensorPermissionRecommended':
-      'Motion/sensor permission is recommended for better tracking.',
+        'Motion/sensor permission is recommended for better tracking.',
     'sevenPlusPack': '7+ packs',
     'sixPack': '6 packs',
     'sleepTime': 'Sleep time',
@@ -3135,7 +3241,7 @@ class AppTexts {
     'stressHigh': 'High',
     'interventionIntensityTitle': 'Intervention intensity',
     'interventionIntensityHint':
-      'Chooses how often the app interrupts and assigns you tasks during the day.',
+        'Chooses how often the app interrupts and assigns you tasks during the day.',
     'triggerTitleHint': 'Which of these make you want to smoke?',
     'interventionIntensityGentle': 'Gentle',
     'interventionIntensityBalanced': 'Balanced',
@@ -3173,73 +3279,120 @@ class AppTexts {
     'taskNoSmoke60': 'Stay smoke-free for 60 minutes',
     'taskNoSmoke90': 'Stay smoke-free for 90 minutes',
     'adaptiveNoSmokeTaskTemplate':
-      'Do not smoke for the next {duration}. If you have a cigarette in your hand, put it out now.',
+        'Do not smoke for the next {duration}. If you have a cigarette in your hand, put it out now.',
     'adaptiveNoSmokeWindowTemplate':
-      'Do not smoke for the next {duration}, get ready before the {window} window.',
+        'Do not smoke for the next {duration}, get ready before the {window} window.',
     'checkInPrompt': 'Are you still holding on?',
-    'coachReductionTier75': "Today's goal: at least 1 fewer cigarette than yesterday, delay the first one by 90 minutes.",
-    'coachReductionTier60': "Today's goal: at least 2 fewer cigarettes than yesterday, wait 10 minutes before each one.",
-    'coachReductionTier40': "Today's goal: at least 3 fewer cigarettes than yesterday, skip one after midday.",
-    'coachReductionTierBase': "Today's goal: keep the current reduction, use water + gum instead of smoking during risky hours.",
-    'coachBreathDeclining': 'BREATHING: Do 2 breath tests today, follow each with 2 minutes of slow breathing.',
-    'coachBreathImproving': 'BREATHING: Keep your gains, finish one breathing routine before your risk hour.',
-    'coachBreathStable': 'BREATHING: During a crisis, do 2 minutes of breathing + 1 glass of water.',
-    'coachTrackReduceToday': 'TRACK: Finish today at least 2 below yesterday\'s total count.',
-    'coachTrackCompleteThree': 'TRACK: Mark at least 3 of today\'s chosen tasks as done.',
-    'coachPrepWindowTemplate': 'PREPARE: Before {window}, prepare water + gum + a short walk plan.',
-    'coachTriggerDelayTemplate': 'TRIGGER: Delay 3 minutes when {trigger} hits, then decide again.',
-    'coachFocusRiskHourTemplate': 'FOCUS: Keep notifications on for your riskiest hour, {hour}.',
-    'coachWeeklyTargetTemplate': 'GOAL: Bring your weekly risk target below {percent}.',
-    'coachTriggerStressCommand': 'TRIGGER-STRESS: When stressed, do 90 seconds of breathing + 1 glass of water, then decide again.',
-    'coachTriggerCoffeeCommand': 'TRIGGER-COFFEE: Delay coffee by 30 minutes, don\'t pair coffee with smoking.',
-    'coachTriggerAlcoholCommand': 'TRIGGER-ALCOHOL: On drinking days, say no to the first cigarette offer, use gum/water instead.',
-    'coachTriggerSocialCommand': 'TRIGGER-SOCIAL: Before entering a social setting, message your support person about your goal.',
-    'coachCrisisProtocol': 'CRISIS: Delay 3 minutes on the first craving wave, apply the 4D protocol on the second.',
-    'coachSupportSingleGoal': 'SUPPORT: Pick a single goal today and mark it done in the app when finished.',
-    'coachHintHighRisk': 'You are in a high-risk period: be sure to delay your first cigarette.',
-    'coachHintMedRisk': 'Medium-high risk: use the breathing + water routine the moment a trigger hits.',
-    'coachHintLowRisk': 'Keep the rhythm: set a goal to complete at least one task today.',
-    'coachHintWindowTemplate': 'Riskiest window: {window}. Prepare before this time.',
-    'coachHintTriggerTemplate': 'Predicted trigger: {trigger}. Decide on an alternative behavior.',
-    'coachRiskDaypart_high_morning_0': 'MORNING: Delay your first cigarette by 90 minutes, drink a glass of water first.',
-    'coachRiskDaypart_high_morning_1': 'CRISIS: Apply the 4D protocol (delay-breathe-water-distract).',
-    'coachRiskDaypart_high_day_0': 'MIDDAY: Take a 7-minute walk after eating, then decide.',
-    'coachRiskDaypart_high_day_1': 'TRIGGER: Separate coffee from smoking, delay coffee by 30 minutes.',
-    'coachRiskDaypart_high_evening_0': 'EVENING: Say no to the first offer in a social setting, delay 3 minutes.',
-    'coachRiskDaypart_high_evening_1': 'SUPPORT: Send your support person a one-line message before your risk hour.',
-    'coachRiskDaypart_high_night_0': 'NIGHT: No smoking after this hour, apply the emergency crisis routine.',
-    'coachRiskDaypart_high_night_1': 'UNWIND: Close the day with 3 minutes of slow breathing + water.',
-    'coachRiskDaypart_medium_morning_0': 'MORNING: Delay your first cigarette by 45 minutes.',
-    'coachRiskDaypart_medium_morning_1': 'ROUTINE: Do a 2-minute breathing exercise before coffee.',
-    'coachRiskDaypart_medium_day_0': 'MIDDAY: Wait 10 minutes before each cigarette.',
+    'coachReductionTier75':
+        "Today's goal: at least 1 fewer cigarette than yesterday, delay the first one by 90 minutes.",
+    'coachReductionTier60':
+        "Today's goal: at least 2 fewer cigarettes than yesterday, wait 10 minutes before each one.",
+    'coachReductionTier40':
+        "Today's goal: at least 3 fewer cigarettes than yesterday, skip one after midday.",
+    'coachReductionTierBase':
+        "Today's goal: keep the current reduction, use water + gum instead of smoking during risky hours.",
+    'coachBreathDeclining':
+        'BREATHING: Do 2 breath tests today, follow each with 2 minutes of slow breathing.',
+    'coachBreathImproving':
+        'BREATHING: Keep your gains, finish one breathing routine before your risk hour.',
+    'coachBreathStable':
+        'BREATHING: During a crisis, do 2 minutes of breathing + 1 glass of water.',
+    'coachTrackReduceToday':
+        'TRACK: Finish today at least 2 below yesterday\'s total count.',
+    'coachTrackCompleteThree':
+        'TRACK: Mark at least 3 of today\'s chosen tasks as done.',
+    'coachPrepWindowTemplate':
+        'PREPARE: Before {window}, prepare water + gum + a short walk plan.',
+    'coachTriggerDelayTemplate':
+        'TRIGGER: Delay 3 minutes when {trigger} hits, then decide again.',
+    'coachFocusRiskHourTemplate':
+        'FOCUS: Keep notifications on for your riskiest hour, {hour}.',
+    'coachWeeklyTargetTemplate':
+        'GOAL: Bring your weekly risk target below {percent}.',
+    'coachTriggerStressCommand':
+        'TRIGGER-STRESS: When stressed, do 90 seconds of breathing + 1 glass of water, then decide again.',
+    'coachTriggerCoffeeCommand':
+        'TRIGGER-COFFEE: Delay coffee by 30 minutes, don\'t pair coffee with smoking.',
+    'coachTriggerAlcoholCommand':
+        'TRIGGER-ALCOHOL: On drinking days, say no to the first cigarette offer, use gum/water instead.',
+    'coachTriggerSocialCommand':
+        'TRIGGER-SOCIAL: Before entering a social setting, message your support person about your goal.',
+    'coachCrisisProtocol':
+        'CRISIS: Delay 3 minutes on the first craving wave, apply the 4D protocol on the second.',
+    'coachSupportSingleGoal':
+        'SUPPORT: Pick a single goal today and mark it done in the app when finished.',
+    'coachHintHighRisk':
+        'You are in a high-risk period: be sure to delay your first cigarette.',
+    'coachHintMedRisk':
+        'Medium-high risk: use the breathing + water routine the moment a trigger hits.',
+    'coachHintLowRisk':
+        'Keep the rhythm: set a goal to complete at least one task today.',
+    'coachHintWindowTemplate':
+        'Riskiest window: {window}. Prepare before this time.',
+    'coachHintTriggerTemplate':
+        'Predicted trigger: {trigger}. Decide on an alternative behavior.',
+    'coachRiskDaypart_high_morning_0':
+        'MORNING: Delay your first cigarette by 90 minutes, drink a glass of water first.',
+    'coachRiskDaypart_high_morning_1':
+        'CRISIS: Apply the 4D protocol (delay-breathe-water-distract).',
+    'coachRiskDaypart_high_day_0':
+        'MIDDAY: Take a 7-minute walk after eating, then decide.',
+    'coachRiskDaypart_high_day_1':
+        'TRIGGER: Separate coffee from smoking, delay coffee by 30 minutes.',
+    'coachRiskDaypart_high_evening_0':
+        'EVENING: Say no to the first offer in a social setting, delay 3 minutes.',
+    'coachRiskDaypart_high_evening_1':
+        'SUPPORT: Send your support person a one-line message before your risk hour.',
+    'coachRiskDaypart_high_night_0':
+        'NIGHT: No smoking after this hour, apply the emergency crisis routine.',
+    'coachRiskDaypart_high_night_1':
+        'UNWIND: Close the day with 3 minutes of slow breathing + water.',
+    'coachRiskDaypart_medium_morning_0':
+        'MORNING: Delay your first cigarette by 45 minutes.',
+    'coachRiskDaypart_medium_morning_1':
+        'ROUTINE: Do a 2-minute breathing exercise before coffee.',
+    'coachRiskDaypart_medium_day_0':
+        'MIDDAY: Wait 10 minutes before each cigarette.',
     'coachRiskDaypart_medium_day_1': 'SKIP: Skip one cigarette this afternoon.',
-    'coachRiskDaypart_medium_evening_0': 'EVENING: Use gum/water as an alternative during your risk hour.',
-    'coachRiskDaypart_medium_evening_1': 'TRACK: Check your goal in the end-of-day count.',
-    'coachRiskDaypart_medium_night_0': 'NIGHT: Drink water after your last cigarette, don\'t smoke again.',
-    'coachRiskDaypart_medium_night_1': 'PLAN: Push tomorrow\'s first-cigarette time back by 15 minutes, starting now.',
-    'coachRiskDaypart_low_morning_0': 'MORNING: Delay your first cigarette by at least 25 minutes.',
-    'coachRiskDaypart_low_morning_1': 'PROTECT: Do a water + breathing routine to protect your breathing gains.',
-    'coachRiskDaypart_low_day_0': 'MIDDAY: Only decide at planned times, no automatic lighting up.',
-    'coachRiskDaypart_low_day_1': 'PROTECT: Take a 5-minute walk instead of a cigarette after midday.',
-    'coachRiskDaypart_low_evening_0': 'EVENING: Apply a 3-minute delay for social triggers.',
-    'coachRiskDaypart_low_evening_1': 'PROTECT: Write down what worked today in your end-of-day note.',
-    'coachRiskDaypart_low_night_0': 'NIGHT: Stop smoking after this hour, use breathing if a crisis hits.',
-    'coachRiskDaypart_low_night_1': 'PROTECT: Write down one measure for tomorrow\'s risk hour.',
+    'coachRiskDaypart_medium_evening_0':
+        'EVENING: Use gum/water as an alternative during your risk hour.',
+    'coachRiskDaypart_medium_evening_1':
+        'TRACK: Check your goal in the end-of-day count.',
+    'coachRiskDaypart_medium_night_0':
+        'NIGHT: Drink water after your last cigarette, don\'t smoke again.',
+    'coachRiskDaypart_medium_night_1':
+        'PLAN: Push tomorrow\'s first-cigarette time back by 15 minutes, starting now.',
+    'coachRiskDaypart_low_morning_0':
+        'MORNING: Delay your first cigarette by at least 25 minutes.',
+    'coachRiskDaypart_low_morning_1':
+        'PROTECT: Do a water + breathing routine to protect your breathing gains.',
+    'coachRiskDaypart_low_day_0':
+        'MIDDAY: Only decide at planned times, no automatic lighting up.',
+    'coachRiskDaypart_low_day_1':
+        'PROTECT: Take a 5-minute walk instead of a cigarette after midday.',
+    'coachRiskDaypart_low_evening_0':
+        'EVENING: Apply a 3-minute delay for social triggers.',
+    'coachRiskDaypart_low_evening_1':
+        'PROTECT: Write down what worked today in your end-of-day note.',
+    'coachRiskDaypart_low_night_0':
+        'NIGHT: Stop smoking after this hour, use breathing if a crisis hits.',
+    'coachRiskDaypart_low_night_1':
+        'PROTECT: Write down one measure for tomorrow\'s risk hour.',
     'taskNoteCraving': 'Take a note of the craving moment',
     'taskNotNowButton': 'Not now',
     'taskOutcomeNo': 'No',
     'taskOutcomeQuestion': 'Did you complete the task successfully?',
     'taskOutcomeYes': 'Yes',
     'taskPlanOneDayDelayAllCravings':
-      '1-day smoke-free task: delay cigarettes during all craving moments today.',
+        '1-day smoke-free task: delay cigarettes during all craving moments today.',
     'taskPlanOneDayDelayFirst90':
-      '1-day smoke-free task: delay first cigarette by at least 90 minutes.',
+        '1-day smoke-free task: delay first cigarette by at least 90 minutes.',
     'taskPlanOneWeekCompleteAll':
-      '1-week smoke-free goal: complete all tasks for 7 days.',
+        '1-week smoke-free goal: complete all tasks for 7 days.',
     'taskPlanTwoDaysBreathAndWater':
-      '2-day smoke-free plan: 10 deep breaths + water during cravings.',
+        '2-day smoke-free plan: 10 deep breaths + water during cravings.',
     'taskPlanTwoDaysDelayTriggers':
-      '2-day smoke-free task: delay smoking in triggers for 48 hours.',
+        '2-day smoke-free task: delay smoking in triggers for 48 hours.',
     'taskReasonCadence': 'Task cadence',
     'taskReasonCardTitle': 'Why this task?',
     'taskReasonCause': 'Reason',
@@ -3278,17 +3431,14 @@ class AppTexts {
     'twoCig': '2 cigarettes',
     'twoPack': '2 packs',
     'unnamedUser': 'Unnamed user',
-    'validationChainCountRequired':
-      'Please select consecutive smoking count.',
-    'validationChainHabitRequired':
-      'Please select consecutive smoking habit.',
+    'validationChainCountRequired': 'Please select consecutive smoking count.',
+    'validationChainHabitRequired': 'Please select consecutive smoking habit.',
     'validationFirstCigaretteRequired':
-      'Please select how soon after waking you smoke your first cigarette.',
-    'validationFixHighlightedFields':
-      'Please fix the highlighted fields.',
+        'Please select how soon after waking you smoke your first cigarette.',
+    'validationFixHighlightedFields': 'Please fix the highlighted fields.',
     'validationSleepTimeRequired': 'Please select sleep time.',
     'validationSmokeYearsRange':
-      'Smoking duration must be between 0 and 90 years.',
+        'Smoking duration must be between 0 and 90 years.',
     'validationWakeTimeRequired': 'Please select wake-up time.',
     'viewAllSurveys': 'View all surveys',
     'violationHigh': 'High',
@@ -3355,44 +3505,44 @@ class AppTexts {
     'taskFollowUpActionNo': 'No',
     'disciplineCommand': 'Do not smoke from this moment',
     'disciplineCommandBody':
-      'Protocol is active. Start the task to clear this alert.',
+        'Protocol is active. Start the task to clear this alert.',
     'breathReminderTitle': 'Breath Test',
     'breathReminderBody': 'Time for your daily breath test.',
     'breathReminderDriving': 'Reminder delayed briefly for driving safety.',
     'breathReminderWorkout':
-      'Reminder deferred until your activity cool-down window.',
+        'Reminder deferred until your activity cool-down window.',
     'breathReminderPostMeal':
-      'Use a post-meal breathing routine now to avoid smoking.',
+        'Use a post-meal breathing routine now to avoid smoking.',
     'taskFollowUpTitlePush': 'Task Follow-up',
     'taskFollowUpQuestion': 'Did you complete the task successfully?',
     'taskFollowUpQuestionDriving':
-      'Answer after driving: Did you complete the task successfully?',
+        'Answer after driving: Did you complete the task successfully?',
     'taskFollowUpQuestionWorkout':
-      'Answer after your activity: Did you complete the task successfully?',
+        'Answer after your activity: Did you complete the task successfully?',
     'taskFollowUpQuestionPostMeal':
-      'After the meal window, did you manage the urge without smoking?',
+        'After the meal window, did you manage the urge without smoking?',
     'postMealShieldCommand':
-      'After meal: delay 10 minutes, drink water, and use gum.',
+        'After meal: delay 10 minutes, drink water, and use gum.',
     'contextReasonDriving':
-      'Notification deferred due to driving/transport context',
+        'Notification deferred due to driving/transport context',
     'contextReasonWorkout':
-      'Notification deferred due to running/workout context',
+        'Notification deferred due to running/workout context',
     'contextReasonEating':
-      'Notification shifted to post-meal anti-smoking window',
+        'Notification shifted to post-meal anti-smoking window',
     'contextReasonNormal': 'Notification scheduled in normal mode',
     'taskEscalationTitle': 'Task updated',
     'taskEscalationBodyPrefix':
-      'No response in 15 seconds. Task will repeat after 10 minutes:',
+        'No response in 15 seconds. Task will repeat after 10 minutes:',
     'taskTimerStartedBody': 'Task started:',
     'taskTimerDuration': 'Timer',
     'minutesShort': 'minutes',
     'oneHourLabel': '1 hour',
     'postponeReminderPromptTitle': 'When should I remind you?',
     'postponeReminderPromptMessage':
-      'You are postponing the task. When would you like to be reminded again?',
+        'You are postponing the task. When would you like to be reminded again?',
     'sleepActivityAdvisoryTitle': 'Still awake?',
     'sleepActivityAdvisoryBody':
-      'We noticed you\'re awake during your sleep hours. You\'ve already completed today\'s tasks -- just remember to rest.',
+        'We noticed you\'re awake during your sleep hours. You\'ve already completed today\'s tasks -- just remember to rest.',
     'barrierStartedTitle': 'Duration barrier started',
     'barrierStartedBody': 'Smoke-free timer is running.',
     'barrierStartedDuration': 'Timer duration',
@@ -3400,35 +3550,35 @@ class AppTexts {
     'smokeFreeCounterRemaining': 'Remaining time',
     'weeklySurveyReminderTitle': 'Weekly survey due',
     'weeklySurveyReminderBody':
-      'Please complete the weekly survey to refresh your risk score.',
+        'Please complete the weekly survey to refresh your risk score.',
     'trialInfoTitle': '14-Day Free Trial',
     'trialInfoMessage':
-      'You can use Nikotin Away free for 14 days, including the AI Mentor and every other feature. A subscription is required to continue after that.',
+        'You can use Nikotin Away free for 14 days, including the AI Mentor and every other feature. A subscription is required to continue after that.',
     'subscriptionGateTitle': 'Your Trial Has Ended',
     'subscriptionGateMessage':
-      'Your 14-day free trial is over. Features like the AI Mentor, the task system, breath/cough tests, and location/sleep intelligence need a subscription; you can keep using the core features for free.',
+        'Your 14-day free trial is over. Features like the AI Mentor, the task system, breath/cough tests, and location/sleep intelligence need a subscription; you can keep using the core features for free.',
     'subscriptionMonthlyTitle': 'Monthly',
     'subscriptionYearlyTitle': 'Yearly',
     'subscriptionPurchaseButton': 'Subscribe',
     'subscriptionRestoreButton': 'Restore Purchase',
     'subscriptionContinueFreeButton': 'Continue for Free',
     'subscriptionNeedsConnection':
-      'An internet connection is needed to verify your subscription. This will retry automatically once connected.',
+        'An internet connection is needed to verify your subscription. This will retry automatically once connected.',
     'subscriptionRetryButton': 'Retry',
     'subscriptionPurchasePending': 'Processing...',
     'subscriptionPurchaseFailed': 'Purchase could not be completed, try again.',
     'subscriptionRestoreNotFound': 'No purchase was found to restore.',
     'subscriptionStoreUnavailable':
-      'The store is currently unavailable. Please try again later.',
+        'The store is currently unavailable. Please try again later.',
     'premiumUpsellTitle': 'Premium Feature',
     'premiumUpsellDismiss': 'Dismiss',
     'premiumUpsellUpgrade': 'Upgrade',
     'premiumUpsellAiMentor':
-      'The AI Mentor requires a subscription or trial period.',
+        'The AI Mentor requires a subscription or trial period.',
     'premiumUpsellBreathTests':
-      'Breath and cough tests require a subscription or trial period.',
+        'Breath and cough tests require a subscription or trial period.',
     'premiumUpsellLocationIntelligence':
-      'Location Intelligence requires a subscription or trial period.',
+        'Location Intelligence requires a subscription or trial period.',
     'savingsPageTitle': 'Savings',
     'savingsMoneySaved': 'Money saved',
     'savingsCigarettesNotSmoked': 'Cigarettes not smoked',
@@ -3449,53 +3599,60 @@ class AppTexts {
     'recoveryYear1Title': '1 year',
     'recoveryYear5Title': '5 years',
     'recoveryYear10Title': '10 years',
-    'recoveryMin20Desc': 'Heart rate and blood pressure start returning to normal.',
-    'recoveryHour12Desc': 'Carbon monoxide level in your blood drops to normal.',
+    'recoveryMin20Desc':
+        'Heart rate and blood pressure start returning to normal.',
+    'recoveryHour12Desc':
+        'Carbon monoxide level in your blood drops to normal.',
     'recoveryDay1Desc': 'Your risk of heart attack begins to decrease.',
     'recoveryDay2Desc': 'Your sense of taste and smell noticeably improves.',
     'recoveryDay3Desc': 'Breathing gets easier and energy levels rise.',
     'recoveryWeek2Desc': 'Circulation and lung function improve.',
-    'recoveryMonth1Desc': 'Coughing and shortness of breath noticeably decrease.',
+    'recoveryMonth1Desc':
+        'Coughing and shortness of breath noticeably decrease.',
     'recoveryMonth9Desc': 'Cilia in your lungs regain normal function.',
     'recoveryYear1Desc': 'Risk of coronary heart disease is cut in half.',
     'recoveryYear5Desc': 'Stroke risk approaches that of a non-smoker.',
-    'recoveryYear10Desc': 'Lung cancer death rate is about half that of a smoker.',
+    'recoveryYear10Desc':
+        'Lung cancer death rate is about half that of a smoker.',
 
     'mentorDailyCoachHourTemplate':
-      "You've really been doing well lately. Pay extra attention to {hour} today — you've got the rest handled.",
-    'mentorDailyCoachNoHour': "You've really been doing well lately. Let's keep this pace up.",
+        "You've really been doing well lately. Pay extra attention to {hour} today — you've got the rest handled.",
+    'mentorDailyCoachNoHour':
+        "You've really been doing well lately. Let's keep this pace up.",
     'mentorDailySupportive':
-      "The last few days haven't been easy for you, I can see that. Today doesn't need to be perfect — just focus on getting through the next moment.",
-    'mentorDailyNeutralHourTemplate': "How's today going? I'm with you during {hour}.",
+        "The last few days haven't been easy for you, I can see that. Today doesn't need to be perfect — just focus on getting through the next moment.",
+    'mentorDailyNeutralHourTemplate':
+        "How's today going? I'm with you during {hour}.",
     'mentorDailyNeutralNoHour': "How's today going? ",
     'mentorBreathImprovingNote':
-      "I noticed your recent breath tests are improving too — keep it up.",
+        "I noticed your recent breath tests are improving too — keep it up.",
     'mentorWeeklyCoachTemplate':
-      "You were really strong this week — you completed {count} tasks. Let's carry this momentum into next week.",
+        "You were really strong this week — you completed {count} tasks. Let's carry this momentum into next week.",
     'mentorWeeklySupportive':
-      "This week was tough, I know. The numbers don't matter right now — what matters is that you're still here.",
+        "This week was tough, I know. The numbers don't matter right now — what matters is that you're still here.",
     'mentorWeeklyNeutralTemplate':
-      "Your risk level this week: {level}. A detailed weekly survey can give us a clearer picture.",
+        "Your risk level this week: {level}. A detailed weekly survey can give us a clearer picture.",
     'mentorHistImprovedTemplate':
-      "You were struggling {daypart} last week — there's no record at all this week during that time, that's great.",
+        "You were struggling {daypart} last week — there's no record at all this week during that time, that's great.",
     'mentorHistWorseningTemplate':
-      "You were struggling {daypart} last week, and it looks similar this week. Should we make a plan together for that time?",
+        "You were struggling {daypart} last week, and it looks similar this week. Should we make a plan together for that time?",
     'mentorHistSimilarTemplate':
-      "You were struggling {daypart} last week, and you look a bit better this week.",
+        "You were struggling {daypart} last week, and you look a bit better this week.",
     'mentorDayPartMorning': 'in the mornings',
     'mentorDayPartAfternoon': 'in the afternoons',
     'mentorDayPartEvening': 'in the evenings',
     'mentorDayPartNight': 'at night',
     'mentorReframeSuspiciousWithTitleTemplate':
-      'Something seemed to go wrong just now (during "{title}"). Are you okay? We can take a short breathing break together if you want.',
+        'Something seemed to go wrong just now (during "{title}"). Are you okay? We can take a short breathing break together if you want.',
     'mentorReframeSuspiciousNoTitle':
-      'Something seemed to go wrong just now. Are you okay? We can take a short breathing break together if you want.',
+        'Something seemed to go wrong just now. Are you okay? We can take a short breathing break together if you want.',
     'mentorReframeWillpower':
-      "It didn't work out this time, that's okay — this isn't a failure, it's part of the process. We'll try again tomorrow.",
-    'mentorReframeDeferredStart': "I understand if now isn't a good time, I'll remind you again in 10 minutes.",
+        "It didn't work out this time, that's okay — this isn't a failure, it's part of the process. We'll try again tomorrow.",
+    'mentorReframeDeferredStart':
+        "I understand if now isn't a good time, I'll remind you again in 10 minutes.",
     'mentorReframeFollowupDeferred': "Okay, I'll ask again in a bit.",
     'mentorReframeDurationBarrier':
-      "I think this goal was a bit long for you. Let's start with a shorter duration next time — small steps are still progress.",
+        "I think this goal was a bit long for you. Let's start with a shorter duration next time — small steps are still progress.",
     'quickReplyOk': "I'm okay",
     'quickReplyStruggling': "I'm struggling",
     'quickReplyNoTalk': "I don't want to talk",
@@ -3517,7 +3674,7 @@ class AppTexts {
     'sleepRoutineStepIndicator': 'Step {current} of {total}',
     'sleepRoutineDiscrepancyQuestionTitle': 'How many cigarettes today?',
     'sleepRoutineDiscrepancyQuestionBody':
-      "We're missing {count} — did you forget to log any?",
+        "We're missing {count} — did you forget to log any?",
     'sleepRoutineDiscrepancyNoneButton': 'No, my log is correct',
     'sleepRoutineDiscrepancyConfirmButton': 'Save what I added',
     'sleepRoutineReportTitle': "Today's Progress",
@@ -4047,9 +4204,7 @@ class AppTexts {
     }
     if (minutes >= 24 * 60) {
       final days = (minutes / (24 * 60)).round();
-      return isTr
-          ? '$days gün'
-          : '$days day${days == 1 ? '' : 's'}';
+      return isTr ? '$days gün' : '$days day${days == 1 ? '' : 's'}';
     }
     if (minutes >= 60) {
       final hours = minutes ~/ 60;
@@ -4061,7 +4216,9 @@ class AppTexts {
           ? '$hours saat $remaining dakika'
           : '$hours hour${hours == 1 ? '' : 's'} $remaining minute${remaining == 1 ? '' : 's'}';
     }
-    return isTr ? '$minutes dakika' : '$minutes minute${minutes == 1 ? '' : 's'}';
+    return isTr
+        ? '$minutes dakika'
+        : '$minutes minute${minutes == 1 ? '' : 's'}';
   }
 
   /// Resolves a [MentorMessageBuilder]-produced canonical `text` value (a
@@ -4078,44 +4235,62 @@ class AppTexts {
 
   static String _localizeMentorSegment(String code, String segment) {
     final colonIndex = segment.indexOf(':');
-    final prefix = colonIndex == -1 ? segment : segment.substring(0, colonIndex);
+    final prefix = colonIndex == -1
+        ? segment
+        : segment.substring(0, colonIndex);
     final param = colonIndex == -1 ? null : segment.substring(colonIndex + 1);
 
     switch (prefix) {
       case MentorMessageCodes.dailyCoachWithHour:
-        return textForCode(code, 'mentorDailyCoachHourTemplate')
-            .replaceAll('{hour}', param ?? '');
+        return textForCode(
+          code,
+          'mentorDailyCoachHourTemplate',
+        ).replaceAll('{hour}', param ?? '');
       case MentorMessageCodes.dailyCoachNoHour:
         return textForCode(code, 'mentorDailyCoachNoHour');
       case MentorMessageCodes.dailySupportive:
         return textForCode(code, 'mentorDailySupportive');
       case MentorMessageCodes.dailyNeutralWithHour:
-        return textForCode(code, 'mentorDailyNeutralHourTemplate')
-            .replaceAll('{hour}', param ?? '');
+        return textForCode(
+          code,
+          'mentorDailyNeutralHourTemplate',
+        ).replaceAll('{hour}', param ?? '');
       case MentorMessageCodes.dailyNeutralNoHour:
         return textForCode(code, 'mentorDailyNeutralNoHour');
       case MentorMessageCodes.breathImprovingNote:
         return textForCode(code, 'mentorBreathImprovingNote');
       case MentorMessageCodes.weeklyCoachPrefix:
-        return textForCode(code, 'mentorWeeklyCoachTemplate')
-            .replaceAll('{count}', param ?? '');
+        return textForCode(
+          code,
+          'mentorWeeklyCoachTemplate',
+        ).replaceAll('{count}', param ?? '');
       case MentorMessageCodes.weeklySupportive:
         return textForCode(code, 'mentorWeeklySupportive');
       case MentorMessageCodes.weeklyNeutralPrefix:
-        return textForCode(code, 'mentorWeeklyNeutralTemplate')
-            .replaceAll('{level}', localizeCanonicalTextForCode(code, param ?? ''));
+        return textForCode(code, 'mentorWeeklyNeutralTemplate').replaceAll(
+          '{level}',
+          localizeCanonicalTextForCode(code, param ?? ''),
+        );
       case MentorMessageCodes.histImprovedPrefix:
-        return textForCode(code, 'mentorHistImprovedTemplate')
-            .replaceAll('{daypart}', _dayPartLabel(code, param));
+        return textForCode(
+          code,
+          'mentorHistImprovedTemplate',
+        ).replaceAll('{daypart}', _dayPartLabel(code, param));
       case MentorMessageCodes.histWorseningPrefix:
-        return textForCode(code, 'mentorHistWorseningTemplate')
-            .replaceAll('{daypart}', _dayPartLabel(code, param));
+        return textForCode(
+          code,
+          'mentorHistWorseningTemplate',
+        ).replaceAll('{daypart}', _dayPartLabel(code, param));
       case MentorMessageCodes.histSimilarPrefix:
-        return textForCode(code, 'mentorHistSimilarTemplate')
-            .replaceAll('{daypart}', _dayPartLabel(code, param));
+        return textForCode(
+          code,
+          'mentorHistSimilarTemplate',
+        ).replaceAll('{daypart}', _dayPartLabel(code, param));
       case MentorMessageCodes.reframeSuspiciousWithTitle:
-        return textForCode(code, 'mentorReframeSuspiciousWithTitleTemplate')
-            .replaceAll('{title}', param ?? '');
+        return textForCode(
+          code,
+          'mentorReframeSuspiciousWithTitleTemplate',
+        ).replaceAll('{title}', param ?? '');
       case MentorMessageCodes.reframeSuspiciousNoTitle:
         return textForCode(code, 'mentorReframeSuspiciousNoTitle');
       case MentorMessageCodes.reframeWillpower:
@@ -4217,7 +4392,8 @@ class AppTexts {
       r'^RISKDAYPART_(HIGH|MEDIUM|LOW)_(MORNING|DAY|EVENING|NIGHT)_(0|1)$',
     ).firstMatch(normalized);
     if (riskDaypart != null) {
-      final key = 'coachRiskDaypart_'
+      final key =
+          'coachRiskDaypart_'
           '${riskDaypart.group(1)!.toLowerCase()}_'
           '${riskDaypart.group(2)!.toLowerCase()}_'
           '${riskDaypart.group(3)}';
@@ -4236,17 +4412,13 @@ class AppTexts {
           .replaceAll('{window}', window);
     }
 
-    final prepWindow = RegExp(
-      r'^PREP_WINDOW:(.+)$',
-    ).firstMatch(normalized);
+    final prepWindow = RegExp(r'^PREP_WINDOW:(.+)$').firstMatch(normalized);
     if (prepWindow != null) {
       final template = textForCode(code, 'coachPrepWindowTemplate');
       return template.replaceAll('{window}', prepWindow.group(1)!);
     }
 
-    final triggerDelay = RegExp(
-      r'^TRIGGER_DELAY:(.+)$',
-    ).firstMatch(normalized);
+    final triggerDelay = RegExp(r'^TRIGGER_DELAY:(.+)$').firstMatch(normalized);
     if (triggerDelay != null) {
       final localizedTrigger = localizeCanonicalTextForCode(
         code,
@@ -4272,17 +4444,13 @@ class AppTexts {
       return template.replaceAll('{percent}', weeklyTarget.group(1)!);
     }
 
-    final hintWindow = RegExp(
-      r'^HINT_WINDOW:(.+)$',
-    ).firstMatch(normalized);
+    final hintWindow = RegExp(r'^HINT_WINDOW:(.+)$').firstMatch(normalized);
     if (hintWindow != null) {
       final template = textForCode(code, 'coachHintWindowTemplate');
       return template.replaceAll('{window}', hintWindow.group(1)!);
     }
 
-    final hintTrigger = RegExp(
-      r'^HINT_TRIGGER:(.+)$',
-    ).firstMatch(normalized);
+    final hintTrigger = RegExp(r'^HINT_TRIGGER:(.+)$').firstMatch(normalized);
     if (hintTrigger != null) {
       final localizedTrigger = localizeCanonicalTextForCode(
         code,

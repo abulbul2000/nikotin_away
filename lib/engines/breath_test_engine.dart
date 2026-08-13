@@ -112,8 +112,12 @@ class BreathTestEngine {
     final scores = sorted.map((item) => item.breathScore).toList();
     final average = scores.reduce((a, b) => a + b) / scores.length;
 
-    final trend3 = _trendLabel(scores.length >= 3 ? scores.sublist(scores.length - 3) : scores);
-    final trend7 = _trendLabel(scores.length >= 7 ? scores.sublist(scores.length - 7) : scores);
+    final trend3 = _trendLabel(
+      scores.length >= 3 ? scores.sublist(scores.length - 3) : scores,
+    );
+    final trend7 = _trendLabel(
+      scores.length >= 7 ? scores.sublist(scores.length - 7) : scores,
+    );
 
     var adjustment = 0;
     if (_isStrictlyImproving(scores, count: 5)) {
@@ -198,7 +202,8 @@ class BreathTestEngine {
       return 0.0;
     }
 
-    final variance = attempts
+    final variance =
+        attempts
             .map((value) => pow(value - mean, 2).toDouble())
             .reduce((a, b) => a + b) /
         attempts.length;

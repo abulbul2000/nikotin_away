@@ -134,11 +134,14 @@ class _BreathAnalysisPageState extends State<BreathAnalysisPage> {
     );
   }
 
-  Widget _buildSummaryCards(BuildContext context, BreathProgressSummary summary) {
+  Widget _buildSummaryCards(
+    BuildContext context,
+    BreathProgressSummary summary,
+  ) {
     final progressLabel = summary.scoreChangeFirstWeekVsLastWeekPercent == null
         ? '-'
         : '${summary.scoreChangeFirstWeekVsLastWeekPercent! >= 0 ? '+' : ''}'
-            '${summary.scoreChangeFirstWeekVsLastWeekPercent!.toStringAsFixed(0)}%';
+              '${summary.scoreChangeFirstWeekVsLastWeekPercent!.toStringAsFixed(0)}%';
 
     return Column(
       children: [
@@ -218,7 +221,10 @@ class _BreathAnalysisPageState extends State<BreathAnalysisPage> {
     );
   }
 
-  Widget _buildScoreChartCard(BuildContext context, BreathProgressSummary summary) {
+  Widget _buildScoreChartCard(
+    BuildContext context,
+    BreathProgressSummary summary,
+  ) {
     // Last 30 days of chart points — the model already carries the whole
     // history, chart just windows it for readability.
     final points = summary.chartPoints.length <= 30
@@ -275,7 +281,10 @@ class _BreathAnalysisPageState extends State<BreathAnalysisPage> {
     );
   }
 
-  Widget _buildWeeklyBarChartCard(BuildContext context, BreathProgressSummary summary) {
+  Widget _buildWeeklyBarChartCard(
+    BuildContext context,
+    BreathProgressSummary summary,
+  ) {
     final weeklyAverages = _weeklyAverages(summary.chartPoints);
 
     return Card(
@@ -318,12 +327,10 @@ class _BreathAnalysisPageState extends State<BreathAnalysisPage> {
     }
 
     final weeks = byWeek.keys.toList()..sort();
-    final averages = weeks
-        .map((week) {
-          final scores = byWeek[week]!;
-          return scores.reduce((a, b) => a + b) / scores.length;
-        })
-        .toList();
+    final averages = weeks.map((week) {
+      final scores = byWeek[week]!;
+      return scores.reduce((a, b) => a + b) / scores.length;
+    }).toList();
 
     return averages.length <= 8
         ? averages
@@ -352,7 +359,8 @@ class _BreathAnalysisPageState extends State<BreathAnalysisPage> {
                 childAspectRatio: 0.85,
               ),
               itemCount: badges.length,
-              itemBuilder: (context, index) => _BreathBadgeTile(badge: badges[index]),
+              itemBuilder: (context, index) =>
+                  _BreathBadgeTile(badge: badges[index]),
             ),
           ],
         ),
@@ -430,8 +438,12 @@ class _ScoreLineChart extends StatelessWidget {
         gridData: const FlGridData(show: true, drawVerticalLine: false),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -514,8 +526,12 @@ class _WeeklyBarChart extends StatelessWidget {
         gridData: const FlGridData(show: true, drawVerticalLine: false),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,

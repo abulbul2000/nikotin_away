@@ -168,7 +168,8 @@ class LocationIntelligenceService {
     if (!await isEnabled()) {
       return;
     }
-    final resolvedPlaces = places ?? await _storageService.loadSignificantPlaces();
+    final resolvedPlaces =
+        places ?? await _storageService.loadSignificantPlaces();
     final hasBackground = await hasBackgroundPermission();
     if (!hasBackground || resolvedPlaces.isEmpty) {
       await GeofencingService.clearGeofences();
@@ -180,8 +181,7 @@ class LocationIntelligenceService {
         await _storageService.loadSetting('location_notification_title') ??
         AppTexts.textForCode(code, 'appName');
     final body =
-        await _storageService.loadSetting('location_notification_body') ??
-        '';
+        await _storageService.loadSetting('location_notification_body') ?? '';
     await GeofencingService.registerGeofences(
       places: resolvedPlaces,
       notificationTitle: title,

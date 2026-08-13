@@ -76,8 +76,7 @@ void main() {
       expect(feedback.messageKey, isNot('breathFeedbackBetterThanBefore'));
     });
 
-    test('a score drop from the previous attempt never claims improvement',
-        () {
+    test('a score drop from the previous attempt never claims improvement', () {
       final feedback = engine.buildFeedback(
         blowDurationSeconds: 10,
         blowStability: 0.9,

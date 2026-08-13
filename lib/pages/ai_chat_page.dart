@@ -122,9 +122,9 @@ class _AIChatPageState extends State<AIChatPage> {
       );
     } on AiAuthRequiredException {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('aiChatAuthNotReady'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('aiChatAuthNotReady'))));
     } on AiServiceException {
       if (!mounted) return;
       ScaffoldMessenger.of(

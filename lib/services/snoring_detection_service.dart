@@ -18,9 +18,7 @@ class SnoringDetectionService {
     : _storageService = storageService ?? StorageService();
 
   Future<bool> isEnabled() async {
-    return (await _storageService.loadSetting(
-          'snoring_detection_enabled',
-        )) ==
+    return (await _storageService.loadSetting('snoring_detection_enabled')) ==
         '1';
   }
 

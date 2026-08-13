@@ -97,7 +97,14 @@ class LanguageService {
   };
 
   // Primary 6 dilleri (ilk seçenekler)
-  static const List<String> primaryLanguages = ['tr', 'en', 'de', 'ar', 'fr', 'es'];
+  static const List<String> primaryLanguages = [
+    'tr',
+    'en',
+    'de',
+    'ar',
+    'fr',
+    'es',
+  ];
 
   static Future<String> loadSelectedLanguageCode() async {
     final prefs = await SharedPreferences.getInstance();
@@ -143,8 +150,8 @@ class LanguageService {
     }
 
     // Geriye dönük uyumluluk: locales listesi boşsa tekil locale'e bak.
-    final fallbackCode =
-        PlatformDispatcher.instance.locale.languageCode.toLowerCase();
+    final fallbackCode = PlatformDispatcher.instance.locale.languageCode
+        .toLowerCase();
     if (supportedLanguages.containsKey(fallbackCode)) {
       return fallbackCode;
     }

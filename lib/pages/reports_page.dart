@@ -155,9 +155,7 @@ class _ReportsPageState extends State<ReportsPage> {
             ),
           ),
           if (_loading || report == null)
-            const Expanded(
-              child: Center(child: CircularProgressIndicator()),
-            )
+            const Expanded(child: Center(child: CircularProgressIndicator()))
           else
             Expanded(
               child: ListView(
@@ -276,10 +274,7 @@ class _ReportRow extends StatelessWidget {
             ),
             Text(
               value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
           ],
         ),

@@ -55,14 +55,18 @@ class _ProtocolViolationsPageState extends State<ProtocolViolationsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final highCount = _rows.where((e) => e.severity.toLowerCase() == 'high').length;
-    final mediumCount = _rows.where((e) => e.severity.toLowerCase() == 'medium').length;
-    final lowCount = _rows.where((e) => e.severity.toLowerCase() == 'low').length;
+    final highCount = _rows
+        .where((e) => e.severity.toLowerCase() == 'high')
+        .length;
+    final mediumCount = _rows
+        .where((e) => e.severity.toLowerCase() == 'medium')
+        .length;
+    final lowCount = _rows
+        .where((e) => e.severity.toLowerCase() == 'low')
+        .length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(context.t('violationReportTitle')),
-      ),
+      appBar: AppBar(title: Text(context.t('violationReportTitle'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Column(
@@ -128,18 +132,28 @@ class _ProtocolViolationsPageState extends State<ProtocolViolationsPage> {
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: _severityColor(row.severity).withValues(alpha: 0.18),
-                                            borderRadius: BorderRadius.circular(10),
+                                            color: _severityColor(
+                                              row.severity,
+                                            ).withValues(alpha: 0.18),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
                                           ),
-                                          child: Text(row.severity.toUpperCase()),
+                                          child: Text(
+                                            row.severity.toUpperCase(),
+                                          ),
                                         ),
                                       ],
                                     ),
                                     const SizedBox(height: 6),
                                     if ((row.taskTitle ?? '').trim().isNotEmpty)
-                                      Text('${context.t('violationTask')}: ${row.taskTitle}'),
+                                      Text(
+                                        '${context.t('violationTask')}: ${row.taskTitle}',
+                                      ),
                                     const SizedBox(height: 4),
-                                    Text('${context.t('violationSource')}: ${row.source}'),
+                                    Text(
+                                      '${context.t('violationSource')}: ${row.source}',
+                                    ),
                                     const SizedBox(height: 4),
                                     Text(row.details),
                                     const SizedBox(height: 4),

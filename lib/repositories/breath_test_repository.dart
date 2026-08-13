@@ -5,7 +5,7 @@ class BreathTestRepository {
   final StorageService _storageService;
 
   BreathTestRepository({StorageService? storageService})
-      : _storageService = storageService ?? StorageService();
+    : _storageService = storageService ?? StorageService();
 
   Future<void> save(BreathTestResult result) {
     return _storageService.saveBreathTestResult(result);

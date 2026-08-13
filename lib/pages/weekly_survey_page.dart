@@ -762,8 +762,8 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     required Map<String, dynamic> evaluation,
   }) async {
     final previous = _previousWeeklyScore;
-    final riskyHours = (await _storageService.loadBehaviorDashboard())
-        .riskyHours;
+    final riskyHours =
+        (await _storageService.loadBehaviorDashboard()).riskyHours;
     final barrierMinutes = await _storageService.loadCurrentBarrierMinutes();
     if (!mounted || !context.mounted) return;
 
@@ -883,7 +883,6 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
   void dispose() {
     super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -1051,14 +1050,65 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
               const SizedBox(height: 10),
               _buildRespiratoryCard(),
               const SizedBox(height: 12),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: _lunchTime,
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyLunchTime'),
+                  border: OutlineInputBorder(),
+                ),
+                items: _timeOptions()
+                    .map(
+                      (time) => DropdownMenuItem<String>(
+                        value: time,
+                        child: Text(time),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) =>
+                    setState(() => _lunchTime = value ?? '12:30'),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                isExpanded: true,
+                initialValue: _dinnerTime,
+                decoration: InputDecoration(
+                  labelText: context.t('weeklyDinnerTime'),
+                  border: OutlineInputBorder(),
+                ),
+                items: _timeOptions()
+                    .map(
+                      (time) => DropdownMenuItem<String>(
+                        value: time,
+                        child: Text(time),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) =>
+                    setState(() => _dinnerTime = value ?? '19:00'),
+              ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(context.t('weeklyProfileChanged')),
+                value: _profileContextChanged,
+                onChanged: (value) {
+                  setState(() {
+                    _profileContextChanged = value;
+                  });
+                },
+              ),
+              if (_profileContextChanged) ...[
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   isExpanded: true,
-                  initialValue: _lunchTime,
+                  initialValue: _updatedWorkStart,
                   decoration: InputDecoration(
-                    labelText: context.t('weeklyLunchTime'),
-                    border: OutlineInputBorder(),
+                    labelText: context.t('updatedWorkStart'),
+                    border: const OutlineInputBorder(),
                   ),
+                  hint: Text(context.t('selectOption')),
                   items: _timeOptions()
                       .map(
                         (time) => DropdownMenuItem<String>(
@@ -1068,16 +1118,17 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                       )
                       .toList(),
                   onChanged: (value) =>
-                      setState(() => _lunchTime = value ?? '12:30'),
+                      setState(() => _updatedWorkStart = value),
                 ),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   isExpanded: true,
-                  initialValue: _dinnerTime,
+                  initialValue: _updatedWorkEnd,
                   decoration: InputDecoration(
-                    labelText: context.t('weeklyDinnerTime'),
-                    border: OutlineInputBorder(),
+                    labelText: context.t('updatedWorkEnd'),
+                    border: const OutlineInputBorder(),
                   ),
+                  hint: Text(context.t('selectOption')),
                   items: _timeOptions()
                       .map(
                         (time) => DropdownMenuItem<String>(
@@ -1086,175 +1137,176 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                         ),
                       )
                       .toList(),
-                  onChanged: (value) =>
-                      setState(() => _dinnerTime = value ?? '19:00'),
+                  onChanged: (value) => setState(() => _updatedWorkEnd = value),
                 ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(context.t('weeklyProfileChanged')),
-                  value: _profileContextChanged,
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: _updatedWorkplaceSmokingRule,
+                  decoration: InputDecoration(
+                    labelText: context.t('updatedWorkplaceRule'),
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'Evet',
+                      child: Text(context.t('yes')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Hayır',
+                      child: Text(context.t('no')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Sadece molalarda',
+                      child: Text(context.t('onlyBreaks')),
+                    ),
+                  ],
                   onChanged: (value) {
                     setState(() {
-                      _profileContextChanged = value;
+                      _updatedWorkplaceSmokingRule = value ?? 'Hayır';
+                      if (_updatedWorkplaceSmokingRule == 'Hayır') {
+                        _updatedHasSmokingBreaks = false;
+                      }
                     });
                   },
                 ),
-                if (_profileContextChanged) ...[
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: _updatedWorkStart,
-                    decoration: InputDecoration(
-                      labelText: context.t('updatedWorkStart'),
-                      border: const OutlineInputBorder(),
-                    ),
-                    hint: Text(context.t('selectOption')),
-                    items: _timeOptions()
-                        .map(
-                          (time) => DropdownMenuItem<String>(
-                            value: time,
-                            child: Text(time),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setState(() => _updatedWorkStart = value),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    context.t('workDaysLabel'),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: _updatedWorkEnd,
-                    decoration: InputDecoration(
-                      labelText: context.t('updatedWorkEnd'),
-                      border: const OutlineInputBorder(),
-                    ),
-                    hint: Text(context.t('selectOption')),
-                    items: _timeOptions()
-                        .map(
-                          (time) => DropdownMenuItem<String>(
-                            value: time,
-                            child: Text(time),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) =>
-                        setState(() => _updatedWorkEnd = value),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _workDayOptions.map((day) {
+                    final key = day['key']!;
+                    return FilterChip(
+                      label: Text(context.t(day['labelKey']!)),
+                      selected: _updatedWorkingDays.contains(key),
+                      onSelected: (value) {
+                        setState(() {
+                          if (value) {
+                            _updatedWorkingDays.add(key);
+                          } else {
+                            _updatedWorkingDays.remove(key);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: _updatedWeekendSmokingPattern,
+                  decoration: InputDecoration(
+                    labelText: context.t('weekendPatternLabel'),
+                    border: const OutlineInputBorder(),
                   ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    isExpanded: true,
-                    initialValue: _updatedWorkplaceSmokingRule,
-                    decoration: InputDecoration(
-                      labelText: context.t('updatedWorkplaceRule'),
-                      border: const OutlineInputBorder(),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'Ayni',
+                      child: Text(context.t('weekendPatternSame')),
                     ),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'Evet',
-                        child: Text(context.t('yes')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Hayır',
-                        child: Text(context.t('no')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'Sadece molalarda',
-                        child: Text(context.t('onlyBreaks')),
-                      ),
-                    ],
+                    DropdownMenuItem(
+                      value: 'HaftaSonuDahaFazla',
+                      child: Text(context.t('weekendPatternMore')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'HaftaSonuDahaAz',
+                      child: Text(context.t('weekendPatternLess')),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _updatedWeekendSmokingPattern = value ?? 'Ayni';
+                    });
+                  },
+                ),
+                const SizedBox(height: 8),
+                if (_updatedWorkplaceSmokingRule != 'Hayır')
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(context.t('smokingBreakExists')),
+                    value: _updatedHasSmokingBreaks,
                     onChanged: (value) {
                       setState(() {
-                        _updatedWorkplaceSmokingRule = value ?? 'Hayır';
-                        if (_updatedWorkplaceSmokingRule == 'Hayır') {
-                          _updatedHasSmokingBreaks = false;
+                        _updatedHasSmokingBreaks = value;
+                        if (!value) {
+                          _updatedHasSecondBreak = false;
+                          _updatedBreakStart1 = null;
+                          _updatedBreakEnd1 = null;
+                          _updatedBreakStart2 = null;
+                          _updatedBreakEnd2 = null;
                         }
                       });
                     },
                   ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text(
-                      context.t('workDaysLabel'),
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                if (_updatedWorkplaceSmokingRule != 'Hayır' &&
+                    _updatedHasSmokingBreaks) ...[
+                  DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    initialValue: _updatedBreakStart1,
+                    decoration: InputDecoration(
+                      labelText: context.t('break1Start'),
+                      border: const OutlineInputBorder(),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _workDayOptions.map((day) {
-                      final key = day['key']!;
-                      return FilterChip(
-                        label: Text(context.t(day['labelKey']!)),
-                        selected: _updatedWorkingDays.contains(key),
-                        onSelected: (value) {
-                          setState(() {
-                            if (value) {
-                              _updatedWorkingDays.add(key);
-                            } else {
-                              _updatedWorkingDays.remove(key);
-                            }
-                          });
-                        },
-                      );
-                    }).toList(),
+                    hint: Text(context.t('selectOption')),
+                    items: _timeOptions()
+                        .map(
+                          (time) => DropdownMenuItem<String>(
+                            value: time,
+                            child: Text(time),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _updatedBreakStart1 = value),
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     isExpanded: true,
-                    initialValue: _updatedWeekendSmokingPattern,
+                    initialValue: _updatedBreakEnd1,
                     decoration: InputDecoration(
-                      labelText: context.t('weekendPatternLabel'),
+                      labelText: context.t('break1End'),
                       border: const OutlineInputBorder(),
                     ),
-                    items: [
-                      DropdownMenuItem(
-                        value: 'Ayni',
-                        child: Text(context.t('weekendPatternSame')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'HaftaSonuDahaFazla',
-                        child: Text(context.t('weekendPatternMore')),
-                      ),
-                      DropdownMenuItem(
-                        value: 'HaftaSonuDahaAz',
-                        child: Text(context.t('weekendPatternLess')),
-                      ),
-                    ],
+                    hint: Text(context.t('selectOption')),
+                    items: _timeOptions()
+                        .map(
+                          (time) => DropdownMenuItem<String>(
+                            value: time,
+                            child: Text(time),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) =>
+                        setState(() => _updatedBreakEnd1 = value),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(context.t('break2Exists')),
+                    value: _updatedHasSecondBreak,
                     onChanged: (value) {
                       setState(() {
-                        _updatedWeekendSmokingPattern = value ?? 'Ayni';
+                        _updatedHasSecondBreak = value;
+                        if (!value) {
+                          _updatedBreakStart2 = null;
+                          _updatedBreakEnd2 = null;
+                        }
                       });
                     },
                   ),
-                  const SizedBox(height: 8),
-                  if (_updatedWorkplaceSmokingRule != 'Hayır')
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(context.t('smokingBreakExists')),
-                      value: _updatedHasSmokingBreaks,
-                      onChanged: (value) {
-                        setState(() {
-                          _updatedHasSmokingBreaks = value;
-                          if (!value) {
-                            _updatedHasSecondBreak = false;
-                            _updatedBreakStart1 = null;
-                            _updatedBreakEnd1 = null;
-                            _updatedBreakStart2 = null;
-                            _updatedBreakEnd2 = null;
-                          }
-                        });
-                      },
-                    ),
-                  if (_updatedWorkplaceSmokingRule != 'Hayır' &&
-                      _updatedHasSmokingBreaks) ...[
+                  if (_updatedHasSecondBreak) ...[
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      initialValue: _updatedBreakStart1,
+                      initialValue: _updatedBreakStart2,
                       decoration: InputDecoration(
-                        labelText: context.t('break1Start'),
+                        labelText: context.t('break2Start'),
                         border: const OutlineInputBorder(),
                       ),
                       hint: Text(context.t('selectOption')),
@@ -1267,14 +1319,14 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                           )
                           .toList(),
                       onChanged: (value) =>
-                          setState(() => _updatedBreakStart1 = value),
+                          setState(() => _updatedBreakStart2 = value),
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       isExpanded: true,
-                      initialValue: _updatedBreakEnd1,
+                      initialValue: _updatedBreakEnd2,
                       decoration: InputDecoration(
-                        labelText: context.t('break1End'),
+                        labelText: context.t('break2End'),
                         border: const OutlineInputBorder(),
                       ),
                       hint: Text(context.t('selectOption')),
@@ -1287,65 +1339,11 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                           )
                           .toList(),
                       onChanged: (value) =>
-                          setState(() => _updatedBreakEnd1 = value),
+                          setState(() => _updatedBreakEnd2 = value),
                     ),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(context.t('break2Exists')),
-                      value: _updatedHasSecondBreak,
-                      onChanged: (value) {
-                        setState(() {
-                          _updatedHasSecondBreak = value;
-                          if (!value) {
-                            _updatedBreakStart2 = null;
-                            _updatedBreakEnd2 = null;
-                          }
-                        });
-                      },
-                    ),
-                    if (_updatedHasSecondBreak) ...[
-                      DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        initialValue: _updatedBreakStart2,
-                        decoration: InputDecoration(
-                          labelText: context.t('break2Start'),
-                          border: const OutlineInputBorder(),
-                        ),
-                        hint: Text(context.t('selectOption')),
-                        items: _timeOptions()
-                            .map(
-                              (time) => DropdownMenuItem<String>(
-                                value: time,
-                                child: Text(time),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) =>
-                            setState(() => _updatedBreakStart2 = value),
-                      ),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        isExpanded: true,
-                        initialValue: _updatedBreakEnd2,
-                        decoration: InputDecoration(
-                          labelText: context.t('break2End'),
-                          border: const OutlineInputBorder(),
-                        ),
-                        hint: Text(context.t('selectOption')),
-                        items: _timeOptions()
-                            .map(
-                              (time) => DropdownMenuItem<String>(
-                                value: time,
-                                child: Text(time),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) =>
-                            setState(() => _updatedBreakEnd2 = value),
-                      ),
-                    ],
                   ],
                 ],
+              ],
               SurveySectionHeader(
                 title: context.t('durationBarrierTitle'),
                 icon: Icons.timer_outlined,
@@ -1433,9 +1431,10 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () async {
-                    final hasCoughTest = await _storageService.hasCoughTestSince(
-                      DateTime.now().subtract(const Duration(days: 7)),
-                    );
+                    final hasCoughTest = await _storageService
+                        .hasCoughTestSince(
+                          DateTime.now().subtract(const Duration(days: 7)),
+                        );
                     if (!hasCoughTest) {
                       if (!mounted || !context.mounted) return;
                       final wantsToTest = await showDialog<bool>(
@@ -1474,9 +1473,10 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                         ),
                       );
                       if (!mounted || !context.mounted) return;
-                      final nowHasTest = await _storageService.hasCoughTestSince(
-                        DateTime.now().subtract(const Duration(days: 7)),
-                      );
+                      final nowHasTest = await _storageService
+                          .hasCoughTestSince(
+                            DateTime.now().subtract(const Duration(days: 7)),
+                          );
                       if (!nowHasTest) {
                         // User backed out of the test without completing
                         // it — don't save the survey out from under them.

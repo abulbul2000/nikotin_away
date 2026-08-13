@@ -61,7 +61,10 @@ void main() {
   group('WheezeDetectionEngine.pushChunk windowing', () {
     test('returns null until a full window has accumulated', () {
       final engine = WheezeDetectionEngine();
-      final halfWindow = _sineChunk(400, WheezeDetectionEngine.windowSizeSamples ~/ 2);
+      final halfWindow = _sineChunk(
+        400,
+        WheezeDetectionEngine.windowSizeSamples ~/ 2,
+      );
       expect(engine.pushChunk(halfWindow, 0), isNull);
     });
 
@@ -69,7 +72,10 @@ void main() {
       final engine = WheezeDetectionEngine();
       // Feed odd-sized chunks (not a multiple of the window) and confirm
       // windows still complete correctly across call boundaries.
-      final fullSignal = _sineChunk(400, WheezeDetectionEngine.windowSizeSamples * 3);
+      final fullSignal = _sineChunk(
+        400,
+        WheezeDetectionEngine.windowSizeSamples * 3,
+      );
       var offset = 0;
       var produced = 0;
       const oddChunkSamples = 333;
@@ -144,25 +150,30 @@ void main() {
       expect(analysis.severityLevel, 'none');
     });
 
-    test('a single short in-band burst below the debounce floor is not a wheeze', () {
-      final engine = WheezeDetectionEngine();
-      // Fewer windows than minConsecutiveWindowsForWheeze — should not
-      // register as a sustained wheeze, matching the app's cough-vs-wheeze
-      // separation (a cough burst is short; a wheeze must persist).
-      final shortBurst = _sineChunk(
-        400,
-        WheezeDetectionEngine.windowSizeSamples *
-            (WheezeDetectionEngine.minConsecutiveWindowsForWheeze - 1),
-      );
-      final silenceAfter = _silenceChunk(WheezeDetectionEngine.windowSizeSamples * 4);
-      final samples = [
-        ..._pushAllWindows(engine, shortBurst),
-        ..._pushAllWindows(engine, silenceAfter),
-      ];
-      final analysis = engine.analyze(samples);
+    test(
+      'a single short in-band burst below the debounce floor is not a wheeze',
+      () {
+        final engine = WheezeDetectionEngine();
+        // Fewer windows than minConsecutiveWindowsForWheeze — should not
+        // register as a sustained wheeze, matching the app's cough-vs-wheeze
+        // separation (a cough burst is short; a wheeze must persist).
+        final shortBurst = _sineChunk(
+          400,
+          WheezeDetectionEngine.windowSizeSamples *
+              (WheezeDetectionEngine.minConsecutiveWindowsForWheeze - 1),
+        );
+        final silenceAfter = _silenceChunk(
+          WheezeDetectionEngine.windowSizeSamples * 4,
+        );
+        final samples = [
+          ..._pushAllWindows(engine, shortBurst),
+          ..._pushAllWindows(engine, silenceAfter),
+        ];
+        final analysis = engine.analyze(samples);
 
-      expect(analysis.wheezeDetected, isFalse);
-    });
+        expect(analysis.wheezeDetected, isFalse);
+      },
+    );
 
     test('empty sample list returns WheezeAnalysis.none', () {
       final engine = WheezeDetectionEngine();
@@ -174,51 +185,60 @@ void main() {
   });
 
   group('WheezeDetectionEngine severity thresholds', () {
-    test('a longer, purer tone scores at least as high as a short, weak one', () {
-      final shortEngine = WheezeDetectionEngine();
-      final shortChunk = _sineChunk(
-        400,
-        WheezeDetectionEngine.windowSizeSamples *
-            WheezeDetectionEngine.minConsecutiveWindowsForWheeze,
-        amplitude: 0.4,
-      );
-      final shortAnalysis = shortEngine.analyze(
-        _pushAllWindows(shortEngine, shortChunk),
-      );
+    test(
+      'a longer, purer tone scores at least as high as a short, weak one',
+      () {
+        final shortEngine = WheezeDetectionEngine();
+        final shortChunk = _sineChunk(
+          400,
+          WheezeDetectionEngine.windowSizeSamples *
+              WheezeDetectionEngine.minConsecutiveWindowsForWheeze,
+          amplitude: 0.4,
+        );
+        final shortAnalysis = shortEngine.analyze(
+          _pushAllWindows(shortEngine, shortChunk),
+        );
 
-      final longEngine = WheezeDetectionEngine();
-      final longChunk = _sineChunk(
-        400,
-        WheezeDetectionEngine.windowSizeSamples *
-            (WheezeDetectionEngine.minConsecutiveWindowsForWheeze * 6),
-        amplitude: 0.9,
-      );
-      final longAnalysis = longEngine.analyze(
-        _pushAllWindows(longEngine, longChunk),
-      );
+        final longEngine = WheezeDetectionEngine();
+        final longChunk = _sineChunk(
+          400,
+          WheezeDetectionEngine.windowSizeSamples *
+              (WheezeDetectionEngine.minConsecutiveWindowsForWheeze * 6),
+          amplitude: 0.9,
+        );
+        final longAnalysis = longEngine.analyze(
+          _pushAllWindows(longEngine, longChunk),
+        );
 
-      expect(shortAnalysis.wheezeDetected, isTrue);
-      expect(longAnalysis.wheezeDetected, isTrue);
-      expect(longAnalysis.severityScore, greaterThanOrEqualTo(shortAnalysis.severityScore));
-    });
+        expect(shortAnalysis.wheezeDetected, isTrue);
+        expect(longAnalysis.wheezeDetected, isTrue);
+        expect(
+          longAnalysis.severityScore,
+          greaterThanOrEqualTo(shortAnalysis.severityScore),
+        );
+      },
+    );
 
-    test('severity score stays within 0-100 and level matches score bucket', () {
-      final engine = WheezeDetectionEngine();
-      final chunk = _sineChunk(
-        400,
-        WheezeDetectionEngine.windowSizeSamples * 40,
-        amplitude: 0.95,
-      );
-      final analysis = engine.analyze(_pushAllWindows(engine, chunk));
+    test(
+      'severity score stays within 0-100 and level matches score bucket',
+      () {
+        final engine = WheezeDetectionEngine();
+        final chunk = _sineChunk(
+          400,
+          WheezeDetectionEngine.windowSizeSamples * 40,
+          amplitude: 0.95,
+        );
+        final analysis = engine.analyze(_pushAllWindows(engine, chunk));
 
-      expect(analysis.severityScore, inInclusiveRange(0, 100));
-      if (analysis.severityScore < 35) {
-        expect(analysis.severityLevel, 'mild');
-      } else if (analysis.severityScore < 65) {
-        expect(analysis.severityLevel, 'moderate');
-      } else {
-        expect(analysis.severityLevel, 'severe');
-      }
-    });
+        expect(analysis.severityScore, inInclusiveRange(0, 100));
+        if (analysis.severityScore < 35) {
+          expect(analysis.severityLevel, 'mild');
+        } else if (analysis.severityScore < 65) {
+          expect(analysis.severityLevel, 'moderate');
+        } else {
+          expect(analysis.severityLevel, 'severe');
+        }
+      },
+    );
   });
 }

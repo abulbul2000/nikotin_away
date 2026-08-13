@@ -30,14 +30,17 @@ void main() {
       expect(result, 1);
     });
 
-    test('expired relief (now on or after reliefUntil) leaves the count unchanged', () {
-      final result = MentorReliefService.applyTaskReliefIfActive(
-        baseCount: 4,
-        now: DateTime(2026, 1, 10),
-        reliefUntil: DateTime(2026, 1, 10),
-      );
-      expect(result, 4);
-    });
+    test(
+      'expired relief (now on or after reliefUntil) leaves the count unchanged',
+      () {
+        final result = MentorReliefService.applyTaskReliefIfActive(
+          baseCount: 4,
+          now: DateTime(2026, 1, 10),
+          reliefUntil: DateTime(2026, 1, 10),
+        );
+        expect(result, 4);
+      },
+    );
 
     test('the instant before reliefUntil is still active', () {
       final result = MentorReliefService.applyTaskReliefIfActive(
@@ -50,15 +53,18 @@ void main() {
   });
 
   group('applyBarrierReliefIfActive', () {
-    test('no relief granted (reliefDate null) leaves the minutes unchanged', () {
-      final result = MentorReliefService.applyBarrierReliefIfActive(
-        baseMinutes: 30,
-        now: DateTime(2026, 1, 5, 14, 0),
-        reliefDate: null,
-        minBarrierMinutes: 10,
-      );
-      expect(result, 30);
-    });
+    test(
+      'no relief granted (reliefDate null) leaves the minutes unchanged',
+      () {
+        final result = MentorReliefService.applyBarrierReliefIfActive(
+          baseMinutes: 30,
+          now: DateTime(2026, 1, 5, 14, 0),
+          reliefDate: null,
+          minBarrierMinutes: 10,
+        );
+        expect(result, 30);
+      },
+    );
 
     test('relief dated today (any time of day) is active', () {
       final result = MentorReliefService.applyBarrierReliefIfActive(

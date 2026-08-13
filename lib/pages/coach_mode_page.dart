@@ -212,7 +212,6 @@ class _CoachModePageState extends State<CoachModePage> {
                     const SizedBox(height: 12),
                   ],
                 ),
-
               ],
             ),
     );

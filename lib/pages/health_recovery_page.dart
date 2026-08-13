@@ -28,7 +28,9 @@ class HealthRecoveryPage extends StatelessWidget {
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Card(
-              color: reached ? const Color(0xFF132238) : const Color(0xFF0F1B2A),
+              color: reached
+                  ? const Color(0xFF132238)
+                  : const Color(0xFF0F1B2A),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
@@ -74,8 +76,11 @@ class HealthRecoveryPage extends StatelessWidget {
                       ),
                     ),
                     if (reached)
-                      const Icon(Icons.check_circle,
-                          color: AppTheme.brandPrimary, size: 20),
+                      const Icon(
+                        Icons.check_circle,
+                        color: AppTheme.brandPrimary,
+                        size: 20,
+                      ),
                   ],
                 ),
               ),
@@ -85,5 +90,4 @@ class HealthRecoveryPage extends StatelessWidget {
       ),
     );
   }
-
 }

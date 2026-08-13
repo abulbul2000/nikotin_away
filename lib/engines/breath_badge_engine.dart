@@ -28,15 +28,17 @@ class BreathBadgeEngine {
 
     earned.add(BreathBadgeKind.firstTest);
 
-    if (clean.length >= BreathBadge.catalog
-        .firstWhere((b) => b.kind == BreathBadgeKind.totalTests)
-        .threshold) {
+    if (clean.length >=
+        BreathBadge.catalog
+            .firstWhere((b) => b.kind == BreathBadgeKind.totalTests)
+            .threshold) {
       earned.add(BreathBadgeKind.totalTests);
     }
 
-    if (_bestDailyStreak(clean) >= BreathBadge.catalog
-        .firstWhere((b) => b.kind == BreathBadgeKind.dailyStreak)
-        .threshold) {
+    if (_bestDailyStreak(clean) >=
+        BreathBadge.catalog
+            .firstWhere((b) => b.kind == BreathBadgeKind.dailyStreak)
+            .threshold) {
       earned.add(BreathBadgeKind.dailyStreak);
     }
 
@@ -52,7 +54,9 @@ class BreathBadgeEngine {
   /// at some point, not just on the very first test (which trivially
   /// "beats" an empty history but isn't a meaningful improvement to
   /// celebrate).
-  bool _hasPersonalRecordImprovement(List<BreathProgressRecord> cleanAscending) {
+  bool _hasPersonalRecordImprovement(
+    List<BreathProgressRecord> cleanAscending,
+  ) {
     if (cleanAscending.length < 2) {
       return false;
     }
@@ -68,11 +72,9 @@ class BreathBadgeEngine {
   }
 
   int _bestDailyStreak(List<BreathProgressRecord> cleanAscending) {
-    final days = cleanAscending
-        .map((r) => _dateOnly(r.completedAt))
-        .toSet()
-        .toList()
-      ..sort((a, b) => a.compareTo(b));
+    final days =
+        cleanAscending.map((r) => _dateOnly(r.completedAt)).toSet().toList()
+          ..sort((a, b) => a.compareTo(b));
 
     if (days.isEmpty) {
       return 0;

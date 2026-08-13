@@ -29,108 +29,137 @@ void main() {
     await storage.clearAllData();
   });
 
-  test('logSuspiciousBehavior records type=suspicious_behavior, severity=high', () async {
-    final storage = StorageService();
-    final service = ProtocolViolationService(storageService: storage);
+  test(
+    'logSuspiciousBehavior records type=suspicious_behavior, severity=high',
+    () async {
+      final storage = StorageService();
+      final service = ProtocolViolationService(storageService: storage);
 
-    await service.logSuspiciousBehavior(taskTitle: 'Bir bardak su ic');
+      await service.logSuspiciousBehavior(taskTitle: 'Bir bardak su ic');
 
-    final violations = await storage.loadProtocolViolations();
-    expect(violations, hasLength(1));
-    expect(violations.first.type, 'suspicious_behavior');
-    expect(violations.first.severity, 'high');
-    expect(violations.first.taskTitle, 'Bir bardak su ic');
-  });
+      final violations = await storage.loadProtocolViolations();
+      expect(violations, hasLength(1));
+      expect(violations.first.type, 'suspicious_behavior');
+      expect(violations.first.severity, 'high');
+      expect(violations.first.taskTitle, 'Bir bardak su ic');
+    },
+  );
 
-  test('logWillpowerWeakness records type=willpower_weakness, severity=medium', () async {
-    final storage = StorageService();
-    final service = ProtocolViolationService(storageService: storage);
+  test(
+    'logWillpowerWeakness records type=willpower_weakness, severity=medium',
+    () async {
+      final storage = StorageService();
+      final service = ProtocolViolationService(storageService: storage);
 
-    await service.logWillpowerWeakness(taskTitle: 'Gorev A');
+      await service.logWillpowerWeakness(taskTitle: 'Gorev A');
 
-    final violations = await storage.loadProtocolViolations();
-    expect(violations.first.type, 'willpower_weakness');
-    expect(violations.first.severity, 'medium');
-  });
+      final violations = await storage.loadProtocolViolations();
+      expect(violations.first.type, 'willpower_weakness');
+      expect(violations.first.severity, 'medium');
+    },
+  );
 
-  test('logDeferredStart records type=deferred_start, severity=medium', () async {
-    final storage = StorageService();
-    final service = ProtocolViolationService(storageService: storage);
+  test(
+    'logDeferredStart records type=deferred_start, severity=medium',
+    () async {
+      final storage = StorageService();
+      final service = ProtocolViolationService(storageService: storage);
 
-    await service.logDeferredStart(taskTitle: 'Gorev B');
+      await service.logDeferredStart(taskTitle: 'Gorev B');
 
-    final violations = await storage.loadProtocolViolations();
-    expect(violations.first.type, 'deferred_start');
-    expect(violations.first.severity, 'medium');
-  });
+      final violations = await storage.loadProtocolViolations();
+      expect(violations.first.type, 'deferred_start');
+      expect(violations.first.severity, 'medium');
+    },
+  );
 
-  test('logFollowUpDeferred records type=followup_deferred, severity=low, custom details', () async {
-    final storage = StorageService();
-    final service = ProtocolViolationService(storageService: storage);
+  test(
+    'logFollowUpDeferred records type=followup_deferred, severity=low, custom details',
+    () async {
+      final storage = StorageService();
+      final service = ProtocolViolationService(storageService: storage);
 
-    await service.logFollowUpDeferred(
-      taskTitle: 'Gorev C',
-      details: 'custom detail',
-    );
+      await service.logFollowUpDeferred(
+        taskTitle: 'Gorev C',
+        details: 'custom detail',
+      );
 
-    final violations = await storage.loadProtocolViolations();
-    expect(violations.first.type, 'followup_deferred');
-    expect(violations.first.severity, 'low');
-    expect(violations.first.details, 'custom detail');
-  });
+      final violations = await storage.loadProtocolViolations();
+      expect(violations.first.type, 'followup_deferred');
+      expect(violations.first.severity, 'low');
+      expect(violations.first.details, 'custom detail');
+    },
+  );
 
-  test('logDurationBarrierFailure records type=duration_barrier_failure, severity=medium', () async {
-    final storage = StorageService();
-    final service = ProtocolViolationService(storageService: storage);
+  test(
+    'logDurationBarrierFailure records type=duration_barrier_failure, severity=medium',
+    () async {
+      final storage = StorageService();
+      final service = ProtocolViolationService(storageService: storage);
 
-    await service.logDurationBarrierFailure(command: '30 dakika sigarasiz kal');
+      await service.logDurationBarrierFailure(
+        command: '30 dakika sigarasiz kal',
+      );
 
-    final violations = await storage.loadProtocolViolations();
-    expect(violations.first.type, 'duration_barrier_failure');
-    expect(violations.first.severity, 'medium');
-  });
+      final violations = await storage.loadProtocolViolations();
+      expect(violations.first.type, 'duration_barrier_failure');
+      expect(violations.first.severity, 'medium');
+    },
+  );
 
-  test('logMandatoryGateShown records type=mandatory_gate, severity=medium', () async {
-    final storage = StorageService();
-    final service = ProtocolViolationService(storageService: storage);
+  test(
+    'logMandatoryGateShown records type=mandatory_gate, severity=medium',
+    () async {
+      final storage = StorageService();
+      final service = ProtocolViolationService(storageService: storage);
 
-    await service.logMandatoryGateShown(taskTitle: 'Gorev D');
+      await service.logMandatoryGateShown(taskTitle: 'Gorev D');
 
-    final violations = await storage.loadProtocolViolations();
-    expect(violations.first.type, 'mandatory_gate');
-    expect(violations.first.severity, 'medium');
-  });
+      final violations = await storage.loadProtocolViolations();
+      expect(violations.first.type, 'mandatory_gate');
+      expect(violations.first.severity, 'medium');
+    },
+  );
 
-  test('logFollowUpFailed records type=followup_failed, severity=medium', () async {
-    final storage = StorageService();
-    final service = ProtocolViolationService(storageService: storage);
+  test(
+    'logFollowUpFailed records type=followup_failed, severity=medium',
+    () async {
+      final storage = StorageService();
+      final service = ProtocolViolationService(storageService: storage);
 
-    await service.logFollowUpFailed(taskTitle: 'Gorev E');
+      await service.logFollowUpFailed(taskTitle: 'Gorev E');
 
-    final violations = await storage.loadProtocolViolations();
-    expect(violations.first.type, 'followup_failed');
-    expect(violations.first.severity, 'medium');
-  });
+      final violations = await storage.loadProtocolViolations();
+      expect(violations.first.type, 'followup_failed');
+      expect(violations.first.severity, 'medium');
+    },
+  );
 
-  test('logSuspiciousBehavior also creates a supportive reframed mentor message', () async {
-    final storage = StorageService();
-    final service = ProtocolViolationService(storageService: storage);
+  test(
+    'logSuspiciousBehavior also creates a supportive reframed mentor message',
+    () async {
+      final storage = StorageService();
+      final service = ProtocolViolationService(storageService: storage);
 
-    await service.logSuspiciousBehavior(taskTitle: 'Gorev F');
+      await service.logSuspiciousBehavior(taskTitle: 'Gorev F');
 
-    final latest = await storage.loadLatestMentorMessage();
-    expect(latest, isNotNull);
-    expect(latest!.type, 'reframed_violation');
-    expect(latest.tone, 'supportive');
-  });
+      final latest = await storage.loadLatestMentorMessage();
+      expect(latest, isNotNull);
+      expect(latest!.type, 'reframed_violation');
+      expect(latest.tone, 'supportive');
+    },
+  );
 
-  test('logMandatoryGateShown does NOT create a reframed mentor message (purely informational)', () async {
-    final storage = StorageService();
-    final service = ProtocolViolationService(storageService: storage);
+  test(
+    'logMandatoryGateShown does NOT create a reframed mentor message (purely informational)',
+    () async {
+      final storage = StorageService();
+      final service = ProtocolViolationService(storageService: storage);
 
-    await service.logMandatoryGateShown(taskTitle: 'Gorev G');
+      await service.logMandatoryGateShown(taskTitle: 'Gorev G');
 
-    final latest = await storage.loadLatestMentorMessage();
-    expect(latest, isNull);
-  });
+      final latest = await storage.loadLatestMentorMessage();
+      expect(latest, isNull);
+    },
+  );
 }

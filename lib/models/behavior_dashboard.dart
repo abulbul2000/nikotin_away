@@ -7,6 +7,7 @@ class BehaviorDashboard {
   final DateTime? lastSurveyDate;
   final DateTime? lastBreathDate;
   final String breathTrend;
+
   /// 'improving'/'worsening'/'stable' over the last 3 breath tests (see
   /// [BreathTestEngine.analyzeTrend]) — a tighter, more responsive rolling
   /// signal than [breathTrend] above, which only compares the very first

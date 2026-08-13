@@ -16,7 +16,7 @@ class BreathBadgeService {
   final BreathBadgeEngine _engine;
 
   BreathBadgeService({BreathBadgeEngine? engine})
-      : _engine = engine ?? BreathBadgeEngine();
+    : _engine = engine ?? BreathBadgeEngine();
 
   /// Returns the full catalog merged with the persisted unlock state.
   Future<List<BreathBadge>> loadAll() async {
@@ -57,7 +57,10 @@ class BreathBadgeService {
     final updated = current.map((badge) {
       if (badge.unlocked) return badge;
       if (!earnedKinds.contains(badge.kind)) return badge;
-      final unlocked = badge.copyWith(unlocked: true, unlockedAt: DateTime.now());
+      final unlocked = badge.copyWith(
+        unlocked: true,
+        unlockedAt: DateTime.now(),
+      );
       newlyUnlocked.add(unlocked);
       return unlocked;
     }).toList();

@@ -85,21 +85,51 @@ void main() {
 
     test('calculates task success rates and breath trend', () {
       final tasks = <TaskHistory>[
-        TaskHistory(taskId: '1', taskTitle: 'Meditasyon', completed: true, date: DateTime(2024, 1, 1)),
-        TaskHistory(taskId: '1', taskTitle: 'Meditasyon', completed: true, date: DateTime(2024, 1, 2)),
-        TaskHistory(taskId: '1', taskTitle: 'Meditasyon', completed: false, date: DateTime(2024, 1, 3)),
-        TaskHistory(taskId: '2', taskTitle: 'Yürüyüş', completed: false, date: DateTime(2024, 1, 4)),
+        TaskHistory(
+          taskId: '1',
+          taskTitle: 'Meditasyon',
+          completed: true,
+          date: DateTime(2024, 1, 1),
+        ),
+        TaskHistory(
+          taskId: '1',
+          taskTitle: 'Meditasyon',
+          completed: true,
+          date: DateTime(2024, 1, 2),
+        ),
+        TaskHistory(
+          taskId: '1',
+          taskTitle: 'Meditasyon',
+          completed: false,
+          date: DateTime(2024, 1, 3),
+        ),
+        TaskHistory(
+          taskId: '2',
+          taskTitle: 'Yürüyüş',
+          completed: false,
+          date: DateTime(2024, 1, 4),
+        ),
       ];
       final breaths = <BreathTestRecord>[
-        BreathTestRecord(date: DateTime(2024, 1, 1), exhaleSeconds: 12, inhaleSeconds: 10),
-        BreathTestRecord(date: DateTime(2024, 1, 2), exhaleSeconds: 18, inhaleSeconds: 15),
+        BreathTestRecord(
+          date: DateTime(2024, 1, 1),
+          exhaleSeconds: 12,
+          inhaleSeconds: 10,
+        ),
+        BreathTestRecord(
+          date: DateTime(2024, 1, 2),
+          exhaleSeconds: 18,
+          inhaleSeconds: 15,
+        ),
       ];
 
       final engine = BehaviorEngine();
       final taskRates = engine.calculateTaskSuccessRates(tasks);
       final breathTrend = engine.calculateBreathTrend(breaths);
 
-      final meditation = taskRates.firstWhere((item) => item['taskTitle'] == 'Meditasyon');
+      final meditation = taskRates.firstWhere(
+        (item) => item['taskTitle'] == 'Meditasyon',
+      );
       expect(meditation['successRate'], 0.6666666666666666);
       expect(meditation['totalCount'], 3);
       expect(breathTrend, 'Improving');
@@ -129,12 +159,30 @@ void main() {
         ),
       ];
       final breaths = <BreathTestRecord>[
-        BreathTestRecord(date: DateTime(2024, 1, 1), exhaleSeconds: 12, inhaleSeconds: 10),
-        BreathTestRecord(date: DateTime(2024, 1, 8), exhaleSeconds: 14, inhaleSeconds: 12),
+        BreathTestRecord(
+          date: DateTime(2024, 1, 1),
+          exhaleSeconds: 12,
+          inhaleSeconds: 10,
+        ),
+        BreathTestRecord(
+          date: DateTime(2024, 1, 8),
+          exhaleSeconds: 14,
+          inhaleSeconds: 12,
+        ),
       ];
       final tasks = <TaskHistory>[
-        TaskHistory(taskId: '1', taskTitle: 'Meditasyon', completed: true, date: DateTime(2024, 1, 1)),
-        TaskHistory(taskId: '1', taskTitle: 'Meditasyon', completed: false, date: DateTime(2024, 1, 2)),
+        TaskHistory(
+          taskId: '1',
+          taskTitle: 'Meditasyon',
+          completed: true,
+          date: DateTime(2024, 1, 1),
+        ),
+        TaskHistory(
+          taskId: '1',
+          taskTitle: 'Meditasyon',
+          completed: false,
+          date: DateTime(2024, 1, 2),
+        ),
       ];
 
       final engine = BehaviorEngine();
@@ -262,10 +310,8 @@ void main() {
     group('risky hours', () {
       final engine = BehaviorEngine();
 
-      List<DateTime> at(int hour, {int count = 1}) => List.generate(
-        count,
-        (i) => DateTime(2026, 7, 20 - i, hour, 15),
-      );
+      List<DateTime> at(int hour, {int count = 1}) =>
+          List.generate(count, (i) => DateTime(2026, 7, 20 - i, hour, 15));
 
       test('logged cigarettes decide the top window over proxy signals', () {
         final hours = engine.calculateRiskyHoursFromTimestamps(
@@ -318,10 +364,7 @@ void main() {
       );
 
       test('no records means no adjustment', () {
-        expect(
-          engine.calculateCoughRiskAdjustment(recentRecords: const []),
-          0,
-        );
+        expect(engine.calculateCoughRiskAdjustment(recentRecords: const []), 0);
       });
 
       test('a normal latest result nudges risk down slightly', () {
@@ -335,9 +378,7 @@ void main() {
 
       test('mild adds a small positive adjustment', () {
         expect(
-          engine.calculateCoughRiskAdjustment(
-            recentRecords: [record('mild')],
-          ),
+          engine.calculateCoughRiskAdjustment(recentRecords: [record('mild')]),
           1,
         );
       });
@@ -403,16 +444,19 @@ void main() {
     group('resolveCoughAdvisoryTier', () {
       final engine = BehaviorEngine();
 
-      test('baseline severity with no conditions or history passes through', () {
-        expect(
-          engine.resolveCoughAdvisoryTier(
-            latestSeverityLevel: 'mild',
-            healthConditions: const [],
-            recentModerateOrWorseCountLast14Days: 0,
-          ),
-          'mild',
-        );
-      });
+      test(
+        'baseline severity with no conditions or history passes through',
+        () {
+          expect(
+            engine.resolveCoughAdvisoryTier(
+              latestSeverityLevel: 'mild',
+              healthConditions: const [],
+              recentModerateOrWorseCountLast14Days: 0,
+            ),
+            'mild',
+          );
+        },
+      );
 
       test('normal stays normal even with a chronic condition', () {
         // The bump only applies once the baseline is already mild+ — a
@@ -471,19 +515,16 @@ void main() {
         );
       });
 
-      test(
-        'three or more moderate-plus results in 14 days forces urgent',
-        () {
-          expect(
-            engine.resolveCoughAdvisoryTier(
-              latestSeverityLevel: 'mild',
-              healthConditions: const [],
-              recentModerateOrWorseCountLast14Days: 3,
-            ),
-            'urgent',
-          );
-        },
-      );
+      test('three or more moderate-plus results in 14 days forces urgent', () {
+        expect(
+          engine.resolveCoughAdvisoryTier(
+            latestSeverityLevel: 'mild',
+            healthConditions: const [],
+            recentModerateOrWorseCountLast14Days: 3,
+          ),
+          'urgent',
+        );
+      });
 
       test('two moderate-plus results in 14 days does not force urgent', () {
         expect(
@@ -500,16 +541,19 @@ void main() {
     group('resolveWheezeAdvisoryTier', () {
       final engine = BehaviorEngine();
 
-      test('baseline severity with no conditions or history passes through', () {
-        expect(
-          engine.resolveWheezeAdvisoryTier(
-            latestWheezeSeverityLevel: 'mild',
-            healthConditions: const [],
-            recentModerateOrWorseCountLast14Days: 0,
-          ),
-          'mild',
-        );
-      });
+      test(
+        'baseline severity with no conditions or history passes through',
+        () {
+          expect(
+            engine.resolveWheezeAdvisoryTier(
+              latestWheezeSeverityLevel: 'mild',
+              healthConditions: const [],
+              recentModerateOrWorseCountLast14Days: 0,
+            ),
+            'mild',
+          );
+        },
+      );
 
       test('none stays none even with a chronic condition', () {
         expect(
@@ -580,16 +624,19 @@ void main() {
         },
       );
 
-      test('two moderate-plus results in 14 days does not force the top tier', () {
-        expect(
-          engine.resolveWheezeAdvisoryTier(
-            latestWheezeSeverityLevel: 'mild',
-            healthConditions: const [],
-            recentModerateOrWorseCountLast14Days: 2,
-          ),
-          'mild',
-        );
-      });
+      test(
+        'two moderate-plus results in 14 days does not force the top tier',
+        () {
+          expect(
+            engine.resolveWheezeAdvisoryTier(
+              latestWheezeSeverityLevel: 'mild',
+              healthConditions: const [],
+              recentModerateOrWorseCountLast14Days: 2,
+            ),
+            'mild',
+          );
+        },
+      );
     });
   });
 }

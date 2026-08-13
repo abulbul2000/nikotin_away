@@ -46,9 +46,30 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
 }
 
 const _languageCodes = [
-  'de', 'ar', 'fr', 'es', 'pt', 'it', 'pl', 'ru', 'ja', 'zh',
-  'ko', 'hi', 'bn', 'pa', 'te', 'mr', 'ta', 'gu', 'kn', 'ml',
-  'th', 'vi', 'id', 'ms',
+  'de',
+  'ar',
+  'fr',
+  'es',
+  'pt',
+  'it',
+  'pl',
+  'ru',
+  'ja',
+  'zh',
+  'ko',
+  'hi',
+  'bn',
+  'pa',
+  'te',
+  'mr',
+  'ta',
+  'gu',
+  'kn',
+  'ml',
+  'th',
+  'vi',
+  'id',
+  'ms',
 ];
 
 /// A handful of names chosen to stress different string lengths/scripts —
@@ -97,7 +118,18 @@ Future<void> _useSmallScreen(WidgetTester tester) async {
 /// coverage above. Keeps the sweep's total scenario count reasonable rather
 /// than doubling all ~700 widget pumps at both screen sizes.
 const _overflowProneCodes = {
-  'de', 'ru', 'ta', 'ar', 'hi', 'bn', 'pa', 'te', 'mr', 'gu', 'kn', 'ml',
+  'de',
+  'ru',
+  'ta',
+  'ar',
+  'hi',
+  'bn',
+  'pa',
+  'te',
+  'mr',
+  'gu',
+  'kn',
+  'ml',
 };
 
 /// Every canonical mentor message code AppTexts.localizeMentorMessage must
@@ -265,63 +297,60 @@ void main() {
         );
       });
 
-      testWidgets(
-        'RiskResultPage renders for varied smoking habits (light to '
-        'heavy smoker)',
-        (tester) async {
-          // Real packsPerDay values from SurveyRecord.packLevel — light,
-          // moderate, and heavy smokers, plus the free-text-ish '7+' and
-          // '3+' high-pack follow-up options.
-          const packLevels = [
-            '1 paketten az',
-            '1 paket',
-            '2 paket',
-            '3 paket',
-            '3+ paket',
-            '5 paket',
-            '7+ paket',
-          ];
-          for (var i = 0; i < _testNames.length; i++) {
-            final name = _testNames[i];
-            final riskScore = [5, 35, 55, 75, 95][i % 5];
-            final packsPerDay = packLevels[i % packLevels.length];
-            scenarioCount++;
+      testWidgets('RiskResultPage renders for varied smoking habits (light to '
+          'heavy smoker)', (tester) async {
+        // Real packsPerDay values from SurveyRecord.packLevel — light,
+        // moderate, and heavy smokers, plus the free-text-ish '7+' and
+        // '3+' high-pack follow-up options.
+        const packLevels = [
+          '1 paketten az',
+          '1 paket',
+          '2 paket',
+          '3 paket',
+          '3+ paket',
+          '5 paket',
+          '7+ paket',
+        ];
+        for (var i = 0; i < _testNames.length; i++) {
+          final name = _testNames[i];
+          final riskScore = [5, 35, 55, 75, 95][i % 5];
+          final packsPerDay = packLevels[i % packLevels.length];
+          scenarioCount++;
 
-            await tester.pumpWidget(
-              _wrapWithLocale(
-                code,
-                RiskResultPage(
-                  name: name,
-                  riskScore: riskScore,
-                  riskLevel: riskScore >= 80
-                      ? 'YUKSEK'
-                      : riskScore >= 40
-                      ? 'ORTA'
-                      : 'DUSUK',
-                  packsPerDay: packsPerDay,
-                  exhaleTestSeconds: 8,
-                  inhaleTestSeconds: 6,
-                  showBreathDisclaimer: i.isOdd,
-                ),
+          await tester.pumpWidget(
+            _wrapWithLocale(
+              code,
+              RiskResultPage(
+                name: name,
+                riskScore: riskScore,
+                riskLevel: riskScore >= 80
+                    ? 'YUKSEK'
+                    : riskScore >= 40
+                    ? 'ORTA'
+                    : 'DUSUK',
+                packsPerDay: packsPerDay,
+                exhaleTestSeconds: 8,
+                inhaleTestSeconds: 6,
+                showBreathDisclaimer: i.isOdd,
               ),
-            );
-            await tester.pump();
-
-            final exception = tester.takeException();
-            if (exception != null) {
-              failures.add(
-                '[$code] RiskResultPage name="$name" risk=$riskScore '
-                'packsPerDay="$packsPerDay" -> $exception',
-              );
-            }
-          }
-          expect(
-            failures.where((f) => f.startsWith('[$code] RiskResultPage')),
-            isEmpty,
-            reason: failures.join('\n'),
+            ),
           );
-        },
-      );
+          await tester.pump();
+
+          final exception = tester.takeException();
+          if (exception != null) {
+            failures.add(
+              '[$code] RiskResultPage name="$name" risk=$riskScore '
+              'packsPerDay="$packsPerDay" -> $exception',
+            );
+          }
+        }
+        expect(
+          failures.where((f) => f.startsWith('[$code] RiskResultPage')),
+          isEmpty,
+          reason: failures.join('\n'),
+        );
+      });
 
       testWidgets('HealthRecoveryPage renders for varied quit dates', (
         tester,
@@ -407,12 +436,7 @@ void main() {
           // exhale/inhale), still a valid combination a real user's device
           // mic could produce.
           (
-            record(
-              riskScore: 60,
-              packsPerDay: '2 paket',
-              exhale: 1,
-              inhale: 1,
-            ),
+            record(riskScore: 60, packsPerDay: '2 paket', exhale: 1, inhale: 1),
             record(
               riskScore: 60,
               packsPerDay: '2 paket',
@@ -450,45 +474,40 @@ void main() {
         );
       });
 
-      testWidgets(
-        'TaskSmokedConfirmPage renders for varied task titles '
-        '(incl. duration-barrier tasks)',
-        (tester) async {
-          final taskTitles = [
-            'Sigara icmeme suresi bariyeri',
-            'ADAPTIVE_NO_SMOKE:45',
-            'SURE-BARIYERI:30',
-            'A', // minimal
-            'Cok uzun bir gorev basligi burada kullanici arayuzunu '
-                'tasma riskiyle test etmek icin bilhassa uzatilmistir',
-          ];
-          for (final title in taskTitles) {
-            scenarioCount++;
-            await tester.pumpWidget(
-              _wrapWithLocale(
-                code,
-                TaskSmokedConfirmPage(taskTitle: title, canonicalTitle: title),
-              ),
-            );
-            await tester.pump();
-
-            final exception = tester.takeException();
-            if (exception != null) {
-              failures.add(
-                '[$code] TaskSmokedConfirmPage title="$title" '
-                '-> $exception',
-              );
-            }
-          }
-          expect(
-            failures.where(
-              (f) => f.startsWith('[$code] TaskSmokedConfirmPage'),
+      testWidgets('TaskSmokedConfirmPage renders for varied task titles '
+          '(incl. duration-barrier tasks)', (tester) async {
+        final taskTitles = [
+          'Sigara icmeme suresi bariyeri',
+          'ADAPTIVE_NO_SMOKE:45',
+          'SURE-BARIYERI:30',
+          'A', // minimal
+          'Cok uzun bir gorev basligi burada kullanici arayuzunu '
+              'tasma riskiyle test etmek icin bilhassa uzatilmistir',
+        ];
+        for (final title in taskTitles) {
+          scenarioCount++;
+          await tester.pumpWidget(
+            _wrapWithLocale(
+              code,
+              TaskSmokedConfirmPage(taskTitle: title, canonicalTitle: title),
             ),
-            isEmpty,
-            reason: failures.join('\n'),
           );
-        },
-      );
+          await tester.pump();
+
+          final exception = tester.takeException();
+          if (exception != null) {
+            failures.add(
+              '[$code] TaskSmokedConfirmPage title="$title" '
+              '-> $exception',
+            );
+          }
+        }
+        expect(
+          failures.where((f) => f.startsWith('[$code] TaskSmokedConfirmPage')),
+          isEmpty,
+          reason: failures.join('\n'),
+        );
+      });
 
       testWidgets('SmokedLogConsentPage renders', (tester) async {
         scenarioCount++;
@@ -522,9 +541,7 @@ void main() {
         tester,
       ) async {
         scenarioCount++;
-        await tester.pumpWidget(
-          _wrapWithLocale(code, const SnoringTestPage()),
-        );
+        await tester.pumpWidget(_wrapWithLocale(code, const SnoringTestPage()));
         await tester.pump();
 
         final exception = tester.takeException();
@@ -535,63 +552,60 @@ void main() {
       });
 
       if (_overflowProneCodes.contains(code)) {
-        testWidgets(
-          'small-screen overflow check: result pages at 320x568',
-          (tester) async {
-            await _useSmallScreen(tester);
-            final smallScreenScenarios = <String, Widget>{
-              'RiskResultPage': const RiskResultPage(
-                name: 'Muhammed Abdurrahman',
-                riskScore: 85,
-                riskLevel: 'YUKSEK',
-                packsPerDay: '2 paketten fazla',
-                exhaleTestSeconds: 8,
-                inhaleTestSeconds: 6,
-                showBreathDisclaimer: true,
-              ),
-              'BreathSpirometryResultPage': const BreathSpirometryResultPage(
-                name: 'Muhammed Abdurrahman',
-                riskScore: 85,
-                riskLevel: 'YUKSEK',
-                breathScore: 80,
-                wheezeDetected: true,
-              ),
-              'HealthRecoveryPage': HealthRecoveryPage(
-                quitDate: DateTime.now().subtract(const Duration(days: 30)),
-              ),
-              'TaskSmokedConfirmPage': const TaskSmokedConfirmPage(
-                taskTitle:
-                    'Cok uzun bir gorev basligi burada kullanici '
-                    'arayuzunu tasma riskiyle test etmek icin bilhassa '
-                    'uzatilmistir',
-                canonicalTitle:
-                    'Cok uzun bir gorev basligi burada kullanici '
-                    'arayuzunu tasma riskiyle test etmek icin bilhassa '
-                    'uzatilmistir',
-              ),
-              'CoughTestPage': const CoughTestPage(),
-              'SnoringTestPage': const SnoringTestPage(),
-            };
+        testWidgets('small-screen overflow check: result pages at 320x568', (
+          tester,
+        ) async {
+          await _useSmallScreen(tester);
+          final smallScreenScenarios = <String, Widget>{
+            'RiskResultPage': const RiskResultPage(
+              name: 'Muhammed Abdurrahman',
+              riskScore: 85,
+              riskLevel: 'YUKSEK',
+              packsPerDay: '2 paketten fazla',
+              exhaleTestSeconds: 8,
+              inhaleTestSeconds: 6,
+              showBreathDisclaimer: true,
+            ),
+            'BreathSpirometryResultPage': const BreathSpirometryResultPage(
+              name: 'Muhammed Abdurrahman',
+              riskScore: 85,
+              riskLevel: 'YUKSEK',
+              breathScore: 80,
+              wheezeDetected: true,
+            ),
+            'HealthRecoveryPage': HealthRecoveryPage(
+              quitDate: DateTime.now().subtract(const Duration(days: 30)),
+            ),
+            'TaskSmokedConfirmPage': const TaskSmokedConfirmPage(
+              taskTitle:
+                  'Cok uzun bir gorev basligi burada kullanici '
+                  'arayuzunu tasma riskiyle test etmek icin bilhassa '
+                  'uzatilmistir',
+              canonicalTitle:
+                  'Cok uzun bir gorev basligi burada kullanici '
+                  'arayuzunu tasma riskiyle test etmek icin bilhassa '
+                  'uzatilmistir',
+            ),
+            'CoughTestPage': const CoughTestPage(),
+            'SnoringTestPage': const SnoringTestPage(),
+          };
 
-            for (final entry in smallScreenScenarios.entries) {
-              scenarioCount++;
-              await tester.pumpWidget(_wrapWithLocale(code, entry.value));
-              await tester.pump();
+          for (final entry in smallScreenScenarios.entries) {
+            scenarioCount++;
+            await tester.pumpWidget(_wrapWithLocale(code, entry.value));
+            await tester.pump();
 
-              final exception = tester.takeException();
-              if (exception != null) {
-                failures.add(
-                  '[$code] SMALL-SCREEN ${entry.key} -> $exception',
-                );
-              }
+            final exception = tester.takeException();
+            if (exception != null) {
+              failures.add('[$code] SMALL-SCREEN ${entry.key} -> $exception');
             }
-            expect(
-              failures.where((f) => f.startsWith('[$code] SMALL-SCREEN')),
-              isEmpty,
-              reason: failures.join('\n'),
-            );
-          },
-        );
+          }
+          expect(
+            failures.where((f) => f.startsWith('[$code] SMALL-SCREEN')),
+            isEmpty,
+            reason: failures.join('\n'),
+          );
+        });
       }
 
       if (code == 'ar') {
@@ -640,9 +654,7 @@ void main() {
           try {
             result = AppTexts.localizeMentorMessage(code, rawCode);
           } catch (e) {
-            failures.add(
-              '[$code] localizeMentorMessage("$rawCode") threw: $e',
-            );
+            failures.add('[$code] localizeMentorMessage("$rawCode") threw: $e');
             continue;
           }
           if (result.trim().isEmpty) {
@@ -661,9 +673,7 @@ void main() {
           }
         }
         expect(
-          failures.where(
-            (f) => f.startsWith('[$code] localizeMentorMessage'),
-          ),
+          failures.where((f) => f.startsWith('[$code] localizeMentorMessage')),
           isEmpty,
           reason: failures.join('\n'),
         );

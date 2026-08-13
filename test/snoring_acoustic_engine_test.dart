@@ -16,11 +16,17 @@ List<BreathAcousticSample> _periodicBursts({
   var elapsed = 0;
   for (var i = 0; i < burstCount; i++) {
     samples.add(
-      BreathAcousticSample(millisecondsSinceStart: elapsed, rmsEnergy: burstEnergy),
+      BreathAcousticSample(
+        millisecondsSinceStart: elapsed,
+        rmsEnergy: burstEnergy,
+      ),
     );
     elapsed += 50;
     samples.add(
-      BreathAcousticSample(millisecondsSinceStart: elapsed, rmsEnergy: quietEnergy),
+      BreathAcousticSample(
+        millisecondsSinceStart: elapsed,
+        rmsEnergy: quietEnergy,
+      ),
     );
     elapsed += cycleMs - 50;
   }
@@ -59,14 +65,17 @@ void main() {
       expect(analysis.snoreLikely, isFalse);
     });
 
-    test('does not detect bursts spaced slower than the snore-cycle ceiling', () {
-      final engine = SnoringAcousticEngine();
-      // 3000ms apart is well over snoreMaxCycleMs (1500ms).
-      final samples = _periodicBursts(cycleMs: 3000, burstCount: 4);
-      final analysis = engine.analyze(samples);
+    test(
+      'does not detect bursts spaced slower than the snore-cycle ceiling',
+      () {
+        final engine = SnoringAcousticEngine();
+        // 3000ms apart is well over snoreMaxCycleMs (1500ms).
+        final samples = _periodicBursts(cycleMs: 3000, burstCount: 4);
+        final analysis = engine.analyze(samples);
 
-      expect(analysis.snoreLikely, isFalse);
-    });
+        expect(analysis.snoreLikely, isFalse);
+      },
+    );
 
     test('does not detect constant, non-bursty energy', () {
       final engine = SnoringAcousticEngine();
@@ -134,25 +143,28 @@ void main() {
       );
     });
 
-    test('severity score stays within 0-100 and level matches score bucket', () {
-      final engine = SnoringAcousticEngine();
-      final samples = _periodicBursts(
-        cycleMs: 600,
-        burstCount: 12,
-        burstEnergy: 0.95,
-      );
-      final analysis = engine.analyze(samples);
+    test(
+      'severity score stays within 0-100 and level matches score bucket',
+      () {
+        final engine = SnoringAcousticEngine();
+        final samples = _periodicBursts(
+          cycleMs: 600,
+          burstCount: 12,
+          burstEnergy: 0.95,
+        );
+        final analysis = engine.analyze(samples);
 
-      expect(analysis.severityScore, inInclusiveRange(0, 100));
-      if (analysis.severityScore <= 0) {
-        expect(analysis.severityLevel, 'none');
-      } else if (analysis.severityScore < 35) {
-        expect(analysis.severityLevel, 'mild');
-      } else if (analysis.severityScore < 65) {
-        expect(analysis.severityLevel, 'moderate');
-      } else {
-        expect(analysis.severityLevel, 'severe');
-      }
-    });
+        expect(analysis.severityScore, inInclusiveRange(0, 100));
+        if (analysis.severityScore <= 0) {
+          expect(analysis.severityLevel, 'none');
+        } else if (analysis.severityScore < 35) {
+          expect(analysis.severityLevel, 'mild');
+        } else if (analysis.severityScore < 65) {
+          expect(analysis.severityLevel, 'moderate');
+        } else {
+          expect(analysis.severityLevel, 'severe');
+        }
+      },
+    );
   });
 }

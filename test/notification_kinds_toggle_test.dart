@@ -30,10 +30,7 @@ class _FakeStorageService extends StorageService {
   }
 
   @override
-  Future<void> setNotificationKindEnabled(
-    String kindName,
-    bool enabled,
-  ) async {
+  Future<void> setNotificationKindEnabled(String kindName, bool enabled) async {
     _state[kindName] = enabled;
   }
 
@@ -132,14 +129,10 @@ void main() {
 
   testWidgets('tapping a switch persists the change', (tester) async {
     final fake = _FakeStorageService();
-    await tester.pumpWidget(
-      wrap(NotificationKindsCard(storageService: fake)),
-    );
+    await tester.pumpWidget(wrap(NotificationKindsCard(storageService: fake)));
     await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.byKey(const ValueKey('notification_kind_sedentary')),
-    );
+    await tester.tap(find.byKey(const ValueKey('notification_kind_sedentary')));
     await tester.pump();
 
     expect(

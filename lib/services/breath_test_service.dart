@@ -29,9 +29,10 @@ class BreathTestService {
     StorageService? storageService,
     BreathTestRepository? repository,
     BreathTestEngine? engine,
-  })  : _storageService = storageService ?? StorageService(),
-        _repository = repository ?? BreathTestRepository(storageService: storageService),
-        _engine = engine ?? BreathTestEngine();
+  }) : _storageService = storageService ?? StorageService(),
+       _repository =
+           repository ?? BreathTestRepository(storageService: storageService),
+       _engine = engine ?? BreathTestEngine();
 
   Future<ProcessedBreathTest> processBreathTest({
     required String name,

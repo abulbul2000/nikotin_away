@@ -38,10 +38,8 @@ void main() {
       final base = DateTime(2026, 1, 1);
       final records = List.generate(
         30,
-        (i) => _record(
-          completedAt: base.add(Duration(hours: i)),
-          breathScore: 50,
-        ),
+        (i) =>
+            _record(completedAt: base.add(Duration(hours: i)), breathScore: 50),
       );
       final earned = engine.evaluateEarnedKinds(records);
       expect(earned, contains(BreathBadgeKind.totalTests));
@@ -52,10 +50,8 @@ void main() {
       final base = DateTime(2026, 1, 1);
       final records = List.generate(
         29,
-        (i) => _record(
-          completedAt: base.add(Duration(hours: i)),
-          breathScore: 50,
-        ),
+        (i) =>
+            _record(completedAt: base.add(Duration(hours: i)), breathScore: 50),
       );
       final earned = engine.evaluateEarnedKinds(records);
       expect(earned, isNot(contains(BreathBadgeKind.totalTests)));
@@ -65,10 +61,8 @@ void main() {
       final base = DateTime(2026, 1, 1);
       final records = List.generate(
         7,
-        (i) => _record(
-          completedAt: base.add(Duration(days: i)),
-          breathScore: 50,
-        ),
+        (i) =>
+            _record(completedAt: base.add(Duration(days: i)), breathScore: 50),
       );
       final earned = engine.evaluateEarnedKinds(records);
       expect(earned, contains(BreathBadgeKind.dailyStreak));

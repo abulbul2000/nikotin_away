@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -269,7 +269,8 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
     if (diabetes) health.add('Diyabet');
     if (copd) health.add('KOAH');
     if (heartDisease) health.add('Kalp Hastaligi');
-    if (otherHealthCondition && otherHealthConditionController.text.trim().isNotEmpty) {
+    if (otherHealthCondition &&
+        otherHealthConditionController.text.trim().isNotEmpty) {
       health.add(otherHealthConditionController.text.trim());
     }
     return health;
@@ -613,9 +614,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       final isMiui = await DevicePermissionService.isMiuiDevice();
       if ((!hasOverlay || isMiui) && mounted) {
         await Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const PermissionSetupPage(),
-          ),
+          MaterialPageRoute<void>(builder: (_) => const PermissionSetupPage()),
         );
       }
       if (mounted) {
@@ -637,7 +636,9 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           sleepTime: sleepTime!,
           wakeTime: wakeTime!,
         );
-        debugPrint('[SurveyPage] scheduleHealthConditionAdviceNotifications ok');
+        debugPrint(
+          '[SurveyPage] scheduleHealthConditionAdviceNotifications ok',
+        );
       } catch (error, stackTrace) {
         debugPrint(
           '[SurveyPage] scheduleHealthConditionAdviceNotifications failed (non-blocking): $error',
@@ -1037,9 +1038,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           isExpanded: true,
           key: const ValueKey('gender_dropdown'),
           initialValue: gender,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(),
-          ),
+          decoration: InputDecoration(border: OutlineInputBorder()),
           hint: Text(context.t('gender')),
           items: [
             DropdownMenuItem(value: 'Erkek', child: Text(context.t('male'))),
@@ -1062,9 +1061,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           isExpanded: true,
           key: const ValueKey('profession_dropdown'),
           initialValue: profession,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(),
-          ),
+          decoration: InputDecoration(border: OutlineInputBorder()),
           hint: Text(context.t('professionLabel')),
           items: professionOptions
               .map(
@@ -1118,9 +1115,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           isExpanded: true,
           initialValue: firstCigaretteRange,
           hint: Text(context.t('firstCigaretteWhen')),
-          decoration: InputDecoration(
-            border: OutlineInputBorder(),
-          ),
+          decoration: InputDecoration(border: OutlineInputBorder()),
           items: [
             DropdownMenuItem(
               value: '0-5',
@@ -1266,9 +1261,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             isExpanded: true,
             key: const ValueKey('school_type_dropdown'),
             initialValue: schoolType,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(),
-            ),
+            decoration: InputDecoration(border: OutlineInputBorder()),
             hint: Text(context.t('schoolTypeLabel')),
             items: [
               DropdownMenuItem(
@@ -1291,8 +1284,8 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         _buildTimePickerRow(
           label: _isStudent
               ? (_isUniversityStudent
-                  ? context.t('firstLectureStart')
-                  : context.t('schoolStart'))
+                    ? context.t('firstLectureStart')
+                    : context.t('schoolStart'))
               : context.t('workStart'),
           currentValue: workStartTime,
           onChanged: (value) {
@@ -1304,8 +1297,8 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
         _buildTimePickerRow(
           label: _isStudent
               ? (_isUniversityStudent
-                  ? context.t('lastLectureEnd')
-                  : context.t('schoolEnd'))
+                    ? context.t('lastLectureEnd')
+                    : context.t('schoolEnd'))
               : context.t('workEnd'),
           currentValue: workEndTime,
           onChanged: (value) {
@@ -1321,8 +1314,8 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           decoration: InputDecoration(
             labelText: _isStudent
                 ? (_isUniversityStudent
-                    ? context.t('campusSmoking')
-                    : context.t('schoolSmoking'))
+                      ? context.t('campusSmoking')
+                      : context.t('schoolSmoking'))
                 : context.t('workplaceSmoking'),
             border: OutlineInputBorder(),
           ),
@@ -1429,9 +1422,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           DropdownButtonFormField<String>(
             isExpanded: true,
             initialValue: breakStart1,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-            ),
+            decoration: InputDecoration(border: const OutlineInputBorder()),
             hint: Text(context.t('break1Start')),
             items: workTimeOptions
                 .map(
@@ -1449,9 +1440,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           DropdownButtonFormField<String>(
             isExpanded: true,
             initialValue: breakEnd1,
-            decoration: InputDecoration(
-              border: const OutlineInputBorder(),
-            ),
+            decoration: InputDecoration(border: const OutlineInputBorder()),
             hint: Text(context.t('break1End')),
             items: workTimeOptions
                 .map(
@@ -1484,9 +1473,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             DropdownButtonFormField<String>(
               isExpanded: true,
               initialValue: breakStart2,
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-              ),
+              decoration: InputDecoration(border: const OutlineInputBorder()),
               hint: Text(context.t('break2Start')),
               items: workTimeOptions
                   .map(
@@ -1506,9 +1493,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
             DropdownButtonFormField<String>(
               isExpanded: true,
               initialValue: breakEnd2,
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-              ),
+              decoration: InputDecoration(border: const OutlineInputBorder()),
               hint: Text(context.t('break2End')),
               items: workTimeOptions
                   .map(

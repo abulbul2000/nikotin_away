@@ -131,20 +131,28 @@ class WheezeDetectionEngine {
   /// scalars are computed from it — see the class doc comment and
   /// [WheezeAcousticSample]'s doc comment for the privacy rationale this
   /// preserves.
-  WheezeAcousticSample? pushChunk(Uint8List rawChunk, int millisecondsSinceStart) {
+  WheezeAcousticSample? pushChunk(
+    Uint8List rawChunk,
+    int millisecondsSinceStart,
+  ) {
     _pendingBytes.addAll(rawChunk);
     const bytesPerWindow = windowSizeSamples * 2; // PCM16 = 2 bytes/sample.
     if (_pendingBytes.length < bytesPerWindow) {
       return null;
     }
 
-    final windowBytes = Uint8List.fromList(_pendingBytes.sublist(0, bytesPerWindow));
+    final windowBytes = Uint8List.fromList(
+      _pendingBytes.sublist(0, bytesPerWindow),
+    );
     _pendingBytes.removeRange(0, bytesPerWindow);
 
     return _analyzeWindow(windowBytes, millisecondsSinceStart);
   }
 
-  WheezeAcousticSample _analyzeWindow(Uint8List windowBytes, int millisecondsSinceStart) {
+  WheezeAcousticSample _analyzeWindow(
+    Uint8List windowBytes,
+    int millisecondsSinceStart,
+  ) {
     final byteData = ByteData.sublistView(windowBytes);
     final samples = List<double>.generate(windowSizeSamples, (i) {
       final raw = byteData.getInt16(i * 2, Endian.little) / 32768.0;
@@ -225,7 +233,8 @@ class WheezeDetectionEngine {
 
     for (final sample in samples) {
       final inBand = sample.wheezeBandEnergyRatio > wheezeRatioThreshold;
-      final sameTone = streakDominantFrequency == null ||
+      final sameTone =
+          streakDominantFrequency == null ||
           sample.dominantFrequencyHz == null ||
           (sample.dominantFrequencyHz! - streakDominantFrequency!).abs() <=
               dominantFrequencyToleranceHz;
@@ -283,8 +292,10 @@ class WheezeDetectionEngine {
     required double meanRatio,
   }) {
     final durationSeconds = longestStreakDurationMs / 1000.0;
-    final durationScore =
-        (durationSeconds / _fullySustainedSeconds).clamp(0.0, 1.0);
+    final durationScore = (durationSeconds / _fullySustainedSeconds).clamp(
+      0.0,
+      1.0,
+    );
     // 0.75 is the upper anchor for "clearly severe" ratio — a wheeze that
     // dominates 75%+ of the window's spectral energy is unambiguous.
     const upperRatioAnchor = 0.75;

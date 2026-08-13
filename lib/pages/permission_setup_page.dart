@@ -103,7 +103,8 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
         descriptionKey: 'permissionMicrophoneDescription',
         purposeKey: 'permissionMicrophonePurpose',
         icon: Icons.mic_none_outlined,
-        isGranted: () async => (await ph.Permission.microphone.status).isGranted,
+        isGranted: () async =>
+            (await ph.Permission.microphone.status).isGranted,
         request: () async {
           await ph.Permission.microphone.request();
         },
@@ -114,7 +115,8 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
         descriptionKey: 'permissionLocationDescription',
         purposeKey: 'permissionLocationPurpose',
         icon: Icons.place_outlined,
-        isGranted: () async => (await ph.Permission.locationAlways.status).isGranted,
+        isGranted: () async =>
+            (await ph.Permission.locationAlways.status).isGranted,
         request: () async {
           // Foreground first, then background — the order Android requires.
           final foreground = await ph.Permission.locationWhenInUse.request();
@@ -294,7 +296,9 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
                   onPressed: () => Navigator.of(context).pop(),
                   child: Text(
                     context.t(
-                      _allGranted ? 'continue' : 'permissionSetupContinueAnyway',
+                      _allGranted
+                          ? 'continue'
+                          : 'permissionSetupContinueAnyway',
                     ),
                   ),
                 ),

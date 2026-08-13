@@ -81,9 +81,9 @@ class AndroidWatchdogService {
 
     return raw
         .whereType<Map>()
-        .map((entry) => entry.map(
-              (key, value) => MapEntry(key.toString(), value),
-            ))
+        .map(
+          (entry) => entry.map((key, value) => MapEntry(key.toString(), value)),
+        )
         .toList();
   }
 
@@ -100,6 +100,7 @@ class AndroidWatchdogService {
     required String title,
     required String body,
     required String doneLabel,
+
     /// Blank hides the button — postpone and SOS are each capped at two uses
     /// per task, and a button whose answer is "no, not any more" is worse
     /// than no button.
@@ -110,6 +111,7 @@ class AndroidWatchdogService {
     required String taskTitle,
     required DateTime triggerAt,
     required Duration watchdogWindow,
+
     /// Carried through to the native alarm's Intent extras so that when it
     /// fires with the app dead, TaskTriggerReceiver can start
     /// NoResponseWatchdogService with the same localized strings
@@ -129,9 +131,9 @@ class AndroidWatchdogService {
         'title': title,
         'body': body,
         'doneLabel': doneLabel,
-            'postponeLabel': postponeLabel,
+        'postponeLabel': postponeLabel,
         'declineLabel': declineLabel,
-            'sosLabel': sosLabel,
+        'sosLabel': sosLabel,
         'watchdogId': watchdogId,
         'taskTitle': taskTitle,
         'triggerAtMillis': triggerAt.millisecondsSinceEpoch,
@@ -272,7 +274,7 @@ class AndroidWatchdogService {
   /// DND/gaming stretch, and everything past the two-task limit is dropped
   /// here rather than delivered in a stack once the block clears.
   static Future<List<Map<String, dynamic>>>
-      consumePendingDeliveryExpirations() async {
+  consumePendingDeliveryExpirations() async {
     if (!_isAndroid) {
       return const [];
     }
@@ -285,9 +287,10 @@ class AndroidWatchdogService {
       }
       return raw
           .whereType<Map>()
-          .map((entry) => entry.map(
-                (key, value) => MapEntry(key.toString(), value),
-              ))
+          .map(
+            (entry) =>
+                entry.map((key, value) => MapEntry(key.toString(), value)),
+          )
           .toList();
     } catch (_) {
       return const [];
@@ -307,9 +310,10 @@ class AndroidWatchdogService {
       }
       return raw
           .whereType<Map>()
-          .map((entry) => entry.map(
-                (key, value) => MapEntry(key.toString(), value),
-              ))
+          .map(
+            (entry) =>
+                entry.map((key, value) => MapEntry(key.toString(), value)),
+          )
           .toList();
     } catch (_) {
       return const [];

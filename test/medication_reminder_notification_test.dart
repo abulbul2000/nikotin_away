@@ -44,17 +44,16 @@ void main() {
         .setMockMethodCallHandler(watchdogChannel, null);
   });
 
-  test('a medication reminder never carries embedded health advice',
-      () async {
+  test('a medication reminder never carries embedded health advice', () async {
     final scheduledBodies = <String>[];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(notificationsChannel, (call) async {
-      if (call.method == 'zonedSchedule') {
-        final args = call.arguments as Map;
-        scheduledBodies.add(args['body'] as String);
-      }
-      return null;
-    });
+          if (call.method == 'zonedSchedule') {
+            final args = call.arguments as Map;
+            scheduledBodies.add(args['body'] as String);
+          }
+          return null;
+        });
     // Android platform is not present in a unit-test host, so
     // AndroidWatchdogService's channel calls are no-ops there anyway — this
     // handler just keeps the test from failing if that ever changes.
@@ -78,31 +77,33 @@ void main() {
     }
   });
 
-  test('health condition advice no longer skips a user who takes medication',
-      () async {
-    // scheduleHealthConditionAdviceNotifications used to early-return
-    // whenever StorageService.loadMedications() was non-empty, on the
-    // theory the tip already rode along with a medication reminder. Now
-    // that reminders never carry a tip, this must schedule regardless of
-    // medication status — the test DB here has none, but the fix under
-    // test is that the function no longer even checks.
-    var scheduleCalls = 0;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(notificationsChannel, (call) async {
-      if (call.method == 'zonedSchedule') {
-        scheduleCalls++;
-      }
-      return null;
-    });
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(watchdogChannel, (call) async => null);
+  test(
+    'health condition advice no longer skips a user who takes medication',
+    () async {
+      // scheduleHealthConditionAdviceNotifications used to early-return
+      // whenever StorageService.loadMedications() was non-empty, on the
+      // theory the tip already rode along with a medication reminder. Now
+      // that reminders never carry a tip, this must schedule regardless of
+      // medication status — the test DB here has none, but the fix under
+      // test is that the function no longer even checks.
+      var scheduleCalls = 0;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(notificationsChannel, (call) async {
+            if (call.method == 'zonedSchedule') {
+              scheduleCalls++;
+            }
+            return null;
+          });
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(watchdogChannel, (call) async => null);
 
-    await NotificationService.scheduleHealthConditionAdviceNotifications(
-      healthConditions: const ['Hipertansiyon'],
-      wakeTime: '07:00',
-      sleepTime: '23:00',
-    );
+      await NotificationService.scheduleHealthConditionAdviceNotifications(
+        healthConditions: const ['Hipertansiyon'],
+        wakeTime: '07:00',
+        sleepTime: '23:00',
+      );
 
-    expect(scheduleCalls, greaterThan(0));
-  });
+      expect(scheduleCalls, greaterThan(0));
+    },
+  );
 }

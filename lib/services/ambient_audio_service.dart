@@ -74,8 +74,8 @@ class AmbientAudioService {
     }
 
     final double averageMean = _windowMeans.isEmpty
-      ? 0.0
-      : _windowMeans.reduce((a, b) => a + b) / _windowMeans.length;
+        ? 0.0
+        : _windowMeans.reduce((a, b) => a + b) / _windowMeans.length;
     final mealLikelihood = _estimateMealSoundLikelihood(
       meanDb: averageMean,
       peakDb: _windowPeak,
@@ -119,8 +119,10 @@ class AmbientAudioService {
 
     final mean = values.reduce((a, b) => a + b) / values.length;
     final variance =
-        values.map((value) => pow(value - mean, 2).toDouble()).reduce((a, b) => a + b) /
-            values.length;
+        values
+            .map((value) => pow(value - mean, 2).toDouble())
+            .reduce((a, b) => a + b) /
+        values.length;
     return sqrt(variance);
   }
 }

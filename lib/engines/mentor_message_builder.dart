@@ -36,7 +36,6 @@ class MentorMessageBuilder {
     return 'neutral';
   }
 
-
   MentorMessage buildDailyMessage({
     required int riskScore,
     required double recentSuccessRate,

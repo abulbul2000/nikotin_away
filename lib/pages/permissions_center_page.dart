@@ -178,8 +178,8 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
                     // ever opening a settings screen — nothing to grant. The
                     // button otherwise looks broken (tap, nothing visibly
                     // happens) instead of "already on".
-                    final granted = await NotificationService
-                        .openExactAlarmSettingsOptional();
+                    final granted =
+                        await NotificationService.openExactAlarmSettingsOptional();
                     if (!context.mounted || granted != true) {
                       return;
                     }

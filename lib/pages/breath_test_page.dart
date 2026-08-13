@@ -302,9 +302,7 @@ class _BreathTestPageState extends State<BreathTestPage>
   // _currentAttemptSamples has accumulated since the mic started in
   // _prepareMicrophoneForAttempt, rather than opening a second concurrent
   // recording session (BreathAudioService only supports one at a time).
-  static const Duration _ambientNoiseCheckWindow = Duration(
-    milliseconds: 2500,
-  );
+  static const Duration _ambientNoiseCheckWindow = Duration(milliseconds: 2500);
 
   void _scheduleAmbientNoiseCheck() {
     _noiseCheckTimer?.cancel();
@@ -361,7 +359,9 @@ class _BreathTestPageState extends State<BreathTestPage>
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
-          context.t(isLoud ? 'breathNoiseLoudTitle' : 'breathNoiseWarningTitle'),
+          context.t(
+            isLoud ? 'breathNoiseLoudTitle' : 'breathNoiseWarningTitle',
+          ),
         ),
         content: Text(
           context.t(
@@ -723,9 +723,7 @@ class _BreathTestPageState extends State<BreathTestPage>
   /// discards this attempt and returns to the "Devam" tap, same recovery
   /// path the noise-warning dialog already uses. Declining the retry keeps
   /// the existing behavior (time-based result with no acoustic reading).
-  Future<void> _handleAttemptOutcomeUi(
-    BreathAcousticAnalysis? acoustic,
-  ) async {
+  Future<void> _handleAttemptOutcomeUi(BreathAcousticAnalysis? acoustic) async {
     if (!mounted) {
       return;
     }
@@ -790,8 +788,10 @@ class _BreathTestPageState extends State<BreathTestPage>
     double? intensity,
   }) {
     final resolvedStability =
-        stability ?? _breathTestEngine.estimateBlowStabilityFromAttempts(_attemptSeconds);
-    final resolvedIntensity = intensity ??
+        stability ??
+        _breathTestEngine.estimateBlowStabilityFromAttempts(_attemptSeconds);
+    final resolvedIntensity =
+        intensity ??
         _breathTestEngine.estimateBlowIntensity(
           holdDuration: seconds.toDouble(),
           blowDuration: seconds.toDouble(),
@@ -880,18 +880,21 @@ class _BreathTestPageState extends State<BreathTestPage>
   /// shouldn't set the recorded score. Pure/synchronous so the result page
   /// can get the score immediately, without waiting on the DB write below.
   ({double medianScore, int seconds, double stability, double intensity})?
-      _computeMedianAttempt() {
+  _computeMedianAttempt() {
     if (_attemptSeconds.isEmpty) {
       return null;
     }
-    final attempts = <({double score, int seconds, double stability, double intensity})>[];
+    final attempts =
+        <({double score, int seconds, double stability, double intensity})>[];
     for (var i = 0; i < _attemptSeconds.length; i++) {
       final acoustic = i < _attemptAcousticResults.length
           ? _attemptAcousticResults[i]
           : null;
       final stability = (acoustic != null && acoustic.exhaleDetected)
           ? acoustic.blowStability!
-          : _breathTestEngine.estimateBlowStabilityFromAttempts(_attemptSeconds);
+          : _breathTestEngine.estimateBlowStabilityFromAttempts(
+              _attemptSeconds,
+            );
       final intensity = (acoustic != null && acoustic.exhaleDetected)
           ? acoustic.blowIntensity!
           : _breathTestEngine.estimateBlowIntensity(
@@ -911,7 +914,8 @@ class _BreathTestPageState extends State<BreathTestPage>
       ));
     }
 
-    final sortedByScore = [...attempts]..sort((a, b) => a.score.compareTo(b.score));
+    final sortedByScore = [...attempts]
+      ..sort((a, b) => a.score.compareTo(b.score));
     final medianAttempt = sortedByScore[sortedByScore.length ~/ 2];
     final medianScore = _breathTrendEngine.medianOfAttemptScores(
       attempts.map((a) => a.score).toList(),
@@ -987,7 +991,9 @@ class _BreathTestPageState extends State<BreathTestPage>
         );
       }
 
-      final spirometry = hasFullAcousticReading ? _lastSpirometryEstimate : null;
+      final spirometry = hasFullAcousticReading
+          ? _lastSpirometryEstimate
+          : null;
       final processed = await _breathTestService.processBreathTest(
         name: widget.name,
         packsPerDay: widget.packsPerDay,
@@ -1197,8 +1203,8 @@ class _BreathTestPageState extends State<BreathTestPage>
   String _getInstruction() {
     if (_isResting) {
       final feedback = _lastAttemptFeedback;
-      final showingFeedback = feedback != null &&
-          _restSecondsLeft > 20 - _feedbackDisplaySeconds;
+      final showingFeedback =
+          feedback != null && _restSecondsLeft > 20 - _feedbackDisplaySeconds;
       if (showingFeedback) {
         return context.t(feedback.messageKey);
       }
@@ -1267,9 +1273,7 @@ class _BreathTestPageState extends State<BreathTestPage>
                         Expanded(
                           flex: 4,
                           child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -1319,9 +1323,7 @@ class _BreathTestPageState extends State<BreathTestPage>
                   boxShadow: isCurrent
                       ? [
                           BoxShadow(
-                            color: AppTheme.brandPrimary.withValues(
-                              alpha: 0.4,
-                            ),
+                            color: AppTheme.brandPrimary.withValues(alpha: 0.4),
                             blurRadius: 8,
                             spreadRadius: 1,
                           ),

@@ -39,10 +39,11 @@ class StepTrendEngine {
       dailyTotals[day] = (dailyTotals[day] ?? 0) + delta;
     }
 
-    final result = dailyTotals.entries
-        .map((entry) => DailyStepCount(date: entry.key, steps: entry.value))
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final result =
+        dailyTotals.entries
+            .map((entry) => DailyStepCount(date: entry.key, steps: entry.value))
+            .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
     return result;
   }
 

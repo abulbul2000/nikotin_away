@@ -140,12 +140,13 @@ class BreathAcousticEngine {
     if (samples.length <= calibrationSkipSamples) {
       return _minBaseline;
     }
-    final calibrationSamples = samples
-        .skip(calibrationSkipSamples)
-        .take(calibrationSampleCount)
-        .map((s) => s.rmsEnergy)
-        .toList()
-      ..sort();
+    final calibrationSamples =
+        samples
+            .skip(calibrationSkipSamples)
+            .take(calibrationSampleCount)
+            .map((s) => s.rmsEnergy)
+            .toList()
+          ..sort();
     if (calibrationSamples.isEmpty) {
       return _minBaseline;
     }
@@ -180,7 +181,8 @@ class BreathAcousticEngine {
     final candidates = samples
         .skip(_calibrationSampleTotal)
         .where(
-          (s) => searchFromMs == null || s.millisecondsSinceStart >= searchFromMs,
+          (s) =>
+              searchFromMs == null || s.millisecondsSinceStart >= searchFromMs,
         )
         .toList();
 
@@ -189,7 +191,8 @@ class BreathAcousticEngine {
       if (candidates[i].rmsEnergy > threshold) {
         streak++;
         if (streak >= onsetDebounceSamples) {
-          return candidates[i - onsetDebounceSamples + 1].millisecondsSinceStart;
+          return candidates[i - onsetDebounceSamples + 1]
+              .millisecondsSinceStart;
         }
       } else {
         streak = 0;
@@ -214,7 +217,8 @@ class BreathAcousticEngine {
       if (candidates[i].rmsEnergy < threshold) {
         streak++;
         if (streak >= offsetDebounceSamples) {
-          return candidates[i - offsetDebounceSamples + 1].millisecondsSinceStart;
+          return candidates[i - offsetDebounceSamples + 1]
+              .millisecondsSinceStart;
         }
       } else {
         streak = 0;
@@ -257,7 +261,9 @@ class BreathAcousticEngine {
     final energies = exhaleSamples.map((s) => s.rmsEnergy).toList();
     final mean = energies.reduce((a, b) => a + b) / energies.length;
     final variance =
-        energies.map((e) => pow(e - mean, 2).toDouble()).reduce((a, b) => a + b) /
+        energies
+            .map((e) => pow(e - mean, 2).toDouble())
+            .reduce((a, b) => a + b) /
         energies.length;
     final stdDev = sqrt(variance);
 
@@ -273,7 +279,9 @@ class BreathAcousticEngine {
     // conservatively from typical close-mic exhale RMS levels; deliberately
     // documented as approximate rather than clinically calibrated.
     const referenceLoudExhaleEnergy = 0.25;
-    final intensity = (mean / referenceLoudExhaleEnergy).clamp(0.0, 1.0).toDouble();
+    final intensity = (mean / referenceLoudExhaleEnergy)
+        .clamp(0.0, 1.0)
+        .toDouble();
 
     return BreathAcousticAnalysis(
       exhaleDetected: true,
@@ -309,14 +317,18 @@ class BreathAcousticEngine {
     int onsetMs,
     int offsetMs,
   ) {
-    final exhaleSamples = samples
-        .where(
-          (s) =>
-              s.millisecondsSinceStart >= onsetMs &&
-              s.millisecondsSinceStart <= offsetMs,
-        )
-        .toList()
-      ..sort((a, b) => a.millisecondsSinceStart.compareTo(b.millisecondsSinceStart));
+    final exhaleSamples =
+        samples
+            .where(
+              (s) =>
+                  s.millisecondsSinceStart >= onsetMs &&
+                  s.millisecondsSinceStart <= offsetMs,
+            )
+            .toList()
+          ..sort(
+            (a, b) =>
+                a.millisecondsSinceStart.compareTo(b.millisecondsSinceStart),
+          );
     if (exhaleSamples.length < 2) {
       return null;
     }
@@ -337,8 +349,8 @@ class BreathAcousticEngine {
 
       if (i > 0) {
         final prev = exhaleSamples[i - 1];
-        final dtSeconds = (sample.millisecondsSinceStart -
-                prev.millisecondsSinceStart) /
+        final dtSeconds =
+            (sample.millisecondsSinceStart - prev.millisecondsSinceStart) /
             1000.0;
         final avgEnergy = (sample.rmsEnergy + prev.rmsEnergy) / 2.0;
         cumulative += avgEnergy * dtSeconds;
@@ -367,11 +379,13 @@ class BreathAcousticEngine {
         peakAtMs = relativeMs;
       }
 
-      curve.add(BreathFlowCurvePoint(
-        millisecondsSinceOnset: relativeMs,
-        energy: sample.rmsEnergy,
-        cumulativeEnergyIntegral: cumulative,
-      ));
+      curve.add(
+        BreathFlowCurvePoint(
+          millisecondsSinceOnset: relativeMs,
+          energy: sample.rmsEnergy,
+          cumulativeEnergyIntegral: cumulative,
+        ),
+      );
     }
 
     final fvcIntegral = cumulative;
@@ -382,8 +396,9 @@ class BreathAcousticEngine {
     final ratio = fvcIntegral <= 0
         ? 0.0
         : ((resolvedFev1 / fvcIntegral) * 100).clamp(0, 100).toDouble();
-    final peakFlowIndex =
-        ((peakEnergy / _referencePeakExhaleEnergy) * 100).clamp(0, 100).toDouble();
+    final peakFlowIndex = ((peakEnergy / _referencePeakExhaleEnergy) * 100)
+        .clamp(0, 100)
+        .toDouble();
 
     return SpirometryEstimate(
       fev1EnergyIntegral: resolvedFev1,

@@ -51,38 +51,44 @@ void main() {
     expect(allowed, isTrue);
   });
 
-  test('canAccess is false once the trial has elapsed with no subscription', () async {
-    await storage.saveSubscriptionState(
-      SubscriptionState(
-        trialStartedAt: DateTime.now().subtract(const Duration(days: 20)),
-        status: SubscriptionStatus.trial,
-        updatedAt: DateTime.now(),
-      ),
-    );
+  test(
+    'canAccess is false once the trial has elapsed with no subscription',
+    () async {
+      await storage.saveSubscriptionState(
+        SubscriptionState(
+          trialStartedAt: DateTime.now().subtract(const Duration(days: 20)),
+          status: SubscriptionStatus.trial,
+          updatedAt: DateTime.now(),
+        ),
+      );
 
-    final allowed = await featureAccess.canAccess(
-      PremiumFeature.breathCoughTests,
-    );
+      final allowed = await featureAccess.canAccess(
+        PremiumFeature.breathCoughTests,
+      );
 
-    expect(allowed, isFalse);
-  });
+      expect(allowed, isFalse);
+    },
+  );
 
-  test('canAccess is true with an active, recently-verified subscription', () async {
-    final now = DateTime.now();
-    await storage.saveSubscriptionState(
-      SubscriptionState(
-        trialStartedAt: now.subtract(const Duration(days: 20)),
-        status: SubscriptionStatus.active,
-        productId: 'monthly_sub',
-        lastVerifiedAt: now.subtract(const Duration(hours: 1)),
-        updatedAt: now,
-      ),
-    );
+  test(
+    'canAccess is true with an active, recently-verified subscription',
+    () async {
+      final now = DateTime.now();
+      await storage.saveSubscriptionState(
+        SubscriptionState(
+          trialStartedAt: now.subtract(const Duration(days: 20)),
+          status: SubscriptionStatus.active,
+          productId: 'monthly_sub',
+          lastVerifiedAt: now.subtract(const Duration(hours: 1)),
+          updatedAt: now,
+        ),
+      );
 
-    final allowed = await featureAccess.canAccess(
-      PremiumFeature.locationIntelligence,
-    );
+      final allowed = await featureAccess.canAccess(
+        PremiumFeature.locationIntelligence,
+      );
 
-    expect(allowed, isTrue);
-  });
+      expect(allowed, isTrue);
+    },
+  );
 }

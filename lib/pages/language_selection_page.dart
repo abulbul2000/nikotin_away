@@ -39,13 +39,13 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
     await AppTexts.ensureLanguageLoaded(languageCode);
     await NotificationService.refreshLocalizedResources();
     if (!context.mounted) return;
-    
+
     // Locale'i set et
     NoSmokeApp.setLocale(
       context,
       LanguageService.supportedLanguages[languageCode] ?? const Locale('en'),
     );
-    
+
     // Locale güncellemesinin uygulanması için kısa bir bekleme
     await Future.delayed(const Duration(milliseconds: 150));
     if (!context.mounted) return;
@@ -108,7 +108,10 @@ class _LanguageSelectionPageState extends State<LanguageSelectionPage> {
                   GestureDetector(
                     onTap: () => _showLanguageModal(context),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.white70, width: 2),
                         borderRadius: BorderRadius.circular(18),
@@ -176,8 +179,8 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
     final query = _searchQuery.toLowerCase();
     final langs = _showOtherLanguages
         ? LanguageService.supportedLanguages.keys
-            .where((code) => !LanguageService.primaryLanguages.contains(code))
-            .toList()
+              .where((code) => !LanguageService.primaryLanguages.contains(code))
+              .toList()
         : LanguageService.primaryLanguages.toList();
 
     if (query.isEmpty) {
@@ -272,7 +275,10 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                 child: ListView.builder(
                   controller: scrollController,
                   itemCount: filteredLangs.length,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   itemBuilder: (context, index) {
                     final code = filteredLangs[index];
                     final name = LanguageService.languageNames[code] ?? code;
@@ -299,10 +305,7 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                                   : Colors.white10,
                               borderRadius: BorderRadius.circular(12),
                               border: isSelected
-                                  ? Border.all(
-                                      color: Colors.green,
-                                      width: 2,
-                                    )
+                                  ? Border.all(color: Colors.green, width: 2)
                                   : null,
                             ),
                             child: Row(

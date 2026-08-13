@@ -58,7 +58,10 @@ class PdfReportService {
               pw.SizedBox(height: 4),
               pw.Text(
                 '${_formatDate(report.periodStart)} - ${_formatDate(report.periodEnd)}',
-                style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
+                style: const pw.TextStyle(
+                  fontSize: 12,
+                  color: PdfColors.grey700,
+                ),
               ),
               pw.SizedBox(height: 20),
               _row(labels['cigarettesLogged'], '${report.cigarettesLogged}'),

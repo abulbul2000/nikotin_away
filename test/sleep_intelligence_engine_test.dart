@@ -68,10 +68,7 @@ void main() {
           screenOff: true,
         ), // falls asleep here
         for (var i = 2; i <= 12; i++)
-          _probe(
-            base.add(Duration(minutes: 45 * i)),
-            screenOff: true,
-          ),
+          _probe(base.add(Duration(minutes: 45 * i)), screenOff: true),
         _probe(
           base.add(const Duration(minutes: 45 * 13)),
           screenOff: false,

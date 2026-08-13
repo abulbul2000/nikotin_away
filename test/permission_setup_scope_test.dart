@@ -45,13 +45,16 @@ void main() {
     );
   });
 
-  test('granting an optional permission never writes a feature-enabled setting', () {
-    final code = source();
-    // saveSetting only ever appears in the location intelligence service's
-    // own enable() flow, never here — this file must call the bare
-    // permission_handler request, not a service method that also flips a
-    // feature switch.
-    expect(code, isNot(contains('saveSetting')));
-    expect(code, isNot(contains('.enable()')));
-  });
+  test(
+    'granting an optional permission never writes a feature-enabled setting',
+    () {
+      final code = source();
+      // saveSetting only ever appears in the location intelligence service's
+      // own enable() flow, never here — this file must call the bare
+      // permission_handler request, not a service method that also flips a
+      // feature switch.
+      expect(code, isNot(contains('saveSetting')));
+      expect(code, isNot(contains('.enable()')));
+    },
+  );
 }

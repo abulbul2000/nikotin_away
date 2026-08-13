@@ -34,10 +34,12 @@ class SmokingTimePredictionEngine {
       profileContext['workStart']?.toString(),
     );
     final workEndMinutes = _parseMinutes(profileContext['workEnd']?.toString());
-    final workplaceRule = (profileContext['workplaceSmokingRule']?.toString() ?? '')
-        .toLowerCase();
+    final workplaceRule =
+        (profileContext['workplaceSmokingRule']?.toString() ?? '')
+            .toLowerCase();
     final weekendPattern =
-        (profileContext['weekendSmokingPattern']?.toString() ?? '').toLowerCase();
+        (profileContext['weekendSmokingPattern']?.toString() ?? '')
+            .toLowerCase();
     final breakWindows =
         (profileContext['breakWindows'] as List<dynamic>? ?? const <dynamic>[])
             .whereType<Map<String, dynamic>>()
@@ -384,20 +386,23 @@ class SmokingTimePredictionEngine {
       return prior;
     }
 
-    final observedWeight =
-        total / (total + calibrationHalfLife).toDouble();
+    final observedWeight = total / (total + calibrationHalfLife).toDouble();
     final structuralWeight = 1 - observedWeight;
 
     final blended = <double>[];
     for (var hour = 0; hour < 24; hour++) {
       final observed = counts[hour] / total;
       final structural = prior.slotForHour(hour).weight;
-      blended.add((structural * structuralWeight) + (observed * observedWeight));
+      blended.add(
+        (structural * structuralWeight) + (observed * observedWeight),
+      );
     }
 
     final blendedTotal = blended.fold<double>(0, (sum, value) => sum + value);
-    final estimatedDailyTotal = prior.hourly
-        .fold<int>(0, (sum, slot) => sum + slot.estimatedCigarettes);
+    final estimatedDailyTotal = prior.hourly.fold<int>(
+      0,
+      (sum, slot) => sum + slot.estimatedCigarettes,
+    );
 
     final hourly = <SmokingTimeSlot>[];
     for (var hour = 0; hour < 24; hour++) {

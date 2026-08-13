@@ -41,11 +41,11 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (methodCall) async {
-      if (methodCall.method == 'zonedSchedule') {
-        return null;
-      }
-      return true;
-    });
+          if (methodCall.method == 'zonedSchedule') {
+            return null;
+          }
+          return true;
+        });
   });
 
   tearDown(() {
@@ -53,44 +53,49 @@ void main() {
         .setMockMethodCallHandler(channel, null);
   });
 
-  testWidgets('RiskResultPage continues directly to HomePage in initial setup',
-      (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        locale: Locale('tr'),
-        supportedLocales: [Locale('tr'), Locale('en')],
-        localizationsDelegates: [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: RiskResultPage(
-          name: 'Ada',
-          riskScore: 40,
-          riskLevel: 'ORTA',
-          packsPerDay: '1 paket',
-          exhaleTestSeconds: 8,
-          inhaleTestSeconds: 10,
+  testWidgets(
+    'RiskResultPage continues directly to HomePage in initial setup',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          locale: Locale('tr'),
+          supportedLocales: [Locale('tr'), Locale('en')],
+          localizationsDelegates: [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: RiskResultPage(
+            name: 'Ada',
+            riskScore: 40,
+            riskLevel: 'ORTA',
+            packsPerDay: '1 paket',
+            exhaleTestSeconds: 8,
+            inhaleTestSeconds: 10,
+          ),
         ),
-      ),
-    );
+      );
 
-    await tester.pumpAndSettle();
-    final continueButton = find.byKey(const ValueKey('risk_result_continue_button'));
-    await tester.ensureVisible(continueButton);
-    await tester.tap(continueButton);
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
+      final continueButton = find.byKey(
+        const ValueKey('risk_result_continue_button'),
+      );
+      await tester.ensureVisible(continueButton);
+      await tester.tap(continueButton);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
-    expect(find.text('Tüm geçmiş anketleri gör'), findsNothing);
-    expect(find.text('Ana sayfaya dön'), findsNothing);
-  });
+      expect(tester.takeException(), isNull);
+      expect(find.text('Tüm geçmiş anketleri gör'), findsNothing);
+      expect(find.text('Ana sayfaya dön'), findsNothing);
+    },
+  );
 
-  testWidgets('SurveyPage context can push BreathTestPage via Navigator.push',
-      (tester) async {
+  testWidgets('SurveyPage context can push BreathTestPage via Navigator.push', (
+    tester,
+  ) async {
     final observer = _TestNavigatorObserver();
 
     await tester.pumpWidget(
@@ -113,10 +118,8 @@ void main() {
     final context = tester.element(find.byType(SurveyPage));
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const BreathTestPage(
-          name: 'Ada',
-          packsPerDay: '1 paket',
-        ),
+        builder: (_) =>
+            const BreathTestPage(name: 'Ada', packsPerDay: '1 paket'),
       ),
     );
     await tester.pumpAndSettle();
@@ -124,41 +127,43 @@ void main() {
     expect(observer.pushCount, greaterThan(initialPushCount));
   });
 
-  testWidgets('SurveyPage shows field specific snackbar when validation fails',
-      (tester) async {
-    await tester.pumpWidget(
-      const MaterialApp(
-        locale: Locale('tr'),
-        supportedLocales: [Locale('tr'), Locale('en')],
-        localizationsDelegates: [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        home: SurveyPage(),
-      ),
-    );
+  testWidgets(
+    'SurveyPage shows field specific snackbar when validation fails',
+    (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          locale: Locale('tr'),
+          supportedLocales: [Locale('tr'), Locale('en')],
+          localizationsDelegates: [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: SurveyPage(),
+        ),
+      );
 
-    await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
-    // SurveyPage's onboarding form is a multi-step SurveyWizard; the
-    // primary button reads "İleri" (Next) on every step except the last,
-    // where it becomes "Tamamla" (Finish) and triggers the real
-    // validation/save flow. Drive through every step to reach it, leaving
-    // the (required) name field on step 1 empty the whole way.
-    final primaryButton = find.byKey(
-      const ValueKey('survey_wizard_primary_button'),
-    );
-    for (var step = 0; step < 5; step++) {
+      // SurveyPage's onboarding form is a multi-step SurveyWizard; the
+      // primary button reads "İleri" (Next) on every step except the last,
+      // where it becomes "Tamamla" (Finish) and triggers the real
+      // validation/save flow. Drive through every step to reach it, leaving
+      // the (required) name field on step 1 empty the whole way.
+      final primaryButton = find.byKey(
+        const ValueKey('survey_wizard_primary_button'),
+      );
+      for (var step = 0; step < 5; step++) {
+        await tester.ensureVisible(primaryButton);
+        await tester.tap(primaryButton);
+        await tester.pumpAndSettle();
+      }
+
       await tester.ensureVisible(primaryButton);
       await tester.tap(primaryButton);
-      await tester.pumpAndSettle();
-    }
+      await tester.pump();
 
-    await tester.ensureVisible(primaryButton);
-    await tester.tap(primaryButton);
-    await tester.pump();
-
-    expect(find.text('Lütfen ad alanını doldurun.'), findsOneWidget);
-  });
+      expect(find.text('Lütfen ad alanını doldurun.'), findsOneWidget);
+    },
+  );
 }

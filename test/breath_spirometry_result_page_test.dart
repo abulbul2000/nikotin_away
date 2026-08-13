@@ -64,35 +64,38 @@ void main() {
     );
   });
 
-  testWidgets('shows a neutral note (not a severity level) when wheeze was detected', (
+  testWidgets(
+    'shows a neutral note (not a severity level) when wheeze was detected',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const BreathSpirometryResultPage(
+            name: 'Ada',
+            riskScore: 40,
+            riskLevel: 'ORTA',
+            breathScore: 62,
+            wheezeDetected: true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey('breath_result_wheeze_card')),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Bu testte olagandisi bir ses paterni duyuldu.'),
+        findsOneWidget,
+      );
+      // No clinical severity wording should survive on this screen.
+      expect(find.textContaining('duzeyde'), findsNothing);
+    },
+  );
+
+  testWidgets('shows the breath score, not FEV1/FVC or peak flow', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _wrap(
-        const BreathSpirometryResultPage(
-          name: 'Ada',
-          riskScore: 40,
-          riskLevel: 'ORTA',
-          breathScore: 62,
-          wheezeDetected: true,
-        ),
-      ),
-    );
-    await tester.pump();
-
-    expect(
-      find.byKey(const ValueKey('breath_result_wheeze_card')),
-      findsOneWidget,
-    );
-    expect(
-      find.text('Bu testte olagandisi bir ses paterni duyuldu.'),
-      findsOneWidget,
-    );
-    // No clinical severity wording should survive on this screen.
-    expect(find.textContaining('duzeyde'), findsNothing);
-  });
-
-  testWidgets('shows the breath score, not FEV1/FVC or peak flow', (tester) async {
     await tester.pumpWidget(
       _wrap(
         const BreathSpirometryResultPage(

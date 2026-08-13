@@ -355,11 +355,10 @@ Future<void> _completeCoughTestStep(WidgetTester tester) async {
   // for either that dialog or the result screen, and dismiss the dialog via
   // its "keep result anyway" TextButton if it's the one that showed up.
   final keepResultButton = find.text('Yine de Devam Et');
-  await _pumpUntilAnyFound(
-    tester,
-    [elevatedButtonFinder, keepResultButton],
-    timeout: const Duration(seconds: 35),
-  );
+  await _pumpUntilAnyFound(tester, [
+    elevatedButtonFinder,
+    keepResultButton,
+  ], timeout: const Duration(seconds: 35));
   if (keepResultButton.evaluate().isNotEmpty) {
     await tester.tap(keepResultButton);
     await _pumpRealTime(tester, const Duration(milliseconds: 100));
@@ -398,7 +397,6 @@ void main() {
     await StorageService().clearAllData();
     _mockRecordChannel();
   });
-
 
   // Deliberately no tearDown() removing the mock handler: AudioRecorder's
   // own dispose() call can still be in flight (fire-and-forget, per
@@ -486,7 +484,6 @@ void main() {
       // between.
       expect(find.byType(DailyProgressReportView), findsOneWidget);
     },
-    
   );
 
   testWidgets(
@@ -529,7 +526,6 @@ void main() {
       expect(find.byType(DailyProgressReportView), findsOneWidget);
       expect(fakeStorage.recalledHoursCallCount, 0);
     },
-    
   );
 
   testWidgets('closing the report transitions the task to succeeded', (

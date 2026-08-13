@@ -206,7 +206,10 @@ class RiskResultPage extends StatelessWidget {
                 ),
                 child: Text(
                   context.t('breathSpirometryEstimateDisclaimer'),
-                  style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ),
             ],

@@ -4,8 +4,14 @@ import 'package:no_smoke/services/device_compatibility_service.dart';
 void main() {
   group('DeviceCompatibilityService.isAggressiveManufacturerName', () {
     test('null or empty is not aggressive', () {
-      expect(DeviceCompatibilityService.isAggressiveManufacturerName(null), isFalse);
-      expect(DeviceCompatibilityService.isAggressiveManufacturerName(''), isFalse);
+      expect(
+        DeviceCompatibilityService.isAggressiveManufacturerName(null),
+        isFalse,
+      );
+      expect(
+        DeviceCompatibilityService.isAggressiveManufacturerName(''),
+        isFalse,
+      );
     });
 
     test('known aggressive manufacturers match case-insensitively', () {

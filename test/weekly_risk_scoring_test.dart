@@ -36,9 +36,7 @@ Map<String, dynamic> payload({
             'sleepQualityResp': 0,
             'energyLevelResp': 0,
           },
-      'warningSigns': {
-        'increasedNightBreathlessnessDays': nightBreathlessness,
-      },
+      'warningSigns': {'increasedNightBreathlessnessDays': nightBreathlessness},
     },
   };
 }

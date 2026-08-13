@@ -23,8 +23,8 @@ class BreathNoiseCheckService {
   BreathNoiseCheckService({
     BreathNoiseEngine? noiseEngine,
     StorageService? storageService,
-  })  : _noiseEngine = noiseEngine ?? BreathNoiseEngine(),
-        _storageService = storageService ?? StorageService();
+  }) : _noiseEngine = noiseEngine ?? BreathNoiseEngine(),
+       _storageService = storageService ?? StorageService();
 
   /// Evaluates the ambient window collected before an attempt starts (the
   /// 2-3s the product spec asks for) against this device's own reference
@@ -38,7 +38,10 @@ class BreathNoiseCheckService {
   ) async {
     final result = await _evaluate(ambientSamples);
     await _storageService.saveBreathNoiseBaseline(
-      BreathNoiseBaseline(measuredAt: DateTime.now(), level: result.measuredLevel),
+      BreathNoiseBaseline(
+        measuredAt: DateTime.now(),
+        level: result.measuredLevel,
+      ),
     );
     return result;
   }

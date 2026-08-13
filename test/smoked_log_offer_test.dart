@@ -8,8 +8,7 @@ import 'package:no_smoke/services/smoked_log_button_service.dart';
 /// Records what the flow asked of it, without touching SQLite — a widget test
 /// runs in a fake-async zone where a real database read never resolves.
 class _FakeButtonService extends SmokedLogButtonService {
-  _FakeButtonService({this.alreadyConsented = false})
-    : super(isAndroid: true);
+  _FakeButtonService({this.alreadyConsented = false}) : super(isAndroid: true);
 
   final bool alreadyConsented;
   bool enableCalled = false;
@@ -63,10 +62,7 @@ void main() {
     }
   }
 
-  Future<void> runOffer(
-    WidgetTester tester,
-    _FakeButtonService service,
-  ) async {
+  Future<void> runOffer(WidgetTester tester, _FakeButtonService service) async {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('tr'),

@@ -215,10 +215,7 @@ class _SmokingDiscrepancyStepState extends State<_SmokingDiscrepancyStep> {
             Text(
               context.t('sleepRoutineDiscrepancyQuestionTitle'),
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             Text(

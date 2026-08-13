@@ -122,7 +122,8 @@ class SmokingIntervalService {
 
     var available = awake.length;
     final rule = input.workplaceRule?.trim().toLowerCase();
-    final smokingBannedAtWork = rule == 'hayır' ||
+    final smokingBannedAtWork =
+        rule == 'hayır' ||
         rule == 'hayir' ||
         rule == 'no' ||
         rule == 'sadece molalarda' ||
@@ -164,7 +165,8 @@ class SmokingIntervalService {
   /// break blocks 09:00–12:00 and 12:30–17:00, leaving the break open.
   List<(String, String)> blockedTaskWindows(SmokingWindowInput input) {
     final rule = input.workplaceRule?.trim().toLowerCase();
-    final smokingBannedAtWork = rule == 'hayır' ||
+    final smokingBannedAtWork =
+        rule == 'hayır' ||
         rule == 'hayir' ||
         rule == 'no' ||
         rule == 'sadece molalarda' ||
@@ -179,13 +181,14 @@ class SmokingIntervalService {
       return const [];
     }
 
-    final breaks = input.breaks
-        .map((b) => (_clockToMinutes(b.$1), _clockToMinutes(b.$2)))
-        .where((b) => b.$1 != null && b.$2 != null)
-        .map((b) => (b.$1!, b.$2!))
-        .where((b) => b.$2 > b.$1)
-        .toList()
-      ..sort((a, b) => a.$1.compareTo(b.$1));
+    final breaks =
+        input.breaks
+            .map((b) => (_clockToMinutes(b.$1), _clockToMinutes(b.$2)))
+            .where((b) => b.$1 != null && b.$2 != null)
+            .map((b) => (b.$1!, b.$2!))
+            .where((b) => b.$2 > b.$1)
+            .toList()
+          ..sort((a, b) => a.$1.compareTo(b.$1));
 
     String fmt(int minutes) {
       final wrapped = minutes % 1440;

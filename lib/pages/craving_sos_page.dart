@@ -138,9 +138,9 @@ class _CravingSosPageState extends State<CravingSosPage>
     }
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.t('sosTaskPostponed'))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.t('sosTaskPostponed'))));
     Navigator.of(context).pop();
   }
 
@@ -273,9 +273,9 @@ class _CravingSosPageState extends State<CravingSosPage>
         const SizedBox(height: 20),
         Text(
           context.t('sosSuggestionTitle'),
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: Colors.white70,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(color: Colors.white70),
         ),
         const SizedBox(height: 12),
         Text(
@@ -312,9 +312,9 @@ class _CravingSosPageState extends State<CravingSosPage>
         Text(
           context.t('sosResumeQuestion'),
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: Colors.white,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(color: Colors.white),
         ),
         const SizedBox(height: 28),
         for (final (minutes, key) in const [

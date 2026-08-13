@@ -130,8 +130,7 @@ class _MedicationEditorSheet extends StatefulWidget {
   final Medication? existing;
 
   @override
-  State<_MedicationEditorSheet> createState() =>
-      _MedicationEditorSheetState();
+  State<_MedicationEditorSheet> createState() => _MedicationEditorSheetState();
 }
 
 class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {

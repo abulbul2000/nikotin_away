@@ -161,10 +161,7 @@ void main() {
       );
 
       for (final item in plan.items) {
-        expect(
-          item.taskTitle,
-          'ADAPTIVE_NO_SMOKE:${item.durationMinutes}',
-        );
+        expect(item.taskTitle, 'ADAPTIVE_NO_SMOKE:${item.durationMinutes}');
       }
     });
 

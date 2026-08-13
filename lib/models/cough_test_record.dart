@@ -55,7 +55,9 @@ class CoughTestRecord {
       'averageIntervalSeconds': averageIntervalSeconds,
       'earlyBurstRatio': earlyBurstRatio,
       'peakIntensityScore': peakIntensityScore,
-      'wheezeDetected': wheezeDetected == null ? null : (wheezeDetected! ? 1 : 0),
+      'wheezeDetected': wheezeDetected == null
+          ? null
+          : (wheezeDetected! ? 1 : 0),
       'wheezeSeverityLevel': wheezeSeverityLevel,
       'wheezeSeverityScore': wheezeSeverityScore,
       'wheezeBandEnergyRatio': wheezeBandEnergyRatio,

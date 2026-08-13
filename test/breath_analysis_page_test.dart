@@ -98,16 +98,18 @@ void main() {
         .path;
   });
 
-  testWidgets('shows the empty state when there is no breath-test history',
-      (tester) async {
+  testWidgets('shows the empty state when there is no breath-test history', (
+    tester,
+  ) async {
     await _pumpAnalysisPage(tester);
 
     expect(find.text('Henüz veri yok'), findsOneWidget);
     expect(find.text('Nefes testini başlat'), findsOneWidget);
   });
 
-  testWidgets('shows summary cards, charts, and badges once records exist',
-      (tester) async {
+  testWidgets('shows summary cards, charts, and badges once records exist', (
+    tester,
+  ) async {
     // Seeding must happen inside runAsync too, for the same reason
     // _pumpAnalysisPage's internal waits do (see its doc comment): these
     // awaits drive real sqflite I/O, which the fake-async zone testWidgets

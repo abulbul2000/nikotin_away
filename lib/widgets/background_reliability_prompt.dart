@@ -57,7 +57,9 @@ Future<void> maybePromptBackgroundReliability({
             Navigator.of(dialogContext).pop();
             await DevicePermissionService.openAutostartSettings();
           },
-          child: Text(dialogContext.t('permissionBackgroundOpenSettingsAction')),
+          child: Text(
+            dialogContext.t('permissionBackgroundOpenSettingsAction'),
+          ),
         ),
       ],
     ),
