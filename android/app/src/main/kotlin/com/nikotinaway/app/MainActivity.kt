@@ -94,6 +94,14 @@ class MainActivity : FlutterActivity() {
 						result.success(true)
 					}
 
+					"setSnoringCaptureChannelInfo" -> {
+						val title = call.argument<String>("title").orEmpty()
+						val body = call.argument<String>("body").orEmpty()
+						val channelName = call.argument<String>("channelName").orEmpty()
+						SnoringCaptureTextStore.save(this, title, body, channelName)
+						result.success(true)
+					}
+
 					else -> result.notImplemented()
 				}
 			}

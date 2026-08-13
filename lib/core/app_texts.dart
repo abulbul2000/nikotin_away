@@ -508,6 +508,10 @@ class AppTexts {
     'taskOverlayChannelName': 'Nikotin Away Görev Ekranı',
     'taskOverlayChannelDescription': 'Odak ekranı gösterilirken aktif',
     'taskOverlayForegroundBody': 'Görev ekranı gösteriliyor',
+    'snoringCaptureChannelName': 'Nikotin Away Uyku Zekası',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Horlama tespiti için kısa bir ses örneği alınıyor',
     'channelNameSmokedLogQuickAction': 'Nikotin Away Hızlı Kayıt',
     'channelDescriptionSmokedLogQuickAction':
         'Sigara içtim butonu ekranda dururken aktif',
@@ -802,7 +806,7 @@ class AppTexts {
     'settingsSnoringDetectionRow': 'Horlama Testi (Deneysel)',
     'snoringDetectionTitle': 'Horlama Testi (Deneysel)',
     'snoringDetectionDescription':
-        'Acik oldugunda, uyku saatlerinde birkac saniyelik kisa ses ornekleri alinip cihaz uzerinde analiz edilir; horlamaya benzer ritmik bir ses paterni olup olmadigina bakilir. Ses kaydi hicbir zaman diske yazilmaz veya disariya gonderilmez, sadece sonuc (evet/hayir) kaydedilir.',
+        'Acik oldugunda, uyku saatlerinde birkac saniyelik kisa ses ornekleri alinip cihaz uzerinde analiz edilir; horlamaya benzer ritmik bir ses paterni olup olmadigina bakilir. Bu kısa örnekleme sırasında telefonun bildirim çubuğunda mikrofonun açık olduğunu belirten sessiz bir bildirim görürsün -- bu, Android\'in mikrofon kullanan arka plan servisleri için zorunlu tuttuğu bir şeffaflık önlemidir. Ses kaydi hicbir zaman diske yazilmaz veya disariya gonderilmez, sadece sonuc (evet/hayir) kaydedilir.',
     'snoringDetectionPurpose':
         'Neden: Horlama, uyku kalitesini ve dolayisiyla ertesi gunku sigara riskini etkileyebilir. Bu ozellik icin once Uyku Zekasi ozelligi acik olmalidir, cunku ayni gece dongusunu kullanir.',
     'snoringDetectionEnabledConfirmation': 'Horlama testi acildi.',
@@ -2283,6 +2287,10 @@ class AppTexts {
     'taskOverlayChannelName': 'Nikotin Away Task Screen',
     'taskOverlayChannelDescription': 'Active while the focus screen is showing',
     'taskOverlayForegroundBody': 'Task screen showing',
+    'snoringCaptureChannelName': 'Nikotin Away Sleep Intelligence',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Taking a brief sound sample to check for snoring',
     'channelNameSmokedLogQuickAction': 'Nikotin Away Quick Log',
     'channelDescriptionSmokedLogQuickAction':
         'Active while the "I Smoked" button is on screen',
@@ -2570,7 +2578,7 @@ class AppTexts {
     'settingsSnoringDetectionRow': 'Snoring Test (Experimental)',
     'snoringDetectionTitle': 'Snoring Test (Experimental)',
     'snoringDetectionDescription':
-        'When on, a few seconds of audio are sampled during your sleep hours and analyzed on-device for a rhythmic, snore-like sound pattern. The recording is never written to disk or sent anywhere -- only the result (yes/no) is stored.',
+        'When on, a few seconds of audio are sampled during your sleep hours and analyzed on-device for a rhythmic, snore-like sound pattern. During that brief sampling you\'ll see a silent notification in the status bar showing the microphone is active -- this is a transparency measure Android requires for any background service that uses the microphone. The recording is never written to disk or sent anywhere -- only the result (yes/no) is stored.',
     'snoringDetectionPurpose':
         'Why: snoring can affect sleep quality and, in turn, next-day smoking risk. Sleep Intelligence must be on first for this feature, since it runs on the same overnight cycle.',
     'snoringDetectionEnabledConfirmation': 'Snoring test turned on.',

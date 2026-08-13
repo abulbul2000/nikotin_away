@@ -1732,6 +1732,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'Aktiv, während der Pflichtaufgabenbildschirm angezeigt wird',
     'taskOverlayForegroundBody': 'Aufgabenbildschirm wird angezeigt',
+    'snoringCaptureChannelName': 'Nikotin Away Schlafintelligenz',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Kurze Tonaufnahme zur Schnarcherkennung wird erfasst',
     'channelNameSmokedLogQuickAction': 'Nikotin Away Schnellerfassung',
     'channelDescriptionSmokedLogQuickAction':
         'Aktiv, während die Schaltfläche "Geraucht" auf dem Bildschirm ist',
@@ -3519,6 +3523,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelName': 'شاشة مهمة Nikotin Away',
     'taskOverlayChannelDescription': 'نشط أثناء عرض شاشة المهمة الإلزامية',
     'taskOverlayForegroundBody': 'شاشة المهمة معروضة',
+    'snoringCaptureChannelName': 'ذكاء النوم في Nikotin Away',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'جارٍ أخذ عينة صوتية قصيرة للكشف عن الشخير',
     'channelNameSmokedLogQuickAction': 'التسجيل السريع لـ Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'نشط أثناء ظهور زر "دخّنت" على الشاشة',
@@ -5401,6 +5409,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'Actif pendant l\'affichage de l\'écran de tâche obligatoire',
     'taskOverlayForegroundBody': 'Écran de tâche affiché',
+    'snoringCaptureChannelName': 'Nikotin Away Intelligence du sommeil',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Prise d\'un bref échantillon sonore pour détecter le ronflement',
     'channelNameSmokedLogQuickAction': 'Saisie rapide Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'Actif tant que le bouton "J\'ai fumé" est à l\'écran',
@@ -7262,6 +7274,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'Activo mientras se muestra la pantalla de tarea obligatoria',
     'taskOverlayForegroundBody': 'Mostrando pantalla de tarea',
+    'snoringCaptureChannelName': 'Nikotin Away Inteligencia del sueño',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Tomando una breve muestra de sonido para detectar ronquidos',
     'channelNameSmokedLogQuickAction': 'Registro rápido Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'Activo mientras el botón "Fumé" está en pantalla',
@@ -9108,6 +9124,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'Ativo enquanto a tela de tarefa obrigatória é exibida',
     'taskOverlayForegroundBody': 'Exibindo tela de tarefa',
+    'snoringCaptureChannelName': 'Nikotin Away Inteligência do sono',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Capturando uma breve amostra de som para detectar ronco',
     'channelNameSmokedLogQuickAction': 'Registro rápido Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'Ativo enquanto o botão "Fumei" está na tela',
@@ -10972,6 +10992,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'Attivo mentre è visibile la schermata dell\'attività obbligatoria',
     'taskOverlayForegroundBody': 'Schermata attività visibile',
+    'snoringCaptureChannelName': 'Nikotin Away Intelligenza del sonno',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Acquisizione di un breve campione audio per rilevare il russamento',
     'channelNameSmokedLogQuickAction': 'Registrazione rapida Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'Attivo mentre il pulsante "Ho fumato" è sullo schermo',
@@ -12819,6 +12843,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'Aktywny, gdy wyświetlany jest ekran obowiązkowego zadania',
     'taskOverlayForegroundBody': 'Wyświetlanie ekranu zadania',
+    'snoringCaptureChannelName': 'Nikotin Away Inteligencja snu',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Trwa nagrywanie krótkiej próbki dźwięku w celu wykrycia chrapania',
     'channelNameSmokedLogQuickAction': 'Szybki wpis Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'Aktywny, gdy przycisk "Zapaliłem" jest widoczny na ekranie',
@@ -14676,6 +14704,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'Активен, пока отображается экран обязательной задачи',
     'taskOverlayForegroundBody': 'Отображается экран задачи',
+    'snoringCaptureChannelName': 'Nikotin Away Интеллект сна',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Записывается короткий образец звука для определения храпа',
     'channelNameSmokedLogQuickAction': 'Быстрая отметка Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'Активен, пока на экране кнопка "Закурил"',
@@ -16189,6 +16221,9 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelName': 'Nikotin Away タスク画面',
     'taskOverlayChannelDescription': '必須タスク画面が表示されている間有効',
     'taskOverlayForegroundBody': 'タスク画面を表示中',
+    'snoringCaptureChannelName': 'Nikotin Away 睡眠インテリジェンス',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody': 'いびき検出のため短い音声サンプルを取得しています',
     'channelNameSmokedLogQuickAction': 'Nikotin Away クイック記録',
     'channelDescriptionSmokedLogQuickAction': '「吸った」ボタンが画面に表示されている間有効',
     'registrationMissingFields': '未入力の項目を入力してください。',
@@ -17624,6 +17659,9 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelName': 'Nikotin Away 任务界面',
     'taskOverlayChannelDescription': '显示强制任务界面期间保持活跃',
     'taskOverlayForegroundBody': '正在显示任务界面',
+    'snoringCaptureChannelName': 'Nikotin Away 睡眠智能',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody': '正在采集简短的声音样本以检测鼾声',
     'channelNameSmokedLogQuickAction': 'Nikotin Away 快速记录',
     'channelDescriptionSmokedLogQuickAction': '"我抽了"按钮显示在屏幕上时保持活跃',
     'registrationMissingFields': '请填写缺失的字段。',
@@ -19145,6 +19183,9 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelName': 'Nikotin Away 작업 화면',
     'taskOverlayChannelDescription': '필수 작업 화면이 표시되는 동안 활성화됨',
     'taskOverlayForegroundBody': '작업 화면 표시 중',
+    'snoringCaptureChannelName': 'Nikotin Away 수면 지능',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody': '코골이 감지를 위해 짧은 소리 샘플을 채취하고 있습니다',
     'channelNameSmokedLogQuickAction': 'Nikotin Away 빠른 기록',
     'channelDescriptionSmokedLogQuickAction': '"흡연함" 버튼이 화면에 표시되는 동안 활성화됨',
     'registrationMissingFields': '누락된 항목을 입력해 주세요.',
@@ -20330,6 +20371,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelName': 'Nikotin Away कार्य स्क्रीन',
     'taskOverlayChannelDescription': 'अनिवार्य कार्य स्क्रीन दिखते समय सक्रिय',
     'taskOverlayForegroundBody': 'कार्य स्क्रीन दिख रही है',
+    'snoringCaptureChannelName': 'Nikotin Away नींद बुद्धिमत्ता',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'खर्राटों का पता लगाने के लिए एक छोटा ध्वनि नमूना लिया जा रहा है',
     'channelNameSmokedLogQuickAction': 'Nikotin Away त्वरित रिकॉर्ड',
     'channelDescriptionSmokedLogQuickAction':
         '"मैंने सिगरेट पी" बटन स्क्रीन पर रहते समय सक्रिय',
@@ -22157,6 +22202,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'বাধ্যতামূলক টাস্ক স্ক্রিন দেখানোর সময় সক্রিয়',
     'taskOverlayForegroundBody': 'টাস্ক স্ক্রিন দেখানো হচ্ছে',
+    'snoringCaptureChannelName': 'Nikotin Away স্লিপ ইন্টেলিজেন্স',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'নাক ডাকা শনাক্ত করতে একটি সংক্ষিপ্ত শব্দ নমুনা নেওয়া হচ্ছে',
     'channelNameSmokedLogQuickAction': 'Nikotin Away দ্রুত লগ',
     'channelDescriptionSmokedLogQuickAction':
         '"সিগারেট খেয়েছি" বাটন স্ক্রিনে থাকার সময় সক্রিয়',
@@ -23978,6 +24027,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'ਜਦੋਂ ਲਾਜ਼ਮੀ ਕੰਮ ਸਕਰੀਨ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੋਵੇ ਤਾਂ ਸਰਗਰਮ',
     'taskOverlayForegroundBody': 'ਕੰਮ ਸਕਰੀਨ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ',
+    'snoringCaptureChannelName': 'Nikotin Away ਨੀਂਦ ਬੁੱਧੀ',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'ਘੁਰਾੜਿਆਂ ਦਾ ਪਤਾ ਲਗਾਉਣ ਲਈ ਇੱਕ ਛੋਟਾ ਆਵਾਜ਼ ਨਮੂਨਾ ਲਿਆ ਜਾ ਰਿਹਾ ਹੈ',
     'channelNameSmokedLogQuickAction': 'Nikotin Away ਤੁਰੰਤ ਦਰਜ',
     'channelDescriptionSmokedLogQuickAction':
         '"ਮੈਂ ਸਿਗਰਟ ਪੀਤੀ" ਬਟਨ ਸਕਰੀਨ \'ਤੇ ਰਹਿਣ ਦੌਰਾਨ ਸਰਗਰਮ',
@@ -25808,6 +25861,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'తప్పనిసరి పని తెర చూపబడుతున్నప్పుడు యాక్టివ్‌గా ఉంటుంది',
     'taskOverlayForegroundBody': 'పని తెర చూపబడుతోంది',
+    'snoringCaptureChannelName': 'Nikotin Away నిద్ర మేధ',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'గురక గుర్తించడానికి చిన్న ధ్వని నమూనా తీసుకుంటోంది',
     'channelNameSmokedLogQuickAction': 'Nikotin Away త్వరిత నమోదు',
     'channelDescriptionSmokedLogQuickAction':
         '"సిగరెట్ తాగాను" బటన్ తెరపై ఉన్నప్పుడు యాక్టివ్‌గా ఉంటుంది',
@@ -27633,6 +27690,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'अनिवार्य कार्य स्क्रीन दिसत असताना सक्रिय',
     'taskOverlayForegroundBody': 'कार्य स्क्रीन दिसत आहे',
+    'snoringCaptureChannelName': 'Nikotin Away झोप बुद्धिमत्ता',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'घोरणे शोधण्यासाठी एक लहान ध्वनी नमुना घेतला जात आहे',
     'channelNameSmokedLogQuickAction': 'Nikotin Away जलद नोंद',
     'channelDescriptionSmokedLogQuickAction':
         '"मी धूम्रपान केले" बटण स्क्रीनवर असताना सक्रिय',
@@ -29485,6 +29546,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'கட்டாய பணித் திரை காட்டப்படும்போது செயலில் உள்ளது',
     'taskOverlayForegroundBody': 'பணித் திரை காட்டப்படுகிறது',
+    'snoringCaptureChannelName': 'Nikotin Away தூக்க நுண்ணறிவு',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'குறட்டையைக் கண்டறிய ஒரு குறுகிய ஒலி மாதிரி எடுக்கப்படுகிறது',
     'channelNameSmokedLogQuickAction': 'Nikotin Away விரைவு பதிவு',
     'channelDescriptionSmokedLogQuickAction':
         '"புகைத்தேன்" பொத்தான் திரையில் இருக்கும்போது செயலில் உள்ளது',
@@ -31316,6 +31381,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'ફરજિયાત કાર્ય સ્ક્રીન બતાવાતી હોય ત્યારે સક્રિય',
     'taskOverlayForegroundBody': 'કાર્ય સ્ક્રીન બતાવાઈ રહી છે',
+    'snoringCaptureChannelName': 'Nikotin Away ઊંઘ બુદ્ધિમત્તા',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'નસકોરાં શોધવા માટે ટૂંકો ધ્વનિ નમૂનો લેવાઈ રહ્યો છે',
     'channelNameSmokedLogQuickAction': 'Nikotin Away ઝડપી નોંધ',
     'channelDescriptionSmokedLogQuickAction':
         '"મેં પીધું" બટન સ્ક્રીન પર હોય ત્યારે સક્રિય',
@@ -33138,6 +33207,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelName': 'Nikotin Away ಕಾರ್ಯ ಪರದೆ',
     'taskOverlayChannelDescription': 'ಕಡ್ಡಾಯ ಕಾರ್ಯ ಪರದೆ ತೋರಿಸುತ್ತಿರುವಾಗ ಸಕ್ರಿಯ',
     'taskOverlayForegroundBody': 'ಕಾರ್ಯ ಪರದೆ ತೋರಿಸುತ್ತಿದೆ',
+    'snoringCaptureChannelName': 'Nikotin Away ನಿದ್ರೆ ಬುದ್ಧಿಮತ್ತೆ',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'ಗೊರಕೆ ಪತ್ತೆಗಾಗಿ ಸಣ್ಣ ಧ್ವನಿ ಮಾದರಿಯನ್ನು ಸಂಗ್ರಹಿಸಲಾಗುತ್ತಿದೆ',
     'channelNameSmokedLogQuickAction': 'Nikotin Away ತ್ವರಿತ ದಾಖಲೆ',
     'channelDescriptionSmokedLogQuickAction':
         '"ಸಿಗರೇಟ್ ಸೇದಿದೆ" ಬಟನ್ ಪರದೆಯಲ್ಲಿ ಇರುವಾಗ ಸಕ್ರಿಯ',
@@ -34981,6 +35054,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'നിർബന്ധിത ടാസ്ക് സ്ക്രീൻ കാണിക്കുമ്പോൾ സജീവം',
     'taskOverlayForegroundBody': 'ടാസ്ക് സ്ക്രീൻ കാണിക്കുന്നു',
+    'snoringCaptureChannelName': 'Nikotin Away സ്ലീപ്പ് ഇന്റലിജൻസ്',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'കൂർക്കംവലി കണ്ടെത്താൻ ഒരു ചെറിയ ശബ്ദ സാമ്പിൾ എടുക്കുന്നു',
     'channelNameSmokedLogQuickAction': 'Nikotin Away ദ്രുത രേഖ',
     'channelDescriptionSmokedLogQuickAction':
         '"ഞാൻ വലിച്ചു" ബട്ടൺ സ്ക്രീനിലുള്ളപ്പോൾ സജീവം',
@@ -37411,6 +37488,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'ทำงานอยู่ขณะที่หน้าจอภารกิจบังคับกำลังแสดงอยู่',
     'taskOverlayForegroundBody': 'กำลังแสดงหน้าจองาน',
+    'snoringCaptureChannelName': 'Nikotin Away ระบบอัจฉริยะด้านการนอนหลับ',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'กำลังบันทึกตัวอย่างเสียงสั้น ๆ เพื่อตรวจจับการนอนกรน',
     'channelNameSmokedLogQuickAction': 'การบันทึกด่วน Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'ทำงานอยู่ขณะที่ปุ่ม "สูบไปแล้ว" แสดงอยู่บนหน้าจอ',
@@ -38617,6 +38698,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'Hoạt động khi màn hình nhiệm vụ bắt buộc đang hiển thị',
     'taskOverlayForegroundBody': 'Màn hình nhiệm vụ đang hiển thị',
+    'snoringCaptureChannelName': 'Nikotin Away Trí Thông Minh Giấc Ngủ',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Đang ghi một mẫu âm thanh ngắn để phát hiện ngáy',
     'channelNameSmokedLogQuickAction': 'Ghi Nhanh Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'Hoạt động khi nút "Tôi Đã Hút" đang hiển thị trên màn hình',
@@ -40455,6 +40540,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'Aktif saat layar tugas wajib sedang ditampilkan',
     'taskOverlayForegroundBody': 'Layar tugas sedang ditampilkan',
+    'snoringCaptureChannelName': 'Nikotin Away Kecerdasan Tidur',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Mengambil sampel suara singkat untuk mendeteksi dengkuran',
     'channelNameSmokedLogQuickAction': 'Catatan Cepat Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'Aktif saat tombol "Saya Merokok" tampil di layar',
@@ -42304,6 +42393,10 @@ generatedLanguageData = <String, Map<String, String>>{
     'taskOverlayChannelDescription':
         'Aktif semasa skrin tugasan wajib dipaparkan',
     'taskOverlayForegroundBody': 'Skrin tugasan sedang dipaparkan',
+    'snoringCaptureChannelName': 'Nikotin Away Kecerdasan Tidur',
+    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureNotificationBody':
+        'Mengambil sampel bunyi ringkas untuk mengesan dengkuran',
     'channelNameSmokedLogQuickAction': 'Kayan Pantas Nikotin Away',
     'channelDescriptionSmokedLogQuickAction':
         'Aktif semasa butang "Saya Merokok" berada pada skrin',

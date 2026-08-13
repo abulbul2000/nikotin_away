@@ -11,6 +11,11 @@
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Android 14+ requires this in addition to RECORD_AUDIO for any
+         foreground service that captures microphone audio — see
+         SnoringCaptureService, started briefly overnight by SleepProbeReceiver
+         when snoring detection is enabled. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
@@ -158,6 +163,12 @@
             android:name=".SleepProbeReceiver"
             android:enabled="true"
             android:exported="false" />
+
+        <service
+            android:name=".SnoringCaptureService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
         <receiver
             android:name=".SleepProbeBootReceiver"

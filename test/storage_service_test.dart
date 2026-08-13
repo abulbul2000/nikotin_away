@@ -477,6 +477,80 @@ void main() {
     });
   });
 
+  group('snoring probe captureSucceeded (Faz 2 -- Android 11+ mic fix)', () {
+    test('saveManualSnoringProbe always records captureSucceeded true', () async {
+      final storage = StorageService();
+      final now = DateTime.now();
+      await storage.saveManualSnoringProbe(
+        SnoringProbeEvent(
+          id: 'manualsnoreprobe_2',
+          createdAt: now,
+          snoreLikely: false,
+        ),
+      );
+
+      final events = await storage.loadSnoringProbeEventsBetween(
+        start: now.subtract(const Duration(minutes: 1)),
+        end: now.add(const Duration(minutes: 1)),
+      );
+
+      expect(events.single.captureSucceeded, isTrue);
+    });
+
+    test('a pre-migration row with no captureSucceeded column loads as null '
+        'instead of crashing', () async {
+      final storage = StorageService();
+      final db = await storage.database;
+      final now = DateTime.now();
+      await db.insert('snoring_probe_events', {
+        'id': 'snoreprobe_legacy_2',
+        'createdAt': now.toUtc().toIso8601String(),
+        'snoreLikely': 0,
+      });
+
+      final events = await storage.loadSnoringProbeEventsBetween(
+        start: now.subtract(const Duration(minutes: 1)),
+        end: now.add(const Duration(minutes: 1)),
+      );
+
+      expect(events.single.captureSucceeded, isNull);
+    });
+
+    test(
+      'countRecentSnoreLikelyEvents excludes rows where the capture itself '
+      'failed, even if snoreLikely happens to be set on them -- a night the '
+      'microphone never opened must not silently count as a clean night',
+      () async {
+        final storage = StorageService();
+        final db = await storage.database;
+        final now = DateTime.now();
+
+        // A real snore-likely reading from a successful capture.
+        await db.insert('snoring_probe_events', {
+          'id': 'snoreprobe_ok',
+          'createdAt': now.toUtc().toIso8601String(),
+          'snoreLikely': 1,
+          'captureSucceeded': 1,
+        });
+        // A failed capture that (as SnoringCaptureService.kt writes it)
+        // defaults snoreLikely to false -- must still be excluded from the
+        // count explicitly, not just incidentally.
+        await db.insert('snoring_probe_events', {
+          'id': 'snoreprobe_failed',
+          'createdAt': now.toUtc().toIso8601String(),
+          'snoreLikely': 0,
+          'captureSucceeded': 0,
+        });
+
+        final count = await storage.countRecentSnoreLikelyEvents(
+          since: now.subtract(const Duration(minutes: 5)),
+        );
+
+        expect(count, 1);
+      },
+    );
+  });
+
   group('subscription state', () {
     test('startTrialIfNeeded sets trialStartedAt and status=trial on first '
         'call', () async {

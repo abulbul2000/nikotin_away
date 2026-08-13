@@ -1,32 +1,25 @@
 package com.nikotinaway.app
 
-import android.Manifest
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.database.sqlite.SQLiteDatabase
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
 import android.os.BatteryManager
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
-import androidx.core.content.ContextCompat
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
-import kotlin.math.sqrt
 
 /// Wakes briefly on an AlarmManager tick to record two free, already-cached
 /// OS signals (screen-interactive state, charging state) as one row, then
@@ -108,155 +101,23 @@ class SleepProbeReceiver : BroadcastReceiver() {
         // SnoringProbeStore/SnoringDetectionService) -- only runs while the
         // screen is off (the user is presumably actually asleep, not just
         // in the configured window) and piggybacks on this same alarm tick
-        // rather than running its own schedule.
+        // rather than running its own schedule. The actual capture happens in
+        // SnoringCaptureService, not here: Android 11+ blocks microphone
+        // access from a plain BroadcastReceiver once the app isn't in the
+        // foreground, and Android 14+ additionally requires a declared
+        // foregroundServiceType="microphone" service for any microphone
+        // capture -- neither of which a receiver can satisfy on its own.
         if (!isAwake &&
             SleepProbeStore.isSnoringDetectionEnabled(context) &&
             inWindow
         ) {
-            captureAndAnalyzeSnoring(context)
+            SnoringCaptureService.start(context)
         }
 
         if (!inWindow) {
             return
         }
         scheduleFireInMinutes(context, windowStartMinute, windowEndMinute, intervalMinutes, intervalMinutes)
-    }
-
-    /// Captures a short (3s) raw audio sample via AudioRecord (not
-    /// MediaRecorder -- no file is ever written, the PCM buffer lives only
-    /// in memory for the few hundred milliseconds it takes to compute an
-    /// energy envelope, then is discarded) and looks for a rhythmic
-    /// loud/quiet pattern in the ~0.3-1.5s cycle range typical of snoring.
-    /// VOICE_RECOGNITION disables the platform's automatic gain control,
-    /// same reasoning as the breath test's acoustic detection: AGC would
-    /// otherwise flatten exactly the energy swings this heuristic looks for.
-    private fun captureAndAnalyzeSnoring(context: Context) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-
-        val sampleRate = 16000
-        val channelConfig = AudioFormat.CHANNEL_IN_MONO
-        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-        val minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
-        if (minBufferSize <= 0) {
-            return
-        }
-
-        var audioRecord: AudioRecord? = null
-        try {
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                sampleRate,
-                channelConfig,
-                audioFormat,
-                minBufferSize * 2,
-            )
-            if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
-                return
-            }
-            audioRecord.startRecording()
-
-            val windowMs = 100
-            val windowSamples = sampleRate * windowMs / 1000
-            val windowCount = SNORING_CAPTURE_DURATION_MS / windowMs
-            val buffer = ShortArray(windowSamples)
-            val energies = DoubleArray(windowCount)
-
-            for (i in 0 until windowCount) {
-                val read = audioRecord.read(buffer, 0, windowSamples)
-                if (read > 0) {
-                    var sumSquares = 0.0
-                    for (j in 0 until read) {
-                        val normalized = buffer[j] / 32768.0
-                        sumSquares += normalized * normalized
-                    }
-                    energies[i] = sqrt(sumSquares / read)
-                }
-            }
-
-            audioRecord.stop()
-            SnoringProbeStore.insertProbe(context, detectSnoreSeverity(energies, windowMs))
-        } catch (_: Exception) {
-            // Best-effort -- a missed capture just skips this probe cycle.
-        } finally {
-            audioRecord?.release()
-        }
-    }
-
-    /// Simple rule-based heuristic (energy envelope + periodicity), same
-    /// spirit as BreathAcousticEngine: finds windows loud enough relative to
-    /// this clip's own median to count as a "burst", collapses adjacent
-    /// loud windows into single events, then checks whether consecutive
-    /// events repeat at a snore-typical interval.
-    ///
-    /// Beyond the plain detected/not-detected call, also scores how
-    /// pronounced this probe's pattern was -- combining how far events
-    /// cleared the threshold (intensity) with how consistently consecutive
-    /// events landed inside the snore-cycle window (continuity), same
-    /// two-component-weighted-sum shape as WheezeDetectionEngine's severity
-    /// score on the Dart side. Not device-calibrated -- see this file's
-    /// other detection heuristics for the same caveat.
-    private fun detectSnoreSeverity(energies: DoubleArray, windowMs: Int): SnoreDetectionResult {
-        if (energies.isEmpty()) {
-            return SnoreDetectionResult(snoreLikely = false, severityScore = 0, severityLevel = "none")
-        }
-        val sorted = energies.sorted()
-        val median = sorted[sorted.size / 2]
-        val threshold = median * 2.0 + 0.01
-
-        val events = mutableListOf<Int>()
-        var lastEventIndex = -10
-        for (i in energies.indices) {
-            if (energies[i] > threshold && i - lastEventIndex > 2) {
-                events.add(i)
-                lastEventIndex = i
-            }
-        }
-        if (events.size < 2) {
-            return SnoreDetectionResult(snoreLikely = false, severityScore = 0, severityLevel = "none")
-        }
-
-        var inCycleGapCount = 0
-        var intensityRatioSum = 0.0
-        for (i in 1 until events.size) {
-            val gapMs = (events[i] - events[i - 1]) * windowMs
-            if (gapMs in SNORE_MIN_CYCLE_MS..SNORE_MAX_CYCLE_MS) {
-                inCycleGapCount++
-            }
-        }
-        for (index in events) {
-            intensityRatioSum += energies[index] / threshold
-        }
-
-        val snoreLikely = inCycleGapCount > 0
-        if (!snoreLikely) {
-            return SnoreDetectionResult(snoreLikely = false, severityScore = 0, severityLevel = "none")
-        }
-
-        // Continuity: what fraction of consecutive event pairs actually fell
-        // inside the snore-cycle window -- a single lucky pair among many
-        // unrelated bursts scores low, a clip that's snore-cycle end to end
-        // scores near 1.
-        val continuityScore = (inCycleGapCount.toDouble() / (events.size - 1)).coerceIn(0.0, 1.0)
-        // Intensity: how far above the threshold events cleared, on
-        // average, anchored the same way WheezeDetectionEngine anchors its
-        // ratio score (a event right at the threshold scores 0, one at 2x+
-        // the threshold scores 1).
-        val averageIntensityRatio = intensityRatioSum / events.size
-        val intensityScore = ((averageIntensityRatio - 1.0) / 1.0).coerceIn(0.0, 1.0)
-
-        val combined = intensityScore * 0.5 + continuityScore * 0.5
-        val score = (combined * 100).toInt().coerceIn(0, 100)
-        val level = when {
-            score <= 0 -> "none"
-            score < 35 -> "mild"
-            score < 65 -> "moderate"
-            else -> "severe"
-        }
-        return SnoreDetectionResult(snoreLikely = true, severityScore = score, severityLevel = level)
     }
 
     private fun isInteractive(context: Context): Boolean {
@@ -350,9 +211,6 @@ class SleepProbeReceiver : BroadcastReceiver() {
         }
 
         private const val REQUEST_CODE = 84001
-        private const val SNORING_CAPTURE_DURATION_MS = 3000
-        private const val SNORE_MIN_CYCLE_MS = 300
-        private const val SNORE_MAX_CYCLE_MS = 1500
     }
 }
 
@@ -550,20 +408,28 @@ object SnoringProbeStore {
     private const val TABLE = "snoring_probe_events"
     private const val RETENTION_DAYS = 14
 
-    fun insertProbe(context: Context, result: SnoreDetectionResult) {
+    /// [result] is null when the capture itself failed (permission revoked
+    /// mid-call, AudioRecord couldn't initialize, foreground service couldn't
+    /// start) -- [captureSucceeded] records that distinction so a night where
+    /// the microphone never actually opened isn't silently indistinguishable
+    /// from a night with no snoring (see SleepProbeReceiver.kt's class doc
+    /// comment / SnoringCaptureService.captureAndAnalyze).
+    fun insertProbe(context: Context, result: SnoreDetectionResult?, captureSucceeded: Boolean) {
         val dbFile = File(File(context.applicationInfo.dataDir, "app_flutter"), "no_smoke.db")
         if (!dbFile.exists()) {
             return
         }
+        val resolved = result ?: SnoreDetectionResult(snoreLikely = false, severityScore = 0, severityLevel = "none")
         try {
             SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
                 val now = System.currentTimeMillis()
                 val values = ContentValues().apply {
                     put("id", "snoreprobe_${now}")
                     put("createdAt", formatIsoUtc(now))
-                    put("snoreLikely", if (result.snoreLikely) 1 else 0)
-                    put("severityScore", result.severityScore)
-                    put("severityLevel", result.severityLevel)
+                    put("snoreLikely", if (resolved.snoreLikely) 1 else 0)
+                    put("severityScore", resolved.severityScore)
+                    put("severityLevel", resolved.severityLevel)
+                    put("captureSucceeded", if (captureSucceeded) 1 else 0)
                 }
                 db.insert(TABLE, null, values)
 

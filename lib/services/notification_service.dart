@@ -518,6 +518,11 @@ class NotificationService {
       channelDescription: _text(code, 'taskOverlayChannelDescription'),
       foregroundBody: _text(code, 'taskOverlayForegroundBody'),
     );
+    await SleepProbeService.setSnoringCaptureChannelInfo(
+      title: _text(code, 'snoringCaptureNotificationTitle'),
+      body: _text(code, 'snoringCaptureNotificationBody'),
+      channelName: _text(code, 'snoringCaptureChannelName'),
+    );
   }
 
   /// Puts the floating button back after a reboot or a process death.

@@ -12,7 +12,10 @@ class SnoringDetectionService {
 
   /// Bump if the disclosure text this feature shows before enabling changes
   /// materially, same convention as SleepIntelligenceService.consentTextVersion.
-  static const String consentTextVersion = 'v1';
+  /// v2: disclosure text now mentions the foreground-service notification
+  /// the user sees during each overnight capture (see SnoringCaptureService.kt
+  /// / Android 11+ background-microphone-access fix).
+  static const String consentTextVersion = 'v2';
 
   SnoringDetectionService({StorageService? storageService})
     : _storageService = storageService ?? StorageService();

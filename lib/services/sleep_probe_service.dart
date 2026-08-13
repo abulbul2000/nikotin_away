@@ -51,6 +51,29 @@ class SleepProbeService {
     }
   }
 
+  /// Pushes the localized notification text SnoringCaptureService's required
+  /// foreground-service notification shows during each overnight capture —
+  /// same "Dart pushes strings, native falls back to English defaults if it
+  /// hasn't received them yet" pattern as
+  /// AndroidWatchdogService.setTaskOverlayChannelInfo. A fixed, locale-only
+  /// text (not tied to any one capture), so it's pushed once at app startup
+  /// rather than on every capture.
+  static Future<void> setSnoringCaptureChannelInfo({
+    required String title,
+    required String body,
+    required String channelName,
+  }) async {
+    try {
+      await _channel.invokeMethod('setSnoringCaptureChannelInfo', {
+        'title': title,
+        'body': body,
+        'channelName': channelName,
+      });
+    } catch (_) {
+      // Best-effort: falls back to the service's own English defaults.
+    }
+  }
+
   /// Drains queued "user was awake during their sleep window" timestamps
   /// (epoch millis, as strings) recorded by the native probe. Best-effort:
   /// an empty list either means nothing happened, or the channel/platform

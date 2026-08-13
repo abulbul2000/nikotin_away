@@ -870,6 +870,16 @@ class StorageService {
       'INTEGER',
     );
     await _ensureTableColumn(db, _snoringProbeTable, 'severityLevel', 'TEXT');
+    // Nullable, no DEFAULT -- existing rows predate the Android 11+ silent
+    // capture-failure fix (SnoringCaptureService.kt) and are read back as
+    // null, which SnoringProbeEvent.captureSucceeded's doc comment explains
+    // callers should treat as true (the old assumption).
+    await _ensureTableColumn(
+      db,
+      _snoringProbeTable,
+      'captureSucceeded',
+      'INTEGER',
+    );
   }
 
   Future<List<SnoringProbeEvent>> loadSnoringProbeEventsBetween({
@@ -894,6 +904,9 @@ class StorageService {
             snoreLikely: (row['snoreLikely'] as int) == 1,
             severityScore: row['severityScore'] as int?,
             severityLevel: row['severityLevel'] as String?,
+            captureSucceeded: (row['captureSucceeded'] as int?) == null
+                ? null
+                : (row['captureSucceeded'] as int) == 1,
           ),
         )
         .toList();
@@ -901,14 +914,25 @@ class StorageService {
 
   /// Count of snore-likely probes since [since] (defaults to the last 12
   /// hours, comfortably covering one night) -- shown as a simple summary in
-  /// Settings rather than a full report, matching the feature's scope.
+  /// Settings rather than a full report, matching the feature's scope, and
+  /// feeds BehaviorEngine.calculateSnoringRiskAdjustment.
+  ///
+  /// Probes where the capture itself failed (captureSucceeded == false --
+  /// see SnoringCaptureService.kt / SnoringProbeEvent.captureSucceeded's doc
+  /// comment) are excluded explicitly, not just incidentally via
+  /// snoreLikely already being false on those rows: a night the microphone
+  /// never actually opened must count toward neither "snoring detected" nor
+  /// "confirmed clean", so it can't silently lower the risk adjustment the
+  /// way a real clean night correctly does.
   Future<int> countRecentSnoreLikelyEvents({DateTime? since}) async {
     final cutoff = since ?? DateTime.now().subtract(const Duration(hours: 12));
     final events = await loadSnoringProbeEventsBetween(
       start: cutoff,
       end: DateTime.now(),
     );
-    return events.where((e) => e.snoreLikely).length;
+    return events
+        .where((e) => e.captureSucceeded != false && e.snoreLikely)
+        .length;
   }
 
   /// Records a daytime, user-initiated Snoring Test result into the same
@@ -924,6 +948,11 @@ class StorageService {
       'snoreLikely': event.snoreLikely ? 1 : 0,
       'severityScore': event.severityScore,
       'severityLevel': event.severityLevel,
+      // A manual, user-initiated test always completes synchronously in the
+      // foreground (the user is looking at the result on screen) — capture
+      // failure isn't a scenario here the way it is for the overnight native
+      // probe.
+      'captureSucceeded': 1,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
