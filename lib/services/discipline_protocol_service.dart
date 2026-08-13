@@ -559,14 +559,16 @@ class DisciplineProtocolService {
       capacity -= 0.02;
       successStreak = 0;
     } else if (isMissed) {
-      // Between deferred (an active "not now") and smoked (an explicit
-      // admission) -- 3 unanswered attempts over 15 minutes on a mandatory
-      // alert is a real failure signal, but not proof the user smoked.
+      // A task the user never actually saw (3 unanswered attempts over 15
+      // minutes) is the app's own delivery delay, not a failure of theirs --
+      // it must not touch movingFailureRate or either streak, the same way
+      // `expired` is kept out of the learning signal entirely. The small
+      // difficulty/capacity easing below is not a penalty: it just keeps the
+      // next task from landing at a level calibrated for someone who is
+      // responding, when this user hasn't been reachable.
       selfControl -= 1.5;
       difficulty -= 0.15;
       capacity -= 0.06;
-      failureStreak += 1;
-      successStreak = 0;
     } else if (isSmoked) {
       selfControl -= 2.3;
       difficulty -= 0.33;
@@ -591,7 +593,8 @@ class DisciplineProtocolService {
       ).clamp(0, 1),
       movingFailureRate: _ewma(
         previous: current.movingFailureRate,
-        incoming: (isSmoked || isMissed) ? 1 : 0,
+        // isMissed deliberately excluded -- see the isMissed branch above.
+        incoming: isSmoked ? 1 : 0,
         alpha: 0.18,
       ).clamp(0, 1),
       avgResponseMinutes: _ewma(
@@ -615,14 +618,14 @@ class DisciplineProtocolService {
     final isSuccess = outcome == AdaptiveTaskOutcome.success;
     final isDeferred = outcome == AdaptiveTaskOutcome.deferred;
     final isSmoked = outcome == AdaptiveTaskOutcome.smoked;
-    final isMissed = outcome == AdaptiveTaskOutcome.missed;
+    // isMissed deliberately left out of strainScore/failureCount below -- a
+    // task the user never saw says nothing about how risky this hour is for
+    // them, the same reasoning as evolveStateFromOutcome's movingFailureRate.
 
     final strainDelta = isSuccess
         ? -0.45
         : isDeferred
         ? 0.30
-        : isMissed
-        ? 0.6
         : isSmoked
         ? 0.85
         : 0.0;
@@ -630,7 +633,7 @@ class DisciplineProtocolService {
     return current.copyWith(
       strainScore: (current.strainScore + strainDelta).clamp(0, 100),
       successCount: current.successCount + (isSuccess ? 1 : 0),
-      failureCount: current.failureCount + ((isSmoked || isMissed) ? 1 : 0),
+      failureCount: current.failureCount + (isSmoked ? 1 : 0),
       deferCount: current.deferCount + (isDeferred ? 1 : 0),
       avgResponseMinutes: _ewma(
         previous: current.avgResponseMinutes,

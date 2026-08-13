@@ -532,4 +532,259 @@ void main() {
       },
     );
   });
+
+  group('duration barrier outcomes reach the learning engine', () {
+    test(
+      'ADAPTIVE_NO_SMOKE:<minutes> success/smoked rows make '
+      'barrierSuccessRate differ from the 0.5 no-data default',
+      () async {
+        final storage = StorageService();
+
+        // Two successes, one smoked failure -- a 2/3 rate, nowhere near 0.5,
+        // so a bug that quietly falls back to the no-data default would be
+        // caught by this assertion instead of accidentally matching.
+        await storage.recordAdaptiveTaskOutcome(
+          taskTitle: 'ADAPTIVE_NO_SMOKE:45',
+          outcome: AdaptiveTaskOutcome.success,
+          plannedDurationMinutes: 45,
+          scheduledAt: DateTime.now().subtract(const Duration(hours: 3)),
+          respondedAt: DateTime.now().subtract(const Duration(hours: 2)),
+        );
+        await storage.recordAdaptiveTaskOutcome(
+          taskTitle: 'ADAPTIVE_NO_SMOKE:50',
+          outcome: AdaptiveTaskOutcome.success,
+          plannedDurationMinutes: 50,
+          scheduledAt: DateTime.now().subtract(const Duration(hours: 2)),
+          respondedAt: DateTime.now().subtract(const Duration(hours: 1)),
+        );
+        await storage.recordAdaptiveTaskOutcome(
+          taskTitle: 'ADAPTIVE_NO_SMOKE:40',
+          outcome: AdaptiveTaskOutcome.smoked,
+          plannedDurationMinutes: 40,
+          scheduledAt: DateTime.now().subtract(const Duration(hours: 1)),
+          respondedAt: DateTime.now(),
+        );
+
+        final dashboard = await storage.loadBehaviorDashboard();
+        final barrierLine = dashboard.riskExplanation.firstWhere(
+          (line) => line.startsWith('Sure bariyeri uyumu'),
+          orElse: () => '',
+        );
+
+        expect(
+          barrierLine,
+          isNot(contains('%50')),
+          reason:
+              'barrierSuccessRate should reflect the 2/3 real outcomes '
+              'above, not the 0.5 fallback that fires when no rows match.',
+        );
+        expect(barrierLine, contains('%67'));
+        expect(barrierLine, contains('son: 2 basarili / 1 basarisiz'));
+      },
+    );
+
+    test(
+      'a legacy SURE-BARIYERI-titled row still counts toward the rate',
+      () async {
+        final storage = StorageService();
+
+        await storage.saveTaskResult(
+          taskTitle: 'SURE-BARIYERI',
+          taskResult: 'barrier_success',
+          completedAt: DateTime.now(),
+        );
+
+        final dashboard = await storage.loadBehaviorDashboard();
+        final barrierLine = dashboard.riskExplanation.firstWhere(
+          (line) => line.startsWith('Sure bariyeri uyumu'),
+          orElse: () => '',
+        );
+
+        expect(barrierLine, contains('%100'));
+        expect(barrierLine, contains('son: 1 basarili / 0 basarisiz'));
+      },
+    );
+  });
+
+  group('duration barrier consent switch (regression coverage)', () {
+    test(
+      'duration_barrier_enabled = 0 produces an empty plan',
+      () async {
+        final storage = StorageService();
+        await storage.saveSetting('duration_barrier_enabled', '0');
+
+        final plan = await storage.buildAdaptiveNoSmokePlan(
+          now: DateTime(2026, 1, 1, 10),
+          sleepAt: DateTime(2026, 1, 1, 23),
+          riskyHours: const [],
+        );
+
+        expect(plan.targetTaskCount, 0);
+        expect(plan.items, isEmpty);
+      },
+    );
+
+    test(
+      "duration_barrier_preference = 'off' produces an empty plan even "
+      "when duration_barrier_enabled is left unset",
+      () async {
+        final storage = StorageService();
+        await storage.saveSetting('duration_barrier_preference', 'off');
+
+        final plan = await storage.buildAdaptiveNoSmokePlan(
+          now: DateTime(2026, 1, 1, 10),
+          sleepAt: DateTime(2026, 1, 1, 23),
+          riskyHours: const [],
+        );
+
+        expect(plan.targetTaskCount, 0);
+        expect(plan.items, isEmpty);
+      },
+    );
+
+    test(
+      'frequency az/cok change task COUNT but never the barrier DURATION',
+      () async {
+        // Same wake/sleep window and survey data for all three runs, so any
+        // difference in the resulting plan can only come from the frequency
+        // setting itself.
+        //
+        // dailyTaskCount() has its own +/-1 jitter (see
+        // smoking_interval_service.dart), so a single run can land two
+        // adjacent frequency settings on the same clamped count purely by
+        // chance -- this repeats the comparison across several fresh plans
+        // (clearAllData between each, since buildAdaptiveNoSmokePlan caches
+        // one plan per calendar day) and asserts the *direction* never
+        // reverses, rather than asserting one exact count difference that
+        // the jitter could occasionally erase.
+        Future<AdaptiveTaskPlan> planWithFrequency(String frequency) async {
+          final storage = StorageService();
+          await storage.clearAllData();
+          await storage.saveSetting(
+            'duration_barrier_frequency_preference',
+            frequency,
+          );
+          return storage.buildAdaptiveNoSmokePlan(
+            now: DateTime(2026, 1, 1, 10),
+            sleepAt: DateTime(2026, 1, 1, 23),
+            riskyHours: const [],
+          );
+        }
+
+        // dailyTaskCount()'s own +/-1 jitter is the same size as the
+        // frequency adjustment itself, so any single az/orta/cok trio can
+        // have the jitter cancel or reverse the frequency effect purely by
+        // chance. Comparing means over many samples is what actually
+        // isolates the frequency effect from that noise.
+        const sampleSize = 40;
+        final allBaseDurations = <int>{};
+        var azTotal = 0;
+        var ortaTotal = 0;
+        var cokTotal = 0;
+
+        for (var attempt = 0; attempt < sampleSize; attempt++) {
+          final az = await planWithFrequency('az');
+          final orta = await planWithFrequency('orta');
+          final cok = await planWithFrequency('cok');
+
+          azTotal += az.targetTaskCount;
+          ortaTotal += orta.targetTaskCount;
+          cokTotal += cok.targetTaskCount;
+
+          // baseDurationMinutes is the week's actual barrier target (from
+          // SmokingIntervalService, no jitter) -- this is the field
+          // frequency must never move. Individual item.durationMinutes
+          // values are deliberately jittered +/-10% for unpredictability
+          // (see DisciplineProtocolService's _durationJitter), so comparing
+          // those directly would fail for an unrelated, intentional reason.
+          allBaseDurations.add(az.baseDurationMinutes);
+          allBaseDurations.add(orta.baseDurationMinutes);
+          allBaseDurations.add(cok.baseDurationMinutes);
+        }
+
+        final azMean = azTotal / sampleSize;
+        final ortaMean = ortaTotal / sampleSize;
+        final cokMean = cokTotal / sampleSize;
+
+        expect(
+          azMean,
+          lessThan(ortaMean),
+          reason:
+              "'az' averaged $azMean tasks over $sampleSize plans vs "
+              "'orta' averaging $ortaMean -- frequency is not lowering the "
+              'task count',
+        );
+        expect(
+          cokMean,
+          greaterThan(ortaMean),
+          reason:
+              "'cok' averaged $cokMean tasks over $sampleSize plans vs "
+              "'orta' averaging $ortaMean -- frequency is not raising the "
+              'task count',
+        );
+
+        // The duration axis is untouched by frequency -- every plan across
+        // every attempt and every frequency setting should carry the same
+        // baseDurationMinutes, since that comes from SmokingIntervalService
+        // alone (via loadCurrentBarrierMinutes, which does not vary within
+        // one calendar day).
+        expect(
+          allBaseDurations.length,
+          lessThanOrEqualTo(1),
+          reason:
+              'every plan across all frequency settings should share the '
+              'same baseDurationMinutes; frequency must not touch it',
+        );
+      },
+    );
+
+    test(
+      'every duration_barrier_* saveSetting call site has a matching '
+      'loadSetting reader somewhere in lib/',
+      () async {
+        final libDir = Directory('lib');
+        final dartFiles = libDir
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.dart'));
+
+        final saveKeyPattern = RegExp(
+          r"saveSetting\(\s*'(duration_barrier_[a-zA-Z_]+)'",
+        );
+        final loadKeyPattern = RegExp(
+          r"loadSetting\(\s*'(duration_barrier_[a-zA-Z_]+)'",
+        );
+
+        final savedKeys = <String>{};
+        final loadedKeys = <String>{};
+        for (final file in dartFiles) {
+          final content = file.readAsStringSync();
+          for (final match in saveKeyPattern.allMatches(content)) {
+            savedKeys.add(match.group(1)!);
+          }
+          for (final match in loadKeyPattern.allMatches(content)) {
+            loadedKeys.add(match.group(1)!);
+          }
+        }
+
+        expect(
+          savedKeys,
+          isNotEmpty,
+          reason:
+              'sanity check -- if this is empty the regex/scan itself is '
+              'broken, not that there are no duration_barrier_* settings',
+        );
+        for (final key in savedKeys) {
+          expect(
+            loadedKeys,
+            contains(key),
+            reason:
+                '$key is written via saveSetting somewhere but never read '
+                'back via loadSetting anywhere in lib/ -- a write with no '
+                'reader is exactly the class of bug this regression was.',
+          );
+        }
+      },
+    );
+  });
 }

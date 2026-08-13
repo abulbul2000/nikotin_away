@@ -16,9 +16,11 @@ import '../models/snoring_probe_event.dart';
 import '../models/task_assignment.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
+import '../pages/self_challenge_page.dart';
 import '../pages/sleep_routine_page.dart';
 import '../pages/task_smoked_confirm_page.dart';
 import '../pages/weekly_survey_page.dart';
+import '../widgets/quick_action_menu.dart';
 import 'android_watchdog_service.dart';
 import 'language_service.dart';
 import 'notification_budget.dart';
@@ -282,6 +284,72 @@ class NotificationService {
     );
   }
 
+  /// How long an unanswered barrier-confirmation prompt is allowed to sit
+  /// before the app stops trusting an answer given that late — see
+  /// [scheduleBarrierResolutionReminder].
+  static const Duration barrierResolutionDeadline = Duration(hours: 2);
+
+  /// A second, lower-priority nudge for the same "did you smoke?" question
+  /// [scheduleTaskConfirmationPrompt] already asked, fired
+  /// [barrierResolutionDeadline] after it if the user never answered.
+  ///
+  /// Answering this one still resolves the task normally — same action ids,
+  /// same payload type — so it's a reminder, not a second question. What it
+  /// exists for is the case where the user never taps either notification at
+  /// all: `syncBarrierResolutionOnStartup`'s app-open check uses this same
+  /// deadline to close the task out as [TaskLifecycleState.barrierUnknown]
+  /// once it's passed, so a barrier the app can no longer honestly evaluate
+  /// doesn't sit open forever.
+  static Future<void> scheduleBarrierResolutionReminder({
+    required String taskTitle,
+    required Duration delay,
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final scheduleMode = await _resolveAndroidScheduleMode();
+    final fireAt = tz.TZDateTime.now(
+      tz.local,
+    ).add(delay).add(barrierResolutionDeadline);
+
+    await _plugin.zonedSchedule(
+      _barrierResolutionReminderIdFor(taskTitle),
+      _text(code, 'taskConfirmQuestionTitle'),
+      _text(code, 'taskConfirmQuestion'),
+      fireAt,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _taskConfirmChannelId,
+          _text(code, 'channelNameTaskConfirm'),
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+          playSound: false,
+          enableVibration: false,
+          visibility: NotificationVisibility.private,
+          actions: <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              _actionConfirmSmokedYes,
+              _text(code, 'taskConfirmYesLabel'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionConfirmSmokedNo,
+              _text(code, 'taskConfirmNoLabel'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+          ],
+        ),
+        iOS: const DarwinNotificationDetails(
+          categoryIdentifier: _categoryTaskConfirm,
+        ),
+      ),
+      androidScheduleMode: scheduleMode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: jsonEncode({'type': _typeTaskConfirm, 'taskTitle': taskTitle}),
+    );
+  }
+
   /// Stable per-task ids so a re-issued prompt replaces its predecessor
   /// instead of stacking a second copy of the same question.
   static int _postponeChoiceIdFor(String taskTitle) =>
@@ -289,6 +357,19 @@ class NotificationService {
 
   static int _confirmIdFor(String taskTitle) =>
       (taskTitle.hashCode.abs() % 100000) + 820000;
+
+  static int _barrierResolutionReminderIdFor(String taskTitle) =>
+      (taskTitle.hashCode.abs() % 100000) + 850000;
+
+  /// Cancels the reminder [scheduleBarrierResolutionReminder] armed, once
+  /// the task it was about has already been resolved some other way (the
+  /// first confirmation prompt was answered, or the app-open check in
+  /// `syncBarrierResolutionOnStartup` already closed it out) — otherwise it
+  /// still fires on schedule and asks about a task nothing is waiting on
+  /// an answer for any more.
+  static Future<void> cancelBarrierResolutionReminder(String taskTitle) async {
+    await _plugin.cancel(_barrierResolutionReminderIdFor(taskTitle));
+  }
 
   static const String _categoryTaskStart = 'task_start_category';
   static const String _categoryPostpone = 'task_postpone_category';
@@ -353,7 +434,6 @@ class NotificationService {
   /// grown ahead of the translations degrades quietly.
   static const int _healthTipsPerCondition = 33;
 
-  static const int _notificationTimeoutMs = 15000;
   static const String _reservedTimesSettingKey =
       'reserved_notification_fire_times';
   // Retry cadence for a mandatory task alert nobody has answered yet: fire
@@ -583,8 +663,11 @@ class NotificationService {
         // task as missed, so left alone it still fires on schedule and asks
         // a question about a task that's already resolved. Same deterministic
         // id scheme as the scheduling call, so this reaches the exact alarm.
+        // Cancelling both is a no-op on the (normal) case where the task was
+        // never accepted in the first place, since neither was ever armed.
         if (taskTitle != null) {
           await _plugin.cancel(_confirmIdFor(taskTitle));
+          await _plugin.cancel(_barrierResolutionReminderIdFor(taskTitle));
         }
 
         // Feeds the same "no response" event into the adaptive engine (see
@@ -937,6 +1020,48 @@ class NotificationService {
   static Future<void> syncOverlayStateFromNative() async {
     await _syncReminderOverlayRouteFromNative();
     await _syncTaskOverlayOutcomesFromNative();
+    await _syncPendingShortcutActionFromNative();
+  }
+
+  /// Picks up a tap on one of the launcher icon's long-press shortcuts (see
+  /// shortcuts.xml / MainActivity.ShortcutStore) — same queue-and-drain
+  /// shape as the reminder-overlay route above, since the tap can arrive
+  /// before any Flutter engine was ready to act on it directly. The
+  /// self-challenge duration picker and craving support screen are the same
+  /// ones QuickAction.selfChallenge/.craving open from the in-app menu (see
+  /// quick_action_menu.dart) — a shortcut tap is just a different way to
+  /// reach the same destinations. "smoked_now" logs immediately, same as
+  /// picking it from the in-app menu.
+  static Future<void> _syncPendingShortcutActionFromNative() async {
+    try {
+      final action = await AndroidWatchdogService.consumePendingShortcutAction();
+      if (action == null || action.isEmpty) {
+        return;
+      }
+      final context = _navigatorKey?.currentContext;
+      if (context == null) {
+        return;
+      }
+      switch (action) {
+        case 'smoked_now':
+          await StorageService().logSmokingNow();
+        case 'craving':
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const CravingSosPage()));
+        case 'self_challenge':
+          final minutes = await showSelfChallengeDurationMenu(context);
+          if (minutes == null) return;
+          if (!context.mounted) return;
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SelfChallengePage(durationMinutes: minutes),
+            ),
+          );
+      }
+    } catch (_) {
+      // Keep notification flow resilient even if shortcut sync fails.
+    }
   }
 
   static Future<void> _syncReminderOverlayRouteFromNative() async {
@@ -1577,8 +1702,12 @@ class NotificationService {
     final code = await LanguageService.loadSelectedLanguageCode();
     final scheduleMode = await _resolveAndroidScheduleMode();
     final title = _text(code, 'taskEscalationTitle');
+    final bodyPrefix = _text(code, 'taskEscalationBodyPrefix').replaceAll(
+      '{minutes}',
+      '${_unansweredReminderDelay.inMinutes}',
+    );
     final body =
-        '${_text(code, 'taskEscalationBodyPrefix')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}';
+        '$bodyPrefix\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}';
 
     final hasNextAttempt = attempt < _maxTaskAttempts;
     final nextReminderId = hasNextAttempt
@@ -1606,7 +1735,6 @@ class NotificationService {
           sound: _taskAlarmSound,
           additionalFlags: _insistentFlag,
           audioAttributesUsage: AudioAttributesUsage.alarm,
-          timeoutAfter: _notificationTimeoutMs,
           category: AndroidNotificationCategory.reminder,
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
@@ -1695,7 +1823,6 @@ class NotificationService {
           autoCancel: false,
           ongoing: true,
           onlyAlertOnce: false,
-          timeoutAfter: _notificationTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.call,
           fullScreenIntent: true,
@@ -1801,7 +1928,6 @@ class NotificationService {
           autoCancel: false,
           ongoing: true,
           onlyAlertOnce: false,
-          timeoutAfter: _notificationTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.call,
           fullScreenIntent: true,

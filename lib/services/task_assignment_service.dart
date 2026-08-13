@@ -181,7 +181,6 @@ class TaskAssignmentService {
     if (canonicalTitle.isEmpty || actionId.isEmpty) {
       return TaskActionFollowUp.none;
     }
-    final now = DateTime.now();
 
     if (actionId == TaskActionId.done) {
       final existing = await _storage.loadLatestTaskAssignmentByTitle(
@@ -197,11 +196,11 @@ class TaskAssignmentService {
       }
 
       final delay = resolveInitialTaskDelay(taskTitle);
-      await _storage.saveTaskResult(
-        taskTitle: taskTitle,
-        taskResult: 'started',
-        completedAt: now,
-      );
+      // Acceptance itself is already durably recorded on the task_assignments
+      // row via the transition below (state=accepted, barrierStartedAt) --
+      // writing a second 'started' row into TaskHistory served no reader and
+      // only meant every accepted task, win or lose, silently added one
+      // permanent "not completed" entry to the risk-scoring history.
       await _transitionTask(canonicalTitle, TaskLifecycleState.accepted);
       await NotificationService.showTaskTimerStartedNotification(
         taskTitle: taskTitle,
@@ -209,6 +208,14 @@ class TaskAssignmentService {
       );
       // The end-of-window question, asked as "did you smoke?".
       await NotificationService.scheduleTaskConfirmationPrompt(
+        taskTitle: taskTitle,
+        delay: delay,
+      );
+      // A quieter repeat of the same question if the first one never gets
+      // answered — the app-open check in syncBarrierResolutionOnStartup
+      // shares the same deadline and closes the task out as barrierUnknown
+      // if the user never sees either notification.
+      await NotificationService.scheduleBarrierResolutionReminder(
         taskTitle: taskTitle,
         delay: delay,
       );
@@ -257,6 +264,9 @@ class TaskAssignmentService {
     // followup pair rather than reused.
     if (actionId == TaskActionId.confirmSmokedYes) {
       await _transitionTask(canonicalTitle, TaskLifecycleState.failedSmoked);
+      await NotificationService.cancelBarrierResolutionReminder(
+        canonicalTitle,
+      );
       // An admission is also a real cigarette, so it belongs in the same
       // table the quick-log button writes to — otherwise the risky-hour
       // ranking never learns about the ones admitted this way.
@@ -265,6 +275,9 @@ class TaskAssignmentService {
     }
     if (actionId == TaskActionId.confirmSmokedNo) {
       await _transitionTask(canonicalTitle, TaskLifecycleState.succeeded);
+      await NotificationService.cancelBarrierResolutionReminder(
+        canonicalTitle,
+      );
       return TaskActionFollowUp.none;
     }
 

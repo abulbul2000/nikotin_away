@@ -23,11 +23,13 @@ import '../pages/mandatory_task_page.dart';
 import '../pages/personal_progress_page.dart';
 import '../pages/protocol_violations_page.dart';
 import '../pages/reports_page.dart';
+import '../pages/self_challenge_page.dart';
 import '../pages/settings_page.dart';
 import '../pages/sleep_routine_page.dart';
 import '../pages/snoring_test_page.dart';
 import '../pages/survey_history_page.dart';
 import '../pages/weekly_survey_page.dart';
+import '../services/device_compatibility_service.dart';
 import '../services/device_permission_service.dart';
 import '../services/location_intelligence_service.dart';
 import '../services/step_tracking_service.dart';
@@ -38,8 +40,10 @@ import '../services/snoring_detection_service.dart';
 import '../services/storage_service.dart';
 import '../services/feature_access.dart';
 import '../services/task_assignment_service.dart';
+import '../widgets/background_reliability_prompt.dart';
 import '../widgets/no_smoke_logo.dart';
 import '../widgets/premium_upsell_dialog.dart';
+import '../widgets/quick_action_menu.dart';
 
 class HomePage extends StatefulWidget {
   final String name;
@@ -65,14 +69,11 @@ class _HomePageState extends State<HomePage> {
   final ProtocolViolationService _protocolViolationService =
       ProtocolViolationService();
   final Map<String, String> _taskStates = {};
-  final Map<String, Timer> _durationBarrierTimers = {};
-  final Map<String, DateTime> _durationBarrierEndsAt = {};
   final Set<String> _notifiedTaskTitles = <String>{};
   MentorMessage? _latestMentorMessage;
   int _snoringSummaryCount = 0;
   String? _snoringSummaryWorstSeverity;
   StreamSubscription<Map<String, String>>? _taskActionSubscription;
-  Timer? _durationBarrierTicker;
   Timer? _mandatoryGateCallRetryTimer;
   Timer? _mandatoryPostponeRetryTimer;
   int _mandatoryTaskPostponeCount = 0;
@@ -106,7 +107,6 @@ class _HomePageState extends State<HomePage> {
   List<String> _todaysTasks = const [];
   List<AdaptiveTaskPlanItem> _adaptivePlanItems = const [];
   List<String> _coachCommands = const [];
-  List<String> _durationBarrierCommands = const [];
   int _weeklySurveyRiskScore = 40;
   String _weeklySurveyRiskLevel = 'medium';
   List<String> _riskExplanation = const [];
@@ -120,16 +120,24 @@ class _HomePageState extends State<HomePage> {
   int _recentFailureCount = 0;
   String _nextTaskNotificationText = '...';
   String _notificationContextReasonText = '...';
-  String _durationBarrierPreference = 'neutral';
-  String _durationBarrierFrequencyPreference = 'orta';
-  bool _durationBarrierEnabled = true;
-  int _durationBarrierHistoryCount = 0;
   int _lastRespiratoryBurden = 25;
   String _lastRespiratoryState = 'stable';
   double _weeklyAverage = 0;
   double _monthlyAverage = 0;
   double _dailyAverage = 0;
   ReductionProgress? _reductionProgress;
+
+  /// A task the overdue-grace branch in [_notifyNewTasks] closed out as
+  /// `missed` without ever showing it — kept here so the home screen can
+  /// still offer it instead of the user just losing it silently. Cleared on
+  /// Start (task begins normally) or Skip (dismissed for good); null once
+  /// there is nothing to offer.
+  String? _missedTaskTitle;
+
+  /// Today's tasks that never reached the user at all (overdue-grace
+  /// closures + native delivery-gate expirations) — shown as a single
+  /// informational line, never counted as the user's own failure.
+  int _undeliveredTaskCount = 0;
 
   @override
   void initState() {
@@ -185,88 +193,25 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _taskActionSubscription?.cancel();
-    for (final timer in _durationBarrierTimers.values) {
-      timer.cancel();
-    }
-    _durationBarrierTicker?.cancel();
     _mandatoryGateCallRetryTimer?.cancel();
     _mandatoryPostponeRetryTimer?.cancel();
     super.dispose();
   }
 
-  void _scheduleLocalDurationBarrierFollowUp(
-    String taskTitle,
-    DateTime scheduledAt,
-  ) {
-    final remaining = scheduledAt.difference(DateTime.now());
-    final delay = remaining.isNegative ? Duration.zero : remaining;
-    _durationBarrierTimers[taskTitle]?.cancel();
-    _durationBarrierTimers[taskTitle] = Timer(delay, () {
-      if (!mounted) {
-        return;
-      }
-      _completeDurationBarrier(taskTitle);
-    });
-    _ensureDurationBarrierTicker();
-  }
-
-  void _ensureDurationBarrierTicker() {
-    final hasActiveBarrier = _durationBarrierEndsAt.values.any(
-      (endAt) => endAt.isAfter(DateTime.now()),
-    );
-    if (!hasActiveBarrier) {
-      _durationBarrierTicker?.cancel();
-      _durationBarrierTicker = null;
-      return;
-    }
-
-    _durationBarrierTicker ??= Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {});
-      final stillActive = _durationBarrierEndsAt.values.any(
-        (endAt) => endAt.isAfter(DateTime.now()),
-      );
-      if (!stillActive) {
-        _durationBarrierTicker?.cancel();
-        _durationBarrierTicker = null;
-      }
-    });
-  }
-
-  bool _isDurationBarrierTask(String taskTitle) {
-    final normalized = taskTitle.toLowerCase();
-    return normalized.contains('sure bariyeri') ||
-        normalized.contains('sigara içmeme süresi') ||
-        normalized.contains('sigara icmeme suresi') ||
-        taskTitle.contains('SURE-BARIYERI') ||
-        taskTitle.contains('Sigara içmeme süresi') ||
-        taskTitle.contains('SIGARA_ICMEME_SURESI');
-  }
-
+  /// Loads whatever `task_followups` rows are outstanding, for the pending-
+  /// follow-up count shown on the today-task card. Nothing currently writes
+  /// to this table (the duration-barrier flow that used to has been folded
+  /// into the ADAPTIVE_NO_SMOKE/task_assignments path), so this reliably
+  /// returns empty today — kept as a read because a future producer would
+  /// need no HomePage change to start showing up here.
   Future<void> _restorePendingFollowUps() async {
     final pending = await _storageService.loadPendingTaskFollowUps();
     if (!mounted) {
       return;
     }
-
     setState(() {
       _pendingFollowUps = pending;
     });
-
-    for (final row in pending) {
-      final taskTitle = row['taskTitle'] as String;
-      final scheduledAt = row['scheduledAt'] as DateTime;
-      // Normal (ADAPTIVE_NO_SMOKE) tasks no longer write to task_followups —
-      // these rows are only ever produced for duration-barrier tasks.
-      if (_isDurationBarrierTask(taskTitle)) {
-        _durationBarrierEndsAt[taskTitle] = scheduledAt;
-        _scheduleLocalDurationBarrierFollowUp(taskTitle, scheduledAt);
-        _taskStates[taskTitle] = 'deferred';
-      }
-    }
-    _ensureDurationBarrierTicker();
   }
 
   String _calculateImprovementLabel(double current, double baseline) {
@@ -337,6 +282,13 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (_taskAssignmentActionIds.contains(actionId)) {
+      // Read before handleTaskAction transitions the row terminal, so the
+      // barrier's own planned length is still known for the win message
+      // below — the row itself becomes unreadable-as-"just succeeded" the
+      // moment it's transitioned.
+      final plannedMinutes = actionId == TaskActionId.confirmSmokedNo
+          ? MentorCommandCodes.durationBarrierMinutes(taskTitle)
+          : null;
       // canonicalTitle isn't threaded through HomePage's stream events today
       // — taskTitle already *is* the canonical ADAPTIVE_NO_SMOKE:<n> form
       // for every task this stream carries, same as the background isolate
@@ -350,6 +302,12 @@ class _HomePageState extends State<HomePage> {
           );
       if (!mounted) {
         return;
+      }
+      if (actionId == TaskActionId.confirmSmokedNo && plannedMinutes != null) {
+        unawaited(_showBarrierWonFeedback(plannedMinutes));
+      }
+      if (actionId == TaskActionId.confirmSmokedYes) {
+        unawaited(_offerFailureTriggerPrompt());
       }
       if (followUp == TaskActionFollowUp.openSosPage) {
         Navigator.of(context).push(
@@ -376,6 +334,59 @@ class _HomePageState extends State<HomePage> {
       await _loadHomeMetrics();
       return;
     }
+  }
+
+  /// The concrete payoff for winning a barrier: how long this one was, plus
+  /// the running total for the month — stated in numbers rather than left
+  /// implicit in a streak count, since getting through a craving without
+  /// smoking is the strongest evidence the programme has that it's working.
+  Future<void> _showBarrierWonFeedback(int plannedMinutes) async {
+    final monthlyMinutes = await _storageService.monthlySmokeFreeMinutes();
+    if (!mounted) return;
+    final monthlyHours = (monthlyMinutes / 60).round();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          context
+              .t('barrierWonFeedback')
+              .replaceAll('{minutes}', '$plannedMinutes')
+              .replaceAll('{hours}', '$monthlyHours'),
+        ),
+      ),
+    );
+  }
+
+  /// A single-tap, skippable "what happened?" after a barrier failure. The
+  /// answer isn't graded or reacted to — it's a data point for the risky-
+  /// hour/trigger profile (see StorageService.saveFailureTrigger), so a
+  /// failure that's explained is worth as much to that profile as one
+  /// reported on next week's survey. Optional on purpose: forcing an answer
+  /// here would turn an already-hard moment into one more chore.
+  Future<void> _offerFailureTriggerPrompt() async {
+    if (!mounted) return;
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(dialogContext.t('failureTriggerPromptTitle')),
+        children: [
+          for (final (reasonKey, labelKey) in const [
+            ('Stres', 'failureTriggerStress'),
+            ('Kahve', 'failureTriggerCoffee'),
+            ('Sosyal Ortam', 'failureTriggerSocial'),
+            ('Alkol', 'failureTriggerAlcohol'),
+            ('unknown', 'failureTriggerUnknown'),
+          ])
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(reasonKey),
+              child: Text(dialogContext.t(labelKey)),
+            ),
+        ],
+      ),
+    );
+    if (reason == null) {
+      return;
+    }
+    await _storageService.saveFailureTrigger(reason);
   }
 
   /// The in-memory `_taskStates` label a UI badge reads, for an action id
@@ -428,6 +439,21 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadHomeMetrics() async {
+    // A barrier the user never answered either confirmation prompt for —
+    // closed out neutrally rather than left open forever or scored as a
+    // failure. Runs before everything else so undeliveredTaskCount and the
+    // task-state map below already reflect it.
+    final closedStaleBarriers = await _storageService.closeStaleAcceptedBarriers(
+      deadline: NotificationService.barrierResolutionDeadline,
+    );
+    for (final task in closedStaleBarriers) {
+      unawaited(
+        NotificationService.cancelBarrierResolutionReminder(
+          task.canonicalTitle,
+        ),
+      );
+    }
+
     // Was `now - quitDate`, which counted days the user had smoked on. The
     // reduction figures are derived from logged cigarettes and answered
     // tasks instead, so a day only counts when something actually happened.
@@ -445,14 +471,9 @@ class _HomePageState extends State<HomePage> {
     final consecutiveSmokingSummary = await _storageService
         .loadConsecutiveSmokingSummary();
     final taskOutcomeSummary = await _storageService.loadTaskOutcomeSummary();
-    final durationBarrierPreference = await _storageService.loadSetting(
-      'duration_barrier_preference',
-    );
-    final durationBarrierFrequencyPreference = await _storageService
-        .loadSetting('duration_barrier_frequency_preference');
-    final durationBarrierEnabledRaw = await _storageService.loadSetting(
-      'duration_barrier_enabled',
-    );
+    final missedTaskTitle = await _storageService.loadMissedTaskTitle();
+    final undeliveredTaskCount = await _storageService
+        .countTodaysUndeliveredTasks();
     final lastRespiratoryBurdenRaw = await _storageService.loadSetting(
       'last_respiratory_burden',
     );
@@ -497,6 +518,8 @@ class _HomePageState extends State<HomePage> {
     if (!mounted) return;
     setState(() {
       _reductionProgress = reductionProgress;
+      _missedTaskTitle = missedTaskTitle;
+      _undeliveredTaskCount = undeliveredTaskCount;
       _registrationCompleted = registrationCompleted;
       _lastSurveyDateText = lastDate == null
           ? 'noRecordYet'
@@ -548,8 +571,6 @@ class _HomePageState extends State<HomePage> {
           ? _adaptivePlanItems.map((item) => item.taskTitle).toList()
           : behavior?.todaysTasks ?? const [];
       _coachCommands = behavior?.coachCommands ?? const [];
-      _durationBarrierCommands = behavior?.durationBarrierCommands ?? const [];
-      _durationBarrierHistoryCount = behavior?.durationBarrierHistoryCount ?? 0;
       _weeklySurveyRiskScore = behavior?.weeklySurveyRiskScore ?? 40;
       _weeklySurveyRiskLevel = behavior?.weeklySurveyRiskLevel ?? 'medium';
       _riskExplanation = behavior?.riskExplanation ?? const [];
@@ -578,10 +599,6 @@ class _HomePageState extends State<HomePage> {
               notificationContextReason.trim().isEmpty)
           ? context.t('taskReasonNoPlanned')
           : notificationContextReason;
-      _durationBarrierPreference = durationBarrierPreference ?? 'neutral';
-      _durationBarrierFrequencyPreference =
-          durationBarrierFrequencyPreference ?? 'orta';
-      _durationBarrierEnabled = (durationBarrierEnabledRaw ?? '1') == '1';
       _lastRespiratoryBurden =
           int.tryParse(lastRespiratoryBurdenRaw ?? '25')?.clamp(0, 100) ?? 25;
       _lastRespiratoryState = lastRespiratoryStateRaw ?? 'stable';
@@ -640,9 +657,6 @@ class _HomePageState extends State<HomePage> {
       }
       unawaited(_notifyNewTasks());
       unawaited(_scheduleCoachCommandNotificationsIfNeeded());
-      unawaited(_scheduleDurationBarrierNotificationsIfNeeded());
-      // Restores duration-barrier timers from task_followups (the only
-      // remaining producer of that table) before the mandatory gate runs.
       await _restorePendingFollowUps();
       if (!mounted) {
         return;
@@ -652,7 +666,42 @@ class _HomePageState extends State<HomePage> {
       unawaited(_scheduleSedentaryReminderIfNeeded());
       await _ensureMentorMessageCadence();
       await _loadSnoringSummary();
+      unawaited(_promptBackgroundReliabilityIfTasksUndelivered());
     }
+  }
+
+  static const int _undeliveredTaskReliabilityThreshold = 3;
+  static const String _lastReliabilityPromptDateKey =
+      'last_reliability_prompt_date';
+
+  /// A pile of tasks the user never even saw (today's undelivered count past
+  /// [_undeliveredTaskReliabilityThreshold]) is a delivery-reliability
+  /// signal, not a sign the user is failing — OEM battery optimization is
+  /// the single most common cause. Reuses the existing background-reliability
+  /// dialog rather than inventing a second one; that dialog already no-ops
+  /// on non-aggressive devices or once the exemption is granted, so this
+  /// only adds a once-a-day cap on top so it isn't re-offered every launch.
+  Future<void> _promptBackgroundReliabilityIfTasksUndelivered() async {
+    if (_undeliveredTaskCount < _undeliveredTaskReliabilityThreshold) {
+      return;
+    }
+    final today = DateTime.now();
+    final todayKey =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final lastShownKey = await _storageService.loadSetting(
+      _lastReliabilityPromptDateKey,
+    );
+    if (lastShownKey == todayKey) {
+      return;
+    }
+    await _storageService.saveSetting(_lastReliabilityPromptDateKey, todayKey);
+    if (!mounted) {
+      return;
+    }
+    await maybePromptBackgroundReliability(
+      context: context,
+      deviceCompatibilityService: DeviceCompatibilityService(),
+    );
   }
 
   /// Generates today's mentor message once per day (if not already done)
@@ -1053,187 +1102,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _scheduleDurationBarrierNotificationsIfNeeded() async {
-    if (!_registrationCompleted ||
-        !_durationBarrierEnabled ||
-        _durationBarrierCommands.isEmpty) {
-      return;
-    }
-
-    final limit = _resolveDurationBarrierNotificationLimit();
-    if (limit <= 0) {
-      return;
-    }
-    final spacingMinutes = _resolveDurationBarrierNotificationSpacing();
-
-    final now = DateTime.now();
-    final signature =
-        '${now.year}-${now.month}-${now.day}|BARRIER|$limit|$spacingMinutes|${_durationBarrierCommands.join('|')}';
-    final existing = await _storageService.loadSetting(
-      'last_duration_barrier_signature',
-    );
-    if (existing == signature) {
-      return;
-    }
-
-    await NotificationService.scheduleCoachCommandNotifications(
-      commands: _durationBarrierCommands,
-      predictedRiskWindow: _predictedRiskWindow,
-      maxNotifications: limit,
-      spacingMinutes: spacingMinutes,
-    );
-    await _storageService.saveSetting(
-      'last_duration_barrier_signature',
-      signature,
-    );
-  }
-
-  Future<void> _completeDurationBarrier(String command) async {
-    final minutes = _extractDurationBarrierMinutes(command);
-    if (!mounted) {
-      return;
-    }
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        final prompt = minutes == null
-            ? context.t('barrierEvaluationPromptNoMinutes')
-            : '$minutes ${context.t('barrierEvaluationPromptMinutes')}';
-        return AlertDialog(
-          title: Text(context.t('barrierEvaluationTitle')),
-          content: Text(prompt),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(context.t('barrierFail')),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(context.t('barrierSuccess')),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (result == null) {
-      return;
-    }
-
-    _durationBarrierTimers[command]?.cancel();
-    _durationBarrierTimers.remove(command);
-    _durationBarrierEndsAt.remove(command);
-
-    await _storageService.saveTaskResult(
-      taskTitle: command,
-      taskResult: result ? 'barrier_success' : 'barrier_failure',
-      completedAt: DateTime.now(),
-    );
-    if (!result) {
-      await _protocolViolationService.logDurationBarrierFailure(
-        command: command,
-      );
-    }
-
-    await _storageService.resolveTaskFollowUpByTitle(command);
-
-    if (!mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          result
-              ? context.t('barrierSavedSuccess')
-              : context.t('barrierSavedFailure'),
-        ),
-      ),
-    );
-    await _loadHomeMetrics();
-    _ensureDurationBarrierTicker();
-  }
-
-  int? _extractDurationBarrierMinutes(String command) {
-    // Adaptive duration-barrier commands are the canonical
-    // 'ADAPTIVE_NO_SMOKE:<minutes>' code (see DisciplineProtocolService),
-    // not display text -- the older 'Sonraki N dakika' pattern this used
-    // to match hasn't existed since that canonical-code refactor, so it
-    // always silently returned null.
-    final canonicalMatch = RegExp(
-      r'^ADAPTIVE_NO_SMOKE:(\d+)$',
-      caseSensitive: false,
-    ).firstMatch(command.trim());
-    if (canonicalMatch != null) {
-      return int.tryParse(canonicalMatch.group(1) ?? '');
-    }
-    final legacyMatch = RegExp(
-      r'Sonraki\s+(\d+)\s+dakika',
-      caseSensitive: false,
-    ).firstMatch(command);
-    if (legacyMatch == null) {
-      return null;
-    }
-    return int.tryParse(legacyMatch.group(1) ?? '');
-  }
-
-  int _resolveDurationBarrierNotificationLimit() {
-    if (_durationBarrierHistoryCount == 0) {
-      return 5;
-    }
-
-    var limit = _durationBarrierFrequencyPreference == 'az'
-        ? 1
-        : _durationBarrierFrequencyPreference == 'cok'
-        ? 3
-        : 2;
-
-    if (_durationBarrierPreference == 'dislike') {
-      limit -= 1;
-    } else if (_durationBarrierPreference == 'like' &&
-        _adaptiveRiskScore >= 70) {
-      limit += 1;
-    }
-
-    if (_recentSuccessCount >= _recentFailureCount + 3) {
-      limit -= 1;
-    } else if (_recentFailureCount > _recentSuccessCount + 1 &&
-        _adaptiveRiskScore >= 70) {
-      limit += 1;
-    }
-
-    if (limit < 1) {
-      return 1;
-    }
-    if (limit > 3) {
-      return 3;
-    }
-    return limit;
-  }
-
-  int _resolveDurationBarrierNotificationSpacing() {
-    var spacing = _durationBarrierFrequencyPreference == 'az'
-        ? 45
-        : _durationBarrierFrequencyPreference == 'cok'
-        ? 20
-        : 30;
-
-    if (_durationBarrierPreference == 'dislike') {
-      spacing += 15;
-    }
-    if (_recentSuccessCount >= _recentFailureCount + 3) {
-      spacing += 10;
-    }
-
-    if (spacing < 15) {
-      return 15;
-    }
-    if (spacing > 90) {
-      return 90;
-    }
-    return spacing;
-  }
-
   // Tasks are still meant to prompt the user several times across a day —
   // this only guards against the screen firing again within a short window
   // of its last appearance (e.g. a handful of app relaunches in a row),
@@ -1430,6 +1298,13 @@ class _HomePageState extends State<HomePage> {
             plannedDurationMinutes: item.durationMinutes,
             scheduledAt: item.scheduledAt,
           );
+          // The learning engine has heard about it, but the user hasn't --
+          // remember it so the home screen can still offer to start it
+          // instead of it just disappearing.
+          await _storageService.saveMissedTaskTitle(task);
+          if (mounted) {
+            setState(() => _missedTaskTitle = task);
+          }
           _notifiedTaskTitles.add(task);
           await _storageService.markTaskTitleNotifiedToday(task);
           continue;
@@ -1850,6 +1725,12 @@ class _HomePageState extends State<HomePage> {
           _buildSettingsTab(context),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        key: const ValueKey('quick_action_fab'),
+        backgroundColor: AppTheme.brandPrimary,
+        onPressed: () => unawaited(_openQuickActionMenu()),
+        child: const Icon(Icons.bolt, color: Colors.black87),
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedTabIndex,
         onDestinationSelected: (index) =>
@@ -1898,7 +1779,7 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: TextButton.icon(
             key: const ValueKey('craving_sos_button'),
-            onPressed: _openCravingSos,
+            onPressed: () => unawaited(_openQuickActionMenu()),
             style: TextButton.styleFrom(
               backgroundColor: Colors.redAccent,
               foregroundColor: Colors.white,
@@ -2377,10 +2258,38 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _openCravingSos() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const CravingSosPage()));
+  /// Single entry point for the floating button, the AppBar's SOS button,
+  /// and (natively, via MainActivity's shortcut-intent handling) the
+  /// launcher icon's long-press menu — all three route through here so the
+  /// same 4 actions are reachable no matter which one the user tapped.
+  Future<void> _openQuickActionMenu() async {
+    final action = await showQuickActionMenu(context);
+    if (!mounted || action == null) return;
+    switch (action) {
+      case QuickAction.smokedNow:
+        await _storageService.logSmokingNow();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.t('quickActionSmokedNowConfirmed'))),
+        );
+        await _loadHomeMetrics();
+      case QuickAction.craving:
+        await Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const CravingSosPage()),
+        );
+      case QuickAction.selfChallenge:
+        final minutes = await showSelfChallengeDurationMenu(context);
+        if (!mounted || minutes == null) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => SelfChallengePage(durationMinutes: minutes),
+          ),
+        );
+      case QuickAction.openApp:
+        // Already open — nothing to do. This case only does real work when
+        // reached from the launcher shortcut while the app isn't running.
+        break;
+    }
   }
 
   Widget _buildAdaptiveInsightsCard() {
@@ -2632,6 +2541,71 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  /// The card offered when [_missedTaskTitle] is set: a task the overdue-
+  /// grace branch of [_notifyNewTasks] closed out as `missed` before the
+  /// user ever saw it. Start re-runs the same accept path the mandatory
+  /// screen uses; Skip just drops it, same as declining any other task.
+  Widget _buildMissedTaskRow() {
+    final title = _missedTaskTitle;
+    if (title == null) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(context.t('missedTaskCardBody')),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              TextButton(
+                onPressed: () => unawaited(_skipMissedTask(title)),
+                child: Text(context.t('missedTaskSkipLabel')),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton(
+                onPressed: () => unawaited(_startMissedTask(title)),
+                child: Text(context.t('missedTaskStartLabel')),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _startMissedTask(String taskTitle) async {
+    await _storageService.clearMissedTaskTitle();
+    if (mounted) {
+      setState(() => _missedTaskTitle = null);
+    }
+    if (!mounted) return;
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => MandatoryTaskPage(taskTitle: taskTitle)),
+    );
+    if (result != true) {
+      return;
+    }
+    await TaskAssignmentService(_storageService).handleTaskAction(
+      canonicalTitle: taskTitle,
+      taskTitle: taskTitle,
+      actionId: TaskActionId.done,
+    );
+    if (!mounted) return;
+    setState(() {
+      _taskStates[taskTitle] = _uiStateFor(TaskActionId.done);
+    });
+    await _loadHomeMetrics();
+  }
+
+  Future<void> _skipMissedTask(String taskTitle) async {
+    await _storageService.clearMissedTaskTitle();
+    if (mounted) {
+      setState(() => _missedTaskTitle = null);
+    }
+  }
+
   Widget _buildTodayTaskCard() {
     final tasks = _todaysTasks.isEmpty
         ? <String>[context.t('noTaskToday')]
@@ -2647,6 +2621,7 @@ class _HomePageState extends State<HomePage> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
+            if (_missedTaskTitle != null) _buildMissedTaskRow(),
             if (_pendingFollowUps.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -2660,6 +2635,16 @@ class _HomePageState extends State<HomePage> {
                 '${context.t('successfulTaskCount')}: $_successfulTaskCount • ${context.t('failedTaskCount')}: $_failedTaskCount',
               ),
             ),
+            if (_undeliveredTaskCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  context
+                      .t('undeliveredTaskSummary')
+                      .replaceAll('{count}', '$_undeliveredTaskCount'),
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ),
             ...tasks.map((task) {
               if (_todaysTasks.isEmpty) {
                 return Padding(

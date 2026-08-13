@@ -45,12 +45,20 @@ class TaskLifecycleState {
   /// signal: this is the system's own delay, not the user's failure.
   static const String expired = 'expired';
 
+  /// The barrier's "did you smoke?" question went unanswered for so long
+  /// (see [TaskAssignment.barrierResolutionDeadline]) that asking now would
+  /// draw on a moment the user no longer remembers accurately. Closed out
+  /// without a real answer and, like [expired], kept out of the learning
+  /// signal on purpose.
+  static const String barrierUnknown = 'barrier_unknown';
+
   static const Set<String> terminal = {
     succeeded,
     failedDeclined,
     failedSmoked,
     failedMissed,
     expired,
+    barrierUnknown,
   };
 
   /// Which states a transition may legally land on, keyed by the state it
@@ -119,8 +127,20 @@ class TaskLifecycleState {
       retrying,
       ..._confirmationOutcomes,
     },
-    sosActive: {postponed},
-    accepted: {awaitingConfirmation, ..._confirmationOutcomes},
+    // Reachable from two different moments: a not-yet-accepted task (SOS
+    // pressed on the trigger notification itself) resumes into `postponed`,
+    // same as before. A barrier already running (`accepted`) that SOS
+    // suspends resumes back into `accepted` instead — the barrier keeps
+    // counting down rather than being reset into a fresh postpone/reminder
+    // cycle. The caller (CravingSosPage) knows which case it's in and picks
+    // the right target; both are legal from here.
+    sosActive: {postponed, accepted},
+    accepted: {
+      awaitingConfirmation,
+      barrierUnknown,
+      sosActive,
+      ..._confirmationOutcomes,
+    },
     awaitingConfirmation: _confirmationOutcomes,
   };
 

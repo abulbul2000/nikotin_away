@@ -48,6 +48,7 @@ class _SettingsPageState extends State<SettingsPage> {
   final DeviceCompatibilityService _deviceCompatibilityService =
       DeviceCompatibilityService();
   bool _sleepIntelligenceEnabled = false;
+  bool _durationBarrierEnabled = true;
   bool _snoringDetectionEnabled = false;
   bool _smokedLogButtonEnabled = false;
   int _lastNightSnoreLikelyCount = 0;
@@ -59,6 +60,7 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     _loadSleepIntelligenceState();
+    _loadDurationBarrierState();
     _loadSnoringDetectionState();
     _loadSmokedLogButtonState();
     _loadWearableIntelligenceState();
@@ -70,6 +72,27 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _sleepIntelligenceEnabled = enabled;
     });
+  }
+
+  /// Mirrors coach_mode_page.dart's own on/off switch — that page holds the
+  /// only detail (frequency), but consent has to be visible from the top-
+  /// level Settings list too, not buried a screen deeper where someone who
+  /// wants the barrier off entirely might never think to look.
+  Future<void> _loadDurationBarrierState() async {
+    final raw = await _storageService.loadSetting('duration_barrier_enabled');
+    if (!mounted) return;
+    setState(() {
+      _durationBarrierEnabled = raw != '0';
+    });
+  }
+
+  Future<void> _toggleDurationBarrier(bool value) async {
+    await _storageService.saveSetting(
+      'duration_barrier_enabled',
+      value ? '1' : '0',
+    );
+    if (!mounted) return;
+    setState(() => _durationBarrierEnabled = value);
   }
 
   Future<void> _loadSmokedLogButtonState() async {
@@ -556,6 +579,18 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: Text(context.t('settingsLanguageRow')),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _openLanguageSettings,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.timer_outlined),
+                title: Text(context.t('durationBarrierEnabledTitle')),
+                subtitle: Text(
+                  context.t('durationBarrierEnabledDescription'),
+                ),
+                trailing: Switch(
+                  value: _durationBarrierEnabled,
+                  onChanged: _toggleDurationBarrier,
+                ),
               ),
               const Divider(height: 1),
               ListTile(

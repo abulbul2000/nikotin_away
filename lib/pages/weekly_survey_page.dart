@@ -116,8 +116,6 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
   String? _updatedBreakStart2;
   String? _updatedBreakEnd2;
   String _updatedWeekendSmokingPattern = 'Ayni';
-  String _durationBarrierPreference = 'Farketmez';
-  String _durationBarrierFrequencyPreference = 'Orta';
 
   static const List<Map<String, String>> _workDayOptions = [
     {'key': 'Mon', 'labelKey': 'dayMonShort'},
@@ -331,10 +329,6 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
         'weekendSmokingPattern': _profileContextChanged
             ? _updatedWeekendSmokingPattern
             : null,
-      },
-      'durationBarrier': {
-        'preference': _durationBarrierPreference,
-        'frequencyPreference': _durationBarrierFrequencyPreference,
       },
     };
   }
@@ -1344,70 +1338,6 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                   ],
                 ],
               ],
-              SurveySectionHeader(
-                title: context.t('durationBarrierTitle'),
-                icon: Icons.timer_outlined,
-              ),
-              DropdownButtonFormField<String>(
-                isExpanded: true,
-                initialValue: _durationBarrierPreference,
-                decoration: InputDecoration(
-                  labelText: context.t('durationBarrierHow'),
-                  border: OutlineInputBorder(),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: 'Begeniyorum',
-                    child: Text(context.t('durationBarrierLike')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Farketmez',
-                    child: Text(context.t('durationBarrierNeutral')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Begenmiyorum',
-                    child: Text(context.t('durationBarrierDislike')),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Istemiyorum',
-                    child: Text(context.t('durationBarrierOff')),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _durationBarrierPreference = value ?? 'Farketmez';
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              if (_durationBarrierPreference != 'Istemiyorum')
-                DropdownButtonFormField<String>(
-                  isExpanded: true,
-                  initialValue: _durationBarrierFrequencyPreference,
-                  decoration: InputDecoration(
-                    labelText: context.t('durationBarrierFrequencyHow'),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'Az',
-                      child: Text(context.t('few')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Orta',
-                      child: Text(context.t('stressMedium')),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Cok',
-                      child: Text(context.t('veryHigh')),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _durationBarrierFrequencyPreference = value ?? 'Orta';
-                    });
-                  },
-                ),
               ConsecutiveSmokingSection(
                 consecutiveSmokingHabit: _consecutiveSmokingHabit,
                 consecutiveSmokingCount: _consecutiveSmokingCount,

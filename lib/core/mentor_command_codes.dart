@@ -54,6 +54,30 @@ abstract final class MentorCommandCodes {
   }) {
     return '${riskDaypartPrefix}_${band.toUpperCase()}_${dayPart.toUpperCase()}_$index';
   }
+
+  static final RegExp _adaptiveNoSmokePattern = RegExp(
+    r'^ADAPTIVE_NO_SMOKE:(\d+)$',
+    caseSensitive: false,
+  );
+
+  /// Whether [command] is a duration-barrier task in its canonical form —
+  /// the single place this check lives, so a barrier task is recognised the
+  /// same way everywhere it's asked about (task-state lookups, outcome
+  /// summaries, mentor command generation) rather than each call site
+  /// re-implementing its own pattern and silently drifting from the others.
+  static bool isDurationBarrierCommand(String command) {
+    return _adaptiveNoSmokePattern.hasMatch(command.trim());
+  }
+
+  /// The planned minute count for a canonical duration-barrier command, or
+  /// null if [command] isn't one (see [isDurationBarrierCommand]).
+  static int? durationBarrierMinutes(String command) {
+    final match = _adaptiveNoSmokePattern.firstMatch(command.trim());
+    if (match == null) {
+      return null;
+    }
+    return int.tryParse(match.group(1) ?? '');
+  }
 }
 
 /// Canonical, language-independent IDs for [MentorMessageBuilder]'s messages.

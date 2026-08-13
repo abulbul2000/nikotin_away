@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Labels for the launcher icon's long-press shortcut menu
+         (shortcuts.xml). Android's ShortcutManager has no bridge to the
+         Dart-side AppTexts translation system — these render in whichever
+         language the OS itself is set to, not the app's own language
+         setting, and only in Turkish here rather than the full 40-language
+         set the rest of the app supports. -->
+    <string name="shortcut_smoked_now_short">Sigara İçtim</string>
+    <string name="shortcut_smoked_now_long">Sigara içtiğini kaydet</string>
+    <string name="shortcut_craving_short">Krizdeyim</string>
+    <string name="shortcut_craving_long">Kriz anı desteği aç</string>
+    <string name="shortcut_self_challenge_short">Meydan Oku</string>
+    <string name="shortcut_self_challenge_long">Kendi meydan okumanı başlat</string>
+    <string name="shortcut_open_app_short">Uygulamayı Aç</string>
+    <string name="shortcut_open_app_long">Nikotin Away\'i aç</string>
+</resources>

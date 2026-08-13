@@ -269,6 +269,23 @@ class AndroidWatchdogService {
     }
   }
 
+  /// The action (if any) queued by a tap on one of the launcher icon's
+  /// long-press shortcuts (see shortcuts.xml / MainActivity.ShortcutStore).
+  /// One of 'smoked_now', 'craving', 'self_challenge', or null when no
+  /// shortcut was tapped since the last drain.
+  static Future<String?> consumePendingShortcutAction() async {
+    if (!_isAndroid) {
+      return null;
+    }
+    try {
+      return await _channel.invokeMethod<String>(
+        'consumePendingShortcutAction',
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Watchdog ids the native delivery-gate queue closed out as `expired`
   /// while the app was closed — two or more tasks fell due during the same
   /// DND/gaming stretch, and everything past the two-task limit is dropped

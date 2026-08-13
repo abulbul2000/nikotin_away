@@ -60,8 +60,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
   String packOption = '1 paketten az';
   String? consecutiveSmokingHabit;
   String? consecutiveSmokingCount;
-  String durationBarrierPreference = 'Farketmez';
-  String durationBarrierFrequencyPreference = 'Orta';
 
   bool hypertension = false;
   bool asthma = false;
@@ -386,38 +384,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       debugPrint('[SurveyPage] saveSleepTime ok: $sleepTime');
     } catch (error, stackTrace) {
       debugPrint('[SurveyPage] saveSleepTime failed (non-blocking): $error');
-      debugPrintStack(stackTrace: stackTrace);
-    }
-
-    final normalizedPreference = durationBarrierPreference == 'Begeniyorum'
-        ? 'like'
-        : durationBarrierPreference == 'Begenmiyorum'
-        ? 'dislike'
-        : durationBarrierPreference == 'Istemiyorum'
-        ? 'off'
-        : 'neutral';
-    final normalizedFrequency = durationBarrierFrequencyPreference == 'Az'
-        ? 'az'
-        : durationBarrierFrequencyPreference == 'Cok'
-        ? 'cok'
-        : 'orta';
-    final enabled = normalizedPreference == 'off' ? '0' : '1';
-
-    try {
-      await _storageService.saveSetting(
-        'duration_barrier_preference',
-        normalizedPreference,
-      );
-      await _storageService.saveSetting(
-        'duration_barrier_frequency_preference',
-        normalizedFrequency,
-      );
-      await _storageService.saveSetting('duration_barrier_enabled', enabled);
-      debugPrint('[SurveyPage] save duration barrier preferences ok');
-    } catch (error, stackTrace) {
-      debugPrint(
-        '[SurveyPage] save duration barrier preferences failed (non-blocking): $error',
-      );
       debugPrintStack(stackTrace: stackTrace);
     }
 
@@ -852,8 +818,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       'packOption': packOption,
       'consecutiveSmokingHabit': consecutiveSmokingHabit,
       'consecutiveSmokingCount': consecutiveSmokingCount,
-      'durationBarrierPreference': durationBarrierPreference,
-      'durationBarrierFrequencyPreference': durationBarrierFrequencyPreference,
       'hypertension': hypertension,
       'asthma': asthma,
       'diabetes': diabetes,
@@ -901,12 +865,6 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       packOption = draft['packOption'] as String? ?? packOption;
       consecutiveSmokingHabit = draft['consecutiveSmokingHabit'] as String?;
       consecutiveSmokingCount = draft['consecutiveSmokingCount'] as String?;
-      durationBarrierPreference =
-          draft['durationBarrierPreference'] as String? ??
-          durationBarrierPreference;
-      durationBarrierFrequencyPreference =
-          draft['durationBarrierFrequencyPreference'] as String? ??
-          durationBarrierFrequencyPreference;
       hypertension = draft['hypertension'] as bool? ?? false;
       asthma = draft['asthma'] as bool? ?? false;
       diabetes = draft['diabetes'] as bool? ?? false;

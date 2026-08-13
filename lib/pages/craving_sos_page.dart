@@ -30,7 +30,10 @@ class CravingSosPage extends StatefulWidget {
 
 enum _BreathPhase { inhale, hold, exhale }
 
-enum _SosStage { breathing, suggestion, resume }
+// `resumed` is the barrier-was-running case: SOS suspended a task already
+// in its no-smoking window, so there's nothing to ask about timing —
+// dismissing just hands it straight back to counting down.
+enum _SosStage { breathing, suggestion, resume, resumed }
 
 class _CravingSosPageState extends State<CravingSosPage>
     with SingleTickerProviderStateMixin {
@@ -56,6 +59,17 @@ class _CravingSosPageState extends State<CravingSosPage>
   late final AnimationController _pulseController;
   late final String _suggestionKey;
   final DateTime _openedAt = DateTime.now();
+  final StorageService _storage = StorageService();
+
+  /// The task this SOS actually applies to — known synchronously the moment
+  /// the page opens whenever [widget.taskCanonicalTitle] was passed in (the
+  /// notification-SOS path), so the resume-choice UI doesn't have to wait on
+  /// a database round trip to appear. [_wasBarrierRunning] answers a
+  /// different question (was it already mid-barrier?) and can only be known
+  /// after that lookup, so it starts false and is resolved separately in
+  /// [_resolveActiveTask].
+  String? _resolvedTaskTitle;
+  bool _wasBarrierRunning = false;
 
   @override
   void initState() {
@@ -66,6 +80,52 @@ class _CravingSosPageState extends State<CravingSosPage>
       duration: Duration(seconds: _secondsLeft),
     )..forward();
     _startTimer();
+    _resolvedTaskTitle = widget.taskCanonicalTitle;
+    unawaited(_resolveActiveTask());
+  }
+
+  /// Whether the resolved task was already mid-barrier (`accepted`) when SOS
+  /// opened, so it can be suspended into `sosActive` and resumed later
+  /// rather than treated as a fresh postpone. [widget.taskCanonicalTitle]
+  /// covers the notification-SOS path; when it's null (home-screen menu,
+  /// self-challenge, a coach nudge) this looks up whichever barrier is
+  /// currently running, if any, so suspending it doesn't depend on which
+  /// door the user walked in through.
+  Future<void> _resolveActiveTask() async {
+    final explicitTitle = widget.taskCanonicalTitle;
+    if (explicitTitle != null && explicitTitle.isNotEmpty) {
+      final task = await _storage.loadLatestTaskAssignmentByTitle(
+        explicitTitle,
+      );
+      final wasRunning = task?.state == TaskLifecycleState.accepted;
+      if (wasRunning) {
+        await _storage.transitionTaskAssignment(
+          id: task!.id,
+          state: TaskLifecycleState.sosActive,
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _wasBarrierRunning = wasRunning;
+      });
+      return;
+    }
+
+    // No task was handed in — check whether a barrier is running anyway
+    // (home-screen SOS menu, self-challenge, a coach nudge mid-barrier).
+    final active = await _storage.loadActiveAcceptedBarrier();
+    if (active == null) {
+      return;
+    }
+    await _storage.transitionTaskAssignment(
+      id: active.id,
+      state: TaskLifecycleState.sosActive,
+    );
+    if (!mounted) return;
+    setState(() {
+      _resolvedTaskTitle = active.canonicalTitle;
+      _wasBarrierRunning = true;
+    });
   }
 
   void _startTimer() {
@@ -118,13 +178,17 @@ class _CravingSosPageState extends State<CravingSosPage>
 
   /// Hands the interrupted task back after [minutes], and records how long
   /// the SOS took so the watchdog's silence window isn't spent on breathing.
+  ///
+  /// Only reached when the barrier wasn't already running (see
+  /// [_resumeBarrier] for that case) — this is the notification-SOS path,
+  /// where the task hadn't started counting down yet, so "how long until
+  /// you're asked again" is still a real question.
   Future<void> _resumeTaskIn(int minutes) async {
-    final title = widget.taskCanonicalTitle;
+    final title = _resolvedTaskTitle;
     if (title != null && title.isNotEmpty) {
-      final storage = StorageService();
-      final task = await storage.loadLatestTaskAssignmentByTitle(title);
+      final task = await _storage.loadLatestTaskAssignmentByTitle(title);
       if (task != null) {
-        await storage.transitionTaskAssignment(
+        await _storage.transitionTaskAssignment(
           id: task.id,
           state: TaskLifecycleState.postponed,
           postponeMinutes: minutes,
@@ -144,6 +208,30 @@ class _CravingSosPageState extends State<CravingSosPage>
     Navigator.of(context).pop();
   }
 
+  /// The barrier-was-running case: resumes the same task back into
+  /// `accepted` (see storage_service.dart's `transitionTaskAssignment`,
+  /// which leaves `barrierStartedAt`/`barrierEndsAt` untouched on this
+  /// specific transition) so it keeps counting down on whatever time was
+  /// actually left, rather than being treated as a fresh postpone.
+  Future<void> _resumeBarrier() async {
+    final title = _resolvedTaskTitle;
+    if (title != null && title.isNotEmpty) {
+      final task = await _storage.loadLatestTaskAssignmentByTitle(title);
+      if (task != null) {
+        await _storage.transitionTaskAssignment(
+          id: task.id,
+          state: TaskLifecycleState.accepted,
+          sosMinutes: DateTime.now().difference(_openedAt).inMinutes,
+        );
+      }
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(context.t('sosBarrierResumed'))));
+    Navigator.of(context).pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -159,6 +247,7 @@ class _CravingSosPageState extends State<CravingSosPage>
             _SosStage.breathing => _buildBreathing(),
             _SosStage.suggestion => _buildSuggestion(),
             _SosStage.resume => _buildResume(),
+            _SosStage.resumed => _buildResumed(),
           },
         ),
       ),
@@ -257,12 +346,15 @@ class _CravingSosPageState extends State<CravingSosPage>
   /// would mean the retry chain kept prompting someone who just told us they
   /// were past the craving.
   void _handleDismiss() {
-    final title = widget.taskCanonicalTitle;
-    if (title == null || title.isEmpty) {
+    if (_resolvedTaskTitle == null) {
       Navigator.of(context).pop();
       return;
     }
-    setState(() => _stage = _SosStage.resume);
+    setState(
+      () => _stage = _wasBarrierRunning
+          ? _SosStage.resumed
+          : _SosStage.resume,
+    );
   }
 
   Widget _buildSuggestion() {
@@ -291,13 +383,7 @@ class _CravingSosPageState extends State<CravingSosPage>
           width: double.infinity,
           child: ElevatedButton(
             key: const ValueKey('sos_suggestion_done_button'),
-            onPressed: () {
-              if (widget.taskCanonicalTitle == null) {
-                Navigator.of(context).pop();
-                return;
-              }
-              setState(() => _stage = _SosStage.resume);
-            },
+            onPressed: _handleDismiss,
             child: Text(context.t('sosDismiss')),
           ),
         ),
@@ -332,6 +418,44 @@ class _CravingSosPageState extends State<CravingSosPage>
           ),
           const SizedBox(height: 10),
         ],
+      ],
+    );
+  }
+
+  /// The barrier-was-running case — no timing question, since the barrier
+  /// itself is already resuming. This is the moment [_wasBarrierRunning]
+  /// exists to recognise: getting through a craving without smoking, on a
+  /// task already in its window, is the strongest evidence the programme
+  /// ever gets, so it's said outright rather than folded into a generic
+  /// "resumed" toast.
+  Widget _buildResumed() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.emoji_events_outlined, size: 56, color: AppTheme.brandPrimary),
+        const SizedBox(height: 20),
+        Text(
+          context.t('sosBarrierResumedTitle'),
+          textAlign: TextAlign.center,
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(color: Colors.white),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          context.t('sosBarrierResumedBody'),
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
+        const SizedBox(height: 28),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            key: const ValueKey('sos_barrier_resumed_button'),
+            onPressed: _resumeBarrier,
+            child: Text(context.t('sosBarrierResumedAction')),
+          ),
+        ),
       ],
     );
   }

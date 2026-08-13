@@ -111,6 +111,8 @@ class _AchievementTile extends StatelessWidget {
         return context
             .t('reductionIntervalGain')
             .replaceAll('{percent}', '${achievement.threshold}');
+      case AchievementKind.longestBarrier:
+        return '${achievement.threshold} ${context.t('minutesShort')}';
     }
   }
 

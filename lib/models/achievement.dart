@@ -13,6 +13,9 @@ enum AchievementKind {
 
   /// How much longer the gap between cigarettes has become, in percent.
   intervalGain,
+
+  /// The longest barrier ever actually completed, in minutes.
+  longestBarrier,
 }
 
 class Achievement {
@@ -176,6 +179,25 @@ class Achievement {
       icon: '🎯',
       kind: AchievementKind.intervalGain,
       threshold: 100,
+    ),
+
+    // The barrier's own natural reward — how long the longest single
+    // no-smoking window ever completed actually ran.
+    Achievement(
+      id: 'longest_barrier_60',
+      titleKey: 'achievementLongestBarrier60Title',
+      descriptionKey: 'achievementLongestBarrier60Desc',
+      icon: '🕐',
+      kind: AchievementKind.longestBarrier,
+      threshold: 60,
+    ),
+    Achievement(
+      id: 'longest_barrier_120',
+      titleKey: 'achievementLongestBarrier120Title',
+      descriptionKey: 'achievementLongestBarrier120Desc',
+      icon: '🌟',
+      kind: AchievementKind.longestBarrier,
+      threshold: 120,
     ),
   ];
 }

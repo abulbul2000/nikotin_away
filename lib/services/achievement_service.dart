@@ -76,6 +76,8 @@ class AchievementService {
         return progress.cigarettesAvoided;
       case AchievementKind.intervalGain:
         return (progress.intervalProgress * 100).round();
+      case AchievementKind.longestBarrier:
+        return progress.longestCompletedBarrierMinutes;
     }
   }
 

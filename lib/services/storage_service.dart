@@ -76,6 +76,7 @@ class StorageService {
   static const _mentorMessagesTable = 'mentor_messages';
   static const _consentEventsTable = 'consent_events';
   static const _subscriptionStateTable = 'subscription_state';
+  static const _failureTriggersTable = 'failure_triggers';
   static const _behaviorDirtyKey = 'behavior_dirty';
   static const _registrationCompletedKey = 'registration_completed';
   static const _isProfileCompletedKey = 'isProfileCompleted';
@@ -155,7 +156,9 @@ class StorageService {
       // status, see SubscriptionState. Upgrading users who already
       // completed the initial survey get trialStartedAt backfilled to
       // "now" rather than penalized for not having had a trial before.
-      version: 31,
+      // 32: failure_triggers — the single-tap "what happened?" answer
+      // logged right after a barrier failure, see saveFailureTrigger.
+      version: 32,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -203,6 +206,7 @@ class StorageService {
         await _ensureMedicationsTable(db);
         await _ensureMedicationDoseLogTable(db);
         await _ensureCoughTestRecordsTable(db);
+        await _ensureFailureTriggersTable(db);
         await _ensureIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -238,6 +242,7 @@ class StorageService {
         await _ensureMedicationsTable(db);
         await _ensureMedicationDoseLogTable(db);
         await _ensureCoughTestRecordsTable(db);
+        await _ensureFailureTriggersTable(db);
         if (oldVersion < 31) {
           // Can't go through loadSurveyHistory()/startTrialIfNeeded() here —
           // both resolve the `database` getter, which would recursively
@@ -1213,6 +1218,64 @@ class StorageService {
     );
   }
 
+  /// A single-tap "what happened?" answer logged right after a barrier
+  /// failure (see [saveFailureTrigger]) — feeds the same risky-hour/trigger
+  /// profile the weekly survey's trigger questions do, so a failure the
+  /// user explains is worth as much to that profile as one they reported on
+  /// a survey a week later.
+  Future<void> _ensureFailureTriggersTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_failureTriggersTable (
+        id TEXT PRIMARY KEY,
+        reason TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      )
+    ''');
+  }
+
+  /// Canonical trigger names a failure can be attributed to — matches
+  /// [BehaviorEngine]'s survey-trigger vocabulary ('Stres', 'Kahve', 'Sosyal
+  /// Ortam', 'Alkol') so a logged failure and a survey answer feed the risky-
+  /// trigger profile identically. 'unknown' is the fifth option (the user
+  /// genuinely doesn't know) and is never counted toward any trigger.
+  static const List<String> failureTriggerReasons = [
+    'Stres',
+    'Kahve',
+    'Sosyal Ortam',
+    'Alkol',
+    'unknown',
+  ];
+
+  Future<void> saveFailureTrigger(String reason) async {
+    if (!failureTriggerReasons.contains(reason)) {
+      return;
+    }
+    final db = await database;
+    final now = DateTime.now();
+    await db.insert(_failureTriggersTable, {
+      'id': 'ftrig_${now.microsecondsSinceEpoch}',
+      'reason': reason,
+      'createdAt': now.toIso8601String(),
+    });
+  }
+
+  /// Extra weight for the risky-trigger score, from failures the user
+  /// explained directly rather than only ever through a weekly survey
+  /// answer. Same +5-per-hit shape [BehaviorEngine.calculateTriggerScores]
+  /// already uses for a survey trigger selection, so a logged failure counts
+  /// the same as reporting it a week later would have.
+  Future<Map<String, int>> loadFailureTriggerScoreBoost() async {
+    final db = await database;
+    final rows = await db.query(_failureTriggersTable, columns: ['reason']);
+    final boost = <String, int>{};
+    for (final row in rows) {
+      final reason = row['reason'] as String;
+      if (reason == 'unknown') continue;
+      boost[reason] = (boost[reason] ?? 0) + 5;
+    }
+    return boost;
+  }
+
   Future<void> _ensureAdaptiveTaskStateTable(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $_adaptiveTaskStateTable (
@@ -1784,6 +1847,72 @@ class StorageService {
       return null;
     }
     return rows.first['value'] as String;
+  }
+
+  static const String _missedTaskTitleKey = 'missed_task_title';
+
+  /// Remembers a task the overdue-grace branch in HomePage closed out
+  /// without ever showing it, so the home screen can offer it back on next
+  /// open instead of it just vanishing. One slot, not a list — the same
+  /// simplification `_lastSleepActivityNotificationKey` and similar
+  /// single-pending-item settings already make elsewhere in this file.
+  Future<void> saveMissedTaskTitle(String taskTitle) async {
+    await saveSetting(_missedTaskTitleKey, taskTitle);
+  }
+
+  Future<String?> loadMissedTaskTitle() async {
+    final value = await loadSetting(_missedTaskTitleKey);
+    return (value == null || value.isEmpty) ? null : value;
+  }
+
+  Future<void> clearMissedTaskTitle() async {
+    await saveSetting(_missedTaskTitleKey, '');
+  }
+
+  /// How many of today's tasks never actually reached the user: `missed`
+  /// adaptive-outcome events (overdue-grace closures, watchdog no-response)
+  /// plus `expired` task_assignments rows (native delivery-gate queue
+  /// limit). Both are the app's own delivery delay, not something the user
+  /// did — this is purely a count for the daily-review summary line and the
+  /// reliability-prompt trigger, not a learning-engine input.
+  /// Total smoke-free time this calendar month, summed from every
+  /// successfully-completed barrier's own planned duration — the concrete
+  /// number [craving_sos_page.dart]/[home_page.dart] show right after a
+  /// barrier is won, so the payoff for getting through one is stated in
+  /// hours, not just left implicit in a streak count.
+  Future<int> monthlySmokeFreeMinutes({DateTime? now}) async {
+    final today = now ?? DateTime.now();
+    final monthStart = DateTime(today.year, today.month);
+    final events = await loadRecentAdaptiveTaskEvents();
+    var total = 0;
+    for (final event in events) {
+      if (event.outcome == AdaptiveTaskOutcome.success &&
+          !event.respondedAt.isBefore(monthStart)) {
+        total += event.plannedDurationMinutes;
+      }
+    }
+    return total;
+  }
+
+  Future<int> countTodaysUndeliveredTasks({DateTime? now}) async {
+    final today = now ?? DateTime.now();
+    final dayStart = DateTime(today.year, today.month, today.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+
+    final events = await loadRecentAdaptiveTaskEvents();
+    final missedToday = events.where(
+      (e) =>
+          e.outcome == AdaptiveTaskOutcome.missed &&
+          !e.respondedAt.isBefore(dayStart) &&
+          e.respondedAt.isBefore(dayEnd),
+    ).length;
+
+    final assignments = await loadTaskAssignmentsForDay(today);
+    final expiredToday = assignments
+        .where((a) => a.state == TaskLifecycleState.expired)
+        .length;
+
+    return missedToday + expiredToday;
   }
 
   Future<void> markBehaviorDirty() async {
@@ -2407,6 +2536,14 @@ class StorageService {
     );
     final taskDays = await _taskSuccessRateByDay(since: since);
 
+    var longestCompletedBarrierMinutes = 0;
+    for (final event in await loadRecentAdaptiveTaskEvents()) {
+      if (event.outcome == AdaptiveTaskOutcome.success &&
+          event.plannedDurationMinutes > longestCompletedBarrierMinutes) {
+        longestCompletedBarrierMinutes = event.plannedDurationMinutes;
+      }
+    }
+
     var streak = 0;
     var avoided = 0;
     var evidenceDays = 0;
@@ -2454,6 +2591,7 @@ class StorageService {
       baselineDaily: input.dailyCigarettes,
       loggedToday: smokedByDay[_dayKey(today)],
       evidenceDays: evidenceDays,
+      longestCompletedBarrierMinutes: longestCompletedBarrierMinutes,
     );
   }
 
@@ -2641,11 +2779,41 @@ class StorageService {
     }
   }
 
+  /// True when the user has switched the barrier off entirely.
+  ///
+  /// Two settings can say so: `duration_barrier_enabled` (the on/off switch
+  /// in coach_mode_page.dart and the top-level Settings row that mirrors
+  /// it) and the legacy `duration_barrier_preference == 'off'` value
+  /// ai_chat_page.dart's AI tool call can still write. Both are checked so
+  /// neither write path is silently ignored. Consent, not tuning: this must
+  /// stop a barrier task from being generated at all, not just adjust one —
+  /// see buildAdaptiveNoSmokePlan, which checks this before doing any of
+  /// the (otherwise wasted) barrier-length/task-count work below.
+  Future<bool> _isDurationBarrierDisabled() async {
+    final enabledRaw = await loadSetting('duration_barrier_enabled');
+    if (enabledRaw == '0') {
+      return true;
+    }
+    final preferenceRaw = await loadSetting('duration_barrier_preference');
+    return preferenceRaw == 'off';
+  }
+
   Future<AdaptiveTaskPlan> buildAdaptiveNoSmokePlan({
     required DateTime now,
     required DateTime sleepAt,
     required List<String> riskyHours,
   }) async {
+    // Checked first, before any of the (otherwise wasted) barrier-length/
+    // task-count work below: this is a consent switch, not a tuning knob,
+    // and must be able to produce an empty plan on its own.
+    if (await _isDurationBarrierDisabled()) {
+      return const AdaptiveTaskPlan(
+        targetTaskCount: 0,
+        baseDurationMinutes: 0,
+        items: [],
+      );
+    }
+
     final todayKey =
         '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     final cachedDate = await loadSetting(_adaptivePlanDateKey);
@@ -2693,8 +2861,25 @@ class StorageService {
       movingFailureRate: state.movingFailureRate,
       postponeRate: state.postponeRate,
     );
+    // User-facing control, independent of the duration axis:
+    // duration_barrier_frequency_preference only ever shifts how many
+    // barrier tasks land in the day, never their length — the length comes
+    // from SmokingIntervalService alone. Clamped to the same 4-8 range
+    // dailyTaskCount itself already enforces, so this can't push the count
+    // outside what that service considers a sane day.
+    final frequencyRaw = await loadSetting(
+      'duration_barrier_frequency_preference',
+    );
+    final frequencyAdjustedCount = switch (frequencyRaw) {
+      'az' => baseTaskCount - 1,
+      'cok' => baseTaskCount + 1,
+      _ => baseTaskCount,
+    }.clamp(
+      SmokingIntervalService.minDailyTasks,
+      SmokingIntervalService.maxDailyTasks,
+    );
     final effectiveTaskCount = MentorReliefService.applyTaskReliefIfActive(
-      baseCount: baseTaskCount,
+      baseCount: frequencyAdjustedCount,
       now: now,
       reliefUntil: reliefUntilRaw == null
           ? null
@@ -3218,12 +3403,6 @@ class StorageService {
       coachCommands: (data['coachCommands'] as List<dynamic>? ?? const [])
           .map((item) => item.toString())
           .toList(),
-      durationBarrierCommands:
-          (data['durationBarrierCommands'] as List<dynamic>? ?? const [])
-              .map((item) => item.toString())
-              .toList(),
-      durationBarrierHistoryCount:
-          (data['durationBarrierHistoryCount'] as num?)?.toInt() ?? 0,
       commandSuccessScores:
           (data['commandSuccessScores'] as Map<String, dynamic>? ??
                   const <String, dynamic>{})
@@ -3505,6 +3684,23 @@ class StorageService {
     return TaskAssignment.fromJson(rows.first);
   }
 
+  /// The barrier currently running, if any — the one row in `accepted`.
+  /// SOS opened without a task attached to it (the home-screen menu,
+  /// self-challenge, a coach nudge) uses this to find out whether a barrier
+  /// is actually mid-countdown and needs suspending rather than resetting.
+  Future<TaskAssignment?> loadActiveAcceptedBarrier() async {
+    final db = await database;
+    final rows = await db.query(
+      _taskAssignmentsTable,
+      where: 'state = ?',
+      whereArgs: [TaskLifecycleState.accepted],
+      orderBy: 'barrierStartedAt DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return TaskAssignment.fromJson(rows.first);
+  }
+
   Future<List<TaskAssignment>> loadTaskAssignmentsForDay(DateTime day) async {
     final db = await database;
     final key = _planDateKey(day);
@@ -3523,17 +3719,58 @@ class StorageService {
     final db = await database;
     final rows = await db.query(
       _taskAssignmentsTable,
-      where: 'state NOT IN (?, ?, ?, ?, ?)',
+      where: 'state NOT IN (?, ?, ?, ?, ?, ?)',
       whereArgs: [
         TaskLifecycleState.succeeded,
         TaskLifecycleState.failedDeclined,
         TaskLifecycleState.failedSmoked,
         TaskLifecycleState.failedMissed,
         TaskLifecycleState.expired,
+        TaskLifecycleState.barrierUnknown,
       ],
       orderBy: 'scheduledAt ASC',
     );
     return rows.map(TaskAssignment.fromJson).toList();
+  }
+
+  /// Closes out any `accepted` barrier whose confirmation window has been
+  /// open longer than [NotificationService.barrierResolutionDeadline] —
+  /// both the first confirmation prompt and its later reminder went
+  /// unanswered, so asking now would draw on a moment the user can no
+  /// longer accurately recall. Closed as [TaskLifecycleState.barrierUnknown]
+  /// rather than a real outcome, and — same as `expired` — never reported
+  /// to the learning engine (`outcomeFor` returns null for it).
+  ///
+  /// Called on every app open; a no-op most of the time since it only ever
+  /// matches a barrier the user genuinely never responded to.
+  Future<List<TaskAssignment>> closeStaleAcceptedBarriers({
+    required Duration deadline,
+    DateTime? now,
+  }) async {
+    final cutoff = (now ?? DateTime.now()).subtract(deadline);
+    final db = await database;
+    final rows = await db.query(
+      _taskAssignmentsTable,
+      where: 'state = ?',
+      whereArgs: [TaskLifecycleState.accepted],
+    );
+    final stale = rows
+        .map(TaskAssignment.fromJson)
+        .where(
+          // barrierEndsAt is when the confirmation prompt actually fired
+          // (barrierStartedAt + the barrier's own duration) — the deadline
+          // counts from there, not from acceptance, so it lines up with
+          // scheduleBarrierResolutionReminder's delay + deadline math.
+          (task) => (task.barrierEndsAt ?? task.scheduledAt).isBefore(cutoff),
+        )
+        .toList();
+    for (final task in stale) {
+      await transitionTaskAssignment(
+        id: task.id,
+        state: TaskLifecycleState.barrierUnknown,
+      );
+    }
+    return stale;
   }
 
   static String _planDateKey(DateTime day) {
@@ -3597,7 +3834,13 @@ class StorageService {
         gateReason: gateReason,
       );
     }
-    if (state == TaskLifecycleState.accepted) {
+    // Only stamped on the *first* arrival at `accepted` — resuming into it
+    // from `sosActive` (the barrier-was-running case, see
+    // TaskLifecycleState._allowedTransitions) must leave these alone so the
+    // barrier resumes at whatever time was actually left on it, not a fresh
+    // full window starting now.
+    if (state == TaskLifecycleState.accepted &&
+        existing.state != TaskLifecycleState.sosActive) {
       updated = updated.copyWith(
         barrierStartedAt: now,
         barrierEndsAt: now.add(Duration(minutes: existing.durationMinutes)),
@@ -4106,6 +4349,10 @@ class StorageService {
 
     final triggerScores = _behaviorEngine
         .calculateTriggerScoresFromSurveyRecords(surveyRecords, triggerMap);
+    final failureTriggerBoost = await loadFailureTriggerScoreBoost();
+    for (final entry in failureTriggerBoost.entries) {
+      triggerScores[entry.key] = (triggerScores[entry.key] ?? 0) + entry.value;
+    }
     final riskyTriggers = _behaviorEngine.calculateRiskyTriggers(triggerScores);
 
     final riskyHours = _behaviorEngine.calculateRiskyHoursFromTimestamps(
@@ -4278,7 +4525,9 @@ class StorageService {
     final taskOutcomeSummary = await loadTaskOutcomeSummary();
     final recentSuccessCount = taskOutcomeSummary['recentSuccessCount'] ?? 0;
     final recentFailureCount = taskOutcomeSummary['recentFailureCount'] ?? 0;
+    final adaptiveEvents = await loadRecentAdaptiveTaskEvents();
     final barrierOutcomeSummary = _summarizeDurationBarrierOutcomes(
+      adaptiveEvents,
       taskHistory,
     );
     final recentBarrierSuccessCount =
@@ -4452,31 +4701,6 @@ class StorageService {
       mode: commandMixMode,
       maxCount: adaptiveCommandCount,
     );
-    final durationBarrierCommands = barrierEnabled
-        ? _mentorEngine.buildDurationBarrierCommands(
-            riskScore: dynamicRisk,
-            predictedWindow: prediction['nextRiskWindow']?.toString(),
-            riskyHours: riskyHours,
-            recentSuccessCount: recentSuccessCount,
-            recentFailureCount: recentFailureCount,
-            barrierSuccessRate: barrierSuccessRate,
-            recentBarrierSuccessCount: recentBarrierSuccessCount,
-            recentBarrierFailureCount: recentBarrierFailureCount,
-            recentTaskCompletionRate: recentTaskCompletionRate,
-            packsPerDay: latestSurvey?.packsPerDay ?? '1 paketten az',
-            firstCigaretteRange: latestContext['firstCigaretteRange']
-                ?.toString(),
-            smokeFreeRange: latestContext['smokeFreeRange']?.toString(),
-            stressLevel: latestContext['stressLevel']?.toString(),
-            workplaceSmokingRule: latestContext['workplaceSmokingRule']
-                ?.toString(),
-            barrierPreference: barrierPreferenceRaw,
-            barrierFrequencyPreference: barrierFrequencyRaw,
-            barrierEnabled: barrierEnabled,
-            durationBarrierHistoryCount: totalBarrierOutcomes,
-          )
-        : const <String>[];
-
     final riskExplanation = _behaviorEngine.buildRiskExplanation(
       baseRisk: baseRisk,
       dynamicCoreRisk: dynamicCoreRisk,
@@ -4524,8 +4748,6 @@ class StorageService {
       riskyHours: riskyHours,
       todaysTasks: orderedTasks,
       coachCommands: balancedCoachCommands,
-      durationBarrierCommands: durationBarrierCommands,
-      durationBarrierHistoryCount: totalBarrierOutcomes,
       commandSuccessScores: commandSuccessScores,
       commandCategoryScores: commandCategoryScores,
       commandMixMode: commandMixMode,
@@ -4550,8 +4772,6 @@ class StorageService {
       'progressSummary': dashboard.progressSummary,
       'todaysTasks': dashboard.todaysTasks,
       'coachCommands': dashboard.coachCommands,
-      'durationBarrierCommands': dashboard.durationBarrierCommands,
-      'durationBarrierHistoryCount': dashboard.durationBarrierHistoryCount,
       'commandSuccessScores': dashboard.commandSuccessScores,
       'commandCategoryScores': dashboard.commandCategoryScores,
       'commandMixMode': dashboard.commandMixMode,
@@ -4715,20 +4935,56 @@ class StorageService {
     return count;
   }
 
+  /// Legacy title patterns a duration-barrier task could have been saved
+  /// under before the `ADAPTIVE_NO_SMOKE:<minutes>` canonical-code refactor
+  /// (see [MentorCommandCodes.isDurationBarrierCommand], the single current
+  /// source of truth). Kept only so old rows already in a user's history
+  /// still count -- nothing writes titles in this shape any more.
+  static bool _isLegacyBarrierTitle(String title) {
+    return title.toUpperCase().contains('SURE-BARIYERI') ||
+        title.toLowerCase().contains('sure bariyeri') ||
+        RegExp(
+          r'Sonraki\s+\d+\s+dakika',
+          caseSensitive: false,
+        ).hasMatch(title);
+  }
+
+  /// Duration-barrier outcomes for the risk/mentor pipeline, read from
+  /// [AdaptiveTaskEvent] -- the table every real ADAPTIVE_NO_SMOKE
+  /// acceptance/confirmation actually writes to via
+  /// [recordAdaptiveTaskOutcome] -- plus any legacy [TaskHistory] rows saved
+  /// under the pre-refactor title patterns. `missed`/`deferred` outcomes are
+  /// excluded on purpose: a barrier the user never got to answer is neutral,
+  /// not a failure, the same principle [TaskLifecycleState.expired] and
+  /// [TaskLifecycleState.barrierUnknown] already follow.
   Map<String, int> _summarizeDurationBarrierOutcomes(
+    List<AdaptiveTaskEvent> adaptiveEvents,
     List<TaskHistory> taskHistory,
   ) {
-    final barriers = taskHistory
+    final canonicalOutcomes = adaptiveEvents
         .where(
-          (item) =>
-              item.taskTitle.toUpperCase().contains('SURE-BARIYERI') ||
-              item.taskTitle.toLowerCase().contains('sure bariyeri'),
+          (event) =>
+              MentorCommandCodes.isDurationBarrierCommand(event.taskTitle) &&
+              (event.outcome == AdaptiveTaskOutcome.success ||
+                  event.outcome == AdaptiveTaskOutcome.smoked),
         )
+        .toList()
+      ..sort((a, b) => a.respondedAt.compareTo(b.respondedAt));
+
+    final legacyOutcomes = taskHistory
+        .where((item) => _isLegacyBarrierTitle(item.taskTitle))
         .toList();
 
     var successCount = 0;
     var failureCount = 0;
-    for (final item in barriers) {
+    for (final event in canonicalOutcomes) {
+      if (event.outcome == AdaptiveTaskOutcome.success) {
+        successCount += 1;
+      } else {
+        failureCount += 1;
+      }
+    }
+    for (final item in legacyOutcomes) {
       if (item.completed) {
         successCount += 1;
       } else {
@@ -4736,13 +4992,21 @@ class StorageService {
       }
     }
 
-    final recent = barriers.length > 8
-        ? barriers.sublist(barriers.length - 8)
-        : barriers;
+    // "Recent" is the last 8 across both sources combined, canonical events
+    // taken as more current since legacy rows all predate the refactor.
+    final recentBooleans = <bool>[
+      ...legacyOutcomes.map((item) => item.completed),
+      ...canonicalOutcomes.map(
+        (event) => event.outcome == AdaptiveTaskOutcome.success,
+      ),
+    ];
+    final recent = recentBooleans.length > 8
+        ? recentBooleans.sublist(recentBooleans.length - 8)
+        : recentBooleans;
     var recentSuccessCount = 0;
     var recentFailureCount = 0;
-    for (final item in recent) {
-      if (item.completed) {
+    for (final completed in recent) {
+      if (completed) {
         recentSuccessCount += 1;
       } else {
         recentFailureCount += 1;

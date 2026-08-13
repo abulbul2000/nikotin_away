@@ -305,6 +305,17 @@ class AppTexts {
         'Bu veriler varsayilan olarak yalnizca cihazinda saklanir ve seni desteklemek disinda bir amacla kullanilmaz. Ayarlar > Bulut Yedekleme uzerinden kendi belirledigin bir sifreyle istege bagli, sifreli bir yedekleme acabilirsin; bu sifreyi biz de goremeyiz, sadece sen bilirsin. Devam ederek bunu onaylamis olursun; mikrofon, hareket ve telefon durumu izinlerini bir sonraki adimda ayrica onaylayabilir ya da reddedebilirsin.',
     'disciplineDisclosureAcknowledge': 'Anladim, devam et',
     'cravingSosButton': 'Krizdeyim',
+    'quickActionSmokedNow': 'Sigara Ictim',
+    'quickActionSmokedNowConfirmed': 'Kaydedildi.',
+    'quickActionSelfChallenge': 'Meydan Oku',
+    'quickActionOpenApp': 'Uygulamayi Ac',
+    'selfChallengeTitle': 'Kendi Meydan Okuman',
+    'selfChallengeDurationPrompt': 'Ne kadar sureyle sigara icmeyeceksin?',
+    'selfChallengeDurationOption': '{minutes} dakika',
+    'selfChallengeInProgress': 'Sigara icmeden devam ediyorsun.',
+    'selfChallengeDone': 'Suren doldu, tebrikler!',
+    'selfChallengeCloseButton': 'Kapat',
+    'selfChallengeGiveUpButton': 'Simdilik birak',
     'surveyDraftFoundTitle': 'Kaldigin yerden devam et',
     'surveyDraftFoundMessage':
         'Daha once yarım bıraktıgın bir anket bulduk. Kaldıgın yerden devam etmek ister misin?',
@@ -600,12 +611,10 @@ class AppTexts {
         'İlk profile göre iş/uyku/çalışma düzeni değişti mi?',
     'weeklyQuickModeInfo':
         'Hızlı mod seçili. Temel sorulara göre risk otomatik hesaplanır. İstersen Detaylı moda geçip tüm parametreleri düzenleyebilirsin.',
-    'durationBarrierTitle': 'Sigara İçmeme Süresi Tercihi',
-    'durationBarrierHow': 'Sigara içmeme süresini nasıl buluyorsun?',
-    'durationBarrierLike': 'Beğeniyorum',
     'durationBarrierNeutral': 'Farketmez',
-    'durationBarrierDislike': 'Beğenmiyorum',
-    'durationBarrierOff': 'İstemiyorum',
+    'durationBarrierEnabledTitle': 'Sigara icmeme suresi bariyeri',
+    'durationBarrierEnabledDescription':
+        'Kapatirsan sigaralar arasi sureyi uzatmani isteyen gorevler gelmez.',
     'durationBarrierFrequencyHow': 'Sigara içmeme süresi sıklığı nasıl olmalı?',
     'respClinicalReview': 'Klinik degerlendirme onerilir',
     'respMonitorCloser': 'Yakin izlem',
@@ -624,19 +633,6 @@ class AppTexts {
     'barrierStartedDuration': 'Sayaç süresi',
     'smokeFreeCounterTitle': 'Sigara içmeme sayacı',
     'smokeFreeCounterRemaining': 'Kalan sure',
-    'barrierEvaluationTitle': 'Sigara içmeme süresi değerlendirme',
-    'barrierEvaluationPromptNoMinutes':
-        'Sigara içmeme süresi tamamlandı. Başarılı oldun mu?',
-    'barrierEvaluationPromptMinutes':
-        'dakikalık sigara içmeme süresi bitti. Başarılı oldun mu?',
-    'barrierFail': 'Basarisiz',
-    'barrierSuccess': 'Basarili',
-    'barrierSavedSuccess':
-        'Sigara içmeme süresi başarılı kaydedildi. Sonraki süreler buna göre ayarlanacak.',
-    'barrierSavedFailure':
-        'Sigara içmeme süresi başarısız kaydedildi. Sonraki süreler uyuma göre güncellenecek.',
-    'commandDeferred10': 'Komut 10 dakika ertelendi.',
-    'barrierDeferred10': 'Sigara içmeme süresi 10 dakika ertelendi.',
     'weeklyRiskLine': 'Haftalik anket riski',
     'respiratoryStatusLine': 'Respiratuar durum',
     'weeklyTopDriversLine': 'Haftalik ust risk etkenleri',
@@ -1333,6 +1329,12 @@ class AppTexts {
     'achievementInterval100Title': 'İki Katı',
     'achievementInterval100Desc':
         'Sigaralar arası süren eskisinin iki katına çıktı.',
+    'achievementLongestBarrier60Title': 'Bir Saat',
+    'achievementLongestBarrier60Desc':
+        'En uzun sigarasız aralığın 1 saati asti.',
+    'achievementLongestBarrier120Title': 'İki Saat',
+    'achievementLongestBarrier120Desc':
+        'En uzun sigarasız aralığın 2 saati asti.',
     'riskChange': 'Risk degisimi',
     'weeklyImprovementPeriod': 'Haftalik iyilesen donem',
     'planDayLabel': 'Plan gunu',
@@ -1444,6 +1446,11 @@ class AppTexts {
     'taskDrinkWater': 'Bir bardak su ic',
     'taskFollowUpEmpty': 'Bekleyen gorev takibi yok.',
     'taskFollowUpPendingCount': 'Bekleyen takip sayisi',
+    'missedTaskCardBody': 'Bir gorevi kacirdik. Simdi baslamak ister misin?',
+    'missedTaskStartLabel': 'Baslat',
+    'missedTaskSkipLabel': 'Gec',
+    'undeliveredTaskSummary':
+        '{count} gorev, telefonun rahatsiz etme modu gibi bir durumla denk geldigi icin ertelendi.',
     'taskFollowUpScheduledAt': 'Planlanan takip saati',
     'taskFollowUpTitle': 'Gorev takipleri',
     'taskFollowUpMarkSuccess': 'Basardim',
@@ -1655,6 +1662,19 @@ class AppTexts {
     'sosResume60': '1 saat sonra',
     'sosResume120': '2 saat sonra',
     'sosTaskPostponed': 'Gorev ertelendi. Kendine iyi bak.',
+    'sosBarrierResumed': 'Bariyer devam ediyor. Basardin.',
+    'sosBarrierResumedTitle': 'Krizi atlattin',
+    'sosBarrierResumedBody':
+        'Bariyeri sifirlamadik, kaldigin yerden devam ediyor. Bu tam olarak istedigimiz sey.',
+    'sosBarrierResumedAction': 'Devam et',
+    'barrierWonFeedback':
+        '{minutes} dakika sigarasiz. Bu ay toplam {hours} saat sigarasiz aralik.',
+    'failureTriggerPromptTitle': 'Ne oldu?',
+    'failureTriggerStress': 'Stres',
+    'failureTriggerCoffee': 'Kahve',
+    'failureTriggerSocial': 'Sosyal ortam',
+    'failureTriggerAlcohol': 'Alkol',
+    'failureTriggerUnknown': 'Bilmiyorum',
     'medicationTimesPerDay': 'Gunde kac kez aliyorsunuz?',
     'medicationTimesPerDayHint':
         'Saatleri uyanik oldugunuz sureye esit dagitip oneriyoruz; her birini degistirebilirsiniz.',
@@ -1689,9 +1709,9 @@ class AppTexts {
     'contextReasonEating':
         'Bildirim yemek penceresi nedeniyle yemek sonrasina kaydirildi',
     'contextReasonNormal': 'Bildirim normal plana gore ayarlandi',
-    'taskEscalationTitle': 'Gorev guncellendi',
+    'taskEscalationTitle': 'Hala bekliyorum',
     'taskEscalationBodyPrefix':
-        '15 saniye icinde yanit alinmadi. 10 dakika sonra gorev tekrarlanacak:',
+        'Henuz cevap vermedin. {minutes} dakika sonra tekrar soracagim:',
     'taskTimerStartedBody': 'Gorev basladi:',
     'taskTimerDuration': 'Sayac',
     'minutesShort': 'dakika',
@@ -2149,6 +2169,17 @@ class AppTexts {
         'By default, this data stays only on your device and is never used for anything other than supporting you. In Settings > Cloud Backup you can optionally turn on an encrypted backup protected by a passphrase you choose — we can never read that passphrase either, only you know it. Continuing means you acknowledge this; you can still separately allow or deny the microphone, motion, and phone-state permissions in the next step.',
     'disciplineDisclosureAcknowledge': 'I understand, continue',
     'cravingSosButton': 'Craving now',
+    'quickActionSmokedNow': 'I Smoked',
+    'quickActionSmokedNowConfirmed': 'Logged.',
+    'quickActionSelfChallenge': 'Challenge Myself',
+    'quickActionOpenApp': 'Open App',
+    'selfChallengeTitle': 'Your Own Challenge',
+    'selfChallengeDurationPrompt': 'How long will you go without smoking?',
+    'selfChallengeDurationOption': '{minutes} minutes',
+    'selfChallengeInProgress': 'Staying smoke-free.',
+    'selfChallengeDone': 'Time\'s up, well done!',
+    'selfChallengeCloseButton': 'Close',
+    'selfChallengeGiveUpButton': 'Give up for now',
     'surveyDraftFoundTitle': 'Continue where you left off',
     'surveyDraftFoundMessage':
         'We found a survey you didn\'t finish earlier. Would you like to continue from where you left off?',
@@ -2353,12 +2384,10 @@ class AppTexts {
         'Has work/sleep/routine changed since the initial profile?',
     'weeklyQuickModeInfo':
         'Quick mode selected. Risk is computed from core answers. You can switch to Detailed mode to adjust all parameters.',
-    'durationBarrierTitle': 'Smoke-free duration preference',
-    'durationBarrierHow': 'How do you feel about smoke-free durations?',
-    'durationBarrierLike': 'I like it',
     'durationBarrierNeutral': 'Neutral',
-    'durationBarrierDislike': 'I do not like it',
-    'durationBarrierOff': 'I do not want it',
+    'durationBarrierEnabledTitle': 'Smoke-free duration barrier',
+    'durationBarrierEnabledDescription':
+        "Turn this off and you won't get tasks asking you to stretch the gap between cigarettes.",
     'durationBarrierFrequencyHow':
         'How often should smoke-free durations appear?',
     'respClinicalReview': 'Clinical review recommended',
@@ -2373,19 +2402,6 @@ class AppTexts {
         'To keep your risk score up to date, complete the weekly survey at least once every 7 days.',
     'weeklyMandatoryGo': 'Go to survey',
     'commandSaved': 'Command marked as completed.',
-    'barrierEvaluationTitle': 'Smoke-free duration evaluation',
-    'barrierEvaluationPromptNoMinutes':
-        'Smoke-free duration completed. Were you successful?',
-    'barrierEvaluationPromptMinutes':
-        'minute smoke-free duration ended. Were you successful?',
-    'barrierFail': 'Failed',
-    'barrierSuccess': 'Successful',
-    'barrierSavedSuccess':
-        'Smoke-free duration saved as successful. Next durations will be tuned accordingly.',
-    'barrierSavedFailure':
-        'Smoke-free duration saved as failed. Next durations will be adjusted to your adherence.',
-    'commandDeferred10': 'Command deferred by 10 minutes.',
-    'barrierDeferred10': 'Smoke-free duration deferred by 10 minutes.',
     'weeklyRiskLine': 'Weekly survey risk',
     'respiratoryStatusLine': 'Respiratory status',
     'weeklyTopDriversLine': 'Top weekly risk drivers',
@@ -3083,6 +3099,12 @@ class AppTexts {
         'Your gap between cigarettes is 50% longer than it was.',
     'achievementInterval100Title': 'Twice as Long',
     'achievementInterval100Desc': 'Your gap between cigarettes has doubled.',
+    'achievementLongestBarrier60Title': 'One Hour',
+    'achievementLongestBarrier60Desc':
+        'Your longest smoke-free stretch passed 1 hour.',
+    'achievementLongestBarrier120Title': 'Two Hours',
+    'achievementLongestBarrier120Desc':
+        'Your longest smoke-free stretch passed 2 hours.',
     'riskChange': 'Risk change',
     'weeklyImprovementPeriod': 'Weekly improvement period',
     'planDayLabel': 'Plan day',
@@ -3266,6 +3288,11 @@ class AppTexts {
     'taskDrinkWater': 'Drink a glass of water',
     'taskFollowUpEmpty': 'No pending task follow-up.',
     'taskFollowUpPendingCount': 'Pending follow-up count',
+    'missedTaskCardBody': 'We missed a task. Want to start it now?',
+    'missedTaskStartLabel': 'Start',
+    'missedTaskSkipLabel': 'Skip',
+    'undeliveredTaskSummary':
+        '{count} task(s) were postponed because your phone was in a state like Do Not Disturb.',
     'taskFollowUpScheduledAt': 'Scheduled follow-up time',
     'taskFollowUpTitle': 'Task follow-ups',
     'taskFollowUpMarkSuccess': 'I did it',
@@ -3494,6 +3521,19 @@ class AppTexts {
     'sosResume60': 'In 1 hour',
     'sosResume120': 'In 2 hours',
     'sosTaskPostponed': 'Task postponed. Take care of yourself.',
+    'sosBarrierResumed': "The barrier is still going. You did it.",
+    'sosBarrierResumedTitle': 'You got through it',
+    'sosBarrierResumedBody':
+        "We didn't reset the barrier — it's resuming right where it left off. That's exactly what we want.",
+    'sosBarrierResumedAction': 'Continue',
+    'barrierWonFeedback':
+        '{minutes} minutes smoke-free. {hours} total hours smoke-free this month.',
+    'failureTriggerPromptTitle': 'What happened?',
+    'failureTriggerStress': 'Stress',
+    'failureTriggerCoffee': 'Coffee',
+    'failureTriggerSocial': 'Social setting',
+    'failureTriggerAlcohol': 'Alcohol',
+    'failureTriggerUnknown': "I don't know",
     'medicationTimesPerDay': 'How many times a day do you take it?',
     'medicationTimesPerDayHint':
         'We spread the times evenly across your waking hours; you can change any of them.',
@@ -3530,9 +3570,9 @@ class AppTexts {
     'contextReasonEating':
         'Notification shifted to post-meal anti-smoking window',
     'contextReasonNormal': 'Notification scheduled in normal mode',
-    'taskEscalationTitle': 'Task updated',
+    'taskEscalationTitle': 'Still waiting',
     'taskEscalationBodyPrefix':
-        'No response in 15 seconds. Task will repeat after 10 minutes:',
+        "You haven't answered yet. I'll ask again in {minutes} minutes:",
     'taskTimerStartedBody': 'Task started:',
     'taskTimerDuration': 'Timer',
     'minutesShort': 'minutes',

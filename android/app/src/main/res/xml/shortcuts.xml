@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Long-press menu on the launcher icon — same 4 actions as the in-app
+  floating button / AppBar SOS button (see quick_action_menu.dart), so all
+  three entry points agree. Android allows at most 4 static shortcuts;
+  order here matches QuickAction's declared order.
+
+  Each shortcut launches MainActivity with a distinct intent action;
+  MainActivity.onNewIntent queues the action for Dart to pick up on the
+  next resume (same native->Dart queue+drain pattern as
+  TaskOverlayOutcomeStore/ReminderOverlayStore) — no bespoke intent extras
+  parsing on the Dart side needed beyond that one drain call.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="smoked_now"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_close_clear_cancel"
+        android:shortcutShortLabel="@string/shortcut_smoked_now_short"
+        android:shortcutLongLabel="@string/shortcut_smoked_now_long">
+        <intent
+            android:action="com.nikotinaway.app.shortcut.SMOKED_NOW"
+            android:targetPackage="com.nikotinaway.app"
+            android:targetClass="com.nikotinaway.app.MainActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="craving"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_help"
+        android:shortcutShortLabel="@string/shortcut_craving_short"
+        android:shortcutLongLabel="@string/shortcut_craving_long">
+        <intent
+            android:action="com.nikotinaway.app.shortcut.CRAVING"
+            android:targetPackage="com.nikotinaway.app"
+            android:targetClass="com.nikotinaway.app.MainActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="self_challenge"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        android:shortcutShortLabel="@string/shortcut_self_challenge_short"
+        android:shortcutLongLabel="@string/shortcut_self_challenge_long">
+        <intent
+            android:action="com.nikotinaway.app.shortcut.SELF_CHALLENGE"
+            android:targetPackage="com.nikotinaway.app"
+            android:targetClass="com.nikotinaway.app.MainActivity" />
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="open_app"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_view"
+        android:shortcutShortLabel="@string/shortcut_open_app_short"
+        android:shortcutLongLabel="@string/shortcut_open_app_long">
+        <intent
+            android:action="android.intent.action.MAIN"
+            android:targetPackage="com.nikotinaway.app"
+            android:targetClass="com.nikotinaway.app.MainActivity" />
+    </shortcut>
+</shortcuts>

@@ -2,6 +2,7 @@ package com.nikotinaway.app
 
 import android.app.PendingIntent
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -49,6 +50,15 @@ class MainActivity : FlutterActivity() {
 
 	override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
 		super.configureFlutterEngine(flutterEngine)
+
+		// Cold start via a shortcut: onNewIntent is never called in this case
+		// (only onCreate sees the launching intent), so the same check runs
+		// here too — by the time configureFlutterEngine runs the engine is
+		// ready, so this is also a safe place for a fresh queue entry to be
+		// picked up on Dart's very first resume.
+		ShortcutStore.actionFor(intent?.action)?.let { action ->
+			ShortcutStore.enqueue(this, action)
+		}
 
 		MethodChannel(flutterEngine.dartExecutor.binaryMessenger, sleepProbeChannelName)
 			.setMethodCallHandler { call, result ->
@@ -327,6 +337,10 @@ class MainActivity : FlutterActivity() {
 						result.success(true)
 					}
 
+					"consumePendingShortcutAction" -> {
+						result.success(ShortcutStore.drain(this))
+					}
+
 					"consumeWatchdogViolations" -> {
 						val rows = WatchdogStore.drainViolations(this)
 						val mapped = rows.mapNotNull { row ->
@@ -564,6 +578,20 @@ class MainActivity : FlutterActivity() {
 					else -> result.notImplemented()
 				}
 			}
+	}
+
+	// Launcher-icon long-press shortcuts (shortcuts.xml) land here — both
+	// when the app is already running (singleTop launchMode routes here
+	// instead of creating a new instance) and, since FlutterActivity calls
+	// this from onCreate too, on a cold start. Just queues the action for
+	// Dart to drain on the next resume; no direct Flutter-engine call here
+	// since a cold start's engine may not be ready to receive one yet.
+	override fun onNewIntent(intent: Intent) {
+		super.onNewIntent(intent)
+		val action = ShortcutStore.actionFor(intent.action)
+		if (action != null) {
+			ShortcutStore.enqueue(this, action)
+		}
 	}
 
 	override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -860,4 +888,50 @@ class MainActivity : FlutterActivity() {
 		private const val GEOFENCE_RADIUS_METERS = 150f
 		private const val HEALTH_CONNECT_PERMISSION_REQUEST_CODE = 86002
 	}
+}
+
+/// Queues the action a launcher-icon shortcut (shortcuts.xml) was tapped
+/// with, for Dart to drain on its next resume — same producer/consumer
+/// shape as TaskOverlayOutcomeStore/ReminderOverlayStore, since a shortcut
+/// tap can arrive (via onNewIntent, or a cold-start onCreate) before any
+/// Flutter engine is guaranteed ready to receive a direct call. Only ever
+/// holds one pending action: a second shortcut tap before the first is
+/// drained simply replaces it, matching how the OS itself only shows one
+/// running instance of this app at a time.
+object ShortcutStore {
+    private const val PREFS = "no_smoke_shortcut_store"
+    private const val KEY_PENDING_ACTION = "pending_action"
+
+    const val ACTION_SMOKED_NOW = "smoked_now"
+    const val ACTION_CRAVING = "craving"
+    const val ACTION_SELF_CHALLENGE = "self_challenge"
+
+    /// Maps an Intent.action string to one of this object's own action
+    /// constants, or null when [intentAction] isn't a shortcut action at all
+    /// (the plain MAIN/LAUNCHER intent every normal app open arrives with,
+    /// or the "open_app" shortcut, which needs no queued action beyond
+    /// launching the app itself — that already happened by the time this
+    /// runs).
+    fun actionFor(intentAction: String?): String? = when (intentAction) {
+        "com.nikotinaway.app.shortcut.SMOKED_NOW" -> ACTION_SMOKED_NOW
+        "com.nikotinaway.app.shortcut.CRAVING" -> ACTION_CRAVING
+        "com.nikotinaway.app.shortcut.SELF_CHALLENGE" -> ACTION_SELF_CHALLENGE
+        else -> null
+    }
+
+    fun enqueue(context: Context, action: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_PENDING_ACTION, action)
+            .apply()
+    }
+
+    fun drain(context: Context): String? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val action = prefs.getString(KEY_PENDING_ACTION, null)
+        if (action != null) {
+            prefs.edit().remove(KEY_PENDING_ACTION).apply()
+        }
+        return action
+    }
 }

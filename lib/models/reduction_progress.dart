@@ -14,6 +14,7 @@ class ReductionProgress {
     required this.baselineDaily,
     required this.loggedToday,
     required this.evidenceDays,
+    this.longestCompletedBarrierMinutes = 0,
   });
 
   /// Consecutive days, counting back from the most recent day with evidence,
@@ -44,6 +45,11 @@ class ReductionProgress {
   /// card has nothing real to show and should say so rather than print
   /// three confident zeros.
   final int evidenceDays;
+
+  /// The longest barrier ever actually completed (a `success` outcome), in
+  /// minutes — the natural personal-record figure the "longest interval"
+  /// achievement badge is measured against.
+  final int longestCompletedBarrierMinutes;
 
   bool get hasEvidence => evidenceDays > 0;
 

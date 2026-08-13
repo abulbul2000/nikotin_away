@@ -56,12 +56,32 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
+            <!-- Registers shortcuts.xml as the launcher icon's long-press
+                 menu. See shortcuts.xml for what each entry does. -->
+            <meta-data
+              android:name="android.app.shortcuts"
+              android:resource="@xml/shortcuts"
+              />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+            <!-- One filter per shortcut action (see shortcuts.xml) so
+                 MainActivity.onNewIntent can tell them apart. -->
+            <intent-filter>
+                <action android:name="com.nikotinaway.app.shortcut.SMOKED_NOW" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.nikotinaway.app.shortcut.CRAVING" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="com.nikotinaway.app.shortcut.SELF_CHALLENGE" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
