@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
+import 'package:speech_to_text/speech_to_text.dart';
 
 import '../core/app_texts.dart';
 import '../models/medication.dart';
 import '../services/ai_service.dart';
+import '../services/device_permission_service.dart';
+import '../services/health_connect_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import 'subscription_gate_page.dart';
@@ -34,12 +38,49 @@ class _AIChatPageState extends State<AIChatPage> {
   final List<_ChatMessage> _messages = [];
   final List<AiChatTurn> _history = [];
   final StorageService _storage = StorageService();
+  final SpeechToText _speech = SpeechToText();
   bool _sending = false;
+  bool _listening = false;
+  String _textBeforeListening = '';
 
   @override
   void dispose() {
     _controller.dispose();
+    if (_listening) {
+      _speech.stop();
+    }
     super.dispose();
+  }
+
+  Future<void> _startListening() async {
+    final available = await _speech.initialize();
+    if (!available) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('aiChatMicPermissionDenied'))),
+      );
+      return;
+    }
+
+    _textBeforeListening = _controller.text;
+    setState(() => _listening = true);
+    await _speech.listen(
+      onResult: (result) {
+        final separator = _textBeforeListening.isEmpty ? '' : ' ';
+        final combined =
+            '$_textBeforeListening$separator${result.recognizedWords}';
+        _controller.text = combined;
+        _controller.selection = TextSelection.collapsed(
+          offset: combined.length,
+        );
+      },
+    );
+  }
+
+  Future<void> _stopListening() async {
+    await _speech.stop();
+    if (!mounted) return;
+    setState(() => _listening = false);
   }
 
   Future<void> _send() async {
@@ -96,6 +137,9 @@ class _AIChatPageState extends State<AIChatPage> {
         break;
       case 'set_medication_times':
         resultKey = await _applyMedicationTimes(action.arguments);
+        break;
+      case 'set_permission':
+        resultKey = await _applyPermission(action.arguments);
         break;
       default:
         resultKey = 'aiChatActionFailed';
@@ -154,6 +198,37 @@ class _AIChatPageState extends State<AIChatPage> {
     final refreshed = await _storage.loadMedications();
     await NotificationService.scheduleMedicationReminders(refreshed);
     return 'aiChatActionAppliedMedication';
+  }
+
+  /// Android never lets an app revoke its own permission — this only ever
+  /// triggers the OS request dialog. A user asking to turn one *off* is
+  /// steered to Settings by the system prompt (functions/ai.js) before this
+  /// is even called, so every branch here only grants.
+  Future<String> _applyPermission(Map<String, dynamic> args) async {
+    final permission = args['permission'] as String?;
+    switch (permission) {
+      case 'microphone':
+        await ph.Permission.microphone.request();
+        break;
+      case 'location':
+        final foreground = await ph.Permission.locationWhenInUse.request();
+        if (foreground.isGranted) {
+          await ph.Permission.locationAlways.request();
+        }
+        break;
+      case 'activityRecognition':
+        await ph.Permission.activityRecognition.request();
+        break;
+      case 'health':
+        await HealthConnectService().requestPermissions();
+        break;
+      case 'usageAccess':
+        await DevicePermissionService.requestUsageAccessPermission();
+        break;
+      default:
+        return 'aiChatActionFailed';
+    }
+    return 'aiChatActionAppliedPermission';
   }
 
   @override
@@ -249,10 +324,37 @@ class _AIChatPageState extends State<AIChatPage> {
                     minLines: 1,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: context.t('aiChatHint'),
+                      hintText: _listening
+                          ? context.t('aiChatListening')
+                          : context.t('aiChatHint'),
                       border: const OutlineInputBorder(),
                     ),
                     onSubmitted: (_) => _send(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: context.t('aiChatMicTooltip'),
+                  child: GestureDetector(
+                    onLongPressStart: _sending
+                        ? null
+                        : (_) => _startListening(),
+                    onLongPressEnd: _sending ? null : (_) => _stopListening(),
+                    child: Material(
+                      color: _listening
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.primary,
+                      shape: const CircleBorder(),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          _listening ? Icons.mic : Icons.mic_none,
+                          color: _listening
+                              ? Theme.of(context).colorScheme.onError
+                              : Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),

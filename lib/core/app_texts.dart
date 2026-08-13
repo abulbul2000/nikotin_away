@@ -664,6 +664,11 @@ class AppTexts {
     'aiChatActionFailed': 'Bu degisiklik uygulanamadi.',
     'aiChatActionAppliedCoachMode': 'Koc Modu ayari guncellendi.',
     'aiChatActionAppliedMedication': 'Ilac hatirlatma saatleri guncellendi.',
+    'aiChatActionAppliedPermission': 'Izin istegi acildi.',
+    'aiChatMicTooltip': 'Basili tutup konusun',
+    'aiChatListening': 'Dinliyorum...',
+    'aiChatMicPermissionDenied': 'Sesli giris icin mikrofon izni gerekiyor.',
+    'aiChatMicUnavailable': 'Bu cihazda sesli giris kullanilamiyor.',
     'mentorReplySentPrefix': 'Yanitin',
     'miuiPermissionTitle': 'Bir izin daha gerekiyor',
     'miuiPermissionMessage':
@@ -2332,6 +2337,11 @@ class AppTexts {
     'aiChatTitle': 'AI Mentor',
     'aiChatHint': 'Type a message...',
     'aiChatSend': 'Send',
+    'aiChatActionAppliedPermission': 'Permission request opened.',
+    'aiChatMicTooltip': 'Hold and speak',
+    'aiChatListening': 'Listening...',
+    'aiChatMicPermissionDenied': 'Microphone permission is required for voice input.',
+    'aiChatMicUnavailable': 'Voice input is not available on this device.',
     'aiChatError': 'Could not send message, try again.',
     'aiChatDisclaimer':
       'This is an AI assistant, not medical advice. Consult your doctor for health matters.',

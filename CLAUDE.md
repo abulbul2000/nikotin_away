@@ -2,6 +2,21 @@
 
 Bu dosya her oturumda otomatik yüklenir. Kalıcı proje kuralları burada durur.
 
+## Proje bağlamı
+
+Flutter tabanlı sigara bırakma uygulaması. Android-only (iOS yapılandırılmamış, native
+özelliklerin çoğu Android'e bağlı). Backend: Firebase (Cloud Functions, Storage,
+Crashlytics). Yerel veri: sqflite + SharedPreferences.
+
+- `lib/engines/` → saf mantık. I/O yok, `DateTime.now()` dışında yan etki yok, Flutter'a
+  bağımlı değil. Yeni karar mantığı buraya yazılır.
+- `lib/services/` → I/O, platform kanalları, Firebase, DB erişimi.
+- `lib/pages/` → UI. İş mantığı içermez, servisleri/motorları çağırır.
+- `lib/core/app_texts.dart` → tüm kullanıcıya görünen metinler burada. UI'da hardcoded
+  string YASAK. Erişim: `context.t('anahtar')`.
+- Kullanıcı geçmişine yazılan metinler dil-bağımsız kanonik ID olmalı (bkz.
+  `MentorMessageCodes`) — hardcoded dil metni DB'ye yazılmaz.
+
 ## Ürünün amacı
 
 **Azaltarak bıraktırma.** Kullanıcı programa başladığında sigara içmeye devam ediyor; sistem
@@ -60,7 +75,11 @@ bir özellik asla tek üreticide çalışacak şekilde kurulmaz.
 
 ## Çalışma düzeni
 
+- Değişiklikten önce ilgili dosyalar okunur, plan çıkarılır, onay alınır.
+- Küçük ve gözden geçirilebilir commit'ler.
+- Mevcut kod yorumları değerlidir — silinmez, gerekiyorsa güncellenir.
 - Her faz sonunda `flutter analyze` + `flutter test` çalıştırılır. Cihaza kurulum
   **kullanıcıya sorulmadan yapılmaz**.
 - Güncel iş listesi: `docs/WORK_LIST.md` — madde tamamlandıkça işaretlenir. Oturum kapanıp
   açıldığında kaldığın yer oradan okunur.
+- Türkçe konuşulur.

@@ -4,7 +4,7 @@
 > yanına kısa not düşülür. Kararların gerekçeleri `docs/TASK_ASSIGNMENT_SYSTEM_DESIGN.md`
 > dosyasında.
 >
-> Son güncelleme: 2026-07-28
+> Son güncelleme: 2026-08-13
 
 ## Teslim sırası
 
@@ -315,6 +315,14 @@
       Safety formunda "Finansal bilgiler → Satın alma geçmişi" **elle işaretlenecek** — referans
       metin `docs/PLAY_STORE_DATA_SAFETY.md` Bölüm 2 ve 6'da hazır, form doldurma Play Console
       üzerinden kullanıcı tarafından yapılmalı.
+- [x] **77.** AI Mentöre sesli giriş (`speech_to_text`, basılı tut → konuş) ve `set_permission`
+      tool'u eklendi (mikrofon/konum/adım sayısı/sağlık verisi/kullanım erişimi izinlerini
+      kullanıcı adına isteyebiliyor). Android bir izni programatik kapatmaya izin vermediği için
+      sistem promptu kapatma isteklerini Ayarlar'a yönlendiriyor, tool sadece açma yönünde
+      çalışıyor. Bu işle birlikte `aiChat*` ailesindeki 11 anahtarın (başlık/hint/gönder/hata/
+      feragatname/aksiyon metinleri + yeni mikrofon/izin metinleri) hiçbiri 24 dilde
+      (`generated_language_data.dart`) yoktu — hepsi İngilizce'ye düşüyordu; bu oturumda 24 dilin
+      tamamına eklendi. `flutter analyze` temiz, 818 test geçiyor. **Cihaz testi bekliyor.**
 
 ---
 

@@ -1,6 +1,8 @@
 # Node.js related
 node_modules/
 .env
+.env.*
+*.secret.local
 
 # Miscellaneous
 *.class
