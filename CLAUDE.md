@@ -26,7 +26,10 @@ içilmeyen sigara sayısı, sigara arası sürenin uzaması).
 
 ## Değişmez kısıtlar
 
-- **Paket adı, applicationId, bundle identifier, Firebase yapılandırması değişmez.**
+- **Paket adı, applicationId, bundle identifier, Firebase yapılandırması ilk Play Store yayınından
+  SONRA değişmez.** İlk yayından önce gerekirse değiştirilebilir (bkz. 2026-08-13:
+  `com.example.no_smoke` → `com.nikotinaway.app` geçişi, Play Console varsayılan paket adını
+  reddettiği için yapıldı). Yayın sonrası bu satırı tekrar mutlak hale getir.
 - Uygulama **tamamen çevrimdışı** çalışır. Kullanıcı verisi cihazdan çıkmaz. Ağ çağrısı
   eklemeden önce `docs/PLAY_STORE_DATA_SAFETY.md` ve `docs/PRIVACY_POLICY.md` ile çelişip
   çelişmediği kontrol edilmeli.

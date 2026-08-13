@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.app.PendingIntent
 import android.content.ActivityNotFoundException

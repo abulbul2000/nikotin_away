@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -64,7 +64,7 @@ class HealthTipTriggerReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_TRIGGER = "com.example.no_smoke.healthtip.TRIGGER"
+        const val ACTION_TRIGGER = "com.nikotinaway.app.healthtip.TRIGGER"
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_BODY = "extra_body"
         const val EXTRA_DISMISS_LABEL = "extra_dismiss_label"

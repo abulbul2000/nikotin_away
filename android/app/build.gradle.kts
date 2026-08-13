@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.no_smoke"
+    namespace = "com.nikotinaway.app"
     compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
@@ -27,8 +27,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.no_smoke"
+        applicationId = "com.nikotinaway.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         // Health Connect (Phase 9 wearable spike) requires API 26+; flutter's

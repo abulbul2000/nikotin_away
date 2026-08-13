@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.Manifest
 import android.app.AlarmManager
@@ -276,7 +276,7 @@ class SleepProbeReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_PROBE = "com.example.no_smoke.sleepprobe.PROBE"
+        const val ACTION_PROBE = "com.nikotinaway.app.sleepprobe.PROBE"
         const val EXTRA_WINDOW_START_MINUTE = "extra_window_start_minute"
         const val EXTRA_WINDOW_END_MINUTE = "extra_window_end_minute"
         const val EXTRA_INTERVAL_MINUTES = "extra_interval_minutes"

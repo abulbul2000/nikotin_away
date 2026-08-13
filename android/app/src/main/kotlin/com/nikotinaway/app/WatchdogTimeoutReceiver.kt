@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -43,6 +43,6 @@ class WatchdogTimeoutReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_TIMEOUT = "com.example.no_smoke.watchdog.TIMEOUT"
+        const val ACTION_TIMEOUT = "com.nikotinaway.app.watchdog.TIMEOUT"
     }
 }

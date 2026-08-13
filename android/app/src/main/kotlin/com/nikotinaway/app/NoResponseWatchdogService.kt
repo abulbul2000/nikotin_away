@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.app.AlarmManager
 import android.app.NotificationChannel
@@ -222,8 +222,8 @@ class NoResponseWatchdogService : Service() {
     }
 
     companion object {
-        const val ACTION_START = "com.example.no_smoke.watchdog.START"
-        const val ACTION_ACK = "com.example.no_smoke.watchdog.ACK"
+        const val ACTION_START = "com.nikotinaway.app.watchdog.START"
+        const val ACTION_ACK = "com.nikotinaway.app.watchdog.ACK"
         const val EXTRA_TASK_TITLE = "extra_task_title"
         const val EXTRA_WATCHDOG_ID = "extra_watchdog_id"
         const val EXTRA_DUE_AT_MILLIS = "extra_due_at_millis"

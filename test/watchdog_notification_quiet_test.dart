@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// attention — this guards the fix staying in place.
 void main() {
   final file = File(
-    'android/app/src/main/kotlin/com/example/no_smoke/NoResponseWatchdogService.kt',
+    'android/app/src/main/kotlin/com/nikotinaway/app/NoResponseWatchdogService.kt',
   );
 
   test('the watchdog notification is silent and minimum priority', () {

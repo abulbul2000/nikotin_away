@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyC-22688NMly2DeumJH8mEDdJFfNmQ_DlM',
-    appId: '1:269922488535:android:14ba91f65a04f912422092',
+    appId: '1:269922488535:android:76a3e835681baec3422092',
     messagingSenderId: '269922488535',
     projectId: 'no-smoke-7dd2e',
     storageBucket: 'no-smoke-7dd2e.firebasestorage.app',
@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '269922488535',
     projectId: 'no-smoke-7dd2e',
     storageBucket: 'no-smoke-7dd2e.firebasestorage.app',
-    iosBundleId: 'com.example.noSmoke',
+    iosBundleId: 'com.nikotinaway.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '269922488535',
     projectId: 'no-smoke-7dd2e',
     storageBucket: 'no-smoke-7dd2e.firebasestorage.app',
-    iosBundleId: 'com.example.noSmoke',
+    iosBundleId: 'com.nikotinaway.app',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

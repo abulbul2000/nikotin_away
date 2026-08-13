@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -387,10 +387,10 @@ class TaskOverlayService : Service() {
     }
 
     companion object {
-        const val ACTION_SHOW = "com.example.no_smoke.overlay.SHOW"
-        const val ACTION_SHOW_INFO = "com.example.no_smoke.overlay.SHOW_INFO"
-        const val ACTION_SHOW_REMINDER = "com.example.no_smoke.overlay.SHOW_REMINDER"
-        const val ACTION_DISMISS = "com.example.no_smoke.overlay.DISMISS"
+        const val ACTION_SHOW = "com.nikotinaway.app.overlay.SHOW"
+        const val ACTION_SHOW_INFO = "com.nikotinaway.app.overlay.SHOW_INFO"
+        const val ACTION_SHOW_REMINDER = "com.nikotinaway.app.overlay.SHOW_REMINDER"
+        const val ACTION_DISMISS = "com.nikotinaway.app.overlay.DISMISS"
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_BODY = "extra_body"
         const val EXTRA_DONE_LABEL = "extra_done_label"

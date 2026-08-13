@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -74,6 +74,6 @@ class SmokedLogActionReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_LOG = "com.example.no_smoke.smokedlog.LOG"
+        const val ACTION_LOG = "com.nikotinaway.app.smokedlog.LOG"
     }
 }

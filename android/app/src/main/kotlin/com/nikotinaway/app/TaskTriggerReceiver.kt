@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -119,7 +119,7 @@ class TaskTriggerReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_TRIGGER = "com.example.no_smoke.task.TRIGGER"
+        const val ACTION_TRIGGER = "com.nikotinaway.app.task.TRIGGER"
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_BODY = "extra_body"
         const val EXTRA_DONE_LABEL = "extra_done_label"

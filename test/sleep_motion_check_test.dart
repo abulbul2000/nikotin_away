@@ -10,7 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// while genuinely asleep because YouTube was still going.
 void main() {
   final file = File(
-    'android/app/src/main/kotlin/com/example/no_smoke/SleepProbeReceiver.kt',
+    'android/app/src/main/kotlin/com/nikotinaway/app/SleepProbeReceiver.kt',
   );
 
   test('screen-on alone no longer decides "awake" during the sleep window', () {

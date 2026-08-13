@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -348,7 +348,7 @@ class SmokedLogOverlayService : Service() {
     }
 
     companion object {
-        const val ACTION_STOP = "com.example.no_smoke.smokedlog.STOP"
+        const val ACTION_STOP = "com.nikotinaway.app.smokedlog.STOP"
         const val CHANNEL_ID = "smoked_log_overlay_channel"
         const val FOREGROUND_NOTIFICATION_ID = 74201
 

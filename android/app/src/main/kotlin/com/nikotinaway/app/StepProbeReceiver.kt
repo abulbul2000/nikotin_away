@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -83,7 +83,7 @@ class StepProbeReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        const val ACTION_PROBE = "com.example.no_smoke.stepprobe.PROBE"
+        const val ACTION_PROBE = "com.nikotinaway.app.stepprobe.PROBE"
         private const val REQUEST_CODE = 87001
         private const val PROBE_HOUR = 0
         private const val PROBE_MINUTE = 5

@@ -1,4 +1,4 @@
-package com.example.no_smoke
+package com.nikotinaway.app
 
 import android.content.BroadcastReceiver
 import android.content.Context
