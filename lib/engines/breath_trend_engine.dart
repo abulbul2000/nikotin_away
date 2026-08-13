@@ -34,7 +34,7 @@ class BreathTrendEngine {
   /// ağırlıklı ortalaması — her bileşen kendi doğal ölçeğinden önce 0-1
   /// aralığına normalize edilir.
   ///
-  /// [blowDurationSeconds] 15 saniyede tavan yapacak şekilde normalize
+  /// [blowDurationSeconds] 10 saniyede tavan yapacak şekilde normalize
   /// edilir: gerçekçi bir zorlu üflemenin üst sınırı bu civarda, daha
   /// uzunu ekstra puan getirmez.
   double computeScore({
@@ -42,7 +42,7 @@ class BreathTrendEngine {
     required double blowStability,
     required double blowIntensity,
   }) {
-    const durationCeilingSeconds = 15.0;
+    const durationCeilingSeconds = 10.0;
     final durationSignal = (blowDurationSeconds / durationCeilingSeconds).clamp(
       0.0,
       1.0,
@@ -81,7 +81,17 @@ class BreathTrendEngine {
 
     final sorted = [...records]
       ..sort((a, b) => a.completedAt.compareTo(b.completedAt));
-    final clean = sorted.where((r) => !r.isNoisyEnvironment).toList();
+    // Legacy (schemaVersion 1) rows recorded blowDurationSeconds as
+    // hold+rest time folded in (see BreathProgressRecord.currentSchemaVersion)
+    // — excluded from trend/chart statistics the same way noisy rows are,
+    // so old inflated durations can't make the trend look like a decline.
+    final clean = sorted
+        .where(
+          (r) =>
+              !r.isNoisyEnvironment &&
+              r.schemaVersion >= BreathProgressRecord.currentSchemaVersion,
+        )
+        .toList();
 
     final now = sorted.last.completedAt;
     final last7 = _window(clean, days: 7, now: now);

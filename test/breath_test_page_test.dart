@@ -22,6 +22,7 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
 
 class _FakeBreathTestService extends BreathTestService {
   int callCount = 0;
+  double? lastBlowDuration;
 
   @override
   Future<ProcessedBreathTest> processBreathTest({
@@ -37,6 +38,7 @@ class _FakeBreathTestService extends BreathTestService {
     String title = 'Nefes Testi',
   }) async {
     callCount += 1;
+    lastBlowDuration = blowDuration;
     final now = completedAt ?? DateTime(2026, 1, 1);
     return ProcessedBreathTest(
       breathResult: BreathTestResult(
@@ -170,6 +172,14 @@ void main() {
 
     expect(fakeService.callCount, 1);
     expect(find.byType(RiskResultPage), findsOneWidget);
+    // Regression: blowDuration used to be inflated by the rest interval /
+    // hold countdown that preceded the exhale (up to ~45s including the 20s
+    // rest window) — it must now be a plausible exhale-only duration.
+    // averageSeconds here is the average of 3 attempts each finished
+    // (almost) immediately upon entering the exhale step in this test, so a
+    // generous bound is used rather than asserting near-zero.
+    expect(fakeService.lastBlowDuration, isNotNull);
+    expect(fakeService.lastBlowDuration, lessThan(30));
   });
 
   testWidgets('backgrounding the app mid-attempt discards it and shows a '

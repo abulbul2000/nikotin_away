@@ -75,15 +75,17 @@ enum _AttemptStep { notStarted, sitRelax, deepBreath, holding, exhale }
 
 class _BreathTestPageState extends State<BreathTestPage>
     with WidgetsBindingObserver, TickerProviderStateMixin {
-  // Above this, the app was almost certainly backgrounded mid-attempt
-  // (Stopwatch keeps advancing in real wall-clock time regardless of
-  // whether the app was in the foreground) rather than the user genuinely
-  // holding/exhaling for that long — not a plausible breath measurement.
+  // [seconds] passed to _finishAttempt is exhale-only (see _handleBreathPressed
+  // / _handleAcousticSample) — 30s is already generous for a forceful blow
+  // (typically 3-8s). Above this, the app was almost certainly backgrounded
+  // mid-attempt (Stopwatch keeps advancing in real wall-clock time regardless
+  // of whether the app was in the foreground) rather than a real exhale that
+  // long — not a plausible breath measurement.
   // (There is deliberately no *minimum* bound here: elapsed time is only
   // tracked at whole-second resolution, so a fast — but real — attempt and
   // an instant double-tap are not reliably distinguishable at that
   // granularity; the app-lifecycle check above is the meaningful guard.)
-  static const int _maxPlausibleSeconds = 120;
+  static const int _maxPlausibleSeconds = 30;
 
   // Test skoru 3 denemenin ortancası olarak hesaplanıyor (bkz.
   // BreathTrendEngine) — tek deneme şansa çok bağlı, ortanca daha dürüst.
@@ -151,6 +153,16 @@ class _BreathTestPageState extends State<BreathTestPage>
 
   int _exhaleStartElapsedSeconds = 0;
   Timer? _acousticGiveUpTimer;
+
+  // Microphone-clock timestamp (BreathAudioService's elapsedMs, not the
+  // stopwatch) of the first sample collected after the hold countdown began
+  // — i.e. roughly when the hold itself started. BreathAcousticEngine.analyze
+  // needs this as measurementStartMs so exhale-onset detection can't reach
+  // back into the loud inhale that preceded the hold, and so the reported
+  // exhaleOnsetMs is relative to the hold rather than to whenever the
+  // recorder happened to start (sit-relax, one or two attempts earlier).
+  // Null until the first post-clear sample arrives.
+  int? _measurementStartMs;
 
   // Mic sensitivity/AGC behavior varies a lot across phones — if an exhale
   // genuinely hasn't been detected within this long, something about this
@@ -468,6 +480,7 @@ class _BreathTestPageState extends State<BreathTestPage>
     // exhale onset. The hold is the one stretch where the user is
     // deliberately silent, which makes it the honest baseline.
     _currentAttemptSamples.clear();
+    _measurementStartMs = null;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
@@ -502,11 +515,12 @@ class _BreathTestPageState extends State<BreathTestPage>
     setState(() {
       _step = _AttemptStep.exhale;
       // The stopwatch itself keeps running continuously from the start of
-      // the hold (holdDuration/blowDuration are still derived from that
-      // one unbroken measurement, unchanged) — this is purely what's put
-      // on screen, so the circle visibly restarts at 0 for the exhale
-      // phase instead of confusingly showing several seconds already
-      // elapsed.
+      // the hold — _exhaleStartElapsedSeconds is what lets
+      // _handleBreathPressed and the UI's currentSeconds recover just the
+      // exhale portion from it, since blowDuration must exclude the hold.
+      // This is purely what's put on screen otherwise, so the circle
+      // visibly restarts at 0 for the exhale phase instead of confusingly
+      // showing several seconds already elapsed.
       _exhaleStartElapsedSeconds = _stopwatch.elapsed.inSeconds;
     });
     _exhaleShrinkController
@@ -621,6 +635,10 @@ class _BreathTestPageState extends State<BreathTestPage>
     if (!isCollectingStep || _autoFinishing) {
       return;
     }
+    // First sample collected since the hold countdown cleared the buffer
+    // (see _startHoldCountdown) — anchors BreathAcousticEngine.analyze's
+    // measurementStartMs to roughly when the hold began.
+    _measurementStartMs ??= sample.millisecondsSinceStart;
     _currentAttemptSamples.add(sample);
 
     if (_step != _AttemptStep.exhale) {
@@ -629,12 +647,16 @@ class _BreathTestPageState extends State<BreathTestPage>
       // allowed to finish the attempt, same as before.
       return;
     }
-    final analysis = _breathAcousticEngine.analyze(_currentAttemptSamples);
+    final analysis = _breathAcousticEngine.analyze(
+      _currentAttemptSamples,
+      measurementStartMs: _measurementStartMs ?? 0,
+    );
     if (analysis.exhaleDetected) {
       _autoFinishing = true;
-      final totalMs =
-          (analysis.holdDurationMs ?? 0) + (analysis.blowDurationMs ?? 0);
-      _finishAttempt(seconds: (totalMs / 1000).round(), acoustic: analysis);
+      _finishAttempt(
+        seconds: ((analysis.blowDurationMs ?? 0) / 1000).round(),
+        acoustic: analysis,
+      );
     }
   }
 
@@ -643,10 +665,16 @@ class _BreathTestPageState extends State<BreathTestPage>
       return;
     }
     _autoFinishing = true;
-    final seconds = _stopwatch.elapsed.inSeconds;
+    // Manual finish has no acoustic offset to measure blow duration from —
+    // fall back to wall-clock time elapsed since the exhale step itself
+    // began (not since the hold, which _stopwatch.elapsed would include).
+    final seconds = _stopwatch.elapsed.inSeconds - _exhaleStartElapsedSeconds;
     final acoustic = _currentAttemptSamples.isEmpty
         ? null
-        : _breathAcousticEngine.analyze(_currentAttemptSamples);
+        : _breathAcousticEngine.analyze(
+            _currentAttemptSamples,
+            measurementStartMs: _measurementStartMs ?? 0,
+          );
     _finishAttempt(seconds: seconds, acoustic: acoustic);
   }
 
@@ -694,12 +722,18 @@ class _BreathTestPageState extends State<BreathTestPage>
     _currentAttemptIsNoisy = false;
     if (acoustic != null &&
         acoustic.exhaleDetected &&
-        acoustic.holdDurationMs != null &&
+        acoustic.exhaleOnsetMs != null &&
         acoustic.blowDurationMs != null) {
+      // estimateSpirometry works in _currentAttemptSamples' own absolute
+      // (microphone-clock) timestamps, but acoustic.exhaleOnsetMs is
+      // relative to _measurementStartMs — rebuild the absolute onset/offset
+      // it expects.
+      final absoluteOnsetMs =
+          (_measurementStartMs ?? 0) + acoustic.exhaleOnsetMs!;
       _lastSpirometryEstimate = _breathAcousticEngine.estimateSpirometry(
         _currentAttemptSamples,
-        acoustic.holdDurationMs!,
-        acoustic.holdDurationMs! + acoustic.blowDurationMs!,
+        absoluteOnsetMs,
+        absoluteOnsetMs + acoustic.blowDurationMs!,
       );
     }
     _lastWheezeAnalysis = _wheezeDetectionEngine.analyze(

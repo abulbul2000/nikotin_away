@@ -178,7 +178,7 @@ void main() {
       final samples = _silenceThenLoudThenSilence();
       final result = engine.analyze(samples);
       expect(result.exhaleDetected, isTrue);
-      expect(result.holdDurationMs, isNotNull);
+      expect(result.exhaleOnsetMs, isNotNull);
       expect(result.blowDurationMs, isNotNull);
       expect(result.blowDurationMs, greaterThan(0));
       // Steady 0.3 energy throughout the exhale -> low variance -> high stability
@@ -188,6 +188,31 @@ void main() {
       // 0.3 / referenceLoudExhaleEnergy(0.25), clamped to 1.0.
       expect(result.blowIntensity, closeTo(1.0, 0.001));
     });
+
+    test(
+      'blowDurationMs measures only the exhale envelope, not elapsed time '
+      'since the microphone started (regression: a rest interval or hold '
+      'countdown before the exhale used to get folded into the reported '
+      'duration)',
+      () {
+        // Simulates 20s of prior mic activity (a rest interval / earlier
+        // attempt) followed by a clean ~4s exhale envelope, with
+        // measurementStartMs anchored at the hold's start (20000ms) so the
+        // preceding activity can't be picked up as the onset.
+        final samples = _silenceThenLoudThenSilence(
+          silenceMs: 20000,
+          loudMs: 4000,
+          trailingSilenceMs: 1500,
+        );
+        final result = engine.analyze(samples, measurementStartMs: 20000);
+        expect(result.exhaleDetected, isTrue);
+        // Onset is reported relative to measurementStartMs, not to the
+        // recorder's own start — small (order of tens of ms), not ~20000.
+        expect(result.exhaleOnsetMs, lessThan(500));
+        // The exhale envelope itself is ~4000ms, not 20000+4000+.
+        expect(result.blowDurationMs, closeTo(4000, 200));
+      },
+    );
 
     test('a noisier exhale yields lower stability than a steady one', () {
       final steady = _silenceThenLoudThenSilence(loudEnergy: 0.3);

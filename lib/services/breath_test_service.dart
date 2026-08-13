@@ -34,6 +34,12 @@ class BreathTestService {
            repository ?? BreathTestRepository(storageService: storageService),
        _engine = engine ?? BreathTestEngine();
 
+  /// [holdDuration] artık bir tutma süresi ölçümü değil — sadece
+  /// SurveyRecord.exhaleTestSeconds'a (bkz. aşağı) taşınan, çağıranın en iyi
+  /// üfleme denemesini raporladığı bir saniye değeri. BreathTestEngine artık
+  /// hold'u hiç ölçmediği için bu, [BreathTestEngine.buildResult]'a
+  /// geçirilmiyor — isimlendirme uyuşmazlığı bilinen bir sorun, FAZ 6'da ele
+  /// alınacak.
   Future<ProcessedBreathTest> processBreathTest({
     required String name,
     required String packsPerDay,
@@ -50,7 +56,6 @@ class BreathTestService {
     final result = _engine.buildResult(
       id: 'breath_${now.microsecondsSinceEpoch}',
       createdAt: now,
-      holdDuration: holdDuration,
       blowDuration: blowDuration,
       blowIntensity: blowIntensity,
       blowStability: blowStability,

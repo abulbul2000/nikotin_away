@@ -1156,9 +1156,22 @@ class StorageService {
         blowDurationSeconds REAL NOT NULL,
         blowStability REAL NOT NULL,
         blowIntensity REAL NOT NULL,
-        isNoisyEnvironment INTEGER NOT NULL DEFAULT 0
+        isNoisyEnvironment INTEGER NOT NULL DEFAULT 0,
+        schemaVersion INTEGER NOT NULL DEFAULT 1
       )
     ''');
+    // Rows saved before this column existed recorded blowDurationSeconds as
+    // hold+blow combined (see BreathAcousticEngine.analyze's measurementStartMs
+    // fix) — DEFAULT 1 backfills every pre-existing row as legacy/inflated.
+    // New rows are always written with schemaVersion 2 (see
+    // saveBreathProgressRecord) so BreathTrendEngine can exclude the legacy
+    // ones from trend/chart statistics without losing the history.
+    await _ensureTableColumn(
+      db,
+      _breathProgressRecordsTable,
+      'schemaVersion',
+      'INTEGER NOT NULL DEFAULT 1',
+    );
   }
 
   /// Ambient noise readings BreathNoiseEngine.computeReferenceLevel uses to
@@ -4846,9 +4859,6 @@ class StorageService {
     }
 
     final latest = breathRecords.last;
-    final holdRisk = _breathTestEngine.holdRisk(
-      latest.exhaleTestSeconds.toDouble(),
-    );
     final blowRisk = _breathTestEngine.blowDurationRisk(
       latest.inhaleTestSeconds.toDouble(),
     );
@@ -4860,7 +4870,6 @@ class StorageService {
     );
 
     return _breathTestEngine.breathScore(
-      holdRisk: holdRisk,
       blowRisk: blowRisk,
       stabilityRisk: _breathTestEngine.stabilityRisk(estimatedStability),
       intensityRisk: _breathTestEngine.intensityRisk(estimatedIntensity),

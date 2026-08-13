@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/models/adaptive_task_models.dart';
+import 'package:no_smoke/models/breath_progress_record.dart';
 import 'package:no_smoke/models/cough_test_record.dart';
 import 'package:no_smoke/models/snoring_probe_event.dart';
 import 'package:no_smoke/models/step_counter_sample.dart';
@@ -16,6 +17,18 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   Future<String?> getApplicationDocumentsPath() async {
     return Directory.systemTemp.createTempSync('no_smoke_test').path;
   }
+}
+
+/// Unlike [_FakePathProviderPlatform], returns the same directory every
+/// call — needed for the migration test, which has to write a legacy
+/// database file and then have [StorageService] reopen that exact path.
+class _FixedPathProviderPlatform extends PathProviderPlatform {
+  _FixedPathProviderPlatform(this.path);
+
+  final String path;
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => path;
 }
 
 void main() {
@@ -784,6 +797,93 @@ void main() {
                 'reader is exactly the class of bug this regression was.',
           );
         }
+      },
+    );
+  });
+
+  group('breath_progress_records schemaVersion migration', () {
+    test(
+      'a pre-existing row from before schemaVersion existed is backfilled '
+      'to 1 (legacy), not crashed on or silently treated as current',
+      () async {
+        // Simulates a device already on a schema version before
+        // schemaVersion existed on breath_progress_records: create the
+        // table by hand, without the column, then run it through the real
+        // onUpgrade path by opening it with StorageService.
+        final dir = Directory.systemTemp.createTempSync(
+          'no_smoke_breath_schema_migration',
+        );
+        PathProviderPlatform.instance = _FixedPathProviderPlatform(dir.path);
+        final dbPath = '${dir.path}/no_smoke.db';
+
+        final legacyDb = await databaseFactory.openDatabase(
+          dbPath,
+          options: OpenDatabaseOptions(
+            version: 32,
+            onCreate: (db, version) async {
+              await db.execute('''
+                CREATE TABLE breath_progress_records (
+                  id TEXT PRIMARY KEY,
+                  completedAt TEXT NOT NULL,
+                  breathScore REAL NOT NULL,
+                  blowDurationSeconds REAL NOT NULL,
+                  blowStability REAL NOT NULL,
+                  blowIntensity REAL NOT NULL,
+                  isNoisyEnvironment INTEGER NOT NULL DEFAULT 0
+                )
+              ''');
+              await db.insert('breath_progress_records', {
+                'id': 'pre_migration',
+                'completedAt': DateTime(2026, 7, 1).toIso8601String(),
+                // Pre-fix rows could have hold+rest time folded into this —
+                // an implausible value for a real exhale, on purpose, so the
+                // test can't accidentally pass because the value looks fine
+                // either way.
+                'blowDurationSeconds': 42.0,
+                'breathScore': 80.0,
+                'blowStability': 0.8,
+                'blowIntensity': 0.8,
+                'isNoisyEnvironment': 0,
+              });
+            },
+          ),
+        );
+        await legacyDb.close();
+
+        final storage = StorageService();
+        await storage.closeDatabaseConnection();
+        final loaded = await storage.loadBreathProgressRecords();
+
+        expect(loaded, hasLength(1));
+        expect(loaded.first.schemaVersion, 1);
+        expect(
+          loaded.first.schemaVersion,
+          lessThan(BreathProgressRecord.currentSchemaVersion),
+        );
+
+        await storage.closeDatabaseConnection();
+        PathProviderPlatform.instance = _FakePathProviderPlatform();
+      },
+    );
+
+    test(
+      'a newly saved record always carries currentSchemaVersion',
+      () async {
+        final storage = StorageService();
+        await storage.saveBreathProgressRecord(
+          BreathProgressRecord(
+            id: 'fresh',
+            completedAt: DateTime(2026, 8, 1),
+            breathScore: 70,
+            blowDurationSeconds: 5,
+            blowStability: 0.7,
+            blowIntensity: 0.7,
+          ),
+        );
+
+        final loaded = await storage.loadBreathProgressRecords();
+        final record = loaded.firstWhere((r) => r.id == 'fresh');
+        expect(record.schemaVersion, BreathProgressRecord.currentSchemaVersion);
       },
     );
   });

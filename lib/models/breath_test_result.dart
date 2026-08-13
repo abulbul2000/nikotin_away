@@ -1,10 +1,17 @@
 class BreathTestResult {
   final String id;
   final DateTime createdAt;
+
+  /// Artık ölçülmüyor — hold sabit 3 saniyelik bir geri sayım, kullanıcı
+  /// performansına bağlı değil (bkz. BreathTestEngine.breathScore). Yeni
+  /// kayıtlarda her zaman 0. Alan yalnızca eski satırlarla şema uyumluluğu
+  /// için modelde tutuluyor.
   final double holdDuration;
   final double blowDuration;
   final double blowIntensity;
   final double blowStability;
+
+  /// Artık hesaplanmıyor — bkz. [holdDuration]. Yeni kayıtlarda her zaman 0.
   final int holdRisk;
   final int blowRisk;
   final int intensityRisk;

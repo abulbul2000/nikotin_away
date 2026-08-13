@@ -10,6 +10,7 @@ BreathProgressRecord _record({
   double blowStability = 0.7,
   double blowIntensity = 0.7,
   bool isNoisyEnvironment = false,
+  int schemaVersion = BreathProgressRecord.currentSchemaVersion,
 }) {
   return BreathProgressRecord(
     id: 'r_${completedAt.millisecondsSinceEpoch}',
@@ -19,6 +20,7 @@ BreathProgressRecord _record({
     blowStability: blowStability,
     blowIntensity: blowIntensity,
     isNoisyEnvironment: isNoisyEnvironment,
+    schemaVersion: schemaVersion,
   );
 }
 
@@ -28,7 +30,7 @@ void main() {
 
     test('weights duration 50%, stability 30%, intensity 20%', () {
       final score = engine.computeScore(
-        blowDurationSeconds: 15, // duration signal = 1.0
+        blowDurationSeconds: 10, // duration signal = 1.0
         blowStability: 1.0,
         blowIntensity: 1.0,
       );
@@ -44,9 +46,9 @@ void main() {
       expect(score, 0);
     });
 
-    test('duration signal clamps at the 15s ceiling', () {
-      final at15 = engine.computeScore(
-        blowDurationSeconds: 15,
+    test('duration signal clamps at the 10s ceiling', () {
+      final at10 = engine.computeScore(
+        blowDurationSeconds: 10,
         blowStability: 0,
         blowIntensity: 0,
       );
@@ -55,9 +57,35 @@ void main() {
         blowStability: 0,
         blowIntensity: 0,
       );
-      expect(at15, closeTo(50, 0.001));
+      expect(at10, closeTo(50, 0.001));
       expect(at30, closeTo(50, 0.001));
     });
+
+    test(
+      'different plausible blow durations produce different scores '
+      '(regression: with real exhale-only durations, the old 15s ceiling '
+      'combined with the old inflated-duration bug meant every attempt '
+      'saturated the duration signal to 1.0)',
+      () {
+        final short = engine.computeScore(
+          blowDurationSeconds: 3,
+          blowStability: 0.7,
+          blowIntensity: 0.7,
+        );
+        final medium = engine.computeScore(
+          blowDurationSeconds: 6,
+          blowStability: 0.7,
+          blowIntensity: 0.7,
+        );
+        final long = engine.computeScore(
+          blowDurationSeconds: 9,
+          blowStability: 0.7,
+          blowIntensity: 0.7,
+        );
+        expect(short, lessThan(medium));
+        expect(medium, lessThan(long));
+      },
+    );
   });
 
   group('BreathTrendEngine.medianOfAttemptScores', () {
@@ -236,6 +264,32 @@ void main() {
       expect(noisyPoint.hasSkippedNoisyTest, isTrue);
       expect(noisyPoint.rawScore, isNull);
     });
+  });
+
+  group('BreathTrendEngine.summarize — legacy schemaVersion excluded', () {
+    final engine = BreathTrendEngine();
+
+    test(
+      'schemaVersion 1 (pre exhale-duration-fix) records are excluded from '
+      'window averages and best score, same as noisy records '
+      '(regression: old inflated blowDurationSeconds must not pollute the '
+      'trend once the measurement bug is fixed)',
+      () {
+        final base = DateTime(2026, 1, 1);
+        final records = [
+          _record(completedAt: base, breathScore: 10, schemaVersion: 1),
+          _record(
+            completedAt: base.add(const Duration(hours: 1)),
+            breathScore: 90,
+          ),
+        ];
+
+        final summary = engine.summarize(records, languageCode: 'tr');
+        expect(summary.bestScore, 90);
+        expect(summary.last7Days.testCount, 1);
+        expect(summary.last7Days.averageScore, 90);
+      },
+    );
   });
 
   group('BreathTrendEngine.summarize — chart moving average', () {

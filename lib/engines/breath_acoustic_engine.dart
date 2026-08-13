@@ -5,14 +5,21 @@ import '../models/breath_acoustic_sample.dart';
 
 class BreathAcousticAnalysis {
   final bool exhaleDetected;
-  final int? holdDurationMs;
+
+  /// Time from [BreathAcousticEngine.analyze]'s `measurementStartMs` (the
+  /// start of the hold, not the recorder) to the detected exhale onset —
+  /// *not* a hold duration measurement. The hold itself is a fixed
+  /// countdown (see BreathTestPage._holdCountdownSeconds); this is just how
+  /// long it took the onset detector to confirm the exhale had begun after
+  /// that countdown ended, normally a few hundred ms.
+  final int? exhaleOnsetMs;
   final int? blowDurationMs;
   final double? blowIntensity;
   final double? blowStability;
 
   const BreathAcousticAnalysis({
     required this.exhaleDetected,
-    this.holdDurationMs,
+    this.exhaleOnsetMs,
     this.blowDurationMs,
     this.blowIntensity,
     this.blowStability,
@@ -232,12 +239,24 @@ class BreathAcousticEngine {
   /// whatever was captured up to that point is passed in). Returns
   /// `exhaleDetected: false` — caller falls back to the timing-based proxy
   /// — whenever onset/offset couldn't be confidently established.
-  BreathAcousticAnalysis analyze(List<BreathAcousticSample> samples) {
+  ///
+  /// [measurementStartMs] is the timestamp (in the same clock as
+  /// [samples]' `millisecondsSinceStart`, i.e. relative to when the
+  /// microphone itself started) that the actual measurement — the hold —
+  /// began. It's forwarded to [findExhaleOnsetMs] as `searchFromMs` so the
+  /// loud inhale that precedes the hold can't be picked up as the exhale
+  /// onset, and it's what [BreathAcousticAnalysis.exhaleOnsetMs] is
+  /// reported relative to. Defaults to 0 (samples already start at the
+  /// measurement) for callers that pre-trim their buffer.
+  BreathAcousticAnalysis analyze(
+    List<BreathAcousticSample> samples, {
+    int measurementStartMs = 0,
+  }) {
     if (samples.isEmpty) {
       return const BreathAcousticAnalysis(exhaleDetected: false);
     }
 
-    final onsetMs = findExhaleOnsetMs(samples);
+    final onsetMs = findExhaleOnsetMs(samples, searchFromMs: measurementStartMs);
     if (onsetMs == null) {
       return const BreathAcousticAnalysis(exhaleDetected: false);
     }
@@ -285,7 +304,7 @@ class BreathAcousticEngine {
 
     return BreathAcousticAnalysis(
       exhaleDetected: true,
-      holdDurationMs: onsetMs,
+      exhaleOnsetMs: onsetMs - measurementStartMs,
       blowDurationMs: offsetMs - onsetMs,
       blowIntensity: intensity,
       blowStability: stability,

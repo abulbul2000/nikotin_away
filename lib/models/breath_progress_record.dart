@@ -7,6 +7,15 @@
 /// değerleri taşır. Böylece analiz/trend katmanı, risk motorunun iç
 /// temsiline bağımlı olmadan bağımsız gelişebilir.
 class BreathProgressRecord {
+  /// Rows written since BreathAcousticEngine.analyze's measurementStartMs
+  /// fix — blowDurationSeconds is a real exhale-only measurement. Rows at
+  /// version 1 (the pre-fix default, backfilled by the schemaVersion
+  /// migration in storage_service.dart) recorded hold+rest time folded into
+  /// blowDurationSeconds and are excluded from BreathTrendEngine's
+  /// trend/chart statistics — see BreathTrendEngine.summarize's `clean`
+  /// filter.
+  static const int currentSchemaVersion = 2;
+
   final String id;
   final DateTime completedAt;
 
@@ -29,6 +38,11 @@ class BreathProgressRecord {
   /// gösterilir — bkz. BreathTrendEngine.
   final bool isNoisyEnvironment;
 
+  /// Bkz. [currentSchemaVersion]. Yeni oluşturulan kayıtlar her zaman
+  /// [currentSchemaVersion] taşır; yalnızca DB'den okunan eski satırlar
+  /// düşük bir değerle gelebilir.
+  final int schemaVersion;
+
   const BreathProgressRecord({
     required this.id,
     required this.completedAt,
@@ -37,6 +51,7 @@ class BreathProgressRecord {
     required this.blowStability,
     required this.blowIntensity,
     this.isNoisyEnvironment = false,
+    this.schemaVersion = currentSchemaVersion,
   });
 
   Map<String, dynamic> toJson() {
@@ -48,6 +63,7 @@ class BreathProgressRecord {
       'blowStability': blowStability,
       'blowIntensity': blowIntensity,
       'isNoisyEnvironment': isNoisyEnvironment,
+      'schemaVersion': schemaVersion,
     };
   }
 
@@ -60,6 +76,10 @@ class BreathProgressRecord {
       blowStability: (json['blowStability'] as num).toDouble(),
       blowIntensity: (json['blowIntensity'] as num).toDouble(),
       isNoisyEnvironment: json['isNoisyEnvironment'] as bool? ?? false,
+      // Rows saved before this column existed have no value in the DB —
+      // default to 1 (legacy), matching the ALTER TABLE ... DEFAULT 1
+      // backfill in storage_service.dart's schema migration.
+      schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? 1,
     );
   }
 }

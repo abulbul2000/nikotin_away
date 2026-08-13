@@ -6,25 +6,6 @@ import 'breath_acoustic_engine.dart';
 import 'wheeze_detection_engine.dart';
 
 class BreathTestEngine {
-  int holdRisk(double holdDuration) {
-    if (holdDuration < 10) {
-      return 100;
-    }
-    if (holdDuration < 20) {
-      return 80;
-    }
-    if (holdDuration < 30) {
-      return 60;
-    }
-    if (holdDuration < 45) {
-      return 40;
-    }
-    if (holdDuration < 60) {
-      return 20;
-    }
-    return 10;
-  }
-
   int blowDurationRisk(double blowDuration) {
     if (blowDuration < 3) {
       return 100;
@@ -51,17 +32,18 @@ class BreathTestEngine {
     return ((1 - safe) * 100).round().clamp(0, 100);
   }
 
+  // Hold artık sabit 3 saniyelik bir geri sayım (bkz.
+  // BreathTestPage._holdCountdownSeconds) — kullanıcının performansına göre
+  // değişmediği için holdRisk kaldırıldı, payı en anlamlı sinyal olan
+  // blowRisk'e eklendi (BreathTrendEngine.blowDurationWeight'in de aynı
+  // gerekçeyle üfleme süresine en yüksek payı vermesiyle tutarlı).
   double breathScore({
-    required int holdRisk,
     required int blowRisk,
     required int stabilityRisk,
     required int intensityRisk,
   }) {
     final score =
-        (holdRisk * 0.40) +
-        (blowRisk * 0.30) +
-        (stabilityRisk * 0.15) +
-        (intensityRisk * 0.15);
+        (blowRisk * 0.70) + (stabilityRisk * 0.15) + (intensityRisk * 0.15);
     return score.clamp(0, 100).toDouble();
   }
 
@@ -142,23 +124,24 @@ class BreathTestEngine {
   /// distance/case muffling/ambient noise silently swing the actual risk
   /// score under a professional-looking label. [spirometry] is null when no
   /// full acoustic reading was available for the attempt.
+  /// [holdDuration] alanı geriye dönük uyumluluk için modelde/DB'de
+  /// tutuluyor ama artık hesaplamaya girmiyor — hold sabit 3 saniyelik bir
+  /// geri sayım, ölçülen bir performans değeri değil (bkz. breathScore'un
+  /// üstündeki not). Her zaman 0 yazılır.
   BreathTestResult buildResult({
     required String id,
     required DateTime createdAt,
-    required double holdDuration,
     required double blowDuration,
     required double blowIntensity,
     required double blowStability,
     SpirometryEstimate? spirometry,
     WheezeAnalysis? wheeze,
   }) {
-    final computedHoldRisk = holdRisk(holdDuration);
     final computedBlowRisk = blowDurationRisk(blowDuration);
     final computedStabilityRisk = stabilityRisk(blowStability);
     final computedIntensityRisk = intensityRisk(blowIntensity);
 
     final score = breathScore(
-      holdRisk: computedHoldRisk,
       blowRisk: computedBlowRisk,
       stabilityRisk: computedStabilityRisk,
       intensityRisk: computedIntensityRisk,
@@ -167,11 +150,11 @@ class BreathTestEngine {
     return BreathTestResult(
       id: id,
       createdAt: createdAt,
-      holdDuration: holdDuration,
+      holdDuration: 0,
       blowDuration: blowDuration,
       blowIntensity: blowIntensity.clamp(0, 1).toDouble(),
       blowStability: blowStability.clamp(0, 1).toDouble(),
-      holdRisk: computedHoldRisk,
+      holdRisk: 0,
       blowRisk: computedBlowRisk,
       intensityRisk: computedIntensityRisk,
       stabilityRisk: computedStabilityRisk,

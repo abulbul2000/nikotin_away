@@ -9,13 +9,13 @@ void main() {
 
     test('computes breath score with configured component weights', () {
       final score = engine.breathScore(
-        holdRisk: 80,
         blowRisk: 60,
         stabilityRisk: 40,
         intensityRisk: 20,
       );
 
-      expect(score, closeTo(59, 0.001));
+      // (60 * 0.70) + (40 * 0.15) + (20 * 0.15) = 42 + 6 + 3 = 51
+      expect(score, closeTo(51, 0.001));
     });
 
     test('computes final risk with survey behavior task breath weights', () {
@@ -94,7 +94,6 @@ void main() {
       return engine.buildResult(
         id: 'b',
         createdAt: DateTime(2026, 1, 1),
-        holdDuration: 20,
         blowDuration: 6,
         blowIntensity: 0.6,
         blowStability: 0.6,
