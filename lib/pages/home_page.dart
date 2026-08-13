@@ -36,8 +36,10 @@ import '../services/protocol_violation_service.dart';
 import '../services/smoked_log_button_service.dart';
 import '../services/snoring_detection_service.dart';
 import '../services/storage_service.dart';
+import '../services/feature_access.dart';
 import '../services/task_assignment_service.dart';
 import '../widgets/no_smoke_logo.dart';
+import '../widgets/premium_upsell_dialog.dart';
 
 class HomePage extends StatefulWidget {
   final String name;
@@ -831,6 +833,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openBreathTestFromMenu() async {
+    await guardPremiumFeature(
+      context,
+      feature: PremiumFeature.breathCoughTests,
+      upsellMessageKey: 'premiumUpsellBreathTests',
+      onGranted: () => unawaited(_openBreathTestAfterGate()),
+    );
+  }
+
+  Future<void> _openBreathTestAfterGate() async {
     final packsPerDay = await _resolveLatestPacksPerDay();
     if (!mounted) {
       return;
@@ -852,6 +863,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _openCoughTestFromMenu() async {
+    await guardPremiumFeature(
+      context,
+      feature: PremiumFeature.breathCoughTests,
+      upsellMessageKey: 'premiumUpsellBreathTests',
+      onGranted: () => unawaited(_openCoughTestAfterGate()),
+    );
+  }
+
+  Future<void> _openCoughTestAfterGate() async {
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -1939,12 +1959,17 @@ class _HomePageState extends State<HomePage> {
             Align(
               alignment: AlignmentDirectional.centerStart,
               child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const AIChatPage()),
-                  );
-                },
+                onPressed: () => guardPremiumFeature(
+                  context,
+                  feature: PremiumFeature.aiMentor,
+                  upsellMessageKey: 'premiumUpsellAiMentor',
+                  onGranted: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AIChatPage()),
+                    );
+                  },
+                ),
                 icon: const Icon(Icons.smart_toy_outlined, size: 18),
                 label: Text(context.t('aiMentorButton')),
               ),

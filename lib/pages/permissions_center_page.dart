@@ -3,7 +3,9 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../core/app_texts.dart';
 import '../services/device_permission_service.dart';
+import '../services/feature_access.dart';
 import '../services/notification_service.dart';
+import '../widgets/premium_upsell_dialog.dart';
 import 'location_intelligence_page.dart';
 
 class PermissionsCenterPage extends StatefulWidget {
@@ -151,13 +153,18 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
                   description: context.t('permissionLocationDescription'),
                   purpose: context.t('permissionLocationPurpose'),
                   granted: _locationGranted,
-                  onRequest: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const LocationIntelligencePage(),
-                      ),
-                    );
-                  },
+                  onRequest: () => guardPremiumFeature(
+                    context,
+                    feature: PremiumFeature.locationIntelligence,
+                    upsellMessageKey: 'premiumUpsellLocationIntelligence',
+                    onGranted: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const LocationIntelligencePage(),
+                        ),
+                      );
+                    },
+                  ),
                 ),
                 _PermissionCard(
                   icon: Icons.alarm,

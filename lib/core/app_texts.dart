@@ -1639,11 +1639,12 @@ class AppTexts {
       'Nikotin Away uygulamasini 14 gun boyunca, Yapay Zeka Mentoru dahil tum ozellikleriyle ucretsiz deneyebilirsin. 14 gun sonunda devam etmek icin abonelik gerekir.',
     'subscriptionGateTitle': 'Deneme Suresi Doldu',
     'subscriptionGateMessage':
-      '14 gunluk ucretsiz deneme suren sona erdi. Nikotin Away kullanmaya devam etmek icin bir abonelik secmelisin.',
+      '14 gunluk ucretsiz deneme suren sona erdi. Yapay Zeka Mentoru, gorev sistemi, nefes/oksuruk testleri ve konum/uyku zekasi gibi ozellikler icin abonelik gerekir; temel ozelliklerle ucretsiz devam edebilirsin.',
     'subscriptionMonthlyTitle': 'Aylik',
     'subscriptionYearlyTitle': 'Yillik',
     'subscriptionPurchaseButton': 'Satin Al',
     'subscriptionRestoreButton': 'Satin Alimi Geri Yukle',
+    'subscriptionContinueFreeButton': 'Ucretsiz Devam Et',
     'subscriptionNeedsConnection':
       'Abonelik durumunu dogrulamak icin internet baglantisi gerekiyor. Baglaninca otomatik olarak tekrar denenecek.',
     'subscriptionRetryButton': 'Tekrar Dene',
@@ -1652,6 +1653,15 @@ class AppTexts {
     'subscriptionRestoreNotFound': 'Geri yuklenecek bir satin alma bulunamadi.',
     'subscriptionStoreUnavailable':
       'Magaza su anda ulasilamaz durumda. Lutfen daha sonra tekrar dene.',
+    'premiumUpsellTitle': 'Premium Ozellik',
+    'premiumUpsellDismiss': 'Vazgec',
+    'premiumUpsellUpgrade': 'Yukselt',
+    'premiumUpsellAiMentor':
+      'Yapay Zeka Mentoru bir abonelik veya deneme suresi gerektirir.',
+    'premiumUpsellBreathTests':
+      'Nefes ve oksuruk testleri bir abonelik veya deneme suresi gerektirir.',
+    'premiumUpsellLocationIntelligence':
+      'Konum Zekasi bir abonelik veya deneme suresi gerektirir.',
     'savingsPageTitle': 'Tasarruf',
     'savingsMoneySaved': 'Biriken para',
     'savingsCigarettesNotSmoked': 'İçilmeyen sigara',
@@ -3394,11 +3404,12 @@ class AppTexts {
       'You can use Nikotin Away free for 14 days, including the AI Mentor and every other feature. A subscription is required to continue after that.',
     'subscriptionGateTitle': 'Your Trial Has Ended',
     'subscriptionGateMessage':
-      'Your 14-day free trial is over. Choose a subscription to keep using Nikotin Away.',
+      'Your 14-day free trial is over. Features like the AI Mentor, the task system, breath/cough tests, and location/sleep intelligence need a subscription; you can keep using the core features for free.',
     'subscriptionMonthlyTitle': 'Monthly',
     'subscriptionYearlyTitle': 'Yearly',
     'subscriptionPurchaseButton': 'Subscribe',
     'subscriptionRestoreButton': 'Restore Purchase',
+    'subscriptionContinueFreeButton': 'Continue for Free',
     'subscriptionNeedsConnection':
       'An internet connection is needed to verify your subscription. This will retry automatically once connected.',
     'subscriptionRetryButton': 'Retry',
@@ -3407,6 +3418,15 @@ class AppTexts {
     'subscriptionRestoreNotFound': 'No purchase was found to restore.',
     'subscriptionStoreUnavailable':
       'The store is currently unavailable. Please try again later.',
+    'premiumUpsellTitle': 'Premium Feature',
+    'premiumUpsellDismiss': 'Dismiss',
+    'premiumUpsellUpgrade': 'Upgrade',
+    'premiumUpsellAiMentor':
+      'The AI Mentor requires a subscription or trial period.',
+    'premiumUpsellBreathTests':
+      'Breath and cough tests require a subscription or trial period.',
+    'premiumUpsellLocationIntelligence':
+      'Location Intelligence requires a subscription or trial period.',
     'savingsPageTitle': 'Savings',
     'savingsMoneySaved': 'Money saved',
     'savingsCigarettesNotSmoked': 'Cigarettes not smoked',

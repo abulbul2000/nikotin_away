@@ -6,6 +6,7 @@ import '../core/app_texts.dart';
 import '../main.dart';
 import '../services/cloud_backup_service.dart';
 import '../services/device_compatibility_service.dart';
+import '../services/feature_access.dart';
 import '../services/language_service.dart';
 import '../services/notification_service.dart';
 import '../models/wearable_health_snapshot.dart';
@@ -17,6 +18,7 @@ import '../services/storage_service.dart';
 import '../services/wearable_intelligence_service.dart';
 import '../widgets/background_reliability_prompt.dart';
 import '../widgets/notification_kinds_card.dart';
+import '../widgets/premium_upsell_dialog.dart';
 import 'coach_mode_page.dart';
 import 'language_selection_page.dart';
 import 'location_intelligence_page.dart';
@@ -336,10 +338,17 @@ class _SettingsPageState extends State<SettingsPage> {
     ).push(MaterialPageRoute(builder: (_) => const CoachModePage()));
   }
 
-  void _openLocationIntelligence() {
-    Navigator.of(
+  Future<void> _openLocationIntelligence() async {
+    await guardPremiumFeature(
       context,
-    ).push(MaterialPageRoute(builder: (_) => const LocationIntelligencePage()));
+      feature: PremiumFeature.locationIntelligence,
+      upsellMessageKey: 'premiumUpsellLocationIntelligence',
+      onGranted: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const LocationIntelligencePage()),
+        );
+      },
+    );
   }
 
   void _openMedications() {
