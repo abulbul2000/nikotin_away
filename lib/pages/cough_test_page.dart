@@ -357,57 +357,9 @@ class _CoughTestPageState extends State<CoughTestPage> {
     widget.onCompleted?.call();
   }
 
-  String _severityTextKey(String tier) {
-    switch (tier) {
-      case 'mild':
-        return 'coughTestSeverityMild';
-      case 'moderate':
-        return 'coughTestSeverityModerate';
-      case 'severe':
-        return 'coughTestSeveritySevere';
-      case 'urgent':
-        return 'coughTestSeverityUrgent';
-      default:
-        return 'coughTestSeverityNormal';
-    }
-  }
-
-  String? _tipTextKey(String tier) {
-    switch (tier) {
-      case 'mild':
-        return 'coughTipMild';
-      case 'moderate':
-        return 'coughTipModerate';
-      case 'severe':
-        return 'coughTipSevere';
-      case 'urgent':
-        return 'coughTipUrgent';
-      default:
-        return null;
-    }
-  }
-
-  String _wheezeSeverityTextKey(String severityLevel) {
-    switch (severityLevel) {
-      case 'severe':
-        return 'wheezeSeveritySevere';
-      case 'moderate':
-        return 'wheezeSeverityModerate';
-      default:
-        return 'wheezeSeverityMild';
-    }
-  }
-
-  String _wheezeAdviceTextKey(String advisoryTier) {
-    switch (advisoryTier) {
-      case 'severe':
-        return 'wheezeAdviceSevere';
-      case 'moderate':
-        return 'wheezeAdviceModerate';
-      default:
-        return 'wheezeAdviceMild';
-    }
-  }
+  /// Tiers below 'mild' (i.e. 'normal', 0 coughs) get no advice card — a
+  /// generic doctor tip on a clean result would read as a false alarm.
+  bool _showsGeneralAdvice(String tier) => tier != 'normal';
 
   void _finish() {
     if (widget.onFinishRequested != null) {
@@ -522,7 +474,6 @@ class _CoughTestPageState extends State<CoughTestPage> {
     if (result == null || tier == null) {
       return const SizedBox.shrink();
     }
-    final tipKey = _tipTextKey(tier);
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -538,17 +489,12 @@ class _CoughTestPageState extends State<CoughTestPage> {
               .replaceAll('{count}', '${result.coughCount}'),
           style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
-        Text(
-          context.t(_severityTextKey(tier)),
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
-        ),
-        if (tipKey != null) ...[
+        if (_showsGeneralAdvice(tier)) ...[
           const SizedBox(height: 16),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
-              child: Text(context.t(tipKey)),
+              child: Text(context.t('coughGeneralAdvice')),
             ),
           ),
         ],
@@ -566,15 +512,11 @@ class _CoughTestPageState extends State<CoughTestPage> {
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    context.t(
-                      _wheezeSeverityTextKey(result.wheezeSeverityLevel!),
-                    ),
-                  ),
+                  Text(context.t('breathUnusualSoundDetected')),
                   if (_wheezeAdvisoryTier != null) ...[
                     const SizedBox(height: 6),
                     Text(
-                      context.t(_wheezeAdviceTextKey(_wheezeAdvisoryTier!)),
+                      context.t('breathUnusualSoundAdvice'),
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.white.withValues(alpha: 0.75),

@@ -794,7 +794,7 @@ class NotificationService {
               code,
               'coughTestResultCount',
             ).replaceAll('{count}', '$coughCount')
-          : _text(code, 'coughTestSeverityNormal');
+          : _text(code, 'coughTestResultCount').replaceAll('{count}', '0');
 
       await _plugin.show(
         _coughTestResultNotificationId,
@@ -852,7 +852,7 @@ class NotificationService {
       await storage.saveSetting(_lastWheezeResultNotificationDateKey, todayKey);
 
       final code = await LanguageService.loadSelectedLanguageCode();
-      final body = _text(code, _wheezeSeverityBodyKey(severityLevel));
+      final body = _text(code, 'breathUnusualSoundAdvice');
 
       await _plugin.show(
         _wheezeTestResultNotificationId,
@@ -877,17 +877,6 @@ class NotificationService {
     } catch (_) {
       // Keep notification flow resilient even if the wheeze-result
       // notification fails — the in-app result screen already showed it.
-    }
-  }
-
-  static String _wheezeSeverityBodyKey(String severityLevel) {
-    switch (severityLevel) {
-      case 'severe':
-        return 'wheezeAdviceSevere';
-      case 'moderate':
-        return 'wheezeAdviceModerate';
-      default:
-        return 'wheezeAdviceMild';
     }
   }
 

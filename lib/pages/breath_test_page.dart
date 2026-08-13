@@ -874,21 +874,15 @@ class _BreathTestPageState extends State<BreathTestPage>
     _stepBreathController.repeat(reverse: true);
   }
 
-  /// Builds the user-facing [BreathProgressRecord] BreathTrendEngine
-  /// consumes for the progress/analysis page, and persists it — separate
-  /// from [_breathTestService.processBreathTest] above, which saves the
-  /// risk engine's own internal [BreathTestResult] representation.
-  ///
   /// Per-attempt score uses [BreathTrendEngine.computeScore] on each
   /// attempt's own duration/stability/intensity, then takes the *median*
   /// across all 3 attempts (not the best) — a single lucky attempt
-  /// shouldn't set the recorded score. The record's duration/stability/
-  /// intensity fields are taken from whichever attempt produced the median
-  /// score, so they describe one real attempt rather than an average that
-  /// never actually happened.
-  Future<void> _saveBreathProgressRecord() async {
+  /// shouldn't set the recorded score. Pure/synchronous so the result page
+  /// can get the score immediately, without waiting on the DB write below.
+  ({double medianScore, int seconds, double stability, double intensity})?
+      _computeMedianAttempt() {
     if (_attemptSeconds.isEmpty) {
-      return;
+      return null;
     }
     final attempts = <({double score, int seconds, double stability, double intensity})>[];
     for (var i = 0; i < _attemptSeconds.length; i++) {
@@ -922,7 +916,25 @@ class _BreathTestPageState extends State<BreathTestPage>
     final medianScore = _breathTrendEngine.medianOfAttemptScores(
       attempts.map((a) => a.score).toList(),
     );
+    return (
+      medianScore: medianScore,
+      seconds: medianAttempt.seconds,
+      stability: medianAttempt.stability,
+      intensity: medianAttempt.intensity,
+    );
+  }
 
+  /// Builds the user-facing [BreathProgressRecord] BreathTrendEngine
+  /// consumes for the progress/analysis page, and persists it — separate
+  /// from [_breathTestService.processBreathTest] above, which saves the
+  /// risk engine's own internal [BreathTestResult] representation.
+  /// Deliberately fire-and-forget (see call site): the result page must not
+  /// wait on this DB write to navigate.
+  Future<void> _saveBreathProgressRecord() async {
+    final median = _computeMedianAttempt();
+    if (median == null) {
+      return;
+    }
     final isNoisy = _attemptNoiseFlags.any((flagged) => flagged);
     final now = DateTime.now();
 
@@ -930,10 +942,10 @@ class _BreathTestPageState extends State<BreathTestPage>
       BreathProgressRecord(
         id: 'breath_progress_${now.microsecondsSinceEpoch}',
         completedAt: now,
-        breathScore: medianScore,
-        blowDurationSeconds: medianAttempt.seconds.toDouble(),
-        blowStability: medianAttempt.stability,
-        blowIntensity: medianAttempt.intensity,
+        breathScore: median.medianScore,
+        blowDurationSeconds: median.seconds.toDouble(),
+        blowStability: median.stability,
+        blowIntensity: median.intensity,
         isNoisyEnvironment: isNoisy,
       ),
     );
@@ -988,6 +1000,7 @@ class _BreathTestPageState extends State<BreathTestPage>
         title: context.t('breathTestRecordTitle'),
       );
 
+      final breathScore = _computeMedianAttempt()?.medianScore;
       unawaited(_saveBreathProgressRecord());
 
       String? wheezeAdvisoryTier;
@@ -1050,9 +1063,8 @@ class _BreathTestPageState extends State<BreathTestPage>
               name: widget.name,
               riskScore: processed.finalRiskScore,
               riskLevel: processed.finalRiskLevel,
-              spirometry: spirometry,
-              wheeze: wheeze,
-              wheezeAdvisoryTier: wheezeAdvisoryTier,
+              breathScore: breathScore ?? 0,
+              wheezeDetected: wheeze?.wheezeDetected ?? false,
             ),
           ),
         );

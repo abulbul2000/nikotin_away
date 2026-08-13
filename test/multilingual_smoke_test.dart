@@ -5,8 +5,6 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/core/app_texts.dart';
 import 'package:no_smoke/core/mentor_command_codes.dart';
-import 'package:no_smoke/engines/breath_acoustic_engine.dart';
-import 'package:no_smoke/engines/wheeze_detection_engine.dart';
 import 'package:no_smoke/models/survey_record.dart';
 import 'package:no_smoke/pages/breath_spirometry_result_page.dart';
 import 'package:no_smoke/pages/cough_test_page.dart';
@@ -101,24 +99,6 @@ Future<void> _useSmallScreen(WidgetTester tester) async {
 const _overflowProneCodes = {
   'de', 'ru', 'ta', 'ar', 'hi', 'bn', 'pa', 'te', 'mr', 'gu', 'kn', 'ml',
 };
-
-const _fakeCurve = <BreathFlowCurvePoint>[
-  BreathFlowCurvePoint(
-    millisecondsSinceOnset: 0,
-    energy: 0.1,
-    cumulativeEnergyIntegral: 0.1,
-  ),
-  BreathFlowCurvePoint(
-    millisecondsSinceOnset: 500,
-    energy: 0.8,
-    cumulativeEnergyIntegral: 0.9,
-  ),
-  BreathFlowCurvePoint(
-    millisecondsSinceOnset: 1000,
-    energy: 0.3,
-    cumulativeEnergyIntegral: 1.2,
-  ),
-];
 
 /// Every canonical mentor message code AppTexts.localizeMentorMessage must
 /// be able to resolve, including the composite (tone + breath note + hist
@@ -263,27 +243,8 @@ void main() {
                     : riskScore >= 40
                     ? 'ORTA'
                     : 'DUSUK',
-                spirometry: const SpirometryEstimate(
-                  fev1EnergyIntegral: 12.5,
-                  fvcEnergyIntegral: 18.2,
-                  fev1FvcRatioPercent: 68.7,
-                  peakFlowIndex: 54,
-                  peakFlowAtMs: 320,
-                  curve: _fakeCurve,
-                ),
-                wheeze: hasWheeze
-                    ? WheezeAnalysis(
-                        wheezeDetected: true,
-                        severityLevel: ['mild', 'moderate', 'severe'][i % 3],
-                        severityScore: 20 + i * 15,
-                        wheezeBandEnergyRatio: 0.5,
-                        dominantFrequencyHz: 400,
-                        wheezeDurationMs: 1200,
-                      )
-                    : WheezeAnalysis.none,
-                wheezeAdvisoryTier: hasWheeze
-                    ? ['mild', 'moderate', 'severe'][i % 3]
-                    : null,
+                breathScore: 20 + (i * 15).toDouble(),
+                wheezeDetected: hasWheeze,
               ),
             ),
           );
@@ -588,27 +549,12 @@ void main() {
                 inhaleTestSeconds: 6,
                 showBreathDisclaimer: true,
               ),
-              'BreathSpirometryResultPage': BreathSpirometryResultPage(
+              'BreathSpirometryResultPage': const BreathSpirometryResultPage(
                 name: 'Muhammed Abdurrahman',
                 riskScore: 85,
                 riskLevel: 'YUKSEK',
-                spirometry: const SpirometryEstimate(
-                  fev1EnergyIntegral: 12.5,
-                  fvcEnergyIntegral: 18.2,
-                  fev1FvcRatioPercent: 68.7,
-                  peakFlowIndex: 54,
-                  peakFlowAtMs: 320,
-                  curve: _fakeCurve,
-                ),
-                wheeze: const WheezeAnalysis(
-                  wheezeDetected: true,
-                  severityLevel: 'severe',
-                  severityScore: 80,
-                  wheezeBandEnergyRatio: 0.6,
-                  dominantFrequencyHz: 500,
-                  wheezeDurationMs: 2000,
-                ),
-                wheezeAdvisoryTier: 'severe',
+                breathScore: 80,
+                wheezeDetected: true,
               ),
               'HealthRecoveryPage': HealthRecoveryPage(
                 quitDate: DateTime.now().subtract(const Duration(days: 30)),

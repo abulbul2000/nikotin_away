@@ -1,18 +1,22 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:no_smoke/engines/breath_acoustic_engine.dart';
-import 'package:no_smoke/engines/wheeze_detection_engine.dart';
 import 'package:no_smoke/pages/breath_spirometry_result_page.dart';
+import 'package:no_smoke/services/storage_service.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-const _fakeSpirometry = SpirometryEstimate(
-  fev1EnergyIntegral: 10,
-  fvcEnergyIntegral: 14,
-  fev1FvcRatioPercent: 71,
-  peakFlowIndex: 60,
-  peakFlowAtMs: 300,
-  curve: [],
-);
+class _FakePathProviderPlatform extends PathProviderPlatform {
+  final Directory _dir = Directory.systemTemp.createTempSync(
+    'no_smoke_breath_result_test',
+  );
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => _dir.path;
+}
 
 Widget _wrap(Widget child) {
   return MaterialApp(
@@ -28,22 +32,17 @@ Widget _wrap(Widget child) {
 }
 
 void main() {
-  testWidgets('no wheeze card when wheeze is null', (tester) async {
-    await tester.pumpWidget(
-      _wrap(
-        const BreathSpirometryResultPage(
-          name: 'Ada',
-          riskScore: 40,
-          riskLevel: 'ORTA',
-          spirometry: _fakeSpirometry,
-        ),
-      ),
-    );
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    expect(
-      find.byKey(const ValueKey('breath_result_wheeze_card')),
-      findsNothing,
-    );
+  setUpAll(() {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+    PathProviderPlatform.instance = _FakePathProviderPlatform();
+  });
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await StorageService().clearAllData();
   });
 
   testWidgets('no wheeze card when wheeze was not detected', (tester) async {
@@ -53,11 +52,11 @@ void main() {
           name: 'Ada',
           riskScore: 40,
           riskLevel: 'ORTA',
-          spirometry: _fakeSpirometry,
-          wheeze: WheezeAnalysis.none,
+          breathScore: 62,
         ),
       ),
     );
+    await tester.pump();
 
     expect(
       find.byKey(const ValueKey('breath_result_wheeze_card')),
@@ -65,7 +64,7 @@ void main() {
     );
   });
 
-  testWidgets('shows the wheeze card with severity and advice when detected', (
+  testWidgets('shows a neutral note (not a severity level) when wheeze was detected', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -74,24 +73,40 @@ void main() {
           name: 'Ada',
           riskScore: 40,
           riskLevel: 'ORTA',
-          spirometry: _fakeSpirometry,
-          wheeze: WheezeAnalysis(
-            wheezeDetected: true,
-            severityLevel: 'moderate',
-            severityScore: 50,
-            wheezeBandEnergyRatio: 0.5,
-            dominantFrequencyHz: 400,
-            wheezeDurationMs: 1500,
-          ),
-          wheezeAdvisoryTier: 'moderate',
+          breathScore: 62,
+          wheezeDetected: true,
         ),
       ),
     );
+    await tester.pump();
 
     expect(
       find.byKey(const ValueKey('breath_result_wheeze_card')),
       findsOneWidget,
     );
-    expect(find.text('Orta duzeyde hiriltili nefes tespit edildi.'), findsOneWidget);
+    expect(
+      find.text('Bu testte olagandisi bir ses paterni duyuldu.'),
+      findsOneWidget,
+    );
+    // No clinical severity wording should survive on this screen.
+    expect(find.textContaining('duzeyde'), findsNothing);
+  });
+
+  testWidgets('shows the breath score, not FEV1/FVC or peak flow', (tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        const BreathSpirometryResultPage(
+          name: 'Ada',
+          riskScore: 40,
+          riskLevel: 'ORTA',
+          breathScore: 62,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('62 / 100'), findsOneWidget);
+    expect(find.textContaining('FEV1'), findsNothing);
+    expect(find.textContaining('Spirometri'), findsNothing);
   });
 }

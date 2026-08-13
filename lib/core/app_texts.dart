@@ -227,19 +227,11 @@ class AppTexts {
     'breathActiveInstruction':
       '1. Dik oturun ve rahatlayın.\n2. Daireye dokunup burnunuzdan ciğerlerinizi tamamen dolduracak şekilde derin bir nefes alın, kısa bir süre tutun.\n3. Nefesinizi ANİDEN ve olabildiğince güçlü, tek seferde verin.\n4. Verme işlemi bitince daireye tekrar dokunun.\n\n3 deneme yapılacak, en iyi skor kaydedilir.',
     'breathExerciseDisclaimer':
-      'Bu bir tibbi tani araci degildir; sonuclar tahminidir ve gercek spirometri olcumunun yerini tutmaz. Saglikla ilgili bir endiseniz varsa doktorunuza danisin.',
+      'Bu bir spirometre degildir. Kendi ilerlemeni takip etmen icin bir olcum.',
     'breathSpirometryResultTitle': 'Nefes Testi Sonucu',
-    'breathSpirometrySummaryTitle': 'Spirometri Tarzı Özet',
-    'breathFev1FvcRatioLabel': 'FEV1/FVC Oranı',
-    'breathPeakFlowIndexLabel': 'Tepe Akış Endeksi',
-    'breathFlowCurveSectionTitle': 'Akış-Zaman Eğrisi',
-    'breathEstimatedValueSuffix': '(tahmini)',
-    'breathRatioBandNormalRange': 'Normal aralıkta izleniyor.',
-    'breathRatioBandMonitor': 'İzlemeye devam edilmesi öneriliyor.',
-    'breathPeakFlowBandNormalRange': 'Normal aralıkta izleniyor.',
-    'breathPeakFlowBandMonitor': 'İzlemeye devam edilmesi öneriliyor.',
-    'breathSpirometryNotEquivalentWarning':
-      'Bu değerler bir tahmindir; kalibre edilmemiştir ve gerçek spirometriye eşdeğer değildir.',
+    'breathScoreLabel': 'Nefes Skoru',
+    'breathScoreDisclaimer':
+      'Bu skor kendi gecmisine gore bir karsilastirmadir; tibbi bir olcum degildir.',
     'breathSpirometryEstimateDisclaimer':
       'Bu bir tıbbi tanı aracı değildir. Sağlıkla ilgili bir endişeniz varsa doktorunuza danışın.',
     'micRationaleTitle': 'Mikrofon izni',
@@ -834,32 +826,15 @@ class AppTexts {
     'coughTestListening': 'Dinleniyor...',
     'coughTestResultTitle': 'Test Sonucu',
     'coughTestResultCount': '{count} oksuruk tespit edildi',
-    'coughTestSeverityNormal': 'Normal araliktasin.',
-    'coughTestSeverityMild': 'Hafif duzeyde oksuruk tespit edildi.',
-    'coughTestSeverityModerate': 'Orta duzeyde oksuruk tespit edildi.',
-    'coughTestSeveritySevere': 'Belirgin duzeyde oksuruk tespit edildi.',
-    'coughTestSeverityUrgent':
-      'Tekrarlayan ve belirgin duzeyde oksuruk tespit edildi.',
-    'coughTipMild':
-      'Hafif oksuruk genelde gecicidir. Bol su icmek ve dinlenmek faydali olabilir.',
-    'coughTipModerate':
-      'Oksurugun birkac gundur surmesi halinde, genel yasam tarzi onlemlerinin (bol su, dinlenme, tahris edici dumandan uzak durma) yaninda bir doktora danismani oneririz.',
-    'coughTipSevere':
-      'Belirgin duzeyde oksuruk tespit edildi. Bu durum devam ederse lutfen bir doktora danis; bu uygulama tibbi tani veya tedavi onerisi vermez.',
-    'coughTipUrgent':
-      'Son iki haftada birden fazla testte belirgin duzeyde oksuruk tespit edildi. Lutfen bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
+    'coughGeneralAdvice':
+      'Oksurugun birkac gundur surmesi halinde bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
     'coughTestNotificationTitle': 'Oksuruk testi sonucun',
-    'wheezeFindingSectionTitle': 'Hiriltili Nefes Bulgusu',
-    'wheezeSeverityMild': 'Hafif duzeyde hiriltili nefes tespit edildi.',
-    'wheezeSeverityModerate': 'Orta duzeyde hiriltili nefes tespit edildi.',
-    'wheezeSeveritySevere': 'Belirgin duzeyde hiriltili nefes tespit edildi.',
-    'wheezeAdviceMild':
-      'Hafif hiriltili nefes gecici olabilir. Belirti tekrarlarsa bir doktora danismani oneririz.',
-    'wheezeAdviceModerate':
-      'Orta duzeyde hiriltili nefes birkac testte tekrar ediyorsa, lutfen bir doktora danis; bu uygulama tibbi tani veya tedavi onerisi vermez.',
-    'wheezeAdviceSevere':
-      'Belirgin duzeyde hiriltili nefes tespit edildi. Lutfen bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
-    'wheezeTestNotificationTitle': 'Hiriltili nefes bulgusu',
+    'wheezeFindingSectionTitle': 'Ses Paterni Notu',
+    'breathUnusualSoundDetected':
+      'Bu testte olagandisi bir ses paterni duyuldu.',
+    'breathUnusualSoundAdvice':
+      'Tekrarlarsa bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
+    'wheezeTestNotificationTitle': 'Nefes testi notu',
     'breathNotDetectedRetryTitle': 'Nefes algilanamadi',
     'breathNotDetectedRetryMessage':
       'Mikrofon nefesini net algilayamadi. Tekrar denemek ister misin?',
@@ -2008,19 +1983,11 @@ class AppTexts {
     'breathActiveInstruction':
       '1. Sit upright and relax.\n2. Tap the circle, breathe in deeply through your nose until your lungs are full, and hold briefly.\n3. Blow out SUDDENLY and as hard as you can, in one burst.\n4. Tap the circle again when you\'re done.\n\n3 attempts will be performed, best score is saved.',
     'breathExerciseDisclaimer':
-      'This is not a medical diagnostic tool; results are estimates and do not replace a real spirometry measurement. If you have a health concern, consult your doctor.',
+      'This is not a spirometer. It\'s a measurement to help you track your own progress.',
     'breathSpirometryResultTitle': 'Breath Test Result',
-    'breathSpirometrySummaryTitle': 'Spirometry-Style Summary',
-    'breathFev1FvcRatioLabel': 'FEV1/FVC Ratio',
-    'breathPeakFlowIndexLabel': 'Peak Flow Index',
-    'breathFlowCurveSectionTitle': 'Flow-Time Curve',
-    'breathEstimatedValueSuffix': '(estimated)',
-    'breathRatioBandNormalRange': 'Tracking within the normal range.',
-    'breathRatioBandMonitor': 'Continued monitoring is recommended.',
-    'breathPeakFlowBandNormalRange': 'Tracking within the normal range.',
-    'breathPeakFlowBandMonitor': 'Continued monitoring is recommended.',
-    'breathSpirometryNotEquivalentWarning':
-      'These values are an estimate; they are uncalibrated and are not equivalent to real spirometry.',
+    'breathScoreLabel': 'Breath Score',
+    'breathScoreDisclaimer':
+      'This score is a comparison against your own history; it is not a medical measurement.',
     'breathSpirometryEstimateDisclaimer':
       'This is not a medical diagnostic tool. If you have a health concern, consult your doctor.',
     'micRationaleTitle': 'Microphone permission',
@@ -2518,32 +2485,14 @@ class AppTexts {
     'coughTestListening': 'Listening...',
     'coughTestResultTitle': 'Test Result',
     'coughTestResultCount': '{count} coughs detected',
-    'coughTestSeverityNormal': 'You\'re in the normal range.',
-    'coughTestSeverityMild': 'A mild level of coughing was detected.',
-    'coughTestSeverityModerate': 'A moderate level of coughing was detected.',
-    'coughTestSeveritySevere': 'A pronounced level of coughing was detected.',
-    'coughTestSeverityUrgent':
-      'Recurring, pronounced coughing was detected.',
-    'coughTipMild':
-      'Mild coughing is usually temporary. Drinking water and resting can help.',
-    'coughTipModerate':
-      'If the cough has lasted several days, alongside general lifestyle steps (fluids, rest, avoiding irritants like smoke) we recommend seeing a doctor.',
-    'coughTipSevere':
-      'A pronounced level of coughing was detected. If this continues, please see a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
-    'coughTipUrgent':
-      'A pronounced level of coughing showed up in more than one test over the last two weeks. We recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
+    'coughGeneralAdvice':
+      'If the cough has lasted several days, we recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
     'coughTestNotificationTitle': 'Your cough test result',
-    'wheezeFindingSectionTitle': 'Wheezing Finding',
-    'wheezeSeverityMild': 'A mild level of wheezing was detected.',
-    'wheezeSeverityModerate': 'A moderate level of wheezing was detected.',
-    'wheezeSeveritySevere': 'A pronounced level of wheezing was detected.',
-    'wheezeAdviceMild':
-      'Mild wheezing can be temporary. If it recurs, we recommend seeing a doctor.',
-    'wheezeAdviceModerate':
-      'If moderate wheezing keeps showing up across tests, please see a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
-    'wheezeAdviceSevere':
-      'A pronounced level of wheezing was detected. We recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
-    'wheezeTestNotificationTitle': 'Wheezing finding',
+    'wheezeFindingSectionTitle': 'Sound Pattern Note',
+    'breathUnusualSoundDetected': 'An unusual sound pattern was heard in this test.',
+    'breathUnusualSoundAdvice':
+      'If it recurs, we recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
+    'wheezeTestNotificationTitle': 'Breath test note',
     'breathNotDetectedRetryTitle': 'Breath not detected',
     'breathNotDetectedRetryMessage':
       "The microphone couldn't clearly detect your breath. Want to try again?",
