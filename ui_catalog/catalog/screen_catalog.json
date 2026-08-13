@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-16T15:57:58.787214",
+  "generatedAt": "2026-08-13T07:26:43.684245",
   "activeLanguageCode": "tr",
   "catalogRoot": "ui_catalog",
   "screenFolder": "ui_catalog/screens",
@@ -102,6 +102,31 @@
       ],
       "styleSources": [
         "lib/pages/trial_info_page.dart"
+      ],
+      "themeSources": [
+        "lib/core/app_theme.dart"
+      ]
+    },
+    {
+      "screenId": "SCR-0010-MANDATORY-TASK",
+      "screenName": "MandatoryTask",
+      "captureProfile": "seeded",
+      "appLocation": "Home -> mandatory task gate",
+      "screenshotPath": "ui_catalog/screens/SCR-0010-MANDATORY-TASK.png",
+      "sourceFiles": [
+        "lib/pages/mandatory_task_page.dart"
+      ],
+      "uiComponents": [
+        "PopScope",
+        "Card",
+        "ElevatedButton"
+      ],
+      "translationKeys": [
+        "mandatoryTaskTitle",
+        "mandatoryTaskHint"
+      ],
+      "styleSources": [
+        "lib/pages/mandatory_task_page.dart"
       ],
       "themeSources": [
         "lib/core/app_theme.dart"

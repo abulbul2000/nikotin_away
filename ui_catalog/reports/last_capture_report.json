@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-07-16T18:58:00.335827",
+  "generatedAt": "2026-08-13T07:26:44.032318",
   "catalogRoot": "ui_catalog",
   "screenFolder": "ui_catalog/screens",
   "catalogJson": "ui_catalog/catalog/screen_catalog.json",
   "catalogMarkdown": "ui_catalog/catalog/screen_catalog.md",
-  "screenCount": 4,
+  "screenCount": 5,
   "activeLanguageCode": "tr"
 }

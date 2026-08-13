@@ -10,10 +10,11 @@ import '../services/tts_locale.dart';
 import '../services/tts_voice_selector.dart';
 import 'craving_sos_page.dart';
 
-/// Styled like an incoming-call screen (large pulsing avatar, caller-style
-/// title, two big round accept/decline buttons) so a triggered task reads
-/// as urgent and hard to ignore — reusing the presentation the app's old
-/// fake-call barrier used, now that the fake-call feature itself is gone.
+/// Vertical-list task prompt — mirrors the native overlay's design
+/// (TaskOverlayService.kt's showOverlay: title, body, stacked full-width
+/// buttons) so the in-app screen and the (currently unused) native overlay
+/// agree on one visual language instead of two. Replaces the earlier
+/// incoming-call-style presentation.
 class MandatoryTaskPage extends StatefulWidget {
   final String taskTitle;
 
@@ -23,28 +24,8 @@ class MandatoryTaskPage extends StatefulWidget {
   State<MandatoryTaskPage> createState() => _MandatoryTaskPageState();
 }
 
-class _MandatoryTaskPageState extends State<MandatoryTaskPage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  // Answering plays a spoken announcement of the task, like the other
-  // party starting to talk the moment a real phone call is picked up
-  // (loudspeaker-style, not just a silent screen change) -- fired via a
+class _MandatoryTaskPageState extends State<MandatoryTaskPage> {
+  // Answering plays a spoken announcement of the task -- fired via a
   // standalone FlutterTts instance rather than the page's own state, so
   // navigating away immediately after doesn't cut the announcement off.
   void _acceptAndAnnounce(BuildContext context) {
@@ -85,108 +66,57 @@ class _MandatoryTaskPageState extends State<MandatoryTaskPage>
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // A real incoming call can't be dismissed with the back button
-      // either — the user has to actively answer or decline.
+      // Same as before: not dismissible with the back button, the user has
+      // to actively answer.
       canPop: false,
       child: Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: AppTheme.noSmokeNavy,
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 40),
+                const Spacer(flex: 2),
                 Text(
                   context.t('mandatoryTaskTitle'),
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-                const Spacer(),
-                // A mandatory "don't smoke" command is exactly the moment a
-                // real craving is most likely to hit — the SOS breathing
-                // helper needs to be reachable from right here, not just
-                // from the home screen. Placed above the icon (not as a
-                // corner-floating button) so it never overlaps the
-                // accept/decline call buttons below. Pushed (not popped) so
-                // answering the command is unaffected.
-                ElevatedButton.icon(
-                  key: const ValueKey('mandatory_task_sos_button'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    foregroundColor: Colors.white,
-                    shape: const StadiumBorder(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
                   ),
-                  icon: const Icon(Icons.sos),
-                  label: Text(context.t('cravingSosButton')),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  AppTexts.localizeCanonicalText(context, widget.taskTitle),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 17,
+                  ),
+                ),
+                const Spacer(flex: 3),
+                _TaskListButton(
+                  key: const ValueKey('mandatory_task_start_button'),
+                  label: context.t('mandatoryTaskStartButton'),
+                  onPressed: () => _acceptAndAnnounce(context),
+                ),
+                const SizedBox(height: 12),
+                _TaskListButton(
+                  key: const ValueKey('mandatory_task_decline_button'),
+                  label: context.t('mandatoryTaskDeclineButton'),
+                  onPressed: () => Navigator.of(context).pop(false),
+                ),
+                const SizedBox(height: 12),
+                _TaskListButton(
+                  key: const ValueKey('mandatory_task_sos_button'),
+                  label: context.t('cravingSosButton'),
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const CravingSosPage()),
                   ),
                 ),
-                const SizedBox(height: 16),
-                AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, child) {
-                    final scale = 1.0 + (_pulseController.value * 0.08);
-                    return Transform.scale(scale: scale, child: child);
-                  },
-                  child: CircleAvatar(
-                    radius: 64,
-                    backgroundColor: AppTheme.brandPrimary.withValues(
-                      alpha: 0.25,
-                    ),
-                    child: const Icon(
-                      Icons.smoke_free,
-                      color: Colors.white,
-                      size: 56,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  context.t('mandatoryTaskCommand'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  AppTexts.localizeCanonicalText(context, widget.taskTitle),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  context.t('mandatoryTaskHint'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white54, fontSize: 14),
-                ),
                 const Spacer(),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _CallStyleButton(
-                      key: const ValueKey('mandatory_task_decline_button'),
-                      color: Colors.redAccent,
-                      icon: Icons.call_end,
-                      label: context.t('mandatoryTaskDeclineButton'),
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                    _CallStyleButton(
-                      key: const ValueKey('mandatory_task_start_button'),
-                      color: AppTheme.brandPrimary,
-                      icon: Icons.call,
-                      label: context.t('mandatoryTaskStartButton'),
-                      onPressed: () => _acceptAndAnnounce(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -196,42 +126,33 @@ class _MandatoryTaskPageState extends State<MandatoryTaskPage>
   }
 }
 
-class _CallStyleButton extends StatelessWidget {
-  final Color color;
-  final IconData icon;
+/// Full-width, rounded, light-gray button — matches the native overlay's
+/// plain Android Button styling so both surfaces read as the same prompt.
+class _TaskListButton extends StatelessWidget {
   final String label;
   final VoidCallback onPressed;
 
-  const _CallStyleButton({
-    super.key,
-    required this.color,
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
+  const _TaskListButton({super.key, required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Material(
-          color: color,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onPressed,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Icon(icon, color: Colors.white, size: 32),
-            ),
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFFEEEEEE),
+          foregroundColor: Colors.black87,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
+        onPressed: onPressed,
+        child: Text(
           label,
-          style: const TextStyle(color: Colors.white70, fontSize: 13),
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
-      ],
+      ),
     );
   }
 }
