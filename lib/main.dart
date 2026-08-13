@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
@@ -35,6 +37,30 @@ Future<void> main() async {
     debugPrint(
       '[main] Firebase/Crashlytics init failed (non-blocking): $error',
     );
+    debugPrintStack(stackTrace: stackTrace);
+  }
+
+  // App Check + anonymous auth back the aiChat/verifySubscription Cloud
+  // Functions (see functions/index.js) so a caller can't forge trial/
+  // subscription proof — but neither may ever block app startup: a user
+  // with no network yet on first launch still needs to reach the home
+  // screen, and these silently retry the next time a callable is invoked.
+  try {
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: kDebugMode
+          ? const AndroidDebugProvider()
+          : const AndroidPlayIntegrityProvider(),
+    );
+  } catch (error, stackTrace) {
+    debugPrint('[main] App Check activation failed (non-blocking): $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
+  try {
+    if (FirebaseAuth.instance.currentUser == null) {
+      await FirebaseAuth.instance.signInAnonymously();
+    }
+  } catch (error, stackTrace) {
+    debugPrint('[main] Anonymous sign-in failed (non-blocking): $error');
     debugPrintStack(stackTrace: stackTrace);
   }
 

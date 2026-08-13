@@ -657,6 +657,10 @@ class AppTexts {
     'aiChatHint': 'Mesaj yaz...',
     'aiChatSend': 'Gonder',
     'aiChatError': 'Mesaj gonderilemedi, tekrar deneyin.',
+    'aiChatDailyLimitReached':
+      'Bugunluk mesaj hakkin doldu, yarin tekrar yazabilirsin.',
+    'aiChatAuthNotReady':
+      'Kimlik dogrulanamadi, birazdan tekrar dene.',
     'aiChatDisclaimer':
       'Bu bir yapay zeka asistanidir, tibbi tavsiye vermez. Saglik konularinda doktorunuza danisin.',
     'aiChatActionApply': 'Uygula',
@@ -2343,6 +2347,9 @@ class AppTexts {
     'aiChatMicPermissionDenied': 'Microphone permission is required for voice input.',
     'aiChatMicUnavailable': 'Voice input is not available on this device.',
     'aiChatError': 'Could not send message, try again.',
+    'aiChatDailyLimitReached':
+      'You\'ve reached today\'s message limit, try again tomorrow.',
+    'aiChatAuthNotReady': 'Could not verify your identity, try again shortly.',
     'aiChatDisclaimer':
       'This is an AI assistant, not medical advice. Consult your doctor for health matters.',
     'aiChatActionApply': 'Apply',

@@ -1,50 +1,45 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
+import { initializeApp } from "firebase-admin/app";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { chatWithAI } from "./ai.js";
 import { verifyPlaySubscription } from "./subscription.js";
+import { requireAuth, sanitizeHistory } from "./auth.js";
+
+initializeApp();
+const db = getFirestore();
 
 const nvidiaApiKey = defineSecret("NVIDIA_API_KEY");
 
-const MAX_MESSAGE_LENGTH = 4000;
-const MAX_HISTORY = 20;
+const TRIAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
+const DAILY_MESSAGE_LIMIT = 50;
 
-function sanitizeHistory(history) {
-  if (!Array.isArray(history)) return null;
-  if (history.length === 0 || history.length > MAX_HISTORY) return null;
-
-  const cleaned = [];
-  for (const entry of history) {
-    const role = entry?.role;
-    const content = entry?.content;
-    if ((role !== "user" && role !== "assistant") || typeof content !== "string") {
-      return null;
-    }
-    if (content.length === 0 || content.length > MAX_MESSAGE_LENGTH) return null;
-    cleaned.push({ role, content });
+// Reads/creates users/{uid} and returns its trial/subscription fields.
+// trialStartedAt is set exactly once, from the server clock, on the first
+// call any given uid ever makes — this is the only source of truth for
+// "when did this user's trial start" (see functions.js's now-removed
+// client-reported subscriptionProof, which this replaces).
+async function getOrCreateUserDoc(uid) {
+  const ref = db.collection("users").doc(uid);
+  const snap = await ref.get();
+  if (snap.exists) {
+    return { ref, data: snap.data() };
   }
-  return cleaned;
+  const data = { trialStartedAt: FieldValue.serverTimestamp() };
+  await ref.set(data, { merge: true });
+  const freshSnap = await ref.get();
+  return { ref, data: freshSnap.data() };
 }
 
-const TRIAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
-
-// Whether the caller is allowed to use the AI mentor right now. There is
-// no server-side user database (see subscription.js's stateless design),
-// so this trusts the client-reported trialStartedAt for trial users — a
-// known, accepted limitation (see the subscription plan doc): per-message
-// cost is low and MAX_HISTORY/MAX_MESSAGE_LENGTH already bound it, so a
-// forged trial date is a minor abuse case, not a blocking one. Purchased
-// subscriptions are always re-verified against Google directly, never
-// trusted from the client.
-async function hasAiAccess(subscriptionProof) {
-  const trialStartedAt = subscriptionProof?.trialStartedAt;
-  if (typeof trialStartedAt === "string") {
-    const startedMs = Date.parse(trialStartedAt);
-    if (!Number.isNaN(startedMs) && Date.now() < startedMs + TRIAL_DURATION_MS) {
-      return true;
-    }
+async function hasAiAccess(uid, userData) {
+  const trialStartedAt = userData.trialStartedAt?.toMillis?.();
+  if (typeof trialStartedAt === "number" && Date.now() < trialStartedAt + TRIAL_DURATION_MS) {
+    return true;
   }
 
-  const { productId, purchaseToken } = subscriptionProof ?? {};
+  const subscription = userData.subscription;
+  const productId = subscription?.productId;
+  const purchaseToken = subscription?.purchaseToken;
   if (typeof productId === "string" && typeof purchaseToken === "string") {
     try {
       const result = await verifyPlaySubscription({ productId, purchaseToken });
@@ -58,15 +53,42 @@ async function hasAiAccess(subscriptionProof) {
   return false;
 }
 
+// Per-uid, per-day message counter under users/{uid}/aiUsage/{YYYY-MM-DD}.
+// A transaction avoids a race between concurrent calls from the same user
+// (e.g. two in-flight requests) both reading the count before either
+// writes it back.
+async function consumeDailyMessageQuota(uid) {
+  const today = new Date().toISOString().slice(0, 10);
+  const usageRef = db
+    .collection("users")
+    .doc(uid)
+    .collection("aiUsage")
+    .doc(today);
+
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(usageRef);
+    const count = snap.exists ? snap.data().count ?? 0 : 0;
+    if (count >= DAILY_MESSAGE_LIMIT) {
+      return false;
+    }
+    tx.set(usageRef, { count: count + 1 }, { merge: true });
+    return true;
+  });
+}
+
 export const aiChat = onCall(
-  { secrets: [nvidiaApiKey], region: "europe-west1" },
+  { secrets: [nvidiaApiKey], region: "europe-west1", enforceAppCheck: true },
   async (request) => {
+    const uid = requireAuth(request);
+
     const history = sanitizeHistory(request.data?.history);
     if (!history) {
       throw new HttpsError("invalid-argument", "valid history is required");
     }
 
-    const allowed = await hasAiAccess(request.data?.subscriptionProof);
+    const { data: userData } = await getOrCreateUserDoc(uid);
+
+    const allowed = await hasAiAccess(uid, userData);
     if (!allowed) {
       throw new HttpsError(
         "permission-denied",
@@ -74,9 +96,23 @@ export const aiChat = onCall(
       );
     }
 
+    const withinQuota = await consumeDailyMessageQuota(uid);
+    if (!withinQuota) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "daily message limit reached"
+      );
+    }
+
     try {
       const result = await chatWithAI(nvidiaApiKey.value(), history);
-      return result;
+      // Echoed back so the client can sync its local subscription_state
+      // cache (see SubscriptionService.resolveAccess) with the
+      // server-authoritative trial start — the server value always wins,
+      // the client copy is a read cache for the offline-friendly access
+      // check, never the source of truth.
+      const trialStartedAtMs = userData.trialStartedAt?.toMillis?.() ?? Date.now();
+      return { ...result, trialStartedAtMs };
     } catch (err) {
       console.error("aiChat failed", err);
       throw new HttpsError("internal", "AI request failed");
@@ -85,8 +121,10 @@ export const aiChat = onCall(
 );
 
 export const verifySubscription = onCall(
-  { region: "europe-west1" },
+  { region: "europe-west1", enforceAppCheck: true },
   async (request) => {
+    const uid = requireAuth(request);
+
     const { productId, purchaseToken } = request.data ?? {};
     if (typeof productId !== "string" || typeof purchaseToken !== "string") {
       throw new HttpsError(
@@ -96,7 +134,24 @@ export const verifySubscription = onCall(
     }
 
     try {
-      return await verifyPlaySubscription({ productId, purchaseToken });
+      const result = await verifyPlaySubscription({ productId, purchaseToken });
+      // Recorded so aiChat's hasAiAccess can re-check this subscription
+      // without the client having to resend the purchase token on every
+      // chat message — the client remains the source of truth for *when*
+      // to call verifySubscription (see SubscriptionService.handlePurchase),
+      // this just lets the server remember the last-verified result.
+      await db
+        .collection("users")
+        .doc(uid)
+        .set(
+          {
+            subscription: result.isActive
+              ? { productId, purchaseToken }
+              : FieldValue.delete(),
+          },
+          { merge: true }
+        );
+      return result;
     } catch (err) {
       console.error("verifySubscription failed", err);
       throw new HttpsError("internal", "verification failed");
