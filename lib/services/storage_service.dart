@@ -880,20 +880,47 @@ class StorageService {
       'captureSucceeded',
       'INTEGER',
     );
+    await _ensureTableColumn(db, _snoringProbeTable, 'source', 'TEXT');
+    // Backfill from the id prefix ("manualsnoreprobe_" vs. "snoreprobe_"),
+    // which was the only thing distinguishing the two sources before this
+    // column existed (see saveManualSnoringProbe's doc comment history) --
+    // WHERE source IS NULL makes this safe to run on every _ensureSnoringProbeTable
+    // call (onCreate and onUpgrade both call it) without re-touching rows a
+    // prior run already backfilled.
+    await db.execute('''
+      UPDATE $_snoringProbeTable
+      SET source = CASE
+        WHEN id LIKE 'manualsnoreprobe_%' THEN '${SnoringProbeEvent.sourceManual}'
+        ELSE '${SnoringProbeEvent.sourceOvernight}'
+      END
+      WHERE source IS NULL
+    ''');
   }
 
+  /// [source] restricts to [SnoringProbeEvent.sourceOvernight] or
+  /// [SnoringProbeEvent.sourceManual] rows only; null (the default) returns
+  /// both. Callers that feed the nightly summary or risk score MUST pass
+  /// [SnoringProbeEvent.sourceOvernight] explicitly -- see
+  /// [countRecentSnoreLikelyEvents], which does exactly that.
   Future<List<SnoringProbeEvent>> loadSnoringProbeEventsBetween({
     required DateTime start,
     required DateTime end,
+    String? source,
   }) async {
     final db = await database;
+    final whereClauses = ['createdAt >= ?', 'createdAt <= ?'];
+    final whereArgs = <Object?>[
+      start.toUtc().toIso8601String(),
+      end.toUtc().toIso8601String(),
+    ];
+    if (source != null) {
+      whereClauses.add('source = ?');
+      whereArgs.add(source);
+    }
     final rows = await db.query(
       _snoringProbeTable,
-      where: 'createdAt >= ? AND createdAt <= ?',
-      whereArgs: [
-        start.toUtc().toIso8601String(),
-        end.toUtc().toIso8601String(),
-      ],
+      where: whereClauses.join(' AND '),
+      whereArgs: whereArgs,
       orderBy: 'createdAt ASC',
     );
     return rows
@@ -907,28 +934,34 @@ class StorageService {
             captureSucceeded: (row['captureSucceeded'] as int?) == null
                 ? null
                 : (row['captureSucceeded'] as int) == 1,
+            source: row['source'] as String?,
           ),
         )
         .toList();
   }
 
-  /// Count of snore-likely probes since [since] (defaults to the last 12
-  /// hours, comfortably covering one night) -- shown as a simple summary in
-  /// Settings rather than a full report, matching the feature's scope, and
-  /// feeds BehaviorEngine.calculateSnoringRiskAdjustment.
+  /// Count of snore-likely OVERNIGHT probes since [since] (defaults to the
+  /// last 12 hours, comfortably covering one night) -- shown as a simple
+  /// summary in Settings rather than a full report, matching the feature's
+  /// scope, and feeds BehaviorEngine.calculateSnoringRiskAdjustment.
   ///
-  /// Probes where the capture itself failed (captureSucceeded == false --
-  /// see SnoringCaptureService.kt / SnoringProbeEvent.captureSucceeded's doc
-  /// comment) are excluded explicitly, not just incidentally via
-  /// snoreLikely already being false on those rows: a night the microphone
-  /// never actually opened must count toward neither "snoring detected" nor
-  /// "confirmed clean", so it can't silently lower the risk adjustment the
-  /// way a real clean night correctly does.
+  /// Always filters to [SnoringProbeEvent.sourceOvernight] -- a daytime,
+  /// user-initiated SnoringTestPage run must never inflate "last night's"
+  /// count or the risk score just because the user was curious and ran it
+  /// two or three times (see FAZ 3 finding). Also excludes probes where the
+  /// capture itself failed (captureSucceeded == false -- see
+  /// SnoringCaptureService.kt / SnoringProbeEvent.captureSucceeded's doc
+  /// comment) explicitly, not just incidentally via snoreLikely already
+  /// being false on those rows: a night the microphone never actually
+  /// opened must count toward neither "snoring detected" nor "confirmed
+  /// clean", so it can't silently lower the risk adjustment the way a real
+  /// clean night correctly does.
   Future<int> countRecentSnoreLikelyEvents({DateTime? since}) async {
     final cutoff = since ?? DateTime.now().subtract(const Duration(hours: 12));
     final events = await loadSnoringProbeEventsBetween(
       start: cutoff,
       end: DateTime.now(),
+      source: SnoringProbeEvent.sourceOvernight,
     );
     return events
         .where((e) => e.captureSucceeded != false && e.snoreLikely)
@@ -936,10 +969,10 @@ class StorageService {
   }
 
   /// Records a daytime, user-initiated Snoring Test result into the same
-  /// table the overnight native probes write to -- the id prefix
-  /// ("manualsnoreprobe_" vs. native's "snoreprobe_") is the only thing
-  /// distinguishing the two sources, kept in case that distinction is ever
-  /// needed later (e.g. excluding manual tests from the overnight summary).
+  /// table the overnight native probes write to -- explicitly tagged
+  /// [SnoringProbeEvent.sourceManual] so [countRecentSnoreLikelyEvents]
+  /// (and anything else scoped to the nightly summary) can never mistake it
+  /// for one of SleepProbeReceiver.kt's passive probes.
   Future<void> saveManualSnoringProbe(SnoringProbeEvent event) async {
     final db = await database;
     await db.insert(_snoringProbeTable, {
@@ -953,6 +986,7 @@ class StorageService {
       // failure isn't a scenario here the way it is for the overnight native
       // probe.
       'captureSucceeded': 1,
+      'source': SnoringProbeEvent.sourceManual,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 

@@ -430,6 +430,11 @@ object SnoringProbeStore {
                     put("severityScore", resolved.severityScore)
                     put("severityLevel", resolved.severityLevel)
                     put("captureSucceeded", if (captureSucceeded) 1 else 0)
+                    // Written explicitly (not left for Dart's migration
+                    // backfill to fill in later) so there's no window where a
+                    // fresh row reads back with source=NULL before the app
+                    // next opens.
+                    put("source", "overnight")
                 }
                 db.insert(TABLE, null, values)
 

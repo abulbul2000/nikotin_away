@@ -306,6 +306,16 @@ class _SnoringTestPageState extends State<SnoringTestPage> {
             context.t(_severityTextKey(result.severityLevel)),
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
+          const SizedBox(height: 12),
+          Text(
+            context.t('snoringTestDaytimeDisclaimer'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: Colors.white54,
+            ),
+          ),
           if (adviceKey != null) ...[
             const SizedBox(height: 16),
             Card(

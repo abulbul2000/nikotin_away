@@ -1809,6 +1809,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'Test starten',
     'snoringTestListening': 'Hört zu...',
     'snoringTestResultTitle': 'Testergebnis',
+    'snoringTestDaytimeDisclaimer':
+        'Dies ist eine Aufnahme im Wachzustand. Sie misst nicht dein Schnarchen im Schlaf und wird nicht in die nächtliche Zusammenfassung aufgenommen.',
     'menuSnoringTest': 'Schnarchtest',
     'subscriptionGateTitle': 'Deine Testphase ist abgelaufen',
     'subscriptionGateMessage':
@@ -3599,6 +3601,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'بدء الاختبار',
     'snoringTestListening': 'يستمع...',
     'snoringTestResultTitle': 'نتيجة الاختبار',
+    'snoringTestDaytimeDisclaimer':
+        'هذه عينة صوتية أُخذت أثناء يقظتك. لا تقيس الشخير أثناء النوم ولا تُدرَج في ملخصك الليلي.',
     'menuSnoringTest': 'اختبار الشخير',
     'subscriptionGateTitle': 'انتهت فترتك التجريبية',
     'subscriptionGateMessage':
@@ -5488,6 +5492,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'Démarrer le test',
     'snoringTestListening': 'Écoute en cours...',
     'snoringTestResultTitle': 'Résultat du test',
+    'snoringTestDaytimeDisclaimer':
+        'Ceci est un échantillon enregistré pendant que vous êtes éveillé. Il ne mesure pas le ronflement pendant le sommeil et n\'est pas inclus dans votre résumé nocturne.',
     'menuSnoringTest': 'Test de ronflement',
     'subscriptionGateTitle': 'Votre essai est terminé',
     'subscriptionGateMessage':
@@ -7351,6 +7357,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'Iniciar prueba',
     'snoringTestListening': 'Escuchando...',
     'snoringTestResultTitle': 'Resultado de la prueba',
+    'snoringTestDaytimeDisclaimer':
+        'Esta es una muestra tomada mientras estás despierto. No mide los ronquidos durante el sueño y no se incluye en tu resumen nocturno.',
     'menuSnoringTest': 'Prueba de ronquidos',
     'subscriptionGateTitle': 'Tu prueba ha terminado',
     'subscriptionGateMessage':
@@ -9201,6 +9209,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'Iniciar Teste',
     'snoringTestListening': 'Ouvindo...',
     'snoringTestResultTitle': 'Resultado do Teste',
+    'snoringTestDaytimeDisclaimer':
+        'Esta é uma amostra registrada enquanto você está acordado. Ela não mede o ronco durante o sono e não é incluída no seu resumo noturno.',
     'menuSnoringTest': 'Teste de Ronco',
     'subscriptionGateTitle': 'Seu período de teste terminou',
     'subscriptionGateMessage':
@@ -11072,6 +11082,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'Avvia Test',
     'snoringTestListening': 'In ascolto...',
     'snoringTestResultTitle': 'Risultato del Test',
+    'snoringTestDaytimeDisclaimer':
+        'Questo è un campione registrato mentre sei sveglio. Non misura il russamento durante il sonno e non è incluso nel tuo riepilogo notturno.',
     'menuSnoringTest': 'Test del Russamento',
     'subscriptionGateTitle': 'La tua prova è terminata',
     'subscriptionGateMessage':
@@ -12920,6 +12932,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'Rozpocznij Test',
     'snoringTestListening': 'Słucham...',
     'snoringTestResultTitle': 'Wynik Testu',
+    'snoringTestDaytimeDisclaimer':
+        'To próbka nagrana, gdy nie śpisz. Nie mierzy chrapania podczas snu i nie jest uwzględniana w podsumowaniu nocnym.',
     'menuSnoringTest': 'Test Chrapania',
     'subscriptionGateTitle': 'Twój okres próbny się zakończył',
     'subscriptionGateMessage':
@@ -14781,6 +14795,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'Начать тест',
     'snoringTestListening': 'Слушаю...',
     'snoringTestResultTitle': 'Результат теста',
+    'snoringTestDaytimeDisclaimer':
+        'Это образец звука, записанный, пока вы бодрствуете. Он не измеряет храп во время сна и не включается в ночную сводку.',
     'menuSnoringTest': 'Тест на храп',
     'subscriptionGateTitle': 'Пробный период завершён',
     'subscriptionGateMessage':
@@ -16283,6 +16299,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'テスト開始',
     'snoringTestListening': '聞いています...',
     'snoringTestResultTitle': 'テスト結果',
+    'snoringTestDaytimeDisclaimer':
+        'これは起きている間に取得したサンプルです。睡眠中のいびきを測定するものではなく、夜間のサマリーには含まれません。',
     'menuSnoringTest': 'いびきテスト',
     'subscriptionGateTitle': 'トライアル期間が終了しました',
     'subscriptionGateMessage':
@@ -17715,6 +17733,7 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': '开始测试',
     'snoringTestListening': '正在聆听...',
     'snoringTestResultTitle': '测试结果',
+    'snoringTestDaytimeDisclaimer': '这是在你清醒时采集的样本，并不能测量睡眠中的打鼾情况，也不会计入夜间摘要。',
     'menuSnoringTest': '打鼾测试',
     'subscriptionGateTitle': '试用期已结束',
     'subscriptionGateMessage':
@@ -19247,6 +19266,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': '테스트 시작',
     'snoringTestListening': '듣고 있어요...',
     'snoringTestResultTitle': '테스트 결과',
+    'snoringTestDaytimeDisclaimer':
+        '이것은 깨어 있는 동안 채취한 샘플이에요. 수면 중 코골이를 측정하지 않으며, 야간 요약에는 포함되지 않아요.',
     'menuSnoringTest': '코골이 테스트',
     'subscriptionGateTitle': '체험 기간이 종료되었습니다',
     'subscriptionGateMessage':
@@ -21067,6 +21088,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'परीक्षण शुरू करें',
     'snoringTestListening': 'सुन रहा है...',
     'snoringTestResultTitle': 'परीक्षण परिणाम',
+    'snoringTestDaytimeDisclaimer':
+        'यह जागते समय लिया गया एक नमूना है। यह नींद के दौरान खर्राटों को नहीं मापता और आपके रात्रि सारांश में शामिल नहीं किया जाता।',
     'menuSnoringTest': 'खर्राटे परीक्षण',
     'subscriptionGateTitle': 'आपकी ट्रायल अवधि समाप्त हो गई है',
     'subscriptionGateMessage':
@@ -22897,6 +22920,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'পরীক্ষা শুরু করুন',
     'snoringTestListening': 'শুনছে...',
     'snoringTestResultTitle': 'পরীক্ষার ফলাফল',
+    'snoringTestDaytimeDisclaimer':
+        'এটি আপনি জেগে থাকা অবস্থায় নেওয়া একটি নমুনা। এটি ঘুমের সময় নাক ডাকা পরিমাপ করে না এবং আপনার রাতের সারসংক্ষেপে অন্তর্ভুক্ত করা হয় না।',
     'menuSnoringTest': 'নাক ডাকা পরীক্ষা',
     'subscriptionGateTitle': 'আপনার ট্রায়াল শেষ হয়ে গেছে',
     'subscriptionGateMessage':
@@ -24720,6 +24745,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'ਟੈਸਟ ਸ਼ੁਰੂ ਕਰੋ',
     'snoringTestListening': 'ਸੁਣ ਰਿਹਾ ਹੈ...',
     'snoringTestResultTitle': 'ਟੈਸਟ ਨਤੀਜਾ',
+    'snoringTestDaytimeDisclaimer':
+        'ਇਹ ਜਾਗਦੇ ਸਮੇਂ ਲਿਆ ਗਿਆ ਇੱਕ ਨਮੂਨਾ ਹੈ। ਇਹ ਨੀਂਦ ਦੌਰਾਨ ਘੁਰਾੜਿਆਂ ਨੂੰ ਨਹੀਂ ਮਾਪਦਾ ਅਤੇ ਤੁਹਾਡੇ ਰਾਤ ਦੇ ਸਾਰ ਵਿੱਚ ਸ਼ਾਮਲ ਨਹੀਂ ਕੀਤਾ ਜਾਂਦਾ।',
     'menuSnoringTest': 'ਘੁਰਾੜੇ ਟੈਸਟ',
     'subscriptionGateTitle': 'ਤੁਹਾਡੀ ਅਜ਼ਮਾਇਸ਼ ਦੀ ਮਿਆਦ ਖਤਮ ਹੋ ਗਈ ਹੈ',
     'subscriptionGateMessage':
@@ -26560,6 +26587,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'పరీక్ష ప్రారంభించండి',
     'snoringTestListening': 'వింటోంది...',
     'snoringTestResultTitle': 'పరీక్ష ఫలితం',
+    'snoringTestDaytimeDisclaimer':
+        'ఇది మీరు మేల్కొని ఉన్నప్పుడు తీసుకున్న నమూనా. ఇది నిద్రలో గురకను కొలవదు మరియు మీ రాత్రి సారాంశంలో చేర్చబడదు.',
     'menuSnoringTest': 'గురక పరీక్ష',
     'subscriptionGateTitle': 'మీ ట్రయల్ ముగిసింది',
     'subscriptionGateMessage':
@@ -28378,6 +28407,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'चाचणी सुरू करा',
     'snoringTestListening': 'ऐकत आहे...',
     'snoringTestResultTitle': 'चाचणी निकाल',
+    'snoringTestDaytimeDisclaimer':
+        'हा तुम्ही जागे असताना घेतलेला नमुना आहे. तो झोपेतील घोरणे मोजत नाही आणि तुमच्या रात्रीच्या सारांशात समाविष्ट केला जात नाही.',
     'menuSnoringTest': 'घोरणे चाचणी',
     'subscriptionGateTitle': 'तुमची चाचणी संपली आहे',
     'subscriptionGateMessage':
@@ -30253,6 +30284,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'சோதனையைத் தொடங்கு',
     'snoringTestListening': 'கேட்கிறது...',
     'snoringTestResultTitle': 'சோதனை முடிவு',
+    'snoringTestDaytimeDisclaimer':
+        'இது நீங்கள் விழிப்புடன் இருக்கும்போது எடுக்கப்பட்ட மாதிரி. இது தூக்கத்தின்போது குறட்டையை அளவிடாது, உங்கள் இரவு சுருக்கத்தில் சேர்க்கப்படாது.',
     'menuSnoringTest': 'குறட்டை சோதனை',
     'subscriptionGateTitle': 'உங்கள் சோதனை காலம் முடிந்துவிட்டது',
     'subscriptionGateMessage':
@@ -32071,6 +32104,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'પરીક્ષણ શરૂ કરો',
     'snoringTestListening': 'સાંભળી રહ્યું છે...',
     'snoringTestResultTitle': 'પરીક્ષણ પરિણામ',
+    'snoringTestDaytimeDisclaimer':
+        'આ તમે જાગતા હો ત્યારે લેવાયેલો નમૂનો છે. તે ઊંઘ દરમિયાનના નસકોરાંને માપતો નથી અને તમારા રાત્રિ સારાંશમાં સામેલ કરવામાં આવતો નથી.',
     'menuSnoringTest': 'નસકોરાં પરીક્ષણ',
     'subscriptionGateTitle': 'તમારો ટ્રાયલ સમયગાળો પૂરો થયો છે',
     'subscriptionGateMessage':
@@ -33907,6 +33942,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'ಪರೀಕ್ಷೆ ಪ್ರಾರಂಭಿಸಿ',
     'snoringTestListening': 'ಕೇಳುತ್ತಿದೆ...',
     'snoringTestResultTitle': 'ಪರೀಕ್ಷೆಯ ಫಲಿತಾಂಶ',
+    'snoringTestDaytimeDisclaimer':
+        'ಇದು ನೀವು ಎಚ್ಚರವಾಗಿರುವಾಗ ಪಡೆದ ಮಾದರಿ. ಇದು ನಿದ್ರೆಯ ಸಮಯದಲ್ಲಿ ಗೊರಕೆಯನ್ನು ಅಳೆಯುವುದಿಲ್ಲ ಮತ್ತು ನಿಮ್ಮ ರಾತ್ರಿಯ ಸಾರಾಂಶದಲ್ಲಿ ಸೇರಿಸಲಾಗುವುದಿಲ್ಲ.',
     'menuSnoringTest': 'ಗೊರಕೆ ಪರೀಕ್ಷೆ',
     'subscriptionGateTitle': 'ನಿಮ್ಮ ಪ್ರಯೋಗ ಅವಧಿ ಮುಗಿದಿದೆ',
     'subscriptionGateMessage':
@@ -35757,6 +35794,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'ടെസ്റ്റ് ആരംഭിക്കുക',
     'snoringTestListening': 'കേൾക്കുന്നു...',
     'snoringTestResultTitle': 'ടെസ്റ്റ് ഫലം',
+    'snoringTestDaytimeDisclaimer':
+        'ഇത് നിങ്ങൾ ഉണർന്നിരിക്കുമ്പോൾ എടുത്ത ഒരു സാമ്പിളാണ്. ഇത് ഉറക്കത്തിലെ കൂർക്കംവലി അളക്കുന്നില്ല, നിങ്ങളുടെ രാത്രി സംഗ്രഹത്തിൽ ഉൾപ്പെടുത്തുന്നുമില്ല.',
     'menuSnoringTest': 'കൂർക്കംവലി ടെസ്റ്റ്',
     'subscriptionGateTitle': 'നിങ്ങളുടെ ട്രയൽ കാലാവധി അവസാനിച്ചു',
     'subscriptionGateMessage':
@@ -37564,6 +37603,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'เริ่มทดสอบ',
     'snoringTestListening': 'กำลังฟัง...',
     'snoringTestResultTitle': 'ผลการทดสอบ',
+    'snoringTestDaytimeDisclaimer':
+        'นี่คือตัวอย่างเสียงที่บันทึกขณะคุณตื่นอยู่ ไม่ได้วัดการนอนกรนขณะหลับ และจะไม่ถูกรวมไว้ในสรุปผลประจำคืนของคุณ',
     'menuSnoringTest': 'ทดสอบการนอนกรน',
     'subscriptionGateTitle': 'ระยะเวลาทดลองใช้ของคุณสิ้นสุดแล้ว',
     'subscriptionGateMessage':
@@ -39391,6 +39432,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'Bắt Đầu Kiểm Tra',
     'snoringTestListening': 'Đang lắng nghe...',
     'snoringTestResultTitle': 'Kết Quả Kiểm Tra',
+    'snoringTestDaytimeDisclaimer':
+        'Đây là mẫu âm thanh được ghi khi bạn đang thức. Nó không đo tiếng ngáy trong khi ngủ và không được đưa vào bản tóm tắt ban đêm của bạn.',
     'menuSnoringTest': 'Kiểm Tra Ngáy',
     'subscriptionGateTitle': 'Thời gian dùng thử của bạn đã kết thúc',
     'subscriptionGateMessage':
@@ -41240,6 +41283,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'Mulai Tes',
     'snoringTestListening': 'Mendengarkan...',
     'snoringTestResultTitle': 'Hasil Tes',
+    'snoringTestDaytimeDisclaimer':
+        'Ini adalah sampel yang diambil saat Anda terjaga. Ini tidak mengukur dengkuran selama tidur dan tidak disertakan dalam ringkasan malam Anda.',
     'menuSnoringTest': 'Tes Mendengkur',
     'subscriptionGateTitle': 'Masa Uji Coba Anda Telah Berakhir',
     'subscriptionGateMessage':
@@ -43088,6 +43133,8 @@ generatedLanguageData = <String, Map<String, String>>{
     'snoringTestStartButton': 'Mula Ujian',
     'snoringTestListening': 'Mendengar...',
     'snoringTestResultTitle': 'Keputusan Ujian',
+    'snoringTestDaytimeDisclaimer':
+        'Ini adalah sampel yang diambil semasa anda terjaga. Ia tidak mengukur dengkuran semasa tidur dan tidak disertakan dalam ringkasan malam anda.',
     'menuSnoringTest': 'Ujian Dengkuran',
     'subscriptionGateTitle': 'Tempoh Percubaan Anda Telah Tamat',
     'subscriptionGateMessage':

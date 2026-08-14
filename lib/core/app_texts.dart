@@ -840,6 +840,8 @@ class AppTexts {
     'snoringTestStartButton': 'Testi Baslat',
     'snoringTestListening': 'Dinleniyor...',
     'snoringTestResultTitle': 'Test Sonucu',
+    'snoringTestDaytimeDisclaimer':
+        'Bu, uyanikken alinan bir ses ornegidir. Uykudaki horlamani olcmez ve gece ozetine dahil edilmez.',
     'menuSnoringTest': 'Horlama Testi',
     'coughTestTitle': 'Oksuruk Testi',
     'coughTestIntro':
@@ -2612,6 +2614,8 @@ class AppTexts {
     'snoringTestStartButton': 'Start Test',
     'snoringTestListening': 'Listening...',
     'snoringTestResultTitle': 'Test Result',
+    'snoringTestDaytimeDisclaimer':
+        'This is a sample taken while you\'re awake. It doesn\'t measure snoring during sleep and isn\'t included in your nightly summary.',
     'menuSnoringTest': 'Snoring Test',
     'coughTestTitle': 'Cough Test',
     'coughTestIntro':

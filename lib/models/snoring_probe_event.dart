@@ -20,6 +20,19 @@ class SnoringProbeEvent {
   /// predate the failure mode this field distinguishes.
   final bool? captureSucceeded;
 
+  /// 'overnight' (SleepProbeReceiver.kt's passive alarm-driven probe, the
+  /// only source that should ever feed the nightly summary/risk score) or
+  /// 'manual' (SnoringTestPage's user-initiated daytime test). Never null
+  /// for rows written since this field existed; rows from before it existed
+  /// are backfilled from their id prefix by the schema migration (see
+  /// StorageService._ensureSnoringProbeTable) so this is effectively always
+  /// non-null in practice, but stays nullable in the model to match how
+  /// every other backfilled field here is typed.
+  final String? source;
+
+  static const String sourceOvernight = 'overnight';
+  static const String sourceManual = 'manual';
+
   const SnoringProbeEvent({
     required this.id,
     required this.createdAt,
@@ -27,5 +40,6 @@ class SnoringProbeEvent {
     this.severityScore,
     this.severityLevel,
     this.captureSucceeded,
+    this.source,
   });
 }

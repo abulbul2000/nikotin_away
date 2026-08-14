@@ -531,6 +531,7 @@ void main() {
           'createdAt': now.toUtc().toIso8601String(),
           'snoreLikely': 1,
           'captureSucceeded': 1,
+          'source': SnoringProbeEvent.sourceOvernight,
         });
         // A failed capture that (as SnoringCaptureService.kt writes it)
         // defaults snoreLikely to false -- must still be excluded from the
@@ -540,6 +541,7 @@ void main() {
           'createdAt': now.toUtc().toIso8601String(),
           'snoreLikely': 0,
           'captureSucceeded': 0,
+          'source': SnoringProbeEvent.sourceOvernight,
         });
 
         final count = await storage.countRecentSnoreLikelyEvents(
@@ -547,6 +549,132 @@ void main() {
         );
 
         expect(count, 1);
+      },
+    );
+  });
+
+  group('snoring probe source (Faz 3 -- daytime test must not pollute the '
+      'nightly summary/risk score)', () {
+    test(
+      'a manual (daytime) snore-likely probe is excluded from '
+      'countRecentSnoreLikelyEvents even though it happened in the window',
+      () async {
+        final storage = StorageService();
+        final now = DateTime.now();
+
+        // One real overnight probe, snore-likely -- source written
+        // explicitly, same as SnoringProbeStore.insertProbe does natively.
+        final db = await storage.database;
+        await db.insert('snoring_probe_events', {
+          'id': 'snoreprobe_overnight_1',
+          'createdAt': now.toUtc().toIso8601String(),
+          'snoreLikely': 1,
+          'captureSucceeded': 1,
+          'source': SnoringProbeEvent.sourceOvernight,
+        });
+
+        // The user got curious and ran the manual daytime test twice, both
+        // snore-likely -- these must never inflate "last night's" count.
+        await storage.saveManualSnoringProbe(
+          SnoringProbeEvent(
+            id: 'manualsnoreprobe_1',
+            createdAt: now,
+            snoreLikely: true,
+            severityScore: 80,
+            severityLevel: 'severe',
+          ),
+        );
+        await storage.saveManualSnoringProbe(
+          SnoringProbeEvent(
+            id: 'manualsnoreprobe_2',
+            createdAt: now,
+            snoreLikely: true,
+            severityScore: 60,
+            severityLevel: 'moderate',
+          ),
+        );
+
+        final count = await storage.countRecentSnoreLikelyEvents(
+          since: now.subtract(const Duration(minutes: 5)),
+        );
+
+        // Only the one overnight row counts, not the two manual ones.
+        expect(count, 1);
+      },
+    );
+
+    test(
+      'id-prefix backfill classifies pre-existing rows correctly: '
+      "'snoreprobe_' as overnight, 'manualsnoreprobe_' as manual",
+      () async {
+        // Simulates a device already on a schema version before the source
+        // column existed on snoring_probe_events: create the table by hand,
+        // without the column, then run it through the real onUpgrade path
+        // by opening it with StorageService -- same pattern as the
+        // breath_progress_records schemaVersion migration test above.
+        final dir = Directory.systemTemp.createTempSync(
+          'no_smoke_snoring_source_migration',
+        );
+        PathProviderPlatform.instance = _FixedPathProviderPlatform(dir.path);
+        final dbPath = '${dir.path}/no_smoke.db';
+        final now = DateTime.now();
+
+        final legacyDb = await databaseFactory.openDatabase(
+          dbPath,
+          options: OpenDatabaseOptions(
+            // Below the real code's current version (32) so that opening it
+            // with StorageService below actually goes through onUpgrade
+            // instead of finding a matching version and skipping every
+            // callback.
+            version: 31,
+            onCreate: (db, version) async {
+              await db.execute('''
+                CREATE TABLE snoring_probe_events (
+                  id TEXT PRIMARY KEY,
+                  createdAt TEXT NOT NULL,
+                  snoreLikely INTEGER NOT NULL
+                )
+              ''');
+              await db.insert('snoring_probe_events', {
+                'id': 'snoreprobe_legacy_overnight',
+                'createdAt': now.toUtc().toIso8601String(),
+                'snoreLikely': 1,
+              });
+              await db.insert('snoring_probe_events', {
+                'id': 'manualsnoreprobe_legacy_manual',
+                'createdAt': now.toUtc().toIso8601String(),
+                'snoreLikely': 1,
+              });
+            },
+          ),
+        );
+        await legacyDb.close();
+
+        final storage = StorageService();
+        await storage.closeDatabaseConnection();
+
+        final overnightOnly = await storage.loadSnoringProbeEventsBetween(
+          start: now.subtract(const Duration(minutes: 1)),
+          end: now.add(const Duration(minutes: 1)),
+          source: SnoringProbeEvent.sourceOvernight,
+        );
+        final manualOnly = await storage.loadSnoringProbeEventsBetween(
+          start: now.subtract(const Duration(minutes: 1)),
+          end: now.add(const Duration(minutes: 1)),
+          source: SnoringProbeEvent.sourceManual,
+        );
+
+        expect(
+          overnightOnly.map((e) => e.id),
+          contains('snoreprobe_legacy_overnight'),
+        );
+        expect(
+          manualOnly.map((e) => e.id),
+          contains('manualsnoreprobe_legacy_manual'),
+        );
+
+        await storage.closeDatabaseConnection();
+        PathProviderPlatform.instance = _FakePathProviderPlatform();
       },
     );
   });
