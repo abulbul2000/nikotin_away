@@ -39,6 +39,58 @@ class _LoginPageState extends State<LoginPage> {
   bool _restoring = false;
   String _status = '';
 
+  List<String> _stringList(dynamic value) {
+    if (value is List) {
+      return value.whereType<String>().toList();
+    }
+    return const [];
+  }
+
+  int? _intValue(dynamic value) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '');
+  }
+
+  Future<void> _restoreSurveyContext(
+    Map<String, Map<String, dynamic>> restoredContext,
+  ) async {
+    final storage = StorageService();
+    for (final entry in restoredContext.entries) {
+      final data = entry.value;
+      await storage.saveSurveyDetail(
+        recordId: entry.key,
+        triggers: _stringList(data['triggers']),
+        healthConditions: _stringList(data['healthConditions']),
+        firstCigaretteRange: data['firstCigaretteRange']?.toString(),
+        smokeFreeRange: data['smokeFreeRange']?.toString(),
+        profession: data['profession']?.toString(),
+        sleepTime: data['sleepTime']?.toString(),
+        wakeTime: data['wakeTime']?.toString(),
+        stressLevel: data['stressLevel']?.toString(),
+        quitReason: data['quitReason']?.toString(),
+        workStart: data['workStart']?.toString(),
+        workEnd: data['workEnd']?.toString(),
+        workplaceSmokingRule: data['workplaceSmokingRule']?.toString(),
+        workingDays: _stringList(data['workingDays']),
+        age: _intValue(data['age']),
+        smokingYears: _intValue(data['smokingYears']),
+        cigarettesPerPack: _intValue(data['cigarettesPerPack']),
+      );
+      final sleepTime = data['sleepTime']?.toString();
+      final wakeTime = data['wakeTime']?.toString();
+      if (sleepTime != null && sleepTime.isNotEmpty) {
+        await storage.saveSleepTime(sleepTime);
+      }
+      if (wakeTime != null && wakeTime.isNotEmpty) {
+        await storage.saveSetting('wake_time', wakeTime);
+      }
+      final gender = data['gender']?.toString();
+      if (gender != null && gender.isNotEmpty) {
+        await storage.saveSetting('gender', gender);
+      }
+    }
+  }
+
   Future<void> _onGoogleSignIn() async {
     if (_busy) return;
     setState(() {
@@ -76,6 +128,7 @@ class _LoginPageState extends State<LoginPage> {
       // Restore locally
       final storage = StorageService();
       await storage.saveSurveyHistory(restoredRecords);
+      await _restoreSurveyContext(restoredContext);
       await storage.saveInitialRegistrationCompleted(true);
 
       if (!mounted) return;

@@ -8,6 +8,7 @@ import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import '../services/ambient_audio_service.dart';
 import '../services/device_permission_service.dart';
+import '../services/firestore_sync_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/permission_service.dart';
@@ -373,7 +374,32 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       debugPrintStack(stackTrace: stackTrace);
       rethrow;
     }
-
+    // Keep the completed initial survey tied to the Google account so it can
+    // be restored after the app is reinstalled.
+    await FirestoreSyncService.syncSurveyToCloud(
+      records: [record],
+      context: {
+        recordId: {
+          'triggers': selectedTriggers,
+          'healthConditions': selectedHealth,
+          'firstCigaretteRange': firstCigaretteRange,
+          'smokeFreeRange': smokeFreeRange,
+          'profession': profession,
+          'sleepTime': sleepTime,
+          'wakeTime': wakeTime,
+          'stressLevel': stressLevel,
+          'quitReason': quitReason,
+          'workStart': inferredWorkStart,
+          'workEnd': inferredWorkEnd,
+          'workplaceSmokingRule': workplaceSmokingRule,
+          'workingDays': inferredWorkingDays,
+          'age': int.tryParse(ageController.text.trim()),
+          'smokingYears': int.tryParse(smokingYears ?? ''),
+          'cigarettesPerPack': int.tryParse(cigarettesPerPack ?? ''),
+          'gender': gender,
+        },
+      },
+    );
     try {
       await _storageService.saveSleepTime(sleepTime!);
       await _storageService.saveSetting('wake_time', wakeTime!);
