@@ -1,6 +1,7 @@
 import 'package:cloud_functions/cloud_functions.dart';
 
 import '../models/subscription_state.dart';
+import 'language_service.dart';
 import 'storage_service.dart';
 
 class AiServiceException implements Exception {
@@ -52,6 +53,27 @@ const int _maxTurnCharacters = 4000;
 const int _maxTotalHistoryCharacters = 12000;
 const int _maxMedicationNameCharacters = 100;
 const int _maxMedicationTimes = 8;
+
+/// Languages the AI is expected to reply in. Anything outside this list is
+/// treated as a malformed response and hidden from the user — the AI may
+/// still reply in these languages even when the user's app language differs,
+/// but that is handled server-side; this list is a safety net for the UI.
+const Set<String> _allowedResponseLanguages = {
+  'tr',
+  'en',
+  'de',
+  'ar',
+  'fr',
+  'es',
+  'pt',
+  'it',
+  'pl',
+  'ru',
+  'ja',
+  'zh',
+  'ko',
+  'hi',
+};
 
 const Set<String> _allowedRoles = {'user', 'assistant'};
 const Set<String> _allowedActions = {
@@ -193,11 +215,17 @@ Future<AiChatResult> sendMessageToAI(List<AiChatTurn> history) async {
       'history': history
           .map((turn) => {'role': turn.role, 'content': turn.content.trim()})
           .toList(),
+      'language': _resolveAppLanguage(),
     });
 
     final reply = result.data['reply'] as String? ?? '';
     if (reply.length > _maxTurnCharacters) {
       throw const AiServiceException('AI reply is too long');
+    }
+    final responseLanguage = result.data['language'] as String?;
+    if (responseLanguage != null &&
+        !_allowedResponseLanguages.contains(responseLanguage)) {
+      throw const AiServiceException('AI responded in an unsupported language');
     }
 
     final action = _parseAndValidateAction(result.data['action']);
@@ -234,3 +262,14 @@ Exception mapAiFunctionsException(FirebaseFunctionsException e) {
 /// Kept as a separate pure function so it can be unit-tested without Firebase.
 Exception mapAiFunctionsExceptionForTest(FirebaseFunctionsException e) =>
     mapAiFunctionsException(e);
+
+/// Resolves the user's preferred app language code. Never throws — falls back
+/// to English when the preference cannot be read, since English is always
+/// supported by the AI backend.
+Future<String> _resolveAppLanguage() async {
+  try {
+    return await LanguageService.loadSelectedLanguageCode();
+  } catch (_) {
+    return 'en';
+  }
+}

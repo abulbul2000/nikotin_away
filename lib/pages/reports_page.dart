@@ -83,6 +83,15 @@ class _ReportsPageState extends State<ReportsPage> {
       'daysSinceQuit': context.t('reportsDaysSinceQuit'),
       'totalSteps': context.t('reportsTotalSteps'),
       'avgStepsPerDay': context.t('reportsAvgStepsPerDay'),
+      'avertedCigarettes': context.t('reportsAvertedCigarettes'),
+      'smokingTimePattern': context.t('reportsSmokingTimePattern'),
+      'noDataYet': context.t('reportsNoDataYet'),
+      'partMorning': context.t('reportsPartMorning'),
+      'partMidday': context.t('reportsPartMidday'),
+      'partAfternoon': context.t('reportsPartAfternoon'),
+      'partEvening': context.t('reportsPartEvening'),
+      'partNight': context.t('reportsPartNight'),
+      'disclaimer': context.t('reportsDisclaimer'),
       'trendImproving': context.t('trendImproving'),
       'trendDeclining': context.t('trendDeclining'),
       'trendStable': context.t('trendStable'),
@@ -220,6 +229,44 @@ class _ReportsPageState extends State<ReportsPage> {
                       value: report.avgStepsPerDay.round().toString(),
                     ),
                   ],
+                  if (report.estimatedAvertedCigarettes != null)
+                    _ReportRow(
+                      label: context.t('reportsAvertedCigarettes'),
+                      value: '${report.estimatedAvertedCigarettes}',
+                    )
+                  else
+                    _ReportRow(
+                      label: context.t('reportsAvertedCigarettes'),
+                      value: context.t('reportsNoDataYet'),
+                    ),
+                  if (report.smokingTimePattern != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      context.t('reportsSmokingTimePattern'),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ...report.smokingTimePattern!.entries.map(
+                      (entry) => _ReportRow(
+                        label: context.t(
+                          'reportsPart${_capitalize(entry.key)}',
+                        ),
+                        value: '${(entry.value * 100).round()}%',
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  Text(
+                    context.t('reportsDisclaimer'),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -249,6 +296,11 @@ class _ReportsPageState extends State<ReportsPage> {
       ),
     );
   }
+}
+
+String _capitalize(String s) {
+  if (s.isEmpty) return s;
+  return s[0].toUpperCase() + s.substring(1);
 }
 
 class _ReportRow extends StatelessWidget {

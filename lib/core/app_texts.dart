@@ -1873,6 +1873,14 @@ class AppTexts {
     'sleepRoutineReportNoEvidence': 'Bugün için henüz yeterli veri yok',
     'sleepRoutineReportTaskSuccessLabel': 'Görev Başarısı',
     'sleepRoutineCommand': 'Uyku öncesi rutin zamanı',
+    'loginTitle': 'Hoş Geldin',
+    'loginSubtitle': 'Verilerini bulutta sakla, yeniden kurunca geri yükle',
+    'loginGoogleButton': 'Google ile Giriş Yap',
+    'loginSkipButton': 'Şimdilik Geç',
+    'loginSkipSubtitle': 'Hesap bağlantısız devam edebilirsin',
+    'loginRestoring': 'Verilerin geri yükleniyor...',
+    'loginNoCloudData': 'Bulutta kayıtlı verin bulunamadı.',
+    'loginRestoreSuccess': '{count} kayıt geri yüklendi.',
   };
 
   // English - Full translation
@@ -3752,6 +3760,14 @@ class AppTexts {
     'sleepRoutineReportNoEvidence': 'Not enough data for today yet',
     'sleepRoutineReportTaskSuccessLabel': 'Task Success',
     'sleepRoutineCommand': 'Time for your pre-sleep routine',
+    'loginTitle': 'Welcome',
+    'loginSubtitle': 'Save your data to the cloud — restore on reinstall',
+    'loginGoogleButton': 'Sign in with Google',
+    'loginSkipButton': 'Skip for Now',
+    'loginSkipSubtitle': 'Continue without linking an account',
+    'loginRestoring': 'Restoring your data...',
+    'loginNoCloudData': 'No saved data found in the cloud.',
+    'loginRestoreSuccess': '{count} records restored.',
   };
 
   // All 40 languages - each inherits from EN, with top keys translated

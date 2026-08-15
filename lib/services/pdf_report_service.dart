@@ -99,6 +99,38 @@ class PdfReportService {
                   report.avgStepsPerDay.round().toString(),
                 ),
               ],
+              if (report.estimatedAvertedCigarettes != null) ...[
+                pw.SizedBox(height: 12),
+                _row(
+                  labels['avertedCigarettes'],
+                  '${report.estimatedAvertedCigarettes}',
+                ),
+              ],
+              if (report.smokingTimePattern != null) ...[
+                pw.SizedBox(height: 12),
+                pw.Text(
+                  labels['smokingTimePattern'] ?? 'Smoking time distribution',
+                  style: pw.TextStyle(
+                    fontSize: 13,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                ...report.smokingTimePattern!.entries.map(
+                  (entry) => _row(
+                    labels['part${_capitalize(entry.key)}'] ?? entry.key,
+                    '${(entry.value * 100).round()}%',
+                  ),
+                ),
+              ],
+              pw.SizedBox(height: 20),
+              pw.Text(
+                labels['disclaimer'] ?? '',
+                style: pw.TextStyle(
+                  fontSize: 9,
+                  color: PdfColors.grey600,
+                  fontStyle: pw.FontStyle.italic,
+                ),
+              ),
             ],
           );
         },
@@ -106,6 +138,11 @@ class PdfReportService {
     );
 
     return doc.save();
+  }
+
+  String _capitalize(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
   }
 
   String Function(String) _trendLabel(Map<String, String> labels) {

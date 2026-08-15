@@ -79,6 +79,7 @@ android {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     implementation("com.google.android.gms:play-services-location:21.3.0")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
     // Phase 9 wearable spike — talks to Health Connect directly (no
     // third-party Flutter wrapper; the only one on pub.dev was too
     // unmaintained for this project's AGP toolchain, see roadmap notes).

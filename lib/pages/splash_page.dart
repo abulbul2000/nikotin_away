@@ -13,6 +13,7 @@ import '../services/subscription_service.dart';
 import '../widgets/no_smoke_logo.dart';
 import 'home_page.dart';
 import 'language_selection_page.dart';
+import 'login_page.dart';
 import 'subscription_gate_page.dart';
 import 'trial_info_page.dart';
 
@@ -98,8 +99,20 @@ class _SplashPageState extends State<SplashPage> {
 
     if (!mounted) return;
 
-    // İlk kez kurulum yapılmamışsa TrialInfoPage'e git
+    // İlk kez kurulum yapılmamışsa önce LoginPage göster
+    // (Google Sign-In veya skip seçeneği)
     if (!hasInitialSetup) {
+      // Eğer henüz login sorulmadıysa LoginPage'e yönlendir
+      final loginAsked = await LoginPage.hasLoginBeenAsked();
+      if (!loginAsked && !mounted) return;
+      if (!loginAsked) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginPage()),
+        );
+        return;
+      }
+      // Login zaten sorulmuş → normal anket akışı
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const TrialInfoPage()),

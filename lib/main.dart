@@ -84,6 +84,12 @@ Future<void> main() async {
   final locale = await LanguageService.loadSelectedLocale();
   await AppTexts.ensureLanguageLoaded(locale.languageCode);
   runApp(NoSmokeApp(initialLocale: locale));
+
+  // Cold start: if the app was opened by tapping a notification while
+  // fully terminated (not background), route to the correct page now.
+  // This handles the case where onDidReceiveNotificationResponse never
+  // fires because the isolate wasn't running at tap time.
+  NotificationService.handleColdStartIfLaunchedFromNotification();
 }
 
 class NoSmokeApp extends StatefulWidget {

@@ -2915,4 +2915,27 @@ class NotificationService {
       MaterialPageRoute(builder: (_) => HealthTipPage(body: body)),
     );
   }
+
+  /// Called from main() on cold start.
+  ///
+  /// When the app was fully terminated and a notification tap launched it,
+  /// [onDidReceiveNotificationResponse] may never fire because the isolate
+  /// wasn't alive at tap time. This method checks the launch details and
+  /// routes to the correct page (or resolves the action silently) so the
+  /// user always gets the full-screen experience.
+  static Future<void> handleColdStartIfLaunchedFromNotification() async {
+    try {
+      final details = await _plugin.getNotificationAppLaunchDetails();
+      if (details?.didNotificationLaunchApp != true) return;
+      final response = details?.notificationResponse;
+      if (response == null) return;
+      // Run after a short delay so the widget tree is built and the
+      // navigator is ready to push routes.
+      Future.delayed(const Duration(milliseconds: 800), () {
+        _handleNotificationResponse(response);
+      });
+    } catch (_) {
+      // Non-blocking: a cold-start route failure must never crash startup.
+    }
+  }
 }
