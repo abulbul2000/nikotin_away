@@ -118,9 +118,7 @@ class _LoginPageState extends State<LoginPage> {
     final restoredResult =
         await FirestoreSyncService.restoreFromCloud();
     final restoredRecords = restoredResult.$1;
-    // restoredContext ($2) — survey details context. Stored for future use.
-    // The survey detail save API requires per-record calls which we'll
-    // enhance later if needed. For now just restoring survey records.
+    final restoredContext = restoredResult.$2;
 
     if (!mounted) return;
 
