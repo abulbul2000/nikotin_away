@@ -1089,7 +1089,7 @@ class NotificationService {
     // visible prompt and the next retry, so cancelling only reminderId can
     // leave the alarm sound running on the tapped notification.
     final notificationIds = <int>{};
-    for (final key in ('notificationId', 'reminderId')) {
+    for (final key in ['notificationId', 'reminderId']) {
       final id = int.tryParse(payload[key] ?? '');
       if (id != null) {
         notificationIds.add(id);
