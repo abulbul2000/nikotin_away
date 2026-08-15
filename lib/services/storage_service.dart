@@ -102,9 +102,78 @@ class StorageService {
       const SmokingCountDiscrepancyEngine();
   Database? _database;
 
+  static const List<String> cloudBackupTableNames = [
+    _tableName,
+    _settingsTable,
+    _surveyDetailsTable,
+    _profileSnapshotTable,
+    _languageHistoryTable,
+    _sensorUsageTable,
+    _sleepProbeTable,
+    _snoringProbeTable,
+    _significantPlacesTable,
+    _locationVisitEventsTable,
+    _stepCounterSamplesTable,
+    _breathTestResultsTable,
+    _breathProgressRecordsTable,
+    _breathNoiseBaselinesTable,
+    _coughTestRecordsTable,
+    _behaviorSnapshotTable,
+    _taskFollowUpTable,
+    _protocolViolationTable,
+    _adaptiveTaskStateTable,
+    _adaptiveTaskEventTable,
+    _adaptiveHourlyProfileTable,
+    _smokingEventsTable,
+    _taskAssignmentsTable,
+    _mentorMessagesTable,
+    _consentEventsTable,
+    _medicationsTable,
+    _medicationDoseLogTable,
+    _failureTriggersTable,
+    _notificationsHistoryTable,
+  ];
+
   Future<Database> get database async {
     _database ??= await _initDatabase();
     return _database!;
+  }
+
+  /// Exports every user-owned local table. Subscription entitlements are
+  /// deliberately excluded: they must be restored from the store/server,
+  /// never from a client-controlled backup.
+  Future<Map<String, List<Map<String, dynamic>>>> exportCloudBackup() async {
+    final db = await database;
+    final result = <String, List<Map<String, dynamic>>>{};
+    for (final table in cloudBackupTableNames) {
+      final rows = await db.query(table);
+      result[table] = rows
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList(growable: false);
+    }
+    return result;
+  }
+
+  /// Imports a cloud backup into an already-initialized local database.
+  /// Upserts preserve any rows created on this device while restoring rows
+  /// that are missing after a reinstall.
+  Future<void> importCloudBackup(
+    Map<String, List<Map<String, dynamic>>> backup,
+  ) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      for (final table in cloudBackupTableNames) {
+        final rows = backup[table];
+        if (rows == null) continue;
+        for (final row in rows) {
+          await txn.insert(
+            table,
+            row,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+        }
+      }
+    });
   }
 
   static const String _dbFileName = 'no_smoke.db';

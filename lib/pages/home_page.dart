@@ -38,6 +38,7 @@ import '../services/protocol_violation_service.dart';
 import '../services/smoked_log_button_service.dart';
 import '../services/snoring_detection_service.dart';
 import '../services/storage_service.dart';
+import '../services/firestore_sync_service.dart';
 import '../services/feature_access.dart';
 import '../services/task_assignment_service.dart';
 import '../widgets/background_reliability_prompt.dart';
@@ -661,6 +662,9 @@ class _HomePageState extends State<HomePage> {
       unawaited(_presentMandatoryTaskIfNeeded());
       unawaited(_storageService.refreshWearableRiskSignal());
       unawaited(_scheduleSedentaryReminderIfNeeded());
+      unawaited(
+        FirestoreSyncService.syncLocalDatabaseBackup(_storageService),
+      );
       await _ensureMentorMessageCadence();
       await _loadSnoringSummary();
       unawaited(_promptBackgroundReliabilityIfTasksUndelivered());

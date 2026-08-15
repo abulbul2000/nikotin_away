@@ -176,7 +176,22 @@ class _LoginPageState extends State<LoginPage> {
     // Try to restore from cloud
     if (!mounted) return;
     setState(() => _restoring = true);
-
+    final storage = StorageService();
+    final fullBackupRestored =
+        await FirestoreSyncService.restoreLocalDatabaseBackup(storage);
+    if (fullBackupRestored) {
+      await storage.saveInitialRegistrationCompleted(true);
+      if (!mounted) return;
+      setState(() => _restoring = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('loginRestoreSuccess'))),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const TrialInfoPage()),
+      );
+      return;
+    }
     final restoredResult =
         await FirestoreSyncService.restoreFromCloud();
     final restoredRecords = restoredResult.$1;
@@ -186,7 +201,6 @@ class _LoginPageState extends State<LoginPage> {
 
     if (restoredRecords.isNotEmpty) {
       // Restore locally
-      final storage = StorageService();
       await storage.saveSurveyHistory(restoredRecords);
       await _restoreSurveyContext(restoredContext);
       await storage.saveInitialRegistrationCompleted(true);

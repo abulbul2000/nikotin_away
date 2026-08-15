@@ -1,14 +1,15 @@
 rules_version = '2';
 
-// This project keeps user data on-device by default (see CLAUDE.md). The
-// only server-side Firestore data is the trial-start timestamp and daily AI
-// message quota used to stop a forged client from bypassing subscription
-// checks (see functions/index.js) — the client never reads or writes this
-// collection directly, only the Cloud Functions (Admin SDK, which bypasses
-// these rules) do. Keeping this closed avoids opening a second access path
-// that would have to be kept in sync with the server-side checks.
+// Server-controlled users/{uid} documents remain closed to the client.
+// The app-owned backup is kept under user_data/{uid}; a signed-in user may
+// access only the document tree belonging to their own Firebase UID.
 service cloud.firestore {
   match /databases/{database}/documents {
+    match /user_data/{userId}/{document=**} {
+      allow read, write: if request.auth != null
+        && request.auth.uid == userId;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

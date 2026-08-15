@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/survey_record.dart';
+import 'storage_service.dart';
 
 class FirestoreSyncService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -20,6 +21,104 @@ class FirestoreSyncService {
       FirebaseAuth.instance.currentUser?.providerData
           .any((p) => p.providerId == 'google.com') ??
       false;
+
+  static DocumentReference<Map<String, dynamic>> get _backupRoot =>
+      _db
+          .collection('user_data')
+          .doc(_uid)
+          .collection('database_backup')
+          .doc('snapshot');
+
+  /// Uploads every user-owned SQLite table in small JSON chunks. Device-only
+  /// permissions and notification schedules are intentionally recreated by
+  /// the new phone; the user data and learning state are not device-bound.
+  static Future<void> syncLocalDatabaseBackup(StorageService storage) async {
+    if (!_isGoogleUser || _uid.isEmpty) return;
+    try {
+      final backup = await storage.exportCloudBackup();
+      await _backupRoot.set({
+        'schemaVersion': 1,
+        'state': 'uploading',
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      for (final table in StorageService.cloudBackupTableNames) {
+        final tableRef = _backupRoot.collection('tables').doc(table);
+        final oldChunks = await tableRef.collection('chunks').get();
+        var batch = _db.batch();
+        var operationCount = 0;
+        Future<void> commitIfFull() async {
+          if (operationCount < 450) return;
+          await batch.commit();
+          batch = _db.batch();
+          operationCount = 0;
+        }
+        for (final old in oldChunks.docs) {
+          batch.delete(old.reference);
+          operationCount++;
+          await commitIfFull();
+        }
+        final rows = backup[table] ?? const <Map<String, dynamic>>[];
+        for (var offset = 0, chunk = 0;
+            offset < rows.length;
+            offset += 50, chunk++) {
+          final end =
+              offset + 50 < rows.length ? offset + 50 : rows.length;
+          batch.set(
+            tableRef.collection('chunks').doc(chunk.toString()),
+            {'rowsJson': jsonEncode(rows.sublist(offset, end))},
+          );
+          operationCount++;
+          await commitIfFull();
+        }
+        if (operationCount > 0) await batch.commit();
+      }
+      await _backupRoot.set({
+        'schemaVersion': 1,
+        'state': 'ready',
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+      debugPrint('[FirestoreSync] Full local database backup synced');
+    } catch (error, stackTrace) {
+      debugPrint('[FirestoreSync] Full backup sync failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  /// Restores the full local database backup. Returns false when the account
+  /// has no full backup yet, allowing the legacy survey-only migration path.
+  static Future<bool> restoreLocalDatabaseBackup(StorageService storage) async {
+    if (!_isGoogleUser || _uid.isEmpty) return false;
+    try {
+      final root = await _backupRoot.get();
+      if (!root.exists || root.data()?['state'] != 'ready') return false;
+      final tables = await _backupRoot.collection('tables').get();
+      final backup = <String, List<Map<String, dynamic>>>{};
+      for (final tableDoc in tables.docs) {
+        final chunks = await tableDoc.reference.collection('chunks').get();
+        final rows = <Map<String, dynamic>>[];
+        for (final chunk in chunks.docs) {
+          final raw = chunk.data()['rowsJson'];
+          if (raw is! String) continue;
+          final decoded = jsonDecode(raw);
+          if (decoded is List) {
+            rows.addAll(
+              decoded.whereType<Map>().map(
+                (row) => Map<String, dynamic>.from(row),
+              ),
+            );
+          }
+        }
+        backup[tableDoc.id] = rows;
+      }
+      await storage.importCloudBackup(backup);
+      debugPrint('[FirestoreSync] Full local database backup restored');
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('[FirestoreSync] Full backup restore failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return false;
+    }
+  }
 
   /// Upload survey records + details to Firestore.
   static Future<void> syncSurveyToCloud({

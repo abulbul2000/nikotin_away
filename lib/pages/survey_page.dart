@@ -445,6 +445,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
       debugPrintStack(stackTrace: stackTrace);
     }
 
+    await FirestoreSyncService.syncLocalDatabaseBackup(_storageService);
     return recordId;
   }
 
