@@ -1229,6 +1229,16 @@ class AppTexts {
         'Sigara sonrası kalp atışındaki hızlanma dakikalarca sürer. O dakikaları hiç yaşamamayı seçebilirsin.',
     'healthTipHeartDisease33':
         'Kalp ilaçlarını düzenli alıyorsan, sigarayı azaltmak onların etkisini güçlendirir, zayıflatmaz.',
+    'reportsAvertedCigarettes': 'Icilmedigi tahmin edilen sigara',
+    'reportsSmokingTimePattern': 'Sigara zaman dagilimi',
+    'reportsNoDataYet': 'Henuz yeterli veri yok',
+    'reportsPartMorning': 'Sabah (05-10)',
+    'reportsPartMidday': 'Ogle (10-13)',
+    'reportsPartAfternoon': 'Ogleden sonra (13-17)',
+    'reportsPartEvening': 'Aksam (17-22)',
+    'reportsPartNight': 'Gece (22-05)',
+    'reportsDisclaimer':
+        'Bu rapor kayitlarina dayali tahmini bilgiler icerir; tibbi degerlendirme veya tani degildir. Kisisel saglik kararlarin icin doktoruna dans.',
     'menuReports': 'Raporlar',
     'reportsTitle': 'Raporlar',
     'reportsWeeklyTab': 'Haftalik',

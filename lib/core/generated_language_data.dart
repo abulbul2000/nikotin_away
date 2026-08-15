@@ -1862,6 +1862,17 @@ generatedLanguageData = <String, Map<String, String>>{
         'Für die Spracheingabe ist eine Mikrofonberechtigung erforderlich.',
     'aiChatMicUnavailable':
         'Spracheingabe ist auf diesem Gerät nicht verfügbar.',
+  
+    'reportsAvertedCigarettes': 'Geschätzte nicht gerauchte Zigaretten',
+    'reportsDisclaimer':
+        'Dieser Bericht enthält Schätzungen auf Basis Ihrer Aufzeichnungen; er ist keine medizinische Beurteilung oder Diagnose. Konsultieren Sie für persönliche Gesundheitsentscheidungen Ihren Arzt.',
+    'reportsNoDataYet': 'Noch nicht genug Daten',
+    'reportsPartAfternoon': 'Nachmittag (13-17)',
+    'reportsPartEvening': 'Abend (17-22)',
+    'reportsPartMidday': 'Mittag (10-13)',
+    'reportsPartMorning': 'Morgen (05-10)',
+    'reportsPartNight': 'Nacht (22-05)',
+    'reportsSmokingTimePattern': 'Zeitverteilung des Rauchens',
   },
   'ar': <String, String>{
     'reductionCardTitle': 'تقدّمك في التقليل',
@@ -3647,6 +3658,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatListening': 'أستمع...',
     'aiChatMicPermissionDenied': 'يلزم إذن الميكروفون للإدخال الصوتي.',
     'aiChatMicUnavailable': 'الإدخال الصوتي غير متاح على هذا الجهاز.',
+  
+    'reportsAvertedCigarettes': 'السجائر التي لم تُعدَّ تدخينها (تقديرية)',
+    'reportsDisclaimer':
+        'يحتوي هذا التقرير على تقديرات مبنية على سجلاتك؛ ولا يعد تقييماً أو تشخيصاً طبياً. استشر طبيبك لقراراتك الصحية الشخصية.',
+    'reportsNoDataYet': 'لا توجد بيانات كافية بعد',
+    'reportsPartAfternoon': 'بعد الظهر (13-17)',
+    'reportsPartEvening': 'المساء (17-22)',
+    'reportsPartMidday': 'الظهر (10-13)',
+    'reportsPartMorning': 'الصباح (05-10)',
+    'reportsPartNight': 'الليل (22-05)',
+    'reportsSmokingTimePattern': 'توزيع وقت التدخين',
   },
   'fr': <String, String>{
     'reductionCardTitle': 'Ta progression',
@@ -5544,6 +5566,17 @@ generatedLanguageData = <String, Map<String, String>>{
         'L\'autorisation du microphone est requise pour la saisie vocale.',
     'aiChatMicUnavailable':
         'La saisie vocale n\'est pas disponible sur cet appareil.',
+  
+    'reportsAvertedCigarettes': 'Cigarettes non fumées estimées',
+    'reportsDisclaimer':
+        'Ce rapport contient des estimations basées sur vos enregistrements ; il ne constitue pas une évaluation ou un diagnostic médical. Consultez votre médecin pour vos décisions de santé personnelles.',
+    'reportsNoDataYet': 'Pas encore assez de données',
+    'reportsPartAfternoon': 'Après-midi (13-17)',
+    'reportsPartEvening': 'Soir (17-22)',
+    'reportsPartMidday': 'Midi (10-13)',
+    'reportsPartMorning': 'Matin (05-10)',
+    'reportsPartNight': 'Nuit (22-05)',
+    'reportsSmokingTimePattern': 'Répartition des moments de fumage',
   },
   'es': <String, String>{
     'reductionCardTitle': 'Tu progreso de reducción',
@@ -7410,6 +7443,17 @@ generatedLanguageData = <String, Map<String, String>>{
         'Se requiere permiso de micrófono para la entrada de voz.',
     'aiChatMicUnavailable':
         'La entrada de voz no está disponible en este dispositivo.',
+  
+    'reportsAvertedCigarettes': 'Cigarrillos no fumados estimados',
+    'reportsDisclaimer':
+        'Este informe contiene estimaciones basadas en sus registros; no es una evaluación ni diagnóstico médico. Consulte a su médico para decisiones de salud personales.',
+    'reportsNoDataYet': 'Aún no hay suficientes datos',
+    'reportsPartAfternoon': 'Tarde (13-17)',
+    'reportsPartEvening': 'Anochecer (17-22)',
+    'reportsPartMidday': 'Mediodía (10-13)',
+    'reportsPartMorning': 'Mañana (05-10)',
+    'reportsPartNight': 'Noche (22-05)',
+    'reportsSmokingTimePattern': 'Distribución del tiempo de fumar',
   },
   'pt': <String, String>{
     'reductionCardTitle': 'Seu progresso de redução',
@@ -9261,6 +9305,17 @@ generatedLanguageData = <String, Map<String, String>>{
         'É necessária permissão de microfone para a entrada de voz.',
     'aiChatMicUnavailable':
         'A entrada de voz não está disponível neste dispositivo.',
+  
+    'reportsAvertedCigarettes': 'Cigarros estimados não fumados',
+    'reportsDisclaimer':
+        'Este relatório contém estimativas baseadas nos seus registos; não é uma avaliação ou diagnóstico médico. Consulte o seu médico para decisões de saúde pessoais.',
+    'reportsNoDataYet': 'Ainda não há dados suficientes',
+    'reportsPartAfternoon': 'Tarde (13-17)',
+    'reportsPartEvening': 'Noite (17-22)',
+    'reportsPartMidday': 'Meio-dia (10-13)',
+    'reportsPartMorning': 'Manhã (05-10)',
+    'reportsPartNight': 'Madrugada (22-05)',
+    'reportsSmokingTimePattern': 'Distribuição do horário de fumar',
   },
   'it': <String, String>{
     'reductionCardTitle': 'I tuoi progressi',
@@ -11135,6 +11190,17 @@ generatedLanguageData = <String, Map<String, String>>{
         'È richiesto il permesso del microfono per l\'input vocale.',
     'aiChatMicUnavailable':
         'L\'input vocale non è disponibile su questo dispositivo.',
+  
+    'reportsAvertedCigarettes': 'Sigarette non fumate stimate',
+    'reportsDisclaimer':
+        'Questo rapporto contiene stime basate sui tuoi registri; non è una valutazione o diagnosi medica. Consulta il tuo medico per decisioni di salute personali.',
+    'reportsNoDataYet': 'Non ci sono ancora dati sufficienti',
+    'reportsPartAfternoon': 'Pomeriggio (13-17)',
+    'reportsPartEvening': 'Sera (17-22)',
+    'reportsPartMidday': 'Mezzogiorno (10-13)',
+    'reportsPartMorning': 'Mattina (05-10)',
+    'reportsPartNight': 'Notte (22-05)',
+    'reportsSmokingTimePattern': 'Distribuzione oraria del fumo',
   },
   'pl': <String, String>{
     'reductionCardTitle': 'Twoje postępy w ograniczaniu',
@@ -12984,6 +13050,17 @@ generatedLanguageData = <String, Map<String, String>>{
         'Do wprowadzania głosowego wymagane jest uprawnienie mikrofonu.',
     'aiChatMicUnavailable':
         'Wprowadzanie głosowe nie jest dostępne na tym urządzeniu.',
+  
+    'reportsAvertedCigarettes': 'Szacowane niezapalone papierosy',
+    'reportsDisclaimer':
+        'Ten raport zawiera szacunki oparte na Twoich zapisach; nie jest oceną ani diagnozą medyczną. Skonsultuj się z lekarzem w sprawach osobistych decyzji zdrowotnych.',
+    'reportsNoDataYet': 'Jeszcze za mało danych',
+    'reportsPartAfternoon': 'Popołudnie (13-17)',
+    'reportsPartEvening': 'Wieczór (17-22)',
+    'reportsPartMidday': 'Południe (10-13)',
+    'reportsPartMorning': 'Rano (05-10)',
+    'reportsPartNight': 'Noc (22-05)',
+    'reportsSmokingTimePattern': 'Rozkład czasu palenia',
   },
   'ru': <String, String>{
     'reductionCardTitle': 'Ваш прогресс в снижении',
@@ -14846,6 +14923,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatMicPermissionDenied':
         'Для голосового ввода требуется разрешение на микрофон.',
     'aiChatMicUnavailable': 'Голосовой ввод недоступен на этом устройстве.',
+  
+    'reportsAvertedCigarettes': 'Ocenenno ne vykurennye sigarety',
+    'reportsDisclaimer':
+        'Etot otchet soderzhit otsenki na osnove vashikh zapisei; on ne yavlyaetsya meditsinskim zaklyucheniem ili diagnozom. Prokonsultiruytes s vrachom.',
+    'reportsNoDataYet': 'Pokha nedostatochno dannykh',
+    'reportsPartAfternoon': 'Dnevnoe vremya (13-17)',
+    'reportsPartEvening': 'Vecher (17-22)',
+    'reportsPartMidday': 'Polden (10-13)',
+    'reportsPartMorning': 'Utro (05-10)',
+    'reportsPartNight': 'Noch (22-05)',
+    'reportsSmokingTimePattern': 'Raspredelenie vremeni kureniya',
   },
   'ja': <String, String>{
     'reductionCardTitle': '減煙の進みぐあい',
@@ -16341,6 +16429,16 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatListening': '聞いています...',
     'aiChatMicPermissionDenied': '音声入力にはマイクの許可が必要です。',
     'aiChatMicUnavailable': 'この端末では音声入力を利用できません。',
+  
+    'reportsAvertedCigarettes': '吸わなかったと推定されるタバコ本数',
+    'reportsDisclaimer': 'このレポートは記録に基づく推定値を含みます。医学的評価や診断ではありません。個人の健康に関する決定は医師にご相談ください。',
+    'reportsNoDataYet': 'まだデータが不足しています',
+    'reportsPartAfternoon': '午後 (13-17)',
+    'reportsPartEvening': '夕方 (17-22)',
+    'reportsPartMidday': '正午 (10-13)',
+    'reportsPartMorning': '朝 (05-10)',
+    'reportsPartNight': '夜 (22-05)',
+    'reportsSmokingTimePattern': '喫煙時間帯の分布',
   },
   'zh': <String, String>{
     'reductionCardTitle': '你的减量进展',
@@ -17772,6 +17870,16 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatListening': '正在聆听...',
     'aiChatMicPermissionDenied': '语音输入需要麦克风权限。',
     'aiChatMicUnavailable': '此设备不支持语音输入。',
+  
+    'reportsAvertedCigarettes': '估计未吸的烟数量',
+    'reportsDisclaimer': '本报告包含基于您记录的估算信息，不是医学评估或诊断。个人健康决定请咨询医生。',
+    'reportsNoDataYet': '数据还不足',
+    'reportsPartAfternoon': '下午 (13-17)',
+    'reportsPartEvening': '傍晚 (17-22)',
+    'reportsPartMidday': '中午 (10-13)',
+    'reportsPartMorning': '上午 (05-10)',
+    'reportsPartNight': '夜间 (22-05)',
+    'reportsSmokingTimePattern': '吸烟时间分布',
   },
   'ko': <String, String>{
     'reductionCardTitle': '줄여가는 과정',
@@ -19307,6 +19415,16 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatListening': '듣고 있어요...',
     'aiChatMicPermissionDenied': '음성 입력에는 마이크 권한이 필요합니다.',
     'aiChatMicUnavailable': '이 기기에서는 음성 입력을 사용할 수 없습니다.',
+  
+    'reportsAvertedCigarettes': '흡연하지 않았다고 추정되는 담배 수',
+    'reportsDisclaimer': '이 보고서는 기록에 기반한 추정치를 포함하며 의학적 평가나 진단이 아닙니다. 개인적인 건강 결정은 의사와 상담하십시오.',
+    'reportsNoDataYet': '아직 데이터가 부족합니다',
+    'reportsPartAfternoon': '오후 (13-17)',
+    'reportsPartEvening': '저녁 (17-22)',
+    'reportsPartMidday': '정오 (10-13)',
+    'reportsPartMorning': '오전 (05-10)',
+    'reportsPartNight': '밤 (22-05)',
+    'reportsSmokingTimePattern': '흡연 시간 분포',
   },
   'hi': <String, String>{
     'reductionCardTitle': 'आपकी कमी की प्रगति',
@@ -21139,6 +21257,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatMicPermissionDenied':
         'आवाज़ इनपुट के लिए माइक्रोफ़ोन अनुमति आवश्यक है।',
     'aiChatMicUnavailable': 'इस डिवाइस पर आवाज़ इनपुट उपलब्ध नहीं है।',
+  
+    'reportsAvertedCigarettes': 'Anumanit nahi piye gaye sigare',
+    'reportsDisclaimer':
+        'Yeh report aapke records par aadharit anuman hai; yeh chikitsa mulyankan ya nidan nahin hai. Vyaktigat svasthya nirnayon ke lie apne chikitsak se paramarsh karen.',
+    'reportsNoDataYet': 'Abhi parapt data nahin',
+    'reportsPartAfternoon': 'Dopahar baad (13-17)',
+    'reportsPartEvening': 'Shaam (17-22)',
+    'reportsPartMidday': 'Dopahar (10-13)',
+    'reportsPartMorning': 'Subah (05-10)',
+    'reportsPartNight': 'Raat (22-05)',
+    'reportsSmokingTimePattern': 'Smoking samay vitran',
   },
   'bn': <String, String>{
     'reductionCardTitle': 'আপনার কমানোর অগ্রগতি',
@@ -22969,6 +23098,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatMicPermissionDenied':
         'ভয়েস ইনপুটের জন্য মাইক্রোফোন অনুমতি প্রয়োজন।',
     'aiChatMicUnavailable': 'এই ডিভাইসে ভয়েস ইনপুট উপলব্ধ নেই।',
+  
+    'reportsAvertedCigarettes': 'Anumanik na khawa sigaret',
+    'reportsDisclaimer':
+        'Ei riporte apanar rekard onujayi anumanik tottho achhe; eta chikitsa mulyayan ba rog nirnay noy. Bektigoto sastho siddhantek niye apnar daktarke poramorsho korun.',
+    'reportsNoDataYet': 'Ekhono parjapto data nei',
+    'reportsPartAfternoon': 'Dupur por (13-17)',
+    'reportsPartEvening': 'Shondha (17-22)',
+    'reportsPartMidday': 'Dupur (10-13)',
+    'reportsPartMorning': 'Shokal (05-10)',
+    'reportsPartNight': 'Rat (22-05)',
+    'reportsSmokingTimePattern': 'Dhumpaner somoy bintaron',
   },
   'pa': <String, String>{
     'reductionCardTitle': 'ਤੁਹਾਡੀ ਘਟਾਉਣ ਦੀ ਤਰੱਕੀ',
@@ -24793,6 +24933,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatListening': 'ਸੁਣ ਰਿਹਾ ਹਾਂ...',
     'aiChatMicPermissionDenied': 'ਆਵਾਜ਼ ਇਨਪੁਟ ਲਈ ਮਾਈਕ੍ਰੋਫੋਨ ਇਜਾਜ਼ਤ ਲੋੜੀਂਦੀ ਹੈ।',
     'aiChatMicUnavailable': 'ਇਸ ਡਿਵਾਈਸ \'ਤੇ ਆਵਾਜ਼ ਇਨਪੁਟ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।',
+  
+    'reportsAvertedCigarettes': 'Anumanit na piyan sigrean',
+    'reportsDisclaimer':
+        'Eh report tuhadde records utte aadharit anuman han; eh chikitsak mulankan ya rog da varnan nahi hai. Jati swasthfa faislyan layi apne doctor nu pucho.',
+    'reportsNoDataYet': 'Hune kafi data nahin',
+    'reportsPartAfternoon': 'Dophar ton baad (13-17)',
+    'reportsPartEvening': 'Sham (17-22)',
+    'reportsPartMidday': 'Dophar (10-13)',
+    'reportsPartMorning': 'Subah (05-10)',
+    'reportsPartNight': 'Raat (22-05)',
+    'reportsSmokingTimePattern': 'Dhumrapan samay vand',
   },
   'te': <String, String>{
     'reductionCardTitle': 'మీ తగ్గింపు పురోగతి',
@@ -26638,6 +26789,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatMicPermissionDenied':
         'వాయిస్ ఇన్‌పుట్ కోసం మైక్రోఫోన్ అనుమతి అవసరం.',
     'aiChatMicUnavailable': 'ఈ పరికరంలో వాయిస్ ఇన్‌పుట్ అందుబాటులో లేదు.',
+  
+    'reportsAvertedCigarettes': 'Postani veyyani sigaretilu (anumanam)',
+    'reportsDisclaimer':
+        'I report mii records paruna anumanalu; idi vaidyaka parisilana ledu. Vyaktigata arogya nirnayal kosam vaidyuni sampradinchandi.',
+    'reportsNoDataYet': 'Ivati sari samapt samakhyalu ledu',
+    'reportsPartAfternoon': 'Madhyahnam tarvata (13-17)',
+    'reportsPartEvening': 'Sandyakalam (17-22)',
+    'reportsPartMidday': 'Madhyanam (10-13)',
+    'reportsPartMorning': 'Udayam (05-10)',
+    'reportsPartNight': 'Ratri (22-05)',
+    'reportsSmokingTimePattern': 'Dumrida vyapti',
   },
   'mr': <String, String>{
     'reductionCardTitle': 'तुमची कमी करण्याची प्रगती',
@@ -28458,6 +28620,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatMicPermissionDenied':
         'आवाज इनपुटसाठी मायक्रोफोन परवानगी आवश्यक आहे.',
     'aiChatMicUnavailable': 'या डिव्हाइसवर आवाज इनपुट उपलब्ध नाही.',
+  
+    'reportsAvertedCigarettes': 'Andazit kelele na pitalele sigarettiche',
+    'reportsDisclaimer':
+        'He aharaval aaplya nondvar adharit andaj ahe; te vaidyakiya mulakhyan kinvh nidhan nahi. Vyaktigat arogya nirnyasathi aaplya doktorashi salh karo.',
+    'reportsNoDataYet': 'Abhi puresa data nahin',
+    'reportsPartAfternoon': 'Duparchi ved (13-17)',
+    'reportsPartEvening': 'Sanjh (17-22)',
+    'reportsPartMidday': 'Dupar (10-13)',
+    'reportsPartMorning': 'Sakal (05-10)',
+    'reportsPartNight': 'Ratri (22-05)',
+    'reportsSmokingTimePattern': 'Dhumrapan velyache vitaran',
   },
   'ta': <String, String>{
     'reductionCardTitle': 'உங்கள் குறைப்பு முன்னேற்றம்',
@@ -30334,6 +30507,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatListening': 'கேட்டுக்கொண்டிருக்கிறேன்...',
     'aiChatMicPermissionDenied': 'குரல் உள்ளீட்டிற்கு மைக்ரோஃபோன் அனுமதி தேவை.',
     'aiChatMicUnavailable': 'இந்த சாதனத்தில் குரல் உள்ளீடு கிடைக்கவில்லை.',
+  
+    'reportsAvertedCigarettes': 'Pidikkatha endru anumanikkirra sigarettukal',
+    'reportsDisclaimer':
+        'Intha arivu unkal parivankalin adipparaiyil ulla vaigal; idi maruththuva muthalaiyallathu nirnayam allathu. Thanippaththa maruththuva mudivugaukkaaga unkal maruththuvarinai aalochikkai.',
+    'reportsNoDataYet': 'Innum potumana tharavukal illai',
+    'reportsPartAfternoon': 'Mathiyam pirkku (13-17)',
+    'reportsPartEvening': 'Maalai (17-22)',
+    'reportsPartMidday': 'Mathiyam (10-13)',
+    'reportsPartMorning': 'Kaalai (05-10)',
+    'reportsPartNight': 'Iravu (22-05)',
+    'reportsSmokingTimePattern': 'Pukai pitikkum neravigalin pirivu',
   },
   'gu': <String, String>{
     'reductionCardTitle': 'તમારી ઘટાડાની પ્રગતિ',
@@ -32151,6 +32335,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatListening': 'સાંભળી રહ્યો છું...',
     'aiChatMicPermissionDenied': 'વૉઇસ ઇનપુટ માટે માઇક્રોફોન પરવાનગી જરૂરી છે.',
     'aiChatMicUnavailable': 'આ ડિવાઇસ પર વૉઇસ ઇનપુટ ઉપલબ્ધ નથી.',
+  
+    'reportsAvertedCigarettes': 'Anumanit na pidhayel sigaret',
+    'reportsDisclaimer':
+        'Aa report tamara records par aadharit anuman chhe; aa charikitsakiye mulyankan ke roganidhan nathi. Vyaktigat arogya nirnayo mate tamara doctor ne puchho.',
+    'reportsNoDataYet': 'Haje parapt data nathi',
+    'reportsPartAfternoon': 'Dupar pachi (13-17)',
+    'reportsPartEvening': 'Sanjh (17-22)',
+    'reportsPartMidday': 'Dupar (10-13)',
+    'reportsPartMorning': 'Savare (05-10)',
+    'reportsPartNight': 'Raat (22-05)',
+    'reportsSmokingTimePattern': 'Dhumrapan samay vitran',
   },
   'kn': <String, String>{
     'reductionCardTitle': 'ನಿಮ್ಮ ಕಡಿತದ ಪ್ರಗತಿ',
@@ -33992,6 +34187,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatMicPermissionDenied':
         'ಧ್ವನಿ ಇನ್‌ಪುಟ್‌ಗೆ ಮೈಕ್ರೊಫೋನ್ ಅನುಮತಿ ಅಗತ್ಯವಿದೆ.',
     'aiChatMicUnavailable': 'ಈ ಸಾಧನದಲ್ಲಿ ಧ್ವನಿ ಇನ್‌ಪುಟ್ ಲಭ್ಯವಿಲ್ಲ.',
+  
+    'reportsAvertedCigarettes': 'Sediyilla endu anumanisida sigarettigalu',
+    'reportsDisclaimer':
+        'I report nimma records adharisida anumanagalu; idu vaidyakiya mulamadyana athava nidanavalla. Vyaktigata arogya nirnayagaluge vaidyaruge samparkisi.',
+    'reportsNoDataYet': 'Ivuvarigu salu dattamshagalu illa',
+    'reportsPartAfternoon': 'Madhyahnanada nantara (13-17)',
+    'reportsPartEvening': 'Sanje (17-22)',
+    'reportsPartMidday': 'Madhyahna (10-13)',
+    'reportsPartMorning': 'Beliggane (05-10)',
+    'reportsPartNight': 'Ratri (22-05)',
+    'reportsSmokingTimePattern': 'Dhumrapana samaya vitarane',
   },
   'ml': <String, String>{
     'reductionCardTitle': 'നിങ്ങളുടെ കുറയ്ക്കൽ പുരോഗതി',
@@ -35845,6 +36051,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatListening': 'ഞാൻ കേൾക്കുന്നു...',
     'aiChatMicPermissionDenied': 'ശബ്ദ ഇൻപുട്ടിന് മൈക്രോഫോൺ അനുമതി ആവശ്യമാണ്.',
     'aiChatMicUnavailable': 'ഈ ഉപകരണത്തിൽ ശബ്ദ ഇൻപുട്ട് ലഭ്യമല്ല.',
+  
+    'reportsAvertedCigarettes': 'Pukaiyatha ennu karuthunna sigarettukal',
+    'reportsDisclaimer':
+        'I report ninte records adishttama anumanangal; idh vaidyika mulyankanallanu. Vyaktigatha arogya theerumanangalkku doctorine sampradhikkuka.',
+    'reportsNoDataYet': 'Innu padhyamanam data illa',
+    'reportsPartAfternoon': 'Uchakkulla samayam (13-17)',
+    'reportsPartEvening': 'Vayikunnneram (17-22)',
+    'reportsPartMidday': 'Madhyahnam (10-13)',
+    'reportsPartMorning': 'Prabhatham (05-10)',
+    'reportsPartNight': 'Rathri (22-05)',
+    'reportsSmokingTimePattern': 'Pukaiyil niramayude vitaranam',
   },
   'th': <String, String>{
     'reductionCardTitle': 'ความคืบหน้าในการลด',
@@ -37651,6 +37868,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatMicPermissionDenied':
         'ต้องได้รับสิทธิ์ไมโครโฟนสำหรับการป้อนด้วยเสียง',
     'aiChatMicUnavailable': 'การป้อนด้วยเสียงไม่พร้อมใช้งานบนอุปกรณ์นี้',
+  
+    'reportsAvertedCigarettes': 'Buhrri sigaret thi yang mai sut (praman)',
+    'reportsDisclaimer':
+        'Rapangan ni mi khomul anuman thi ang ong atrra khun; mi chai karan winaicchai thang kan paet. Porukha paet khong than per son karn chao tha nai.',
+    'reportsNoDataYet': 'Yang mai mi khomul phriang',
+    'reportsPartAfternoon': 'Bai (13-17)',
+    'reportsPartEvening': 'Yen (17-22)',
+    'reportsPartMidday': 'Thiang (10-13)',
+    'reportsPartMorning': 'Chao (05-10)',
+    'reportsPartNight': 'Klang khuen (22-05)',
+    'reportsSmokingTimePattern': 'Kan jad jang wa la pi buhrri',
   },
   'vi': <String, String>{
     'reductionCardTitle': 'Tiến trình giảm của bạn',
@@ -39483,6 +39711,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatMicPermissionDenied': 'Cần quyền micro để nhập bằng giọng nói.',
     'aiChatMicUnavailable':
         'Nhập bằng giọng nói không khả dụng trên thiết bị này.',
+  
+    'reportsAvertedCigarettes': 'So thuoc da tinh la khong hut',
+    'reportsDisclaimer':
+        'Bao cao nay chua cac uoc tinh dua tren ho so cua ban; khong phai la danh gia hay chan doan y te. Hay tham khao y bac si cho cac quyet dinh suc khoe ca nhan.',
+    'reportsNoDataYet': 'Chua du du lieu',
+    'reportsPartAfternoon': 'Chieu (13-17)',
+    'reportsPartEvening': 'Toi (17-22)',
+    'reportsPartMidday': 'Trua (10-13)',
+    'reportsPartMorning': 'Sang (05-10)',
+    'reportsPartNight': 'Dem (22-05)',
+    'reportsSmokingTimePattern': 'Phan bo thoi gian hut thuoc',
   },
   'id': <String, String>{
     'reductionCardTitle': 'Kemajuan pengurangan kamu',
@@ -41333,6 +41572,17 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatListening': 'Mendengarkan...',
     'aiChatMicPermissionDenied': 'Izin mikrofon diperlukan untuk input suara.',
     'aiChatMicUnavailable': 'Input suara tidak tersedia di perangkat ini.',
+  
+    'reportsAvertedCigarettes': 'Rokok yang diperkirakan tidak dihisap',
+    'reportsDisclaimer':
+        'Laporan ini berisi perkiraan berdasarkan catatan Anda; bukan penilaian atau diagnosis medis. Konsultasikan dengan dokter untuk keputusan kesehatan pribadi.',
+    'reportsNoDataYet': 'Belum ada data yang cukup',
+    'reportsPartAfternoon': 'Sore (13-17)',
+    'reportsPartEvening': 'Petang (17-22)',
+    'reportsPartMidday': 'Siang (10-13)',
+    'reportsPartMorning': 'Pagi (05-10)',
+    'reportsPartNight': 'Malam (22-05)',
+    'reportsSmokingTimePattern': 'Pola waktu merokok',
   },
   'ms': <String, String>{
     'reductionCardTitle': 'Kemajuan pengurangan anda',
@@ -43183,5 +43433,16 @@ generatedLanguageData = <String, Map<String, String>>{
     'aiChatMicPermissionDenied':
         'Kebenaran mikrofon diperlukan untuk input suara.',
     'aiChatMicUnavailable': 'Input suara tidak tersedia pada peranti ini.',
+  
+    'reportsAvertedCigarettes': 'Rokok dianggarkan tidak dihisap',
+    'reportsDisclaimer':
+        'Laporan ini mengandungi anggaran berdasarkan rekod anda; ia bukan penilaian atau diagnosis perubatan. Rujuk doktor anda untuk keputusan kesihatan peribadi.',
+    'reportsNoDataYet': 'Belum cukup data',
+    'reportsPartAfternoon': 'Petang (13-17)',
+    'reportsPartEvening': 'Petang (17-22)',
+    'reportsPartMidday': 'Tengah hari (10-13)',
+    'reportsPartMorning': 'Pagi (05-10)',
+    'reportsPartNight': 'Malam (22-05)',
+    'reportsSmokingTimePattern': 'Taburan masa merokok',
   },
 };

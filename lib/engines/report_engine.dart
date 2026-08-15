@@ -88,6 +88,14 @@ class ReportEngine {
     );
     final avgStepsPerDay = totalSteps / periodDays;
 
+    final baselineAvgPerDay = _baselineAveragePerDay(
+      allSurveyRecords,
+      periodStart,
+    );
+    final estimatedAvertedCigarettes = baselineAvgPerDay == null
+        ? null
+        : _estimatedAverted(baselineAvgPerDay, avgCigarettesPerDay, periodDays);
+
     return PeriodReport(
       periodStart: periodStart,
       periodEnd: periodEnd,
@@ -113,7 +121,80 @@ class ReportEngine {
       daysSinceQuitDate: daysSinceQuitDate,
       totalSteps: totalSteps,
       avgStepsPerDay: avgStepsPerDay,
+      estimatedAvertedCigarettes: estimatedAvertedCigarettes,
+      smokingTimePattern: _smokingTimePattern(smokingEventsInPeriod),
     );
+  }
+
+  /// Best-guess average daily smoking count before the period started,
+  /// derived only from real survey records (the lowest baseline the user
+  /// reported across their surveys). Null when there is nothing real to
+  /// base it on.
+  double? _baselineAveragePerDay(
+    List<SurveyRecord> allSurveyRecords,
+    DateTime periodStart,
+  ) {
+    double? baseline;
+    for (final record in allSurveyRecords) {
+      if (!record.completedAt.isBefore(periodStart)) {
+        continue;
+      }
+      final count = SurveyRecord.packsToLegacyCigarettes(record.packsPerDay);
+      if (baseline == null || count < baseline) {
+        baseline = count.toDouble();
+      }
+    }
+    return baseline;
+  }
+
+  int _estimatedAverted(
+    double baselineAvgPerDay,
+    double currentAvgPerDay,
+    int periodDays,
+  ) {
+    final diff = baselineAvgPerDay - currentAvgPerDay;
+    if (diff <= 0) {
+      return 0;
+    }
+    return (diff * periodDays).round();
+  }
+
+  /// Share of logged cigarettes per part of the day. Null unless there are
+  /// at least 3 real events — below that there is no pattern to report.
+  Map<String, double>? _smokingTimePattern(List<SmokingEvent> events) {
+    if (events.length < 3) {
+      return null;
+    }
+    final buckets = <String, double>{
+      'morning': 0.0,
+      'midday': 0.0,
+      'afternoon': 0.0,
+      'evening': 0.0,
+      'night': 0.0,
+    };
+    for (final event in events) {
+      final part = _partOfDay(event.timestamp.hour);
+      final current = buckets[part] ?? 0;
+      buckets[part] = current + 1;
+    }
+    final total = events.length.toDouble();
+    return buckets.map((key, value) => MapEntry(key, value / total));
+  }
+
+  String _partOfDay(int hour) {
+    if (hour >= 5 && hour < 10) {
+      return 'morning';
+    }
+    if (hour >= 10 && hour < 13) {
+      return 'midday';
+    }
+    if (hour >= 13 && hour < 17) {
+      return 'afternoon';
+    }
+    if (hour >= 17 && hour < 22) {
+      return 'evening';
+    }
+    return 'night';
   }
 
   String _resolveRiskTrend(int? start, int? end) {
