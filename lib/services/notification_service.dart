@@ -1084,11 +1084,20 @@ class NotificationService {
       return;
     }
 
-    final reminderId = int.tryParse(payload['reminderId'] ?? '');
-    if (reminderId != null) {
-      unawaited(_plugin.cancel(reminderId));
+    // Cancel the notification that was actually tapped, plus its linked
+    // retry reminder. Task-start notifications use different IDs for the
+    // visible prompt and the next retry, so cancelling only reminderId can
+    // leave the alarm sound running on the tapped notification.
+    final notificationIds = <int>{};
+    for (final key in ('notificationId', 'reminderId')) {
+      final id = int.tryParse(payload[key] ?? '');
+      if (id != null) {
+        notificationIds.add(id);
+      }
     }
-
+    for (final id in notificationIds) {
+      unawaited(_plugin.cancel(id));
+    }
     final type = payload['type'];
 
     // Navigate to Notifications page when tapped
@@ -1780,6 +1789,7 @@ class NotificationService {
         // be matched back to a task_assignments row — a lookup on them finds
         // nothing and silently does nothing.
         'canonicalTitle': taskDescription,
+        'notificationId': '$id',
         'reminderId': '$reminderId',
         'watchdogId': watchdogId,
       }),
@@ -1882,11 +1892,11 @@ class NotificationService {
         // localised, user-facing wording, so the canonical form has to travel
         // alongside it for the task row to be findable.
         'canonicalTitle': taskDescription,
+        'notificationId': '$id',
         'reminderId': '$reminderId',
         'watchdogId': watchdogId,
       }),
     );
-
     // Armed for [fireAt], not for now: the overlay has to be raised at the
     // moment the task is actually due (a scheduled notification can't start
     // it, and with the app closed no Dart is running then), and the watchdog
@@ -2422,6 +2432,7 @@ class NotificationService {
       payload: jsonEncode({
         'type': _typeTaskFollowUp,
         'taskTitle': taskTitle,
+        'notificationId': '$reminderId',
         'reminderId': '$reminderId',
       }),
     );
