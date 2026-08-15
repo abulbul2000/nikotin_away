@@ -89,6 +89,13 @@ export const aiChat = onCall(
     const uid = requireAuth(request);
 
     const history = sanitizeHistory(request.data?.history);
+    const requestedLanguage =
+      typeof request.data?.language === "string"
+        ? request.data.language.toLowerCase().trim()
+        : "en";
+    const language = /^[a-z]{2,3}$/.test(requestedLanguage)
+      ? requestedLanguage
+      : "en";
     if (!history) {
       throw new HttpsError("invalid-argument", "valid history is required");
     }
@@ -112,7 +119,11 @@ export const aiChat = onCall(
     }
 
     try {
-      const result = await chatWithAI(NVIDIA_API_KEY.value(), history);
+      const result = await chatWithAI(
+        NVIDIA_API_KEY.value(),
+        history,
+        language
+      );
       // Echoed back so the client can sync its local subscription_state
       // cache (see SubscriptionService.resolveAccess) with the
       // server-authoritative trial start — the server value always wins,

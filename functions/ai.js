@@ -1,5 +1,12 @@
 import OpenAI from "openai";
 
+const SUPPORTED_AI_LANGUAGES = new Set([
+  "tr", "en", "de", "ar", "fr", "es", "pt", "it", "pl", "ru", "ja",
+  "zh", "ko", "hi", "bn", "pa", "te", "mr", "ta", "gu", "kn", "ml",
+  "th", "vi", "id", "ms", "fil", "uk", "ro", "el", "hu", "cs", "sv",
+  "da", "no", "fi", "nl", "be", "sr", "hr",
+]);
+
 const SYSTEM_PROMPT = `
 Sen "No Smoke" adlı sigara azaltma/bırakma uygulamasının içindeki yapay zeka mentörüsün.
 Görevin SADECE bu uygulama ve kullanıcının sigarayı azaltma/bırakma süreciyle ilgili konularda
@@ -100,7 +107,9 @@ const TOOLS = [
   },
 ];
 
-export async function chatWithAI(apiKey, history) {
+export async function chatWithAI(apiKey, history, language = "en") {
+  const normalizedLanguage = SUPPORTED_AI_LANGUAGES.has(language) ? language : "en";
+  const languageInstruction = `Kullanıcının uygulama dili ${normalizedLanguage} kodudur. Yanıtının görünen tüm doğal dil bölümlerini bu dilde yaz. Teknik araç adlarını, enum değerlerini ve saat biçimlerini değiştirme.`;
   const client = new OpenAI({
     baseURL: "https://integrate.api.nvidia.com/v1",
     apiKey,
@@ -108,7 +117,10 @@ export async function chatWithAI(apiKey, history) {
 
   const completion = await client.chat.completions.create({
     model: "nvidia/nemotron-3.5-lightning-30b-a3b",
-    messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
+    messages: [
+      { role: "system", content: `${SYSTEM_PROMPT}\n\n${languageInstruction}` },
+      ...history,
+    ],
     tools: TOOLS,
     max_tokens: 800,
   });
@@ -126,8 +138,13 @@ export async function chatWithAI(apiKey, history) {
     return {
       reply: choice.content?.trim() || "",
       action: { name: toolCall.function.name, arguments: args },
+      language: normalizedLanguage,
     };
   }
 
-  return { reply: choice.content?.trim() || "", action: null };
+  return {
+    reply: choice.content?.trim() || "",
+    action: null,
+    language: normalizedLanguage,
+  };
 }

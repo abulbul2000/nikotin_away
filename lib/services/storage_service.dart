@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../core/app_texts.dart';
 import '../core/mentor_command_codes.dart';
 import '../engines/mentor_message_builder.dart';
 import '../models/adaptive_plan.dart';
@@ -43,6 +44,7 @@ import '../engines/smoking_time_prediction_engine.dart';
 import '../engines/step_trend_engine.dart';
 import '../engines/wearable_signal_engine.dart';
 import 'behavior_engine.dart';
+import 'language_service.dart';
 import 'discipline_protocol_service.dart';
 import 'smoking_count_discrepancy_engine.dart';
 import 'mentor_relief_service.dart';
@@ -2403,11 +2405,12 @@ class StorageService {
     required String taskResult,
     required DateTime completedAt,
   }) async {
+    final languageCode = await LanguageService.loadSelectedLanguageCode();
     final record = SurveyRecord(
       id: 'task_${completedAt.millisecondsSinceEpoch}',
       completedAt: completedAt,
       type: 'task_result',
-      title: 'Görev Sonucu',
+      title: AppTexts.textForCode(languageCode, 'taskResultTitle'),
       name: '',
       packsPerDay: '1 paketten az',
       exhaleTestSeconds: 0,
@@ -3772,13 +3775,14 @@ class StorageService {
   }) async {
     final profileContext = await loadMergedProfileContext();
     final records = await loadSurveyHistory();
+    final languageCode = await LanguageService.loadSelectedLanguageCode();
     final latestSurvey = records.reversed.firstWhere(
       (record) => _surveyTypes.contains(record.type),
       orElse: () => SurveyRecord(
         id: 'fallback',
         completedAt: DateTime.fromMillisecondsSinceEpoch(0),
         type: 'initial',
-        title: 'Başlangıç',
+        title: AppTexts.textForCode(languageCode, 'initialSurvey'),
         name: '',
         packsPerDay: '1 paketten az',
         exhaleTestSeconds: 0,

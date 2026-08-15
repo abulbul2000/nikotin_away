@@ -108,9 +108,15 @@ class LanguageService {
 
   static Future<String> loadSelectedLanguageCode() async {
     final prefs = await SharedPreferences.getInstance();
-    final code =
-        prefs.getString(_languageCodeKey) ?? getDeviceLanguageCode() ?? 'en';
-    return supportedLanguages.containsKey(code) ? code : 'en';
+    final savedCode = prefs.getString(_languageCodeKey)?.toLowerCase();
+
+    // A saved value is an explicit user override. If it is absent (or was
+    // removed from the supported list in a later release), use the device's
+    // preferred supported language before falling back to English.
+    if (savedCode != null && supportedLanguages.containsKey(savedCode)) {
+      return savedCode;
+    }
+    return getDeviceLanguageCode() ?? 'en';
   }
 
   static Future<bool> hasSavedLanguageSelection() async {
@@ -124,10 +130,11 @@ class LanguageService {
   }
 
   static Future<void> saveSelectedLanguageCode(String languageCode) async {
+    final code = languageCode.toLowerCase();
+    if (!supportedLanguages.containsKey(code)) {
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
-    final code = supportedLanguages.containsKey(languageCode)
-        ? languageCode
-        : 'en';
     await prefs.setString(_languageCodeKey, code);
     await StorageService().saveLanguageSelectionHistory(code);
   }
