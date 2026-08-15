@@ -7,6 +7,7 @@
 /// then is automatically removed. This means a notification shown at 23:59
 /// will still be visible until 05:59 the next day — day boundaries never
 /// cut off notifications prematurely.
+library;
 
 import '../services/storage_service.dart';
 

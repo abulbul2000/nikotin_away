@@ -2,6 +2,7 @@
 ///
 /// Entries are kept for at least 6 hours after they were received,
 /// regardless of day boundaries.
+library;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
