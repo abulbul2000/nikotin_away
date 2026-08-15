@@ -11,19 +11,124 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import 'subscription_gate_page.dart';
 
+/// A voice command recognised locally, before any AI round-trip. Keeping this
+/// whitelist narrow and explicit means an accidental phrase can only ever
+/// trigger one of these known, reversible actions — everything else falls
+/// through to the regular AI chat flow.
+class _VoiceCommandIntent {
+  const _VoiceCommandIntent(this.action, this.summaryText);
+
+  final AiAction action;
+
+  /// Short human-readable summary shown in the confirmation dialog.
+  final String summaryText;
+}
+
+typedef _VoicePattern = ({
+  RegExp pattern,
+  _VoiceCommandIntent Function(Match) build,
+});
+
+final List<_VoicePattern> _voiceIntentPatterns = <_VoicePattern>[
+  (
+    pattern: RegExp(
+      r'\b(koç modunu?|coach modunu?)\s*(kapat|devre dışı|off|kapalı)',
+      caseSensitive: false,
+    ),
+    build: (m) => _VoiceCommandIntent(
+      const AiAction(name: 'set_coach_mode', arguments: {'preference': 'off'}),
+      'Koç modu kapatılacak',
+    ),
+  ),
+  (
+    pattern: RegExp(
+      r'\b(koç modunu?|coach modunu?)\s*(aç|etkinleştir|on|aktif)',
+      caseSensitive: false,
+    ),
+    build: (m) => _VoiceCommandIntent(
+      const AiAction(
+        name: 'set_coach_mode',
+        arguments: {'preference': 'like', 'frequency': 'orta'},
+      ),
+      'Koç modu açılacak',
+    ),
+  ),
+  (
+    pattern: RegExp(
+      r'\b(koç modunu?|coach modunu?)\s*(sevmedim|kötü|beğenmedim|nefret)',
+      caseSensitive: false,
+    ),
+    build: (m) => _VoiceCommandIntent(
+      const AiAction(
+        name: 'set_coach_mode',
+        arguments: {'preference': 'dislike'},
+      ),
+      'Koç modu kapatılacak (beğenilmedi)',
+    ),
+  ),
+  (
+    pattern: RegExp(
+      r'\b(mikrofon|mikrofon erişimi|microphone)\s*(izin|erişim)',
+      caseSensitive: false,
+    ),
+    build: (m) => _VoiceCommandIntent(
+      const AiAction(
+        name: 'set_permission',
+        arguments: {'permission': 'microphone'},
+      ),
+      'Mikrofon izni istenecek',
+    ),
+  ),
+  (
+    pattern: RegExp(
+      r'\b(konum|yer|location|gps)\s*(izin|erişim|aç)',
+      caseSensitive: false,
+    ),
+    build: (m) => _VoiceCommandIntent(
+      const AiAction(
+        name: 'set_permission',
+        arguments: {'permission': 'location'},
+      ),
+      'Konum izni istenecek',
+    ),
+  ),
+  (
+    pattern: RegExp(
+      r'\b(adım|adım sayar|aktivite|activity)\s*(izin|erişim|aç)',
+      caseSensitive: false,
+    ),
+    build: (m) => _VoiceCommandIntent(
+      const AiAction(
+        name: 'set_permission',
+        arguments: {'permission': 'activityRecognition'},
+      ),
+      'Adım/aktivite izni istenecek',
+    ),
+  ),
+];
+
 class _ChatMessage {
   const _ChatMessage({
     required this.text,
     required this.fromUser,
     this.pendingAction,
+    this.voiceSummary,
   });
 
   final String text;
   final bool fromUser;
   final AiAction? pendingAction;
 
-  _ChatMessage resolved() =>
-      _ChatMessage(text: text, fromUser: fromUser, pendingAction: null);
+  /// If this message is a recognised voice command, its local summary text
+  /// shown above the apply/dismiss buttons instead of the raw transcript.
+  final String? voiceSummary;
+
+  _ChatMessage resolved() => _ChatMessage(
+    text: text,
+    fromUser: fromUser,
+    pendingAction: null,
+    voiceSummary: voiceSummary,
+  );
 }
 
 class AIChatPage extends StatefulWidget {
@@ -83,6 +188,17 @@ class _AIChatPageState extends State<AIChatPage> {
     setState(() => _listening = false);
   }
 
+  _VoiceCommandIntent? _matchVoiceIntent(String spokenText) {
+    final lower = spokenText.trim().toLowerCase();
+    for (final entry in _voiceIntentPatterns) {
+      final match = entry.pattern.firstMatch(lower);
+      if (match != null) {
+        return entry.build(match);
+      }
+    }
+    return null;
+  }
+
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
@@ -93,6 +209,25 @@ class _AIChatPageState extends State<AIChatPage> {
       _controller.clear();
       _sending = true;
     });
+
+    // Local whitelist check: well-known settings phrases turn into an
+    // on-device confirmation dialog without touching the network.
+    final intent = _matchVoiceIntent(text);
+    if (intent != null) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(
+          _ChatMessage(
+            text: '',
+            fromUser: false,
+            pendingAction: intent.action,
+            voiceSummary: intent.summaryText,
+          ),
+        );
+        _sending = false;
+      });
+      return;
+    }
 
     try {
       final result = await sendMessageToAI(_history);
@@ -288,6 +423,19 @@ class _AIChatPageState extends State<AIChatPage> {
                         if (message.text.isNotEmpty) Text(message.text),
                         if (message.pendingAction != null) ...[
                           const SizedBox(height: 8),
+                          if (message.voiceSummary != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                message.voiceSummary!,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
