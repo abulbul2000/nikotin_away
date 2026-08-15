@@ -12,6 +12,7 @@ import 'core/app_texts.dart';
 import 'core/app_theme.dart';
 import 'pages/splash_page.dart';
 import 'pages/subscription_gate_page.dart';
+import 'services/google_auth_service.dart';
 import 'services/language_service.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
@@ -37,6 +38,13 @@ Future<void> main() async {
     debugPrint(
       '[main] Firebase/Crashlytics init failed (non-blocking): $error',
     );
+    debugPrintStack(stackTrace: stackTrace);
+  }
+
+  try {
+    await GoogleAuthService.initialize();
+  } catch (error, stackTrace) {
+    debugPrint('[main] Google Sign-In init failed (non-blocking): $error');
     debugPrintStack(stackTrace: stackTrace);
   }
 
