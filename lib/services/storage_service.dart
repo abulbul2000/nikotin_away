@@ -1976,12 +1976,14 @@ class StorageService {
     final dayEnd = dayStart.add(const Duration(days: 1));
 
     final events = await loadRecentAdaptiveTaskEvents();
-    final missedToday = events.where(
-      (e) =>
-          e.outcome == AdaptiveTaskOutcome.missed &&
-          !e.respondedAt.isBefore(dayStart) &&
-          e.respondedAt.isBefore(dayEnd),
-    ).length;
+    final missedToday = events
+        .where(
+          (e) =>
+              e.outcome == AdaptiveTaskOutcome.missed &&
+              !e.respondedAt.isBefore(dayStart) &&
+              e.respondedAt.isBefore(dayEnd),
+        )
+        .length;
 
     final assignments = await loadTaskAssignmentsForDay(today);
     final expiredToday = assignments
@@ -2331,6 +2333,21 @@ class StorageService {
     );
     await saveSurveyRecord(record);
     await markBehaviorDirty();
+  }
+
+  Future<void> saveTaskFollowUp({
+    required String taskTitle,
+    required DateTime scheduledAt,
+  }) async {
+    final db = await database;
+    final now = DateTime.now();
+    await db.insert(_taskFollowUpTable, {
+      'id': 'followup_${now.microsecondsSinceEpoch}',
+      'taskTitle': taskTitle,
+      'scheduledAt': scheduledAt.toIso8601String(),
+      'status': 'pending',
+      'createdAt': now.toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   Future<AdaptiveTaskState> loadAdaptiveTaskState() async {
@@ -2946,14 +2963,15 @@ class StorageService {
     final frequencyRaw = await loadSetting(
       'duration_barrier_frequency_preference',
     );
-    final frequencyAdjustedCount = switch (frequencyRaw) {
-      'az' => baseTaskCount - 1,
-      'cok' => baseTaskCount + 1,
-      _ => baseTaskCount,
-    }.clamp(
-      SmokingIntervalService.minDailyTasks,
-      SmokingIntervalService.maxDailyTasks,
-    );
+    final frequencyAdjustedCount =
+        switch (frequencyRaw) {
+          'az' => baseTaskCount - 1,
+          'cok' => baseTaskCount + 1,
+          _ => baseTaskCount,
+        }.clamp(
+          SmokingIntervalService.minDailyTasks,
+          SmokingIntervalService.maxDailyTasks,
+        );
     final effectiveTaskCount = MentorReliefService.applyTaskReliefIfActive(
       baseCount: frequencyAdjustedCount,
       now: now,
@@ -5015,10 +5033,7 @@ class StorageService {
   static bool _isLegacyBarrierTitle(String title) {
     return title.toUpperCase().contains('SURE-BARIYERI') ||
         title.toLowerCase().contains('sure bariyeri') ||
-        RegExp(
-          r'Sonraki\s+\d+\s+dakika',
-          caseSensitive: false,
-        ).hasMatch(title);
+        RegExp(r'Sonraki\s+\d+\s+dakika', caseSensitive: false).hasMatch(title);
   }
 
   /// Duration-barrier outcomes for the risk/mentor pipeline, read from
@@ -5033,15 +5048,18 @@ class StorageService {
     List<AdaptiveTaskEvent> adaptiveEvents,
     List<TaskHistory> taskHistory,
   ) {
-    final canonicalOutcomes = adaptiveEvents
-        .where(
-          (event) =>
-              MentorCommandCodes.isDurationBarrierCommand(event.taskTitle) &&
-              (event.outcome == AdaptiveTaskOutcome.success ||
-                  event.outcome == AdaptiveTaskOutcome.smoked),
-        )
-        .toList()
-      ..sort((a, b) => a.respondedAt.compareTo(b.respondedAt));
+    final canonicalOutcomes =
+        adaptiveEvents
+            .where(
+              (event) =>
+                  MentorCommandCodes.isDurationBarrierCommand(
+                    event.taskTitle,
+                  ) &&
+                  (event.outcome == AdaptiveTaskOutcome.success ||
+                      event.outcome == AdaptiveTaskOutcome.smoked),
+            )
+            .toList()
+          ..sort((a, b) => a.respondedAt.compareTo(b.respondedAt));
 
     final legacyOutcomes = taskHistory
         .where((item) => _isLegacyBarrierTitle(item.taskTitle))

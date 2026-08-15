@@ -845,13 +845,17 @@ class AppTexts {
     'menuSnoringTest': 'Horlama Testi',
     'coughTestTitle': 'Oksuruk Testi',
     'coughTestIntro':
-        '30 saniye boyunca mikrofonu acik tutacagiz ve bu surede kac kez oksurdugunu sayacagiz.',
+        'Mikrofonu 30 saniye acik tutacagiz. Bu surede senden birkac kez oksurmen istenecek ve sesindeki hirilti paterni analiz edilecek.',
     'coughTestInstructions':
-        'Sessiz bir ortamda basla ve normal sekilde nefes al/oksur. Ses hicbir zaman kaydedilmez veya disariya gonderilmez, sadece oksuruk sayisi hesaplanir.',
+        'Sessiz bir ortamda basla. Normal nefes al ve senden istendiginde birkac kez oksur. Ses kaydedilmez veya disariya gonderilmez; yalnizca hirilti paterni analiz edilir.',
+
     'coughTestStartButton': 'Testi Baslat',
     'coughTestListening': 'Dinleniyor...',
     'coughTestResultTitle': 'Test Sonucu',
     'coughTestResultCount': '{count} oksuruk tespit edildi',
+    'wheezeDetectedResult': 'Hirilti tespit edildi',
+    'wheezeNotDetectedResult': 'Hirilti tespit edilmedi',
+
     'coughGeneralAdvice':
         'Oksurugun birkac gundur surmesi halinde bir doktora danismani oneririz; bu uygulama tibbi tani veya tedavi onerisi vermez.',
     'coughTestNotificationTitle': 'Oksuruk testi sonucun',
@@ -2619,13 +2623,17 @@ class AppTexts {
     'menuSnoringTest': 'Snoring Test',
     'coughTestTitle': 'Cough Test',
     'coughTestIntro':
-        'We\'ll keep the microphone on for 30 seconds and count how many times you cough.',
+        'We\'ll keep the microphone on for 30 seconds. You\'ll be asked to cough a few times while the sound is checked for wheeze patterns.',
     'coughTestInstructions':
-        'Start somewhere quiet and breathe/cough normally. Audio is never recorded or sent anywhere -- only the cough count is computed.',
+        'Start somewhere quiet. Breathe normally and cough a few times when prompted. Audio is not recorded or sent anywhere; only the wheeze pattern is analysed.',
+
     'coughTestStartButton': 'Start Test',
     'coughTestListening': 'Listening...',
     'coughTestResultTitle': 'Test Result',
     'coughTestResultCount': '{count} coughs detected',
+    'wheezeDetectedResult': 'Wheeze detected',
+    'wheezeNotDetectedResult': 'No wheeze detected',
+
     'coughGeneralAdvice':
         'If the cough has lasted several days, we recommend seeing a doctor -- this app does not provide a medical diagnosis or treatment recommendation.',
     'coughTestNotificationTitle': 'Your cough test result',

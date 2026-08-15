@@ -276,11 +276,6 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    if (actionId == NotificationService.mandatoryGateCheckActionId) {
-      unawaited(_presentMandatoryTaskIfNeeded());
-      return;
-    }
-
     if (_taskAssignmentActionIds.contains(actionId)) {
       // Read before handleTaskAction transitions the row terminal, so the
       // barrier's own planned length is still known for the win message
@@ -443,9 +438,10 @@ class _HomePageState extends State<HomePage> {
     // closed out neutrally rather than left open forever or scored as a
     // failure. Runs before everything else so undeliveredTaskCount and the
     // task-state map below already reflect it.
-    final closedStaleBarriers = await _storageService.closeStaleAcceptedBarriers(
-      deadline: NotificationService.barrierResolutionDeadline,
-    );
+    final closedStaleBarriers = await _storageService
+        .closeStaleAcceptedBarriers(
+          deadline: NotificationService.barrierResolutionDeadline,
+        );
     for (final task in closedStaleBarriers) {
       unawaited(
         NotificationService.cancelBarrierResolutionReminder(
@@ -1270,7 +1266,7 @@ class _HomePageState extends State<HomePage> {
 
     if (_adaptivePlanItems.isNotEmpty) {
       final planDate = DateTime.now();
-      final assignments = await taskAssignmentService.planDailyTasks(
+      await taskAssignmentService.planDailyTasks(
         planDate: planDate,
         items: _adaptivePlanItems,
       );
@@ -1314,17 +1310,9 @@ class _HomePageState extends State<HomePage> {
           delay = const Duration(minutes: 1);
         }
 
-        final matchingAssignment = assignments
-            .where(
-              (row) =>
-                  row.canonicalTitle == item.taskTitle &&
-                  row.scheduledAt == item.scheduledAt,
-            )
-            .firstOrNull;
         await NotificationService.scheduleFirstTaskTriggerNotification(
           taskDescription: task,
           delay: delay,
-          taskAssignmentId: matchingAssignment?.id,
         );
 
         _notifiedTaskTitles.add(task);
@@ -2274,9 +2262,9 @@ class _HomePageState extends State<HomePage> {
         );
         await _loadHomeMetrics();
       case QuickAction.craving:
-        await Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const CravingSosPage()),
-        );
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const CravingSosPage()));
       case QuickAction.selfChallenge:
         final minutes = await showSelfChallengeDurationMenu(context);
         if (!mounted || minutes == null) return;
@@ -2582,7 +2570,9 @@ class _HomePageState extends State<HomePage> {
     }
     if (!mounted) return;
     final result = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => MandatoryTaskPage(taskTitle: taskTitle)),
+      MaterialPageRoute(
+        builder: (_) => MandatoryTaskPage(taskTitle: taskTitle),
+      ),
     );
     if (result != true) {
       return;

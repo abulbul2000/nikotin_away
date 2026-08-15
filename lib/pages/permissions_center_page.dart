@@ -178,18 +178,10 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
                     // ever opening a settings screen — nothing to grant. The
                     // button otherwise looks broken (tap, nothing visibly
                     // happens) instead of "already on".
-                    final granted =
-                        await NotificationService.openExactAlarmSettingsOptional();
-                    if (!context.mounted || granted != true) {
+                    await NotificationService.openExactAlarmSettingsOptional();
+                    if (!context.mounted) {
                       return;
                     }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          context.t('permissionExactAlarmAlreadyGranted'),
-                        ),
-                      ),
-                    );
                   },
                 ),
                 if (_isMiuiDevice)

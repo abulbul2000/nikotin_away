@@ -19,10 +19,9 @@ import '../widgets/success_check_overlay.dart';
 
 enum _CoughTestPhase { notStarted, listening, finished }
 
-/// A short (default 30s), user-initiated test that counts distinct cough
-/// events from the microphone — separate from BreathTestPage's multi-step
-/// hold/exhale protocol, since this only needs to listen once and count,
-/// not walk through a guided breathing sequence.
+/// A short (default 30s), user-initiated test that listens for acoustic
+/// wheeze patterns while the user coughs several times.
+
 class CoughTestPage extends StatefulWidget {
   final bool navigateToHomeOnComplete;
 
@@ -74,7 +73,7 @@ class _CoughTestPageState extends State<CoughTestPage> {
   final List<WheezeAcousticSample> _wheezeSamples = [];
 
   CoughTestRecord? _result;
-  String? _advisoryTier;
+
   String? _wheezeAdvisoryTier;
 
   @override
@@ -246,38 +245,8 @@ class _CoughTestPageState extends State<CoughTestPage> {
       testDurationSeconds: _testDurationSeconds,
     );
 
-    if (analysis.coughCount > 0) {
-      if (mounted) {
-        await SuccessCheckOverlay.show(context);
-      }
-    } else {
-      if (!mounted) {
-        return;
-      }
-      final retry = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(context.t('coughNotDetectedRetryTitle')),
-          content: Text(context.t('coughNotDetectedRetryMessage')),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text(context.t('keepResultAnywayButton')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(context.t('retryAttemptButton')),
-            ),
-          ],
-        ),
-      );
-      if (!mounted) {
-        return;
-      }
-      if (retry == true) {
-        unawaited(_startTest());
-        return;
-      }
+    if (mounted) {
+      await SuccessCheckOverlay.show(context);
     }
     if (!mounted) {
       return;
@@ -304,16 +273,6 @@ class _CoughTestPageState extends State<CoughTestPage> {
     final healthConditions = await _storageService.loadHealthConditions();
     final priorRecords = await _storageService.loadCoughTestRecords(limit: 30);
     final fourteenDaysAgo = DateTime.now().subtract(const Duration(days: 14));
-    const moderateOrWorse = {'moderate', 'severe', 'urgent'};
-    final recentModerateOrWorseCount = priorRecords
-        .where((r) => r.createdAt.isAfter(fourteenDaysAgo))
-        .where((r) => moderateOrWorse.contains(r.severityLevel))
-        .length;
-    final advisoryTier = _behaviorEngine.resolveCoughAdvisoryTier(
-      latestSeverityLevel: record.severityLevel,
-      healthConditions: healthConditions,
-      recentModerateOrWorseCountLast14Days: recentModerateOrWorseCount,
-    );
 
     String? wheezeAdvisoryTier;
     if (record.wheezeDetected == true) {
@@ -331,35 +290,25 @@ class _CoughTestPageState extends State<CoughTestPage> {
         healthConditions: healthConditions,
         recentModerateOrWorseCountLast14Days: recentWheezeModerateOrWorseCount,
       );
-      unawaited(
-        NotificationService.showWheezeTestResultAdvisory(
-          wheezeDetected: true,
-          severityLevel: wheezeAdvisoryTier,
-        ),
-      );
     }
 
     unawaited(
-      NotificationService.showCoughTestResultAdvisory(
-        coughCount: record.coughCount,
-        severityLevel: advisoryTier,
+      NotificationService.showWheezeTestResultAdvisory(
+        wheezeDetected: record.wheezeDetected == true,
+        severityLevel: wheezeAdvisoryTier ?? 'normal',
       ),
     );
+
     if (!mounted) {
       return;
     }
     setState(() {
       _result = record;
-      _advisoryTier = advisoryTier;
       _wheezeAdvisoryTier = wheezeAdvisoryTier;
       _phase = _CoughTestPhase.finished;
     });
     widget.onCompleted?.call();
   }
-
-  /// Tiers below 'mild' (i.e. 'normal', 0 coughs) get no advice card — a
-  /// generic doctor tip on a clean result would read as a false alarm.
-  bool _showsGeneralAdvice(String tier) => tier != 'normal';
 
   void _finish() {
     if (widget.onFinishRequested != null) {
@@ -470,8 +419,7 @@ class _CoughTestPageState extends State<CoughTestPage> {
 
   Widget _buildFinished(BuildContext context) {
     final result = _result;
-    final tier = _advisoryTier;
-    if (result == null || tier == null) {
+    if (result == null) {
       return const SizedBox.shrink();
     }
     return Column(
@@ -484,20 +432,13 @@ class _CoughTestPageState extends State<CoughTestPage> {
         ),
         const SizedBox(height: 12),
         Text(
-          context
-              .t('coughTestResultCount')
-              .replaceAll('{count}', '${result.coughCount}'),
+          result.wheezeDetected == true
+              ? context.t('wheezeDetectedResult')
+              : context.t('wheezeNotDetectedResult'),
+          textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
         ),
-        if (_showsGeneralAdvice(tier)) ...[
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Text(context.t('coughGeneralAdvice')),
-            ),
-          ),
-        ],
+
         if (result.wheezeDetected == true) ...[
           const SizedBox(height: 16),
           Card(

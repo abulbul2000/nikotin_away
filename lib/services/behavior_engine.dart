@@ -1130,6 +1130,36 @@ class BehaviorEngine {
     return _wheezeAdvisoryTierNames[tierIndex];
   }
 
+  static const List<String> _snoringAdvisoryTierNames = [
+    'normal',
+    'mild',
+    'moderate',
+    'severe',
+  ];
+
+  /// Converts one night's snore-likely probe count into a non-diagnostic
+  /// advisory tier for the morning summary.
+  String resolveSnoringAdvisoryTier({
+    required int snoreCount,
+    required List<String> healthConditions,
+  }) {
+    var tierIndex = 0;
+    if (snoreCount >= 6) {
+      tierIndex = 3;
+    } else if (snoreCount >= 3) {
+      tierIndex = 2;
+    } else if (snoreCount >= 1) {
+      tierIndex = 1;
+    }
+
+    final hasRespiratoryCondition =
+        healthConditions.contains('KOAH') || healthConditions.contains('Astim');
+    if (hasRespiratoryCondition && tierIndex >= 1) {
+      tierIndex = min(tierIndex + 1, _snoringAdvisoryTierNames.length - 1);
+    }
+    return _snoringAdvisoryTierNames[tierIndex];
+  }
+
   int calculateProfileRiskAdjustment({
     required String? profession,
     required String? sleepTime,
