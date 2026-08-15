@@ -32,26 +32,30 @@ async function getOrCreateUserDoc(uid) {
   return { ref, data: freshSnap.data() };
 }
 
+// AI is currently free for all users (no subscription required).
+// When monetization is enabled in production, re-enable the trial/subscription
+// check below and remove this early return.
 async function hasAiAccess(uid, userData) {
-  const trialStartedAt = userData.trialStartedAt?.toMillis?.();
-  if (typeof trialStartedAt === "number" && Date.now() < trialStartedAt + TRIAL_DURATION_MS) {
-    return true;
-  }
+  return true;
 
-  const subscription = userData.subscription;
-  const productId = subscription?.productId;
-  const purchaseToken = subscription?.purchaseToken;
-  if (typeof productId === "string" && typeof purchaseToken === "string") {
-    try {
-      const result = await verifyPlaySubscription({ productId, purchaseToken });
-      return result.isActive;
-    } catch (err) {
-      console.error("aiChat subscription check failed", err);
-      return false;
-    }
-  }
-
-  return false;
+  // --- Re-enable for monetized version ---
+  // const trialStartedAt = userData.trialStartedAt?.toMillis?.();
+  // if (typeof trialStartedAt === "number" && Date.now() < trialStartedAt + TRIAL_DURATION_MS) {
+  //   return true;
+  // }
+  // const subscription = userData.subscription;
+  // const productId = subscription?.productId;
+  // const purchaseToken = subscription?.purchaseToken;
+  // if (typeof productId === "string" && typeof purchaseToken === "string") {
+  //   try {
+  //     const result = await verifyPlaySubscription({ productId, purchaseToken });
+  //     return result.isActive;
+  //   } catch (err) {
+  //     console.error("aiChat subscription check failed", err);
+  //     return false;
+  //   }
+  // }
+  // return false;
 }
 
 // Per-uid, per-day message counter under users/{uid}/aiUsage/{YYYY-MM-DD}.
