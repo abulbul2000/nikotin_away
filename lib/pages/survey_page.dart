@@ -393,10 +393,28 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           'workEnd': inferredWorkEnd,
           'workplaceSmokingRule': workplaceSmokingRule,
           'workingDays': inferredWorkingDays,
+          'breakWindowsJson': jsonEncode(inferredBreakWindows),
+          'weekendSmokingPattern': inferredWeekendPattern,
           'age': int.tryParse(ageController.text.trim()),
           'smokingYears': int.tryParse(smokingYears ?? ''),
           'cigarettesPerPack': int.tryParse(cigarettesPerPack ?? ''),
           'gender': gender,
+          'interventionIntensity': interventionIntensity,
+          'schoolType': schoolType,
+          'packOption': packOption,
+          'hasSmokingBreaks': hasSmokingBreaks,
+          'hasSecondBreak': hasSecondBreak,
+          'consecutiveSmokingHabit': consecutiveSmokingHabit,
+          'consecutiveSmokingCount': consecutiveSmokingCount,
+          'usesMedication': usesMedication,
+          'medicationsJson': jsonEncode(
+            _collectValidMedications()
+                .map((medication) => {
+                  'name': medication.name,
+                  'times': medication.times,
+                })
+                .toList(),
+          ),
         },
       },
     );

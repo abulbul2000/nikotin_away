@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -7,6 +9,7 @@ import '../core/app_texts.dart';
 import '../services/firestore_sync_service.dart';
 import '../services/google_auth_service.dart';
 import '../services/storage_service.dart';
+import '../models/medication.dart';
 import '../widgets/no_smoke_logo.dart';
 import 'trial_info_page.dart';
 
@@ -51,6 +54,31 @@ class _LoginPageState extends State<LoginPage> {
     return int.tryParse(value?.toString() ?? '');
   }
 
+  dynamic _decodeJson(dynamic value) {
+    if (value is! String || value.isEmpty) return value;
+    try {
+      return jsonDecode(value);
+    } catch (_) {
+      return value;
+    }
+  }
+
+  List<Map<String, String>> _breakWindows(dynamic value) {
+    final decoded = _decodeJson(value);
+    if (decoded is! List) return const [];
+    return decoded.whereType<Map>().map((row) {
+      return row.map((key, value) => MapEntry(key.toString(), value.toString()));
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _medicationRows(dynamic value) {
+    final decoded = _decodeJson(value);
+    if (decoded is! List) return const [];
+    return decoded.whereType<Map>().map((row) {
+      return row.map((key, value) => MapEntry(key.toString(), value));
+    }).toList();
+  }
+
   Future<void> _restoreSurveyContext(
     Map<String, Map<String, dynamic>> restoredContext,
   ) async {
@@ -72,6 +100,8 @@ class _LoginPageState extends State<LoginPage> {
         workEnd: data['workEnd']?.toString(),
         workplaceSmokingRule: data['workplaceSmokingRule']?.toString(),
         workingDays: _stringList(data['workingDays']),
+        breakWindows: _breakWindows(data['breakWindowsJson']),
+        weekendSmokingPattern: data['weekendSmokingPattern']?.toString(),
         age: _intValue(data['age']),
         smokingYears: _intValue(data['smokingYears']),
         cigarettesPerPack: _intValue(data['cigarettesPerPack']),
@@ -87,6 +117,38 @@ class _LoginPageState extends State<LoginPage> {
       final gender = data['gender']?.toString();
       if (gender != null && gender.isNotEmpty) {
         await storage.saveSetting('gender', gender);
+      }
+      final interventionIntensity = data['interventionIntensity']?.toString();
+      if (interventionIntensity != null && interventionIntensity.isNotEmpty) {
+        await storage.saveInterventionIntensity(interventionIntensity);
+      }
+      for (final key in [
+        'schoolType',
+        'packOption',
+        'hasSmokingBreaks',
+        'hasSecondBreak',
+        'consecutiveSmokingHabit',
+        'consecutiveSmokingCount',
+        'usesMedication',
+      ]) {
+        final value = data[key];
+        if (value != null) {
+          await storage.saveSetting(key, value.toString());
+        }
+      }
+      final medications = _medicationRows(data['medicationsJson']);
+      for (var i = 0; i < medications.length; i++) {
+        final row = medications[i];
+        final name = row['name']?.toString().trim() ?? '';
+        if (name.isEmpty) continue;
+        await storage.saveMedication(
+          Medication(
+            id: 'restored_${entry.key}_$i',
+            name: name,
+            times: _stringList(row['times']),
+            createdAt: DateTime.now(),
+          ),
+        );
       }
     }
   }
