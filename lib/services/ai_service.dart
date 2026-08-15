@@ -12,31 +12,14 @@ class AiServiceException implements Exception {
   String toString() => message;
 }
 
-/// The server rejected the request because the caller isn't inside the
-/// trial window and has no active subscription. Distinct from
-/// [AiServiceException] so callers (AIChatPage) can route straight to
-/// SubscriptionGatePage instead of showing a generic error snackbar — this
-/// is the edge case where the client-side gate should already have caught
-/// it (trial/subscription lapsed in the background before the next resume
-/// check ran), not a normal failure.
 class AiSubscriptionRequiredException implements Exception {
   const AiSubscriptionRequiredException();
 }
 
-/// The server rejected the request because App Check/anonymous auth hasn't
-/// completed yet (see main.dart — both are best-effort and non-blocking, so
-/// there's a narrow window right after a cold start with no network where a
-/// callable can race ahead of them). Callers should surface this as "try
-/// again in a moment" rather than routing to the subscription gate.
 class AiAuthRequiredException implements Exception {
   const AiAuthRequiredException();
 }
 
-/// The server rejected the request because the caller already sent
-/// [DAILY_MESSAGE_LIMIT] (see functions/index.js) messages today. Distinct
-/// from [AiSubscriptionRequiredException] so callers can show "come back
-/// tomorrow" instead of steering an already-paying user to the purchase
-/// screen.
 class AiDailyLimitReachedException implements Exception {
   const AiDailyLimitReachedException();
 }
@@ -44,7 +27,7 @@ class AiDailyLimitReachedException implements Exception {
 class AiChatTurn {
   const AiChatTurn({required this.role, required this.content});
 
-  final String role; // 'user' or 'assistant'
+  final String role;
   final String content;
 
   Map<String, String> toJson() => {'role': role, 'content': content};
@@ -64,19 +47,38 @@ class AiChatResult {
   final AiAction? action;
 }
 
-/// Reconciles the local subscription_state cache with the
-/// server-authoritative trial start (see functions/index.js's
-/// getOrCreateUserDoc): the server value always wins. This only ever moves
-/// the cached date to match the server — [SubscriptionService.resolveAccess]
-/// keeps reading trialStartedAt from local storage so the offline grace
-/// window still works, it just now reads a server-synced value instead of
-/// a purely client-set one.
+const int _maxHistoryTurns = 50;
+const int _maxTurnCharacters = 4000;
+const int _maxTotalHistoryCharacters = 12000;
+const int _maxMedicationNameCharacters = 100;
+const int _maxMedicationTimes = 8;
+
+const Set<String> _allowedRoles = {'user', 'assistant'};
+const Set<String> _allowedActions = {
+  'set_coach_mode',
+  'set_medication_times',
+  'set_permission',
+};
+const Set<String> _allowedCoachPreferences = {
+  'like',
+  'neutral',
+  'dislike',
+  'off',
+};
+const Set<String> _allowedCoachFrequencies = {'az', 'orta', 'cok'};
+const Set<String> _allowedPermissions = {
+  'microphone',
+  'location',
+  'activityRecognition',
+  'health',
+  'usageAccess',
+};
+
 Future<void> _syncServerTrialStart(DateTime serverTrialStartedAt) async {
   final storage = StorageService();
   final existing = await storage.loadSubscriptionState();
-  if (existing?.trialStartedAt == serverTrialStartedAt) {
-    return;
-  }
+  if (existing?.trialStartedAt == serverTrialStartedAt) return;
+
   final now = DateTime.now();
   await storage.saveSubscriptionState(
     (existing ??
@@ -85,30 +87,120 @@ Future<void> _syncServerTrialStart(DateTime serverTrialStartedAt) async {
   );
 }
 
-Future<AiChatResult> sendMessageToAI(List<AiChatTurn> history) async {
+void _validateHistory(List<AiChatTurn> history) {
   if (history.isEmpty) {
     throw const AiServiceException('History is empty');
   }
+  if (history.length > _maxHistoryTurns) {
+    throw const AiServiceException('History is too long');
+  }
+
+  var totalCharacters = 0;
+  for (final turn in history) {
+    if (!_allowedRoles.contains(turn.role)) {
+      throw const AiServiceException('Invalid chat role');
+    }
+    final content = turn.content.trim();
+    if (content.isEmpty || content.length > _maxTurnCharacters) {
+      throw const AiServiceException('Invalid chat message length');
+    }
+    totalCharacters += content.length;
+  }
+  if (totalCharacters > _maxTotalHistoryCharacters) {
+    throw const AiServiceException('Chat history is too large');
+  }
+}
+
+Map<String, dynamic> _stringKeyedMap(dynamic value, String fieldName) {
+  if (value is! Map) {
+    throw AiServiceException('Invalid $fieldName');
+  }
+  return value.map((key, item) => MapEntry(key.toString(), item));
+}
+
+void _validateActionArguments(String name, Map<String, dynamic> args) {
+  switch (name) {
+    case 'set_coach_mode':
+      final preference = args['preference'];
+      final frequency = args['frequency'];
+      if (preference is! String ||
+          !_allowedCoachPreferences.contains(preference)) {
+        throw const AiServiceException('Invalid coach mode action');
+      }
+      if (frequency != null &&
+          (frequency is! String ||
+              !_allowedCoachFrequencies.contains(frequency))) {
+        throw const AiServiceException('Invalid coach frequency action');
+      }
+      return;
+
+    case 'set_medication_times':
+      final medicationName = args['medicationName'];
+      final times = args['times'];
+      if (medicationName is! String ||
+          medicationName.trim().isEmpty ||
+          medicationName.length > _maxMedicationNameCharacters ||
+          times is! List ||
+          times.isEmpty ||
+          times.length > _maxMedicationTimes) {
+        throw const AiServiceException('Invalid medication time action');
+      }
+      final timePattern = RegExp(r'^([01]?\d|2[0-3]):[0-5]\d$');
+      for (final time in times) {
+        if (time is! String || !timePattern.hasMatch(time)) {
+          throw const AiServiceException('Invalid medication time format');
+        }
+      }
+      return;
+
+    case 'set_permission':
+      final permission = args['permission'];
+      if (permission is! String || !_allowedPermissions.contains(permission)) {
+        throw const AiServiceException('Invalid permission action');
+      }
+      return;
+
+    default:
+      throw const AiServiceException('Unsupported AI action');
+  }
+}
+
+AiAction? _parseAndValidateAction(dynamic rawAction) {
+  if (rawAction == null) return null;
+
+  final actionMap = _stringKeyedMap(rawAction, 'action');
+  final name = actionMap['name'];
+  if (name is! String || !_allowedActions.contains(name)) {
+    throw const AiServiceException('Unsupported AI action');
+  }
+
+  final arguments = _stringKeyedMap(
+    actionMap['arguments'] ?? <String, dynamic>{},
+    'action arguments',
+  );
+  _validateActionArguments(name, arguments);
+  return AiAction(name: name, arguments: arguments);
+}
+
+Future<AiChatResult> sendMessageToAI(List<AiChatTurn> history) async {
+  _validateHistory(history);
 
   try {
     final callable = FirebaseFunctions.instanceFor(
       region: 'europe-west1',
     ).httpsCallable('aiChat');
     final result = await callable.call<Map<String, dynamic>>({
-      'history': history.map((t) => t.toJson()).toList(),
+      'history': history
+          .map((turn) => {'role': turn.role, 'content': turn.content.trim()})
+          .toList(),
     });
 
     final reply = result.data['reply'] as String? ?? '';
-    final rawAction = result.data['action'] as Map<dynamic, dynamic>?;
-    AiAction? action;
-    if (rawAction != null && rawAction['name'] is String) {
-      final rawArgs = rawAction['arguments'] as Map<dynamic, dynamic>? ?? {};
-      action = AiAction(
-        name: rawAction['name'] as String,
-        arguments: rawArgs.map((k, v) => MapEntry(k.toString(), v)),
-      );
+    if (reply.length > _maxTurnCharacters) {
+      throw const AiServiceException('AI reply is too long');
     }
 
+    final action = _parseAndValidateAction(result.data['action']);
     if (reply.isEmpty && action == null) {
       throw const AiServiceException('Empty response from AI');
     }
@@ -126,11 +218,6 @@ Future<AiChatResult> sendMessageToAI(List<AiChatTurn> history) async {
   }
 }
 
-/// Maps an `aiChat`/`verifySubscription` [FirebaseFunctionsException] code
-/// (see functions/index.js's `requireAuth`, `hasAiAccess` and
-/// `consumeDailyMessageQuota`) to the exception type callers actually branch
-/// on. Pulled out of [sendMessageToAI] — no I/O, so it's testable without a
-/// real Firebase backend (see test/ai_service_test.dart).
 Exception mapAiFunctionsException(FirebaseFunctionsException e) {
   switch (e.code) {
     case 'permission-denied':
@@ -143,3 +230,7 @@ Exception mapAiFunctionsException(FirebaseFunctionsException e) {
       return AiServiceException(e.message ?? e.code);
   }
 }
+
+/// Kept as a separate pure function so it can be unit-tested without Firebase.
+Exception mapAiFunctionsExceptionForTest(FirebaseFunctionsException e) =>
+    mapAiFunctionsException(e);

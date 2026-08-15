@@ -306,6 +306,42 @@ class _PermissionCard extends StatelessWidget {
   final bool? granted;
   final VoidCallback onRequest;
 
+  Future<void> _confirmAndRequest(BuildContext context) async {
+    final shouldContinue = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(description),
+              const SizedBox(height: 12),
+              Text(
+                purpose,
+                style: const TextStyle(fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('no')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('continue')),
+          ),
+        ],
+      ),
+    );
+    if (shouldContinue == true) {
+      onRequest();
+    }
+  }
+
   const _PermissionCard({
     required this.icon,
     required this.title,
@@ -385,7 +421,9 @@ class _PermissionCard extends StatelessWidget {
                 // per-app settings screen, so once granted this button's
                 // job switches from "request" to "take me there to manage
                 // it" instead of disappearing with nothing left to tap.
-                onPressed: granted == true ? openAppSettings : onRequest,
+                onPressed: granted == true
+                    ? openAppSettings
+                    : () => _confirmAndRequest(context),
                 child: Text(
                   granted == true
                       ? context.t('permissionActionManage')
