@@ -7,6 +7,7 @@ import '../models/medication.dart';
 import '../services/ai_service.dart';
 import '../services/device_permission_service.dart';
 import '../services/health_connect_service.dart';
+import '../services/language_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import 'subscription_gate_page.dart';
@@ -158,19 +159,44 @@ class _AIChatPageState extends State<AIChatPage> {
   }
 
   Future<void> _startListening() async {
-    final available = await _speech.initialize();
+    // Re-initialize in case the service was stopped after a previous failure.
+    final available = await _speech.initialize(
+      onError: (error) {
+        debugPrint('SpeechToText error: ${error.errorMsg}');
+      },
+    );
     if (!available) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('aiChatMicPermissionDenied'))),
+        SnackBar(
+          content: Text(context.t('aiChatMicPermissionDenied')),
+          action: SnackBarAction(
+            label: 'OK',
+            onPressed: () {
+              ph.Permission.microphone.request();
+            },
+          ),
+        ),
       );
       return;
     }
 
+    // If a previous listening session is still active, stop it first.
+    if (_speech.isListening) {
+      await _speech.stop();
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+
+    final locale = await _resolveListeningLocale();
     _textBeforeListening = _controller.text;
     setState(() => _listening = true);
     await _speech.listen(
       onResult: (result) {
+        // Only use final results or non-empty partial results to avoid
+        // flickering the input with empty strings.
+        if (!result.finalResult && result.recognizedWords.trim().isEmpty) {
+          return;
+        }
         final separator = _textBeforeListening.isEmpty ? '' : ' ';
         final combined =
             '$_textBeforeListening$separator${result.recognizedWords}';
@@ -179,7 +205,39 @@ class _AIChatPageState extends State<AIChatPage> {
           offset: combined.length,
         );
       },
+      listenOptions: SpeechListenOptions(
+        listenFor: const Duration(seconds: 60),
+        pauseFor: const Duration(seconds: 3),
+        partialResults: true,
+        cancelOnError: true,
+        listenMode: ListenMode.confirmation,
+        localeId: locale,
+      ),
     );
+  }
+
+  /// Picks a listening locale the device speech engine actually supports.
+  /// Falls back to the current locale first, then English, and finally lets
+  /// the platform choose when nothing works.
+  Future<String?> _resolveListeningLocale() async {
+    final locales = await _speech.locales();
+    final localeIds = locales.map((l) => l.localeId).toList();
+    final preferred = await LanguageService.loadSelectedLanguageCode();
+    final candidates = <String>[
+      preferred,
+      'tr_TR',
+      'tr',
+      'en_US',
+      'en',
+    ];
+    for (final candidate in candidates) {
+      if (localeIds.contains(candidate)) return candidate;
+    }
+    // Fallback to any locale whose language prefix matches the preference.
+    for (final id in localeIds) {
+      if (id.startsWith(preferred)) return id;
+    }
+    return null;
   }
 
   Future<void> _stopListening() async {
@@ -260,11 +318,17 @@ class _AIChatPageState extends State<AIChatPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.t('aiChatAuthNotReady'))));
-    } on AiServiceException {
+    } on AiServiceException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(context.t('aiChatError'))));
+      // Show the actual error reason instead of a generic failure message —
+      // this makes network / region / server issues visible to the user.
+      final detail = e.message.trim().isEmpty ? '' : '\n(${e.message})';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${context.t('aiChatError')}$detail'),
+          duration: const Duration(seconds: 5),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
