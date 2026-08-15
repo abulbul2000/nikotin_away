@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:speech_to_text/speech_to_text.dart';
 
@@ -257,9 +258,50 @@ class _AIChatPageState extends State<AIChatPage> {
     return null;
   }
 
+  /// Ensures the anonymous Firebase identity exists before any callable is
+  /// invoked — the aiChat Cloud Function rejects requests without auth
+  /// (functions/index.js requireAuth), and the app-wide sign-in in main()
+  /// is best-effort so it may not have completed by the time the user opens
+  /// this page.
+  Future<bool> _ensureAuth() async {
+    try {
+      if (auth.FirebaseAuth.instance.currentUser == null) {
+        debugPrint('[AIChat] No currentUser, attempting anonymous sign-in…');
+        final userCredential =
+            await auth.FirebaseAuth.instance.signInAnonymously();
+        debugPrint(
+          '[AIChat] Anonymous sign-in result: uid=${userCredential.user?.uid}',
+        );
+        return userCredential.user != null;
+      }
+      debugPrint(
+        '[AIChat] currentUser exists: uid=${auth.FirebaseAuth.instance.currentUser?.uid}',
+      );
+      return true;
+    } catch (e) {
+      debugPrint('[AIChat] Auth failed: $e');
+      return false;
+    }
+  }
+
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
+
+    // Make sure anonymous auth is in place before touching the network.
+    final authed = await _ensureAuth();
+    if (!authed) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Firebase girişi yapılamadı. İnternet bağlantını kontrol et ve tekrar dene.',
+          ),
+          duration: Duration(seconds: 5),
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _messages.add(_ChatMessage(text: text, fromUser: true));

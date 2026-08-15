@@ -34,8 +34,7 @@ const TOOLS = [
           preference: {
             type: "string",
             enum: ["like", "neutral", "dislike", "off"],
-            description:
-              "like=zor/zorlayıcı, neutral=normal, dislike=kolay, off=kapalı",
+            description: "like=zor/zorlayıcı, neutral=normal, dislike=kolay, off=kapalı",
           },
           frequency: {
             type: "string",
@@ -52,21 +51,28 @@ const TOOLS = [
     function: {
       name: "set_medication_times",
       description:
-        "Var olan bir ilacın hatırlatma saatlerini değiştirir. Saatler 24 saat formatında HH:mm olmalı.",
+        "Kullanıcının ilaç/destek ürünü hatırlatıcı saatlerini ayarlar veya temizler.",
       parameters: {
         type: "object",
         properties: {
-          medicationName: {
-            type: "string",
-            description: "Saatleri değişecek ilacın adı",
-          },
           times: {
             type: "array",
-            items: { type: "string" },
-            description: "Yeni hatırlatma saatleri, örn. [\"08:00\", \"20:00\"]",
+            items: {
+              type: "object",
+              properties: {
+                hour: { type: "integer", minimum: 0, maximum: 23 },
+                minute: { type: "integer", minimum: 0, maximum: 59 },
+              },
+              required: ["hour", "minute"],
+            },
+            description: "Hatırlatma saatleri (24 saatlik format)",
+          },
+          clear: {
+            type: "boolean",
+            description:
+              "true ise mevcut hatırlatmalar silinir, times alanı yok sayılır",
           },
         },
-        required: ["medicationName", "times"],
       },
     },
   },
@@ -75,7 +81,7 @@ const TOOLS = [
     function: {
       name: "set_permission",
       description:
-        "Kullanıcı isteğe bağlı bir izni (mikrofon, konum, aktivite tanıma, sağlık verisi, kullanım erişimi) açmak isterse, o izin için sistemin izin isteme diyaloğunu tetikler. Android bir izni kapatmayı asla programatik olarak yapmaya izin vermez; kapatmak isteyen kullanıcı Ayarlar'a yönlendirilmeli, bu tool sadece açma isteğini tetikleyebilir.",
+        "Kullanıcının uygulama izin tercihlerinden birini (mikrofon, konum, adım sayısı, sağlık verisi, kullanım erişimi) açmayı önerir.",
       parameters: {
         type: "object",
         properties: {
@@ -108,6 +114,7 @@ export async function chatWithAI(apiKey, history) {
     model: "nvidia/nemotron-3.5-lightning-30b-a3b",
     messages: [{ role: "system", content: SYSTEM_PROMPT }, ...history],
     tools: TOOLS,
+    max_tokens: 800,
   });
 
   const choice = completion.choices[0].message;
@@ -121,10 +128,10 @@ export async function chatWithAI(apiKey, history) {
       args = {};
     }
     return {
-      reply: choice.content || "",
+      reply: choice.content?.trim() || "",
       action: { name: toolCall.function.name, arguments: args },
     };
   }
 
-  return { reply: choice.content || "", action: null };
+  return { reply: choice.content?.trim() || "", action: null };
 }

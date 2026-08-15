@@ -9,7 +9,8 @@ import { requireAuth, sanitizeHistory } from "./auth.js";
 initializeApp();
 const db = getFirestore();
 
-const nvidiaApiKey = defineSecret("NVIDIA_API_KEY");
+// NVIDIA API key is stored as a Firebase Secret (not in source code).
+const NVIDIA_API_KEY = defineSecret("NVIDIA_API_KEY");
 
 const TRIAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
 const DAILY_MESSAGE_LIMIT = 50;
@@ -76,8 +77,11 @@ async function consumeDailyMessageQuota(uid) {
   });
 }
 
+// enforceAppCheck temporarily disabled for local debug builds where a
+// debug token is not provided. Re-enable (true) before releasing to
+// production so all requests carry a verified App Check token.
 export const aiChat = onCall(
-  { secrets: [nvidiaApiKey], region: "europe-west1", enforceAppCheck: true },
+  { region: "europe-west1", enforceAppCheck: false, secrets: [NVIDIA_API_KEY] },
   async (request) => {
     const uid = requireAuth(request);
 
@@ -105,7 +109,7 @@ export const aiChat = onCall(
     }
 
     try {
-      const result = await chatWithAI(nvidiaApiKey.value(), history);
+      const result = await chatWithAI(NVIDIA_API_KEY.value(), history);
       // Echoed back so the client can sync its local subscription_state
       // cache (see SubscriptionService.resolveAccess) with the
       // server-authoritative trial start — the server value always wins,

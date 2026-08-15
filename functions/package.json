@@ -11,10 +11,10 @@
     "test": "node --test \"test/**/*.test.js\""
   },
   "dependencies": {
-    "firebase-functions": "^6.3.1",
     "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.1",
     "googleapis": "^144.0.0",
-    "openai": "^4.77.0"
+    "openai": "^4.90.0"
   },
   "private": true
 }
