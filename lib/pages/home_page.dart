@@ -133,6 +133,7 @@ class _HomePageState extends State<HomePage> {
   /// Start (task begins normally) or Skip (dismissed for good); null once
   /// there is nothing to offer.
   String? _missedTaskTitle;
+  Future<void>? _notifyNewTasksInFlight;
 
   /// Today's tasks that never reached the user at all (overdue-grace
   /// closures + native delivery-gate expirations) — shown as a single
@@ -1241,7 +1242,21 @@ class _HomePageState extends State<HomePage> {
   /// rather than delivered late (see the overdue branch in [_notifyNewTasks]).
   static const Duration _overdueTaskGrace = Duration(minutes: 15);
 
-  Future<void> _notifyNewTasks() async {
+  Future<void> _notifyNewTasks() {
+    final inFlight = _notifyNewTasksInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+    final future = _notifyNewTasksInternal();
+    _notifyNewTasksInFlight = future;
+    return future.whenComplete(() {
+      if (identical(_notifyNewTasksInFlight, future)) {
+        _notifyNewTasksInFlight = null;
+      }
+    });
+  }
+
+  Future<void> _notifyNewTasksInternal() async {
     final taskAssignmentService = TaskAssignmentService(_storageService);
     // Backstop for the native delivery-gate queue limit while the app is
     // open — a task stuck in pendingDelivery beyond the queue limit is
