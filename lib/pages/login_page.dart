@@ -156,6 +156,14 @@ class _LoginPageState extends State<LoginPage> {
                 // Google Sign-In button
                 ElevatedButton(
                   onPressed: _busy ? null : _onGoogleSignIn,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black87,
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -170,14 +178,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ],
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    minimumSize: const Size(double.infinity, 52),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
                 ),
 
                 const SizedBox(height: 16),
@@ -185,15 +185,15 @@ class _LoginPageState extends State<LoginPage> {
                 // Skip button
                 OutlinedButton(
                   onPressed: _busy ? null : _onSkip,
-                  child: Text(
-                    context.t('loginSkipButton'),
-                    style: const TextStyle(fontSize: 16),
-                  ),
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 52),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
+                  ),
+                  child: Text(
+                    context.t('loginSkipButton'),
+                    style: const TextStyle(fontSize: 16),
                   ),
                 ),
 
