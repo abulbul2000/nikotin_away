@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 
-const PACKAGE_NAME = "com.example.no_smoke";
+const PACKAGE_NAME = "com.nikotinaway.app";
 
 const ACTIVE_STATES = new Set([
   "SUBSCRIPTION_STATE_ACTIVE",

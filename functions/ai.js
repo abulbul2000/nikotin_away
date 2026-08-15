@@ -51,28 +51,24 @@ const TOOLS = [
     function: {
       name: "set_medication_times",
       description:
-        "Kullanıcının ilaç/destek ürünü hatırlatıcı saatlerini ayarlar veya temizler.",
+        "Kullanıcının seçtiği ilaç/destek ürünü için hatırlatıcı saatlerini ayarlar.",
       parameters: {
         type: "object",
         properties: {
+          medicationName: {
+            type: "string",
+            description: "Mevcut ilaç veya destek ürününün adı",
+          },
           times: {
             type: "array",
             items: {
-              type: "object",
-              properties: {
-                hour: { type: "integer", minimum: 0, maximum: 23 },
-                minute: { type: "integer", minimum: 0, maximum: 59 },
-              },
-              required: ["hour", "minute"],
+              type: "string",
+              pattern: "^([01]?\\d|2[0-3]):[0-5]\\d$",
             },
-            description: "Hatırlatma saatleri (24 saatlik format)",
-          },
-          clear: {
-            type: "boolean",
-            description:
-              "true ise mevcut hatırlatmalar silinir, times alanı yok sayılır",
+            description: "Hatırlatma saatleri; HH:mm biçiminde, örneğin 08:30",
           },
         },
+        required: ["medicationName", "times"],
       },
     },
   },

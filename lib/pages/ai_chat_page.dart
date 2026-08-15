@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:permission_handler/permission_handler.dart' as ph;
@@ -149,6 +151,65 @@ class _AIChatPageState extends State<AIChatPage> {
   bool _sending = false;
   bool _listening = false;
   String _textBeforeListening = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedHistory();
+  }
+
+  Future<void> _loadSavedHistory() async {
+    try {
+      final raw = await _storage.loadSetting('ai_chat_history_v1');
+      if (raw == null || raw.trim().isEmpty) return;
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return;
+      final turns = <AiChatTurn>[];
+      for (final item in decoded) {
+        if (item is! Map) continue;
+        final role = item['role'];
+        final content = item['content'];
+        if ((role == 'user' || role == 'assistant') && content is String) {
+          turns.add(AiChatTurn(role: role, content: content));
+        }
+      }
+      if (!mounted || turns.isEmpty) return;
+      final restoredTurns = turns.length > 20
+          ? turns.sublist(turns.length - 20)
+          : turns;
+      setState(() {
+        _history
+          ..clear()
+          ..addAll(restoredTurns);
+        _messages
+          ..clear()
+          ..addAll(
+            restoredTurns.map(
+              (turn) => _ChatMessage(
+                text: turn.content,
+                fromUser: turn.role == 'user',
+              ),
+            ),
+          );
+      });
+    } catch (error) {
+      debugPrint('[AIChat] saved history restore failed: $error');
+    }
+  }
+
+  Future<void> _persistHistory() async {
+    try {
+      final turns = _history.length > 20
+          ? _history.sublist(_history.length - 20)
+          : _history;
+      final payload = turns
+          .map((turn) => turn.toJson())
+          .toList(growable: false);
+      await _storage.saveSetting('ai_chat_history_v1', jsonEncode(payload));
+    } catch (error) {
+      debugPrint('[AIChat] saved history write failed: $error');
+    }
+  }
 
   @override
   void dispose() {
@@ -326,6 +387,7 @@ class _AIChatPageState extends State<AIChatPage> {
         );
         _sending = false;
       });
+      await _persistHistory();
       return;
     }
 
@@ -344,6 +406,7 @@ class _AIChatPageState extends State<AIChatPage> {
           ),
         );
       });
+      await _persistHistory();
     } on AiSubscriptionRequiredException {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -411,7 +474,6 @@ class _AIChatPageState extends State<AIChatPage> {
     }
     final frequency = args['frequency'] as String?;
 
-    await _storage.saveSetting('duration_barrier_preference', preference);
     if (frequency != null && const ['az', 'orta', 'cok'].contains(frequency)) {
       await _storage.saveSetting(
         'duration_barrier_frequency_preference',

@@ -81,11 +81,10 @@ async function consumeDailyMessageQuota(uid) {
   });
 }
 
-// enforceAppCheck temporarily disabled for local debug builds where a
-// debug token is not provided. Re-enable (true) before releasing to
-// production so all requests carry a verified App Check token.
+// AI requests must carry a verified App Check token so a copied client
+// cannot freely consume the NVIDIA secret or forge the app's trial flow.
 export const aiChat = onCall(
-  { region: "europe-west1", enforceAppCheck: false, secrets: [NVIDIA_API_KEY] },
+  { region: "europe-west1", enforceAppCheck: true, secrets: [NVIDIA_API_KEY] },
   async (request) => {
     const uid = requireAuth(request);
 
