@@ -1881,6 +1881,10 @@ class AppTexts {
     'loginRestoring': 'Verilerin geri yükleniyor...',
     'loginNoCloudData': 'Bulutta kayıtlı verin bulunamadı.',
     'loginRestoreSuccess': '{count} kayıt geri yüklendi.',
+    'notificationsPageTitle': 'Bildirimler',
+    'notificationsEmpty': 'Son 6 saat icinde bildirim yok',
+    'settingsNotificationsRow': 'Bildirim Gecmisi',
+    'settingsNotificationsRowSubtitle': 'Son bildirimlerini goruntule',
   };
 
   // English - Full translation
@@ -3768,6 +3772,10 @@ class AppTexts {
     'loginRestoring': 'Restoring your data...',
     'loginNoCloudData': 'No saved data found in the cloud.',
     'loginRestoreSuccess': '{count} records restored.',
+    'notificationsPageTitle': 'Notifications',
+    'notificationsEmpty': 'No notifications in the last 6 hours',
+    'settingsNotificationsRow': 'Notification History',
+    'settingsNotificationsRowSubtitle': 'View your recent notifications',
   };
 
   // All 40 languages - each inherits from EN, with top keys translated

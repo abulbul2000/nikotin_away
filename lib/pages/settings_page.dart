@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'notifications_page.dart';
 
 import '../core/app_texts.dart';
 import '../main.dart';
@@ -321,6 +322,14 @@ class _SettingsPageState extends State<SettingsPage> {
     unawaited(_refreshWearableSnapshot());
   }
 
+
+  Future<void> _openNotifications() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotificationsPage()),
+    );
+  }
+
   Future<void> _openLanguageSettings() async {
     final initialCode = await LanguageService.loadSelectedLanguageCode();
     if (!mounted) return;
@@ -570,6 +579,17 @@ class _SettingsPageState extends State<SettingsPage> {
         _SectionLabel(context.t('notifKindsSectionTitle')),
         const NotificationKindsCard(),
         const SizedBox(height: 20),
+
+        const SizedBox(height: 8),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.notifications_outlined),
+            title: Text(context.t('settingsNotificationsRow')),
+            subtitle: Text(context.t('settingsNotificationsRowSubtitle')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _openNotifications,
+          ),
+        ),
         _SectionLabel(context.t('settingsSectionGeneral')),
         Card(
           child: Column(

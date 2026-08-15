@@ -13,6 +13,7 @@ import '../models/medication.dart';
 import '../models/task_assignment.dart';
 import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
+import '../pages/notifications_page.dart';
 import '../pages/health_tip_page.dart';
 import '../pages/medication_reminder_page.dart';
 import '../pages/task_smoked_confirm_page.dart';
@@ -21,6 +22,7 @@ import 'android_watchdog_service.dart';
 import 'behavior_engine.dart';
 import 'language_service.dart';
 import 'notification_budget.dart';
+import 'notification_history_service.dart';
 import 'phone_state_service.dart';
 import 'sleep_probe_service.dart';
 import 'smoked_log_button_service.dart';
@@ -44,6 +46,21 @@ class NotificationService {
       return;
     }
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+  }
+
+
+  /// Records a notification in the history for the Notifications page.
+  /// Called after every notification is shown.
+  static void _recordNotificationHistory({
+    required String title,
+    required String body,
+    required String type,
+  }) {
+    unawaited(NotificationHistoryService.record(
+      title: title,
+      body: body,
+      type: type,
+    ));
   }
 
   static const String _typeBreath = 'breath';
@@ -1073,6 +1090,20 @@ class NotificationService {
     }
 
     final type = payload['type'];
+
+    // Navigate to Notifications page when tapped
+    if (type == 'notifications') {
+      if (allowNavigation) {
+        final context = _navigatorKey?.currentContext;
+        if (context != null) {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const NotificationsPage()),
+          );
+        }
+      }
+      return;
+    }
+
     if (type == _typeBreath && allowNavigation) {
       // Never deep-link into BreathTestPage before the user has finished
       // the initial survey — a stale/queued daily reminder firing during
@@ -1753,6 +1784,7 @@ class NotificationService {
         'watchdogId': watchdogId,
       }),
     );
+    _recordNotificationHistory(title: _text(code, 'disciplineCommand'), body: _text(code, 'disciplineCommandBody'), type: 'task_start');
 
     await AndroidWatchdogService.startWatchdog(
       taskTitle: taskTitle,
@@ -2047,6 +2079,7 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: jsonEncode({'type': _typeBreath}),
       );
+      _recordNotificationHistory(title: _text(code, 'dailyBreathOverdueNotificationTitle'), body: _text(code, 'dailyBreathOverdueNotificationBody'), type: 'breath');
     }
 
     if (safeMinimum <= count) {
@@ -2447,6 +2480,7 @@ class NotificationService {
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: jsonEncode({'type': _typeWeeklySurvey}),
     );
+    _recordNotificationHistory(title: _text(code, 'weeklySurveyReminderTitle'), body: _text(code, 'weeklySurveyReminderBody'), type: 'weekly_survey');
   }
 
   static Future<void> cancelWeeklySurveyReminder() async {

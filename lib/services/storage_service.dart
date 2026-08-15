@@ -77,6 +77,7 @@ class StorageService {
   static const _consentEventsTable = 'consent_events';
   static const _subscriptionStateTable = 'subscription_state';
   static const _failureTriggersTable = 'failure_triggers';
+  static const _notificationsHistoryTable = 'notification_history';
   static const _behaviorDirtyKey = 'behavior_dirty';
   static const _registrationCompletedKey = 'registration_completed';
   static const _isProfileCompletedKey = 'isProfileCompleted';
@@ -158,7 +159,7 @@ class StorageService {
       // "now" rather than penalized for not having had a trial before.
       // 32: failure_triggers — the single-tap "what happened?" answer
       // logged right after a barrier failure, see saveFailureTrigger.
-      version: 32,
+      version: 33,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -207,6 +208,7 @@ class StorageService {
         await _ensureMedicationDoseLogTable(db);
         await _ensureCoughTestRecordsTable(db);
         await _ensureFailureTriggersTable(db);
+        await _ensureNotificationsHistoryTable(db);
         await _ensureIndexes(db);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
@@ -243,6 +245,7 @@ class StorageService {
         await _ensureMedicationDoseLogTable(db);
         await _ensureCoughTestRecordsTable(db);
         await _ensureFailureTriggersTable(db);
+        await _ensureNotificationsHistoryTable(db);
         if (oldVersion < 31) {
           // Can't go through loadSurveyHistory()/startTrialIfNeeded() here —
           // both resolve the `database` getter, which would recursively
@@ -1299,6 +1302,20 @@ class StorageService {
   /// profile the weekly survey's trigger questions do, so a failure the
   /// user explains is worth as much to that profile as one they reported on
   /// a survey a week later.
+
+  Future<void> _ensureNotificationsHistoryTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $_notificationsHistoryTable (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT '',
+        receivedAt TEXT NOT NULL,
+        expiresAt TEXT NOT NULL
+      )
+    ''');
+  }
+
   Future<void> _ensureFailureTriggersTable(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $_failureTriggersTable (
