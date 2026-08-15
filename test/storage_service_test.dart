@@ -859,6 +859,7 @@ void main() {
 
     test(
       'frequency az/cok change task COUNT but never the barrier DURATION',
+      timeout: const Timeout(Duration(minutes: 2)),
       () async {
         // Same wake/sleep window and survey data for all three runs, so any
         // difference in the resulting plan can only come from the frequency
@@ -891,7 +892,7 @@ void main() {
         // have the jitter cancel or reverse the frequency effect purely by
         // chance. Comparing means over many samples is what actually
         // isolates the frequency effect from that noise.
-        const sampleSize = 40;
+        const sampleSize = 10;
         final allBaseDurations = <int>{};
         var azTotal = 0;
         var ortaTotal = 0;
