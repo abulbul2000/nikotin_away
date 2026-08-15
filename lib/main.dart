@@ -46,11 +46,27 @@ Future<void> main() async {
   // with no network yet on first launch still needs to reach the home
   // screen, and these silently retry the next time a callable is invoked.
   try {
-    await FirebaseAppCheck.instance.activate(
-      providerAndroid: kDebugMode
-          ? const AndroidDebugProvider()
-          : const AndroidPlayIntegrityProvider(),
-    );
+    // In debug builds a server-generated debug token can be passed via
+    // `flutter run --dart-define=APP_CHECK_DEBUG_SECRET=<secret>` so the
+    // Firebase Console "Manage debug tokens" entry lets this build pass
+    // App Check (needed by the enforceAppCheck Cloud Functions).
+    const String debugSecret =
+        String.fromEnvironment('APP_CHECK_DEBUG_SECRET');
+    final bool useDebugProvider =
+        kDebugMode || debugSecret.isNotEmpty;
+    if (useDebugProvider && debugSecret.isNotEmpty) {
+      await FirebaseAppCheck.instance.activate(
+        providerAndroid: AndroidDebugProvider(debugToken: debugSecret),
+      );
+    } else if (kDebugMode) {
+      await FirebaseAppCheck.instance.activate(
+        providerAndroid: const AndroidDebugProvider(),
+      );
+    } else {
+      await FirebaseAppCheck.instance.activate(
+        providerAndroid: const AndroidPlayIntegrityProvider(),
+      );
+    }
   } catch (error, stackTrace) {
     debugPrint('[main] App Check activation failed (non-blocking): $error');
     debugPrintStack(stackTrace: stackTrace);
