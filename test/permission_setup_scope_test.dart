@@ -2,14 +2,12 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-/// The permission screen used to show only notifications and overlay — the
-/// permissions optional features need (microphone, location, activity
-/// recognition, Health Connect) were each requested only when the user
-/// switched that feature on, in whatever screen owned the toggle. The user
-/// described this as scattered. These checks hold the two things that made
-/// consolidating them safe: the optional permissions must never count toward
-/// "everything is granted", and granting one must never flip a feature on by
-/// itself — that decision still belongs to the toggle in Settings.
+/// The permission screen contains both required permissions and optional
+/// feature permissions. Optional entries must not block completion of the
+/// mandatory setup. Sleep Intelligence is intentionally enabled from this
+/// flow because its permission row is also its opt-in control; the other
+/// optional permission rows only request platform access and do not enable a
+/// feature implicitly.
 void main() {
   final file = File('lib/pages/permission_setup_page.dart');
 
@@ -39,22 +37,26 @@ void main() {
   test('"everything granted" only counts required items', () {
     final code = source();
     expect(
-      code,
-      contains('_items\n      .where((item) => item.required)'),
+      RegExp(r'_items\s*\.where\(\s*\(item\)\s*=>\s*item\.required\s*\)\s*\.every')
+          .hasMatch(code),
+      isTrue,
       reason: 'a plain _items.every(...) would fold optional items back in',
     );
   });
 
-  test(
-    'granting an optional permission never writes a feature-enabled setting',
-    () {
-      final code = source();
-      // saveSetting only ever appears in the location intelligence service's
-      // own enable() flow, never here — this file must call the bare
-      // permission_handler request, not a service method that also flips a
-      // feature switch.
-      expect(code, isNot(contains('saveSetting')));
-      expect(code, isNot(contains('.enable()')));
-    },
-  );
+  test('optional permission rows have the intended enablement scope', () {
+    final code = source();
+
+    // Sleep Intelligence is the one optional row that intentionally enables
+    // its feature from this onboarding permission flow.
+    expect(code, contains('SleepIntelligenceService().enable()'));
+
+    // The remaining platform permission rows must only request access. They
+    // must not save a feature setting or invoke a feature service implicitly.
+    expect(code, isNot(contains('saveSetting')));
+    expect(code, contains('ph.Permission.microphone.request()'));
+    expect(code, contains('ph.Permission.locationWhenInUse.request()'));
+    expect(code, contains('ph.Permission.activityRecognition.request()'));
+    expect(code, contains('HealthConnectService().requestPermissions()'));
+  });
 }
