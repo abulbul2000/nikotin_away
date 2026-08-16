@@ -369,8 +369,15 @@ class _HomePageState extends State<HomePage> {
           for (final (reasonKey, labelKey) in const [
             ('Stres', 'failureTriggerStress'),
             ('Kahve', 'failureTriggerCoffee'),
-            ('Sosyal Ortam', 'failureTriggerSocial'),
+            ('Yemek', 'failureTriggerMeal'),
             ('Alkol', 'failureTriggerAlcohol'),
+            ('Telefon', 'failureTriggerPhone'),
+            ('Arac', 'failureTriggerDriving'),
+            ('Is Molasi', 'failureTriggerWorkBreak'),
+            ('Sosyal Ortam', 'failureTriggerSocial'),
+            ('Can Sikintisi', 'failureTriggerBoredom'),
+            ('Aliskanlik', 'failureTriggerHabit'),
+            ('no_specific_reason', 'failureTriggerNoReason'),
             ('unknown', 'failureTriggerUnknown'),
           ])
             SimpleDialogOption(

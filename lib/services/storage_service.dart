@@ -1405,8 +1405,15 @@ class StorageService {
   static const List<String> failureTriggerReasons = [
     'Stres',
     'Kahve',
-    'Sosyal Ortam',
+    'Yemek',
     'Alkol',
+    'Telefon',
+    'Arac',
+    'Is Molasi',
+    'Sosyal Ortam',
+    'Can Sikintisi',
+    'Aliskanlik',
+    'no_specific_reason',
     'unknown',
   ];
 
