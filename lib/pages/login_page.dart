@@ -376,6 +376,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       await LoginPage.markLoginAsked();
+      if (!mounted) return;
       setState(() {
         _busy = false;
         _restoring = false;

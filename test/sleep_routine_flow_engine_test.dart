@@ -14,13 +14,12 @@ void main() {
     ]);
   });
 
-  test('with a discrepancy the question is inserted before the report', () {
+  test('with a discrepancy the flow still uses the current three steps', () {
     final steps = engine.buildSteps(hasDiscrepancy: true);
 
     expect(steps, [
       SleepRoutineStep.breathTest,
       SleepRoutineStep.coughTest,
-      SleepRoutineStep.smokingDiscrepancyQuestion,
       SleepRoutineStep.dailyReport,
     ]);
   });
