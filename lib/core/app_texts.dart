@@ -809,6 +809,8 @@ class AppTexts {
         'Acik oldugunda, telefonun ekran ve sarj durumunu gece boyunca birkac kez kontrol ederek uyku saatlerini tahmin etmeye calisir. Bu tahmin, risk degerlendirmeni daha dogru hale getirmek icin kullanilir.',
     'sleepIntelligencePurpose':
         'Neden: Sadece ekran acik/kapali ve sarjda olup olmadigin kontrol edilir, baska hicbir sey okunmaz. Yeterli veri yoksa anket sirasinda verdigin uyku saatlerine geri donulur.',
+    'sleepIntelligenceSnoringIncluded':
+        'Horlama analizi de ayni gece takibine otomatik olarak dahildir; ayri bir horlama testi yoktur.',
     'sleepIntelligenceEnabledConfirmation': 'Uyku zekasi acildi.',
     'sleepIntelligenceDisabledConfirmation': 'Uyku zekasi kapatildi.',
     'settingsSnoringDetectionRow': 'Horlama Testi (Deneysel)',
@@ -2633,6 +2635,8 @@ class AppTexts {
         'When on, the app checks your phone\'s screen and charging state a few times overnight to estimate your sleep hours. This estimate is used to make your risk assessment more accurate.',
     'sleepIntelligencePurpose':
         'Why: only whether the screen is on/off and charging is checked, nothing else is read. If there isn\'t enough data, it falls back to the sleep time you gave in the survey.',
+    'sleepIntelligenceSnoringIncluded':
+        'Snoring analysis is automatically included in the same overnight tracking; there is no separate snoring test.',
     'sleepIntelligenceEnabledConfirmation': 'Sleep intelligence turned on.',
     'sleepIntelligenceDisabledConfirmation': 'Sleep intelligence turned off.',
     'settingsSnoringDetectionRow': 'Snoring Test (Experimental)',

@@ -15,7 +15,6 @@ import '../models/wearable_health_snapshot.dart';
 import '../services/health_connect_service.dart';
 import '../services/sleep_intelligence_service.dart';
 import '../services/smoked_log_button_service.dart';
-import '../services/snoring_detection_service.dart';
 import '../services/storage_service.dart';
 import '../services/wearable_intelligence_service.dart';
 import '../widgets/background_reliability_prompt.dart';
@@ -40,8 +39,6 @@ class _SettingsPageState extends State<SettingsPage> {
   final StorageService _storageService = StorageService();
   final SleepIntelligenceService _sleepIntelligenceService =
       SleepIntelligenceService();
-  final SnoringDetectionService _snoringDetectionService =
-      SnoringDetectionService();
   final SmokedLogButtonService _smokedLogButtonService =
       SmokedLogButtonService();
   final WearableIntelligenceService _wearableIntelligenceService =
@@ -51,9 +48,7 @@ class _SettingsPageState extends State<SettingsPage> {
       DeviceCompatibilityService();
   bool _sleepIntelligenceEnabled = false;
   bool _durationBarrierEnabled = true;
-  bool _snoringDetectionEnabled = false;
   bool _smokedLogButtonEnabled = false;
-  int _lastNightSnoreLikelyCount = 0;
   bool _wearableIntelligenceEnabled = false;
   WearableHealthSnapshot _wearableSnapshot = WearableHealthSnapshot.empty;
   bool _wearableSnapshotLoading = false;
@@ -63,7 +58,6 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadSleepIntelligenceState();
     _loadDurationBarrierState();
-    _loadSnoringDetectionState();
     _loadSmokedLogButtonState();
     _loadWearableIntelligenceState();
   }
@@ -165,47 +159,6 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() => _smokedLogButtonEnabled = true);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.t('smokedLogButtonEnabled'))),
-    );
-  }
-
-  Future<void> _loadSnoringDetectionState() async {
-    final enabled = await _snoringDetectionService.isEnabled();
-    final count = await _snoringDetectionService.lastNightSnoreLikelyCount();
-    if (!mounted) return;
-    setState(() {
-      _snoringDetectionEnabled = enabled;
-      _lastNightSnoreLikelyCount = count;
-    });
-  }
-
-  Future<void> _toggleSnoringDetection(bool value) async {
-    if (value && !_sleepIntelligenceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.t('snoringDetectionRequiresSleepIntelligence')),
-        ),
-      );
-      return;
-    }
-    if (value) {
-      await _snoringDetectionService.enable();
-    } else {
-      await _snoringDetectionService.disable();
-    }
-    if (!mounted) return;
-    setState(() {
-      _snoringDetectionEnabled = value;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          context.t(
-            value
-                ? 'snoringDetectionEnabledConfirmation'
-                : 'snoringDetectionDisabledConfirmation',
-          ),
-        ),
-      ),
     );
   }
 
@@ -686,58 +639,14 @@ class _SettingsPageState extends State<SettingsPage> {
                     fontStyle: FontStyle.italic,
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        _SectionLabel(context.t('settingsSnoringDetectionRow')),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.mic_none_outlined, color: Colors.white70),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        context.t('snoringDetectionTitle'),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    Switch(
-                      value: _snoringDetectionEnabled,
-                      onChanged: _toggleSnoringDetection,
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 10),
                 Text(
-                  context.t('snoringDetectionDescription'),
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.75)),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  context.t('snoringDetectionPurpose'),
+                  context.t('sleepIntelligenceSnoringIncluded'),
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: Colors.white.withValues(alpha: 0.72),
                     fontSize: 13,
-                    fontStyle: FontStyle.italic,
                   ),
                 ),
-                if (_snoringDetectionEnabled) ...[
-                  const SizedBox(height: 10),
-                  Text(
-                    '${context.t('snoringDetectionLastNightCount')}: $_lastNightSnoreLikelyCount',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ],
               ],
             ),
           ),

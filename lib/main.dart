@@ -16,6 +16,7 @@ import 'services/google_auth_service.dart';
 import 'services/language_service.dart';
 import 'services/notification_service.dart';
 import 'services/storage_service.dart';
+import 'services/sleep_intelligence_service.dart';
 import 'services/subscription_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -92,6 +93,9 @@ Future<void> main() async {
   final locale = await LanguageService.loadSelectedLocale();
   await AppTexts.ensureLanguageLoaded(locale.languageCode);
   runApp(NoSmokeApp(initialLocale: locale));
+  // Re-arm Sleep Intelligence from the user's configured window or, once
+  // enough trusted data exists, from the behavior engine's learned window.
+  unawaited(SleepIntelligenceService().refreshScheduleIfEnabled());
 
   // Cold start: if the app was opened by tapping a notification while
   // fully terminated (not background), route to the correct page now.
