@@ -15,10 +15,17 @@ import 'package:google_sign_in/google_sign_in.dart';
 class GoogleAuthService {
   static bool _initialized = false;
 
+  // Firebase project's Web OAuth client. Passing this explicitly avoids
+  // relying on generated Android resources when google_sign_in initializes.
+  static const _serverClientId =
+      '269922488535-ku41a5487u3mql48s2l2o6hculqgqskm.apps.googleusercontent.com';
+
   /// Must be called once at app startup (before signInWithGoogle).
   static Future<void> initialize() async {
     if (_initialized) return;
-    await GoogleSignIn.instance.initialize();
+    await GoogleSignIn.instance.initialize(
+      serverClientId: _serverClientId,
+    );
     _initialized = true;
   }
 
@@ -52,7 +59,9 @@ class GoogleAuthService {
 
       await FirebaseAuth.instance.signInWithCredential(credential);
       return true;
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('[GoogleAuth] Sign-in failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
       return false;
     }
   }
