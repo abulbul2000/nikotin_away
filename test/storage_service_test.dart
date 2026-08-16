@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:no_smoke/models/adaptive_task_models.dart';
 import 'package:no_smoke/models/breath_progress_record.dart';
 import 'package:no_smoke/models/cough_test_record.dart';
@@ -35,6 +36,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() {
+    SharedPreferences.setMockInitialValues({});
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     PathProviderPlatform.instance = _FakePathProviderPlatform();
