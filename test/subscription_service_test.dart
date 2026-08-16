@@ -9,7 +9,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 PurchaseDetails _purchase(PurchaseStatus status) => PurchaseDetails(
-  productID: SubscriptionService.monthlyProductId,
+  productID: SubscriptionService.starterProductId,
   verificationData: PurchaseVerificationData(
     localVerificationData: 'local',
     serverVerificationData: 'server-token',
@@ -41,7 +41,10 @@ void main() {
   setUp(() async {
     storage = StorageService();
     await storage.clearAllData();
-    service = SubscriptionService(storageService: storage);
+    service = SubscriptionService(
+      storageService: storage,
+      allowDebugAccess: false,
+    );
   });
 
   test(
@@ -54,10 +57,21 @@ void main() {
     },
   );
 
-  test('allows access while inside the 14-day trial window', () async {
-    await storage.startTrialIfNeeded();
-
+  test('shows the gate without a subscription in release mode', () async {
     final decision = await service.resolveAccess(
+      hasCompletedInitialSurvey: true,
+    );
+
+    expect(decision, AccessDecision.showGate);
+  });
+
+  test('allows access in debug mode without a subscription', () async {
+    final debugService = SubscriptionService(
+      storageService: storage,
+      allowDebugAccess: true,
+    );
+
+    final decision = await debugService.resolveAccess(
       hasCompletedInitialSurvey: true,
     );
 
@@ -65,33 +79,13 @@ void main() {
   });
 
   test(
-    'shows the gate once the trial window has elapsed with no subscription',
-    () async {
-      await storage.saveSubscriptionState(
-        SubscriptionState(
-          trialStartedAt: DateTime.now().subtract(const Duration(days: 20)),
-          status: SubscriptionStatus.trial,
-          updatedAt: DateTime.now(),
-        ),
-      );
-
-      final decision = await service.resolveAccess(
-        hasCompletedInitialSurvey: true,
-      );
-
-      expect(decision, AccessDecision.showGate);
-    },
-  );
-
-  test(
-    'allows access when subscription is active and verified recently',
+    'allows access when Starter subscription is active and recently verified',
     () async {
       final now = DateTime.now();
       await storage.saveSubscriptionState(
         SubscriptionState(
-          trialStartedAt: now.subtract(const Duration(days: 20)),
           status: SubscriptionStatus.active,
-          productId: 'monthly_sub',
+          productId: SubscriptionService.starterProductId,
           lastVerifiedAt: now.subtract(const Duration(hours: 1)),
           updatedAt: now,
         ),
@@ -111,9 +105,8 @@ void main() {
       final now = DateTime.now();
       await storage.saveSubscriptionState(
         SubscriptionState(
-          trialStartedAt: now.subtract(const Duration(days: 20)),
           status: SubscriptionStatus.active,
-          productId: 'monthly_sub',
+          productId: SubscriptionService.plusProductId,
           lastVerifiedAt: now.subtract(const Duration(days: 4)),
           updatedAt: now,
         ),
@@ -131,9 +124,8 @@ void main() {
     final now = DateTime.now();
     await storage.saveSubscriptionState(
       SubscriptionState(
-        trialStartedAt: now.subtract(const Duration(days: 20)),
         status: SubscriptionStatus.expired,
-        productId: 'monthly_sub',
+        productId: SubscriptionService.proProductId,
         lastVerifiedAt: now,
         updatedAt: now,
       ),
