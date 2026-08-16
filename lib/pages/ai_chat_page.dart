@@ -223,12 +223,40 @@ class _AIChatPageState extends State<AIChatPage> {
   }
 
   Future<void> _startListening() async {
+    if (_listening || _sending) return;
+
+    final microphoneStatus = await ph.Permission.microphone.request();
+    if (!microphoneStatus.isGranted) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.t('aiChatMicPermissionDenied')),
+          action: SnackBarAction(
+            label: 'Ayarlar',
+            onPressed: () => ph.openAppSettings(),
+          ),
+        ),
+      );
+      return;
+    }
+
     // Re-initialize in case the service was stopped after a previous failure.
     final available = await _speech.initialize(
+      onStatus: (status) {
+        if (!mounted) return;
+        if (status == 'notListening' || status == 'done') {
+          setState(() => _listening = false);
+        }
+      },
       onError: (error) {
         debugPrint('SpeechToText error: ${error.errorMsg}');
+        if (!mounted) return;
+        setState(() => _listening = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Mikrofon kullanılamadı: ${error.errorMsg}')),
+        );
       },
-    );
+    ).timeout(const Duration(seconds: 10), onTimeout: () => false);
     if (!available) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -689,10 +717,11 @@ class _AIChatPageState extends State<AIChatPage> {
                 Tooltip(
                   message: context.t('aiChatMicTooltip'),
                   child: GestureDetector(
-                    onLongPressStart: _sending
+                    onTap: _sending
                         ? null
-                        : (_) => _startListening(),
-                    onLongPressEnd: _sending ? null : (_) => _stopListening(),
+                        : () => _listening
+                            ? _stopListening()
+                            : _startListening(),
                     child: Material(
                       color: _listening
                           ? Theme.of(context).colorScheme.error
