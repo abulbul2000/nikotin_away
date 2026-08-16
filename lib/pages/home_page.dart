@@ -154,6 +154,7 @@ class _HomePageState extends State<HomePage> {
     unawaited(_stepTrackingService.ensureDailyProbeScheduled());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_handlePendingQuickLogRoute());
+      unawaited(_offerPendingSmokingTriggerPrompts());
       unawaited(_offerQuickLogButtonOnce());
     });
   }
@@ -351,6 +352,51 @@ class _HomePageState extends State<HomePage> {
               .replaceAll('{hours}', '$monthlyHours'),
         ),
       ),
+    );
+  }
+
+  Future<void> _offerPendingSmokingTriggerPrompts() async {
+    final events = await _storageService.loadSmokingEventsWithoutTrigger();
+    for (final event in events) {
+      if (!mounted) return;
+      await _offerSmokingTriggerPrompt(event.id);
+    }
+    if (events.isNotEmpty && mounted) {
+      await _loadHomeMetrics();
+    }
+  }
+
+  Future<void> _offerSmokingTriggerPrompt(String eventId) async {
+    if (!mounted) return;
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(dialogContext.t('failureTriggerPromptTitle')),
+        children: [
+          for (final (reasonKey, labelKey) in const [
+            ('Stres', 'failureTriggerStress'),
+            ('Kahve', 'failureTriggerCoffee'),
+            ('Yemek', 'failureTriggerMeal'),
+            ('Alkol', 'failureTriggerAlcohol'),
+            ('Telefon', 'failureTriggerPhone'),
+            ('Arac', 'failureTriggerDriving'),
+            ('Is Molasi', 'failureTriggerWorkBreak'),
+            ('Sosyal Ortam', 'failureTriggerSocial'),
+            ('Can Sikintisi', 'failureTriggerBoredom'),
+            ('Aliskanlik', 'failureTriggerHabit'),
+            ('no_specific_reason', 'failureTriggerNoReason'),
+            ('unknown', 'failureTriggerUnknown'),
+          ])
+            SimpleDialogOption(
+              onPressed: () => Navigator.of(dialogContext).pop(reasonKey),
+              child: Text(dialogContext.t(labelKey)),
+            ),
+        ],
+      ),
+    );
+    await _storageService.updateSmokingEventTrigger(
+      id: eventId,
+      trigger: reason ?? 'unknown',
     );
   }
 
@@ -2291,7 +2337,9 @@ class _HomePageState extends State<HomePage> {
     if (!mounted || action == null) return;
     switch (action) {
       case QuickAction.smokedNow:
-        await _storageService.logSmokingNow();
+        final eventId = await _storageService.logSmokingNow();
+        if (!mounted) return;
+        await _offerSmokingTriggerPrompt(eventId);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.t('quickActionSmokedNowConfirmed'))),

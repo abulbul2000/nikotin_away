@@ -230,7 +230,9 @@ class StorageService {
       // "now" rather than penalized for not having had a trial before.
       // 32: failure_triggers — the single-tap "what happened?" answer
       // logged right after a barrier failure, see saveFailureTrigger.
-      version: 33,
+      // 33: smoking_events.trigger — the reason selected after a cigarette
+      // log, used by the adaptive trigger profile.
+      version: 34,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE $_tableName (
@@ -678,7 +680,8 @@ class StorageService {
         timestamp TEXT NOT NULL,
         source TEXT NOT NULL,
         approximate INTEGER NOT NULL,
-        placeId TEXT
+        placeId TEXT,
+        trigger TEXT
       )
     ''');
     // Added after the table shipped, so existing installs need it separately.
@@ -687,6 +690,7 @@ class StorageService {
     // cigarette would assemble precisely the movement history that design
     // avoids.
     await _ensureTableColumn(db, _smokingEventsTable, 'placeId', 'TEXT');
+    await _ensureTableColumn(db, _smokingEventsTable, 'trigger', 'TEXT');
   }
 
   /// One row per issued task, carrying the whole lifecycle.
@@ -1438,10 +1442,15 @@ class StorageService {
   Future<Map<String, int>> loadFailureTriggerScoreBoost() async {
     final db = await database;
     final rows = await db.query(_failureTriggersTable, columns: ['reason']);
+    final smokingRows = await db.query(
+      _smokingEventsTable,
+      columns: ['trigger'],
+      where: 'trigger IS NOT NULL',
+    );
     final boost = <String, int>{};
-    for (final row in rows) {
-      final reason = row['reason'] as String;
-      if (reason == 'unknown') continue;
+    for (final row in [...rows, ...smokingRows]) {
+      final reason = (row['reason'] ?? row['trigger']) as String?;
+      if (reason == null || reason == 'unknown') continue;
       boost[reason] = (boost[reason] ?? 0) + 5;
     }
     return boost;
@@ -4166,7 +4175,11 @@ class StorageService {
   /// presses it queued while no Flutter engine was alive, so the moment kept
   /// is when the user actually pressed rather than when the app got round to
   /// reading it.
-  Future<String> logSmokingNow({DateTime? timestamp, String? placeId}) async {
+  Future<String> logSmokingNow({
+    DateTime? timestamp,
+    String? placeId,
+    String? trigger,
+  }) async {
     final at = timestamp ?? DateTime.now();
     final id = 'smoke_${at.microsecondsSinceEpoch}';
     await saveSmokingEvent(
@@ -4176,9 +4189,36 @@ class StorageService {
         source: 'quick_log',
         approximate: false,
         placeId: placeId,
+        trigger: trigger,
       ),
     );
     return id;
+  }
+
+  Future<void> updateSmokingEventTrigger({
+    required String id,
+    required String trigger,
+  }) async {
+    if (!failureTriggerReasons.contains(trigger)) return;
+    final db = await database;
+    await db.update(
+      _smokingEventsTable,
+      {'trigger': trigger},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    await markBehaviorDirty();
+  }
+
+  Future<List<SmokingEvent>> loadSmokingEventsWithoutTrigger() async {
+    final db = await database;
+    final rows = await db.query(
+      _smokingEventsTable,
+      where: 'trigger IS NULL AND source = ?',
+      whereArgs: ['quick_log'],
+      orderBy: 'timestamp ASC',
+    );
+    return rows.map((row) => SmokingEvent.fromJson(row)).toList();
   }
 
   Future<void> deleteSmokingEvent(String id) async {

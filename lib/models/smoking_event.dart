@@ -19,6 +19,9 @@ class SmokingEvent {
   /// precise logged moment.
   final bool approximate;
 
+  /// Canonical reason the user smoked, if they answered the follow-up prompt.
+  final String? trigger;
+
   /// Which of the user's [SignificantPlace]s this happened at, if any.
   ///
   /// An id, never coordinates. The app stores at most a handful of finalised
@@ -38,6 +41,7 @@ class SmokingEvent {
     required this.source,
     required this.approximate,
     this.placeId,
+    this.trigger,
   });
 
   Map<String, dynamic> toJson() {
@@ -47,6 +51,7 @@ class SmokingEvent {
       'source': source,
       'approximate': approximate ? 1 : 0,
       'placeId': placeId,
+      'trigger': trigger,
     };
   }
 
@@ -57,6 +62,7 @@ class SmokingEvent {
       source: json['source'] as String? ?? 'daily_recall',
       approximate: ((json['approximate'] as num?)?.toInt() ?? 1) == 1,
       placeId: json['placeId'] as String?,
+      trigger: json['trigger'] as String?,
     );
   }
 }
