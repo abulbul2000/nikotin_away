@@ -198,6 +198,39 @@ void main() {
       expect(profile.breathTrend, isA<String>());
     });
 
+    test('orders time-series records before calculating trends', () {
+      final engine = BehaviorEngine();
+      final older = SurveyHistory(
+        surveyDate: DateTime(2024, 1, 1),
+        packsPerDay: '2 paket',
+        longestSmokeFreeDuration: 6,
+        hardestHour: '20:00',
+        hardestDay: 'Pazartesi',
+        triggers: const ['stres'],
+        stressLevel: 7,
+        riskScore: 70,
+        chainSmokingLevel: '5+ adet',
+      );
+      final newer = SurveyHistory(
+        surveyDate: DateTime(2024, 1, 8),
+        packsPerDay: '1 paket',
+        longestSmokeFreeDuration: 8,
+        hardestHour: '21:00',
+        hardestDay: 'Çarşamba',
+        triggers: const ['stres'],
+        stressLevel: 5,
+        riskScore: 40,
+        chainSmokingLevel: '2 adet',
+      );
+
+      expect(engine.calculateSmokingTrend([newer, older]), 'Decreasing');
+      expect(engine.calculateRiskTrend([newer, older]), 'Improving');
+      expect(
+        engine.calculateConsecutiveSmokingTrend([newer, older]),
+        'trendImproving',
+      );
+    });
+
     test('calculates consecutive smoking score and trend', () {
       final engine = BehaviorEngine();
       final score = engine.calculateConsecutiveSmokingScore(

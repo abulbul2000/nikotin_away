@@ -301,8 +301,10 @@ class BehaviorEngine {
       return 'Stable';
     }
 
-    final initialAverage = _averageBreathValue(breathTests.first);
-    final latestAverage = _averageBreathValue(breathTests.last);
+    final ordered = [...breathTests]
+      ..sort((a, b) => a.date.compareTo(b.date));
+    final initialAverage = _averageBreathValue(ordered.first);
+    final latestAverage = _averageBreathValue(ordered.last);
 
     if (latestAverage > initialAverage) {
       return 'Improving';
@@ -341,9 +343,11 @@ class BehaviorEngine {
   }
 
   String calculateSmokingTrend(List<SurveyHistory> surveys) {
-    final recentSurveys = surveys.length > 5
-        ? surveys.sublist(surveys.length - 5)
-        : surveys;
+    final ordered = [...surveys]
+      ..sort((a, b) => a.surveyDate.compareTo(b.surveyDate));
+    final recentSurveys = ordered.length > 5
+        ? ordered.sublist(ordered.length - 5)
+        : ordered;
 
     if (recentSurveys.length < 2) {
       return 'Stable';
@@ -395,8 +399,10 @@ class BehaviorEngine {
       return 'Stable';
     }
 
-    final initialRisk = _effectiveRiskScore(surveys.first);
-    final latestRisk = _effectiveRiskScore(surveys.last);
+    final ordered = [...surveys]
+      ..sort((a, b) => a.surveyDate.compareTo(b.surveyDate));
+    final initialRisk = _effectiveRiskScore(ordered.first);
+    final latestRisk = _effectiveRiskScore(ordered.last);
     if (latestRisk < initialRisk) {
       return 'Improving';
     }
@@ -411,11 +417,13 @@ class BehaviorEngine {
       return 'noRecordYet';
     }
 
+    final ordered = [...surveys]
+      ..sort((a, b) => a.surveyDate.compareTo(b.surveyDate));
     final previousScore = calculateChainSmokingRiskContribution(
-      surveys[surveys.length - 2].chainSmokingLevel,
+      ordered[ordered.length - 2].chainSmokingLevel,
     );
     final currentScore = calculateChainSmokingRiskContribution(
-      surveys.last.chainSmokingLevel,
+      ordered.last.chainSmokingLevel,
     );
 
     if (currentScore < previousScore) {
@@ -1363,7 +1371,9 @@ class BehaviorEngine {
         ? _calculateConsecutiveSmokingStatusFromRecords(surveyRecords)
         : _calculateConsecutiveSmokingStatusFromSurveys(surveys);
 
-    final latestSurvey = surveys.isEmpty ? null : surveys.last;
+    final orderedSurveys = [...surveys]
+      ..sort((a, b) => a.surveyDate.compareTo(b.surveyDate));
+    final latestSurvey = orderedSurveys.isEmpty ? null : orderedSurveys.last;
     final riskScore = latestSurvey == null
         ? 0
         : _effectiveRiskScore(latestSurvey);
