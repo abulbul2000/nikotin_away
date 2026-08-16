@@ -324,11 +324,16 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
 
+  Future<String> _selectedLanguageCode() async {
+    return LanguageService.loadSelectedLanguageCode();
+  }
+
   Future<void> _shareApp() async {
-    final languageCode = await LanguageService.loadSelectedLanguageCode();
+    final languageCode = await _selectedLanguageCode();
     if (!mounted) return;
     await AppShareService.shareApp(languageCode: languageCode);
   }
+
 
   Future<void> _openNotifications() async {
     await Navigator.push(
