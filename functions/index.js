@@ -11,7 +11,6 @@ const db = getFirestore();
 
 // Provider keys are stored as Firebase Secrets (never in source code or the Flutter app).
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
-const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 
 const TRIAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
 const DAILY_MESSAGE_LIMIT = 50;
@@ -88,7 +87,7 @@ export const aiChat = onCall(
   {
     region: "europe-west1",
     enforceAppCheck: true,
-    secrets: [GEMINI_API_KEY, OPENAI_API_KEY],
+    secrets: [GEMINI_API_KEY],
   },
   async (request) => {
     const uid = requireAuth(request);
@@ -127,7 +126,7 @@ export const aiChat = onCall(
       const result = await chatWithAI(
         {
           geminiApiKey: GEMINI_API_KEY.value(),
-          openaiApiKey: OPENAI_API_KEY.value(),
+          openaiApiKey: null,
         },
         history,
         language
