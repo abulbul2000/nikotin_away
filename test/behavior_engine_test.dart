@@ -231,6 +231,44 @@ void main() {
       );
     });
 
+    test('reports confidence, freshness, recovery mode and suggestion reasons', () {
+      final engine = BehaviorEngine();
+      final surveys = List.generate(
+        3,
+        (index) => SurveyHistory(
+          surveyDate: DateTime.now().subtract(Duration(days: index)),
+          packsPerDay: '1 paket',
+          longestSmokeFreeDuration: 8,
+          hardestHour: '20:00',
+          hardestDay: 'Pazartesi',
+          triggers: const ['stres'],
+          stressLevel: 5,
+          riskScore: 40,
+        ),
+      );
+      final tasks = List.generate(
+        5,
+        (index) => TaskHistory(
+          taskId: '$index',
+          taskTitle: 'Kısa yürüyüş',
+          completed: index < 2,
+          date: DateTime.now().subtract(Duration(days: index)),
+        ),
+      );
+      final profile = engine.generateBehaviorProfile(
+        surveys: surveys,
+        breathTests: const [],
+        taskHistory: tasks,
+      );
+
+      expect(profile.dataConfidence, 'high');
+      expect(profile.dataFreshness, 'fresh');
+      expect(profile.recoveryMode, 'relapseRisk');
+      expect(profile.suggestionReasons, contains('trigger_risk'));
+      expect(profile.suggestionReasons, contains('relapse_recovery'));
+      expect(engine.buildHomeSummary(profile)['recoveryMode'], 'relapseRisk');
+    });
+
     test('calculates consecutive smoking score and trend', () {
       final engine = BehaviorEngine();
       final score = engine.calculateConsecutiveSmokingScore(

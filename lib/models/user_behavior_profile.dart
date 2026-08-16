@@ -17,6 +17,10 @@ class UserBehaviorProfile {
   final DateTime? subscriptionEndDate;
   final bool trialActive;
   final bool premiumFeaturesEnabled;
+  final String dataConfidence;
+  final String dataFreshness;
+  final String recoveryMode;
+  final List<String> suggestionReasons;
 
   const UserBehaviorProfile({
     required this.riskScore,
@@ -37,5 +41,9 @@ class UserBehaviorProfile {
     this.subscriptionEndDate,
     this.trialActive = false,
     this.premiumFeaturesEnabled = false,
+    this.dataConfidence = 'low',
+    this.dataFreshness = 'noData',
+    this.recoveryMode = 'steady',
+    this.suggestionReasons = const [],
   });
 }

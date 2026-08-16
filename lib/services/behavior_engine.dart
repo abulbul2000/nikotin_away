@@ -1346,6 +1346,71 @@ class BehaviorEngine {
     );
   }
 
+  String _dataConfidence({
+    required int surveyCount,
+    required int breathCount,
+    required int taskCount,
+  }) {
+    final evidenceCount = surveyCount + breathCount + taskCount;
+    if (surveyCount >= 3 && evidenceCount >= 8) return 'high';
+    if (evidenceCount >= 3 || surveyCount >= 1) return 'medium';
+    return 'low';
+  }
+
+  String _dataFreshness({
+    required DateTime? latestEvidenceAt,
+    DateTime? now,
+  }) {
+    if (latestEvidenceAt == null) return 'noData';
+    final age = (now ?? DateTime.now()).difference(latestEvidenceAt);
+    if (age.isNegative || age.inDays <= 7) return 'fresh';
+    if (age.inDays <= 30) return 'aging';
+    return 'stale';
+  }
+
+  String _recoveryMode({
+    required String smokingTrend,
+    required String riskTrend,
+    required String progressStatus,
+    required List<TaskHistory> taskHistory,
+  }) {
+    final recent = taskHistory.length > 5
+        ? taskHistory.sublist(taskHistory.length - 5)
+        : taskHistory;
+    final recentFailureRate = recent.isEmpty
+        ? 0.0
+        : recent.where((item) => !item.completed).length / recent.length;
+    if (smokingTrend == 'Increasing' ||
+        riskTrend == 'Declining' ||
+        recentFailureRate >= 0.6) {
+      return 'relapseRisk';
+    }
+    if (progressStatus == 'Improving' &&
+        (smokingTrend == 'Decreasing' || riskTrend == 'Improving')) {
+      return 'recovery';
+    }
+    return 'steady';
+  }
+
+  List<String> _suggestionReasons({
+    required List<String> riskyTriggers,
+    required List<String> riskyHours,
+    required String breathTrend,
+    required String smokingTrend,
+    required String riskTrend,
+    required String recoveryMode,
+  }) {
+    final reasons = <String>[];
+    if (riskyTriggers.isNotEmpty) reasons.add('trigger_risk');
+    if (riskyHours.isNotEmpty) reasons.add('risky_hours');
+    if (breathTrend == 'Declining') reasons.add('breath_decline');
+    if (smokingTrend == 'Increasing') reasons.add('smoking_increase');
+    if (riskTrend == 'Declining') reasons.add('risk_increase');
+    if (recoveryMode == 'relapseRisk') reasons.add('relapse_recovery');
+    if (reasons.isEmpty) reasons.add('maintenance');
+    return reasons;
+  }
+
   UserBehaviorProfile generateBehaviorProfile({
     required List<SurveyHistory> surveys,
     required List<BreathTestRecord> breathTests,
@@ -1377,6 +1442,36 @@ class BehaviorEngine {
     final riskScore = latestSurvey == null
         ? 0
         : _effectiveRiskScore(latestSurvey);
+    DateTime? latestEvidenceAt = latestSurvey?.surveyDate;
+    for (final breath in breathTests) {
+      if (latestEvidenceAt == null || breath.date.isAfter(latestEvidenceAt)) {
+        latestEvidenceAt = breath.date;
+      }
+    }
+    for (final task in taskHistory) {
+      if (latestEvidenceAt == null || task.date.isAfter(latestEvidenceAt)) {
+        latestEvidenceAt = task.date;
+      }
+    }
+    final progressStatus = _deriveProgressStatus(
+      smokingTrend: smokingTrend,
+      breathTrend: breathTrend,
+      riskTrend: riskTrend,
+    );
+    final recoveryMode = _recoveryMode(
+      smokingTrend: smokingTrend,
+      riskTrend: riskTrend,
+      progressStatus: progressStatus,
+      taskHistory: taskHistory,
+    );
+    final suggestionReasons = _suggestionReasons(
+      riskyTriggers: riskyTriggers,
+      riskyHours: riskyHours,
+      breathTrend: breathTrend,
+      smokingTrend: smokingTrend,
+      riskTrend: riskTrend,
+      recoveryMode: recoveryMode,
+    );
 
     final successfulTasks = <String, Map<String, dynamic>>{};
     final failedTasks = <String, Map<String, dynamic>>{};
@@ -1400,11 +1495,7 @@ class BehaviorEngine {
       riskTrend: riskTrend,
       consecutiveSmokingTrend: consecutiveSmokingTrend,
       consecutiveSmokingStatus: consecutiveSmokingStatus,
-      progressStatus: _deriveProgressStatus(
-        smokingTrend: smokingTrend,
-        breathTrend: breathTrend,
-        riskTrend: riskTrend,
-      ),
+      progressStatus: progressStatus,
       suggestedTasks: _generateSuggestedTasks(
         riskyTriggers: riskyTriggers,
         riskyHours: riskyHours,
@@ -1420,6 +1511,14 @@ class BehaviorEngine {
       subscriptionEndDate: subscriptionEndDate,
       trialActive: trialActive,
       premiumFeaturesEnabled: premiumFeaturesEnabled,
+      dataConfidence: _dataConfidence(
+        surveyCount: surveys.length,
+        breathCount: breathTests.length,
+        taskCount: taskHistory.length,
+      ),
+      dataFreshness: _dataFreshness(latestEvidenceAt: latestEvidenceAt),
+      recoveryMode: recoveryMode,
+      suggestionReasons: suggestionReasons,
     );
   }
 
@@ -1592,6 +1691,10 @@ class BehaviorEngine {
       'riskyHours': profile.riskyHours,
       'suggestedTasks': profile.suggestedTasks,
       'lastSurveyDate': profile.lastSurveyDate,
+      'dataConfidence': profile.dataConfidence,
+      'dataFreshness': profile.dataFreshness,
+      'recoveryMode': profile.recoveryMode,
+      'suggestionReasons': profile.suggestionReasons,
     };
   }
 
