@@ -3032,9 +3032,16 @@ class NotificationService {
       return;
     }
 
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final severityKey = switch (severityLevel.toLowerCase()) {
+      'severe' => 'severityLevel5',
+      'moderate' => 'severityLevel3',
+      'mild' => 'severityLevel1',
+      _ => 'severityLevel0',
+    };
     final body = wheezeDetected
-        ? 'Wheeze detected. Severity: $severityLevel'
-        : 'No wheeze detected.';
+        ? '${_text(code, 'wheezeDetectedResult')}: ${_text(code, severityKey)}'
+        : _text(code, 'wheezeNotDetectedResult');
 
     await navigator.push(
       MaterialPageRoute(builder: (_) => HealthTipPage(body: body)),
