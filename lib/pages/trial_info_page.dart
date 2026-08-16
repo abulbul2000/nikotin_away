@@ -25,6 +25,9 @@ class TrialInfoPage extends StatelessWidget {
     if (!hasInitialSetup) {
       final guideSeen =
           await storage.loadSetting(HowItWorksPage.seenSettingKey) == '1';
+      if (!context.mounted) {
+        return;
+      }
       if (!guideSeen) {
         Navigator.pushReplacement(
           context,
