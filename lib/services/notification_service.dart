@@ -55,6 +55,7 @@ class NotificationService {
     required String title,
     required String body,
     required String type,
+    String? dedupeKey,
     DateTime? receivedAt,
     DateTime? availableAt,
   }) {
@@ -62,6 +63,7 @@ class NotificationService {
       title: title,
       body: body,
       type: type,
+      dedupeKey: dedupeKey,
       receivedAt: receivedAt,
       availableAt: availableAt,
     ));
@@ -79,6 +81,7 @@ class NotificationService {
       title: title ?? '',
       body: body ?? '',
       type: _historyTypeFromPayload(payload),
+      dedupeKey: _historyDedupeKey(title: title ?? '', body: body ?? '', payload: payload),
     );
   }
 
@@ -109,9 +112,33 @@ class NotificationService {
       title: title ?? '',
       body: body ?? '',
       type: _historyTypeFromPayload(payload),
+      dedupeKey: _historyDedupeKey(title: title ?? '', body: body ?? '', payload: payload),
       receivedAt: scheduledDate,
       availableAt: scheduledDate,
     );
+  }
+
+  static String? _historyDedupeKey({
+    required String title,
+    required String body,
+    required String? payload,
+  }) {
+    final type = _historyTypeFromPayload(payload);
+    if (payload != null && payload.isNotEmpty) {
+      try {
+        final data = jsonDecode(payload);
+        if (data is Map<String, dynamic>) {
+          final notificationId = data['notificationId'];
+          if (notificationId is String && notificationId.isNotEmpty) {
+            return '$type:$notificationId';
+          }
+        }
+      } catch (_) {
+        // Fall back to the stable visible content below.
+      }
+    }
+    if (title.isEmpty && body.isEmpty) return null;
+    return '$type:$title:$body';
   }
 
   static String _historyTypeFromPayload(String? payload) {

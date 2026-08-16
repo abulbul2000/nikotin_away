@@ -47,6 +47,7 @@ class NotificationHistoryService {
     required String title,
     required String body,
     required String type,
+    String? dedupeKey,
     DateTime? receivedAt,
     DateTime? availableAt,
   }) async {
@@ -54,13 +55,42 @@ class NotificationHistoryService {
       final storage = StorageService();
       final db = await storage.database;
       final now = receivedAt ?? DateTime.now();
-      final expiresAt = now.add(_retention);
+            final expiresAt = now.add(_retention);
+
+      if (dedupeKey != null && dedupeKey.isNotEmpty) {
+        final existing = await db.query(
+          'notification_history',
+          columns: ['id'],
+          where: 'dedupeKey = ? AND expiresAt >= ?',
+          whereArgs: [dedupeKey, now.toIso8601String()],
+          orderBy: 'receivedAt DESC',
+          limit: 1,
+        );
+        if (existing.isNotEmpty) {
+          await db.update(
+            'notification_history',
+            {
+              'title': title,
+              'body': body,
+              'type': type,
+              'receivedAt': now.toIso8601String(),
+              'expiresAt': expiresAt.toIso8601String(),
+              'availableAt': (availableAt ?? now).toIso8601String(),
+              'dedupeKey': dedupeKey,
+            },
+            where: 'id = ?',
+            whereArgs: [existing.first['id']],
+          );
+          return;
+        }
+      }
 
       await db.insert('notification_history', {
         'id': 'notif_${now.microsecondsSinceEpoch}',
         'title': title,
         'body': body,
         'type': type,
+        'dedupeKey': dedupeKey,
         'receivedAt': now.toIso8601String(),
         'expiresAt': expiresAt.toIso8601String(),
         'availableAt': (availableAt ?? now).toIso8601String(),
@@ -83,6 +113,18 @@ class NotificationHistoryService {
         where: 'expiresAt < ?',
         whereArgs: [now],
       );
+
+      // Older app versions could record the same visible notification every
+      // time the scheduler was rebuilt. Keep only the newest copy of each
+      // notification content while retaining genuinely different events.
+      await db.rawDelete('''
+        DELETE FROM notification_history
+        WHERE rowid NOT IN (
+          SELECT MAX(rowid)
+          FROM notification_history
+          GROUP BY type, title, body
+        )
+      ''');
 
       final rows = await db.query(
         'notification_history',
