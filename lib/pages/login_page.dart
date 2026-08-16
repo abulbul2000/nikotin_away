@@ -514,7 +514,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                   child: Text(
-                    context.t('loginSkipButton'),
+                    context.t('loginFirstUserButton'),
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),
