@@ -137,6 +137,42 @@ class _ChatMessage {
   );
 }
 
+class _ChatConversation {
+  _ChatConversation({
+    required this.id,
+    required this.title,
+    required List<AiChatTurn> turns,
+  }) : turns = List<AiChatTurn>.from(turns);
+
+  final String id;
+  String title;
+  final List<AiChatTurn> turns;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'turns': turns.map((turn) => turn.toJson()).toList(growable: false),
+  };
+
+  static _ChatConversation? fromJson(dynamic raw) {
+    if (raw is! Map) return null;
+    final id = raw['id'];
+    final title = raw['title'];
+    final rawTurns = raw['turns'];
+    if (id is! String || title is! String || rawTurns is! List) return null;
+    final turns = <AiChatTurn>[];
+    for (final item in rawTurns) {
+      if (item is! Map) continue;
+      final role = item['role'];
+      final content = item['content'];
+      if ((role == 'user' || role == 'assistant') && content is String) {
+        turns.add(AiChatTurn(role: role, content: content));
+      }
+    }
+    return _ChatConversation(id: id, title: title, turns: turns);
+  }
+}
+
 class AIChatPage extends StatefulWidget {
   const AIChatPage({super.key});
 
@@ -148,7 +184,9 @@ class _AIChatPageState extends State<AIChatPage> {
   final TextEditingController _controller = TextEditingController();
   final List<_ChatMessage> _messages = [];
   final List<AiChatTurn> _history = [];
+  final List<_ChatConversation> _conversations = [];
   final StorageService _storage = StorageService();
+  String? _activeConversationId;
   final SpeechToText _speech = SpeechToText();
   bool _sending = false;
   bool _listening = false;
@@ -162,55 +200,138 @@ class _AIChatPageState extends State<AIChatPage> {
 
   Future<void> _loadSavedHistory() async {
     try {
-      final raw = await _storage.loadSetting('ai_chat_history_v1');
-      if (raw == null || raw.trim().isEmpty) return;
-      final decoded = jsonDecode(raw);
-      if (decoded is! List) return;
-      final turns = <AiChatTurn>[];
-      for (final item in decoded) {
-        if (item is! Map) continue;
-        final role = item['role'];
-        final content = item['content'];
-        if ((role == 'user' || role == 'assistant') && content is String) {
-          turns.add(AiChatTurn(role: role, content: content));
+      final rawConversations = await _storage.loadSetting(
+        'ai_chat_conversations_v1',
+      );
+      if (rawConversations != null && rawConversations.trim().isNotEmpty) {
+        final decoded = jsonDecode(rawConversations);
+        if (decoded is List) {
+          _conversations
+            ..clear()
+            ..addAll(
+              decoded
+                  .map(_ChatConversation.fromJson)
+                  .whereType<_ChatConversation>(),
+            );
         }
       }
-      if (!mounted || turns.isEmpty) return;
-      final restoredTurns = turns.length > 20
-          ? turns.sublist(turns.length - 20)
-          : turns;
-      setState(() {
-        _history
-          ..clear()
-          ..addAll(restoredTurns);
-        _messages
-          ..clear()
-          ..addAll(
-            restoredTurns.map(
-              (turn) => _ChatMessage(
-                text: turn.content,
-                fromUser: turn.role == 'user',
+
+      // Migrate the previous single-history format into one conversation.
+      if (_conversations.isEmpty) {
+        final legacy = await _storage.loadSetting('ai_chat_history_v1');
+        if (legacy != null && legacy.trim().isNotEmpty) {
+          final decoded = jsonDecode(legacy);
+          final turns = <AiChatTurn>[];
+          if (decoded is List) {
+            for (final item in decoded) {
+              if (item is! Map) continue;
+              final role = item['role'];
+              final content = item['content'];
+              if ((role == 'user' || role == 'assistant') && content is String) {
+                turns.add(AiChatTurn(role: role, content: content));
+              }
+            }
+          }
+          if (turns.isNotEmpty) {
+            _conversations.add(
+              _ChatConversation(
+                id: 'chat_${DateTime.now().microsecondsSinceEpoch}',
+                title: _conversationTitle(turns),
+                turns: turns,
               ),
-            ),
-          );
-      });
+            );
+          }
+        }
+      }
+
+      if (!mounted) return;
+      if (_conversations.isNotEmpty) {
+        _selectConversation(_conversations.first, notify: false);
+      }
+      await _persistConversations();
     } catch (error) {
-      debugPrint('[AIChat] saved history restore failed: $error');
+      debugPrint('[AIChat] saved conversation restore failed: $error');
     }
   }
 
-  Future<void> _persistHistory() async {
+  String _conversationTitle(List<AiChatTurn> turns) {
+    final firstUser = turns.firstWhere(
+      (turn) => turn.role == 'user' && turn.content.trim().isNotEmpty,
+      orElse: () => const AiChatTurn(role: 'assistant', content: ''),
+    );
+    final text = firstUser.content.trim();
+    if (text.isEmpty) return 'Yeni sohbet';
+    return text.length > 30 ? '${text.substring(0, 30)}…' : text;
+  }
+
+  Future<void> _persistConversations() async {
     try {
-      final turns = _history.length > 20
-          ? _history.sublist(_history.length - 20)
-          : _history;
-      final payload = turns
-          .map((turn) => turn.toJson())
+      final payload = _conversations
+          .take(30)
+          .map((conversation) => conversation.toJson())
           .toList(growable: false);
-      await _storage.saveSetting('ai_chat_history_v1', jsonEncode(payload));
+      await _storage.saveSetting(
+        'ai_chat_conversations_v1',
+        jsonEncode(payload),
+      );
     } catch (error) {
-      debugPrint('[AIChat] saved history write failed: $error');
+      debugPrint('[AIChat] conversation write failed: $error');
     }
+  }
+
+  void _selectConversation(_ChatConversation conversation, {bool notify = true}) {
+    void apply() {
+      _activeConversationId = conversation.id;
+      _history
+        ..clear()
+        ..addAll(conversation.turns);
+      _messages
+        ..clear()
+        ..addAll(
+          conversation.turns.map(
+            (turn) => _ChatMessage(
+              text: turn.content,
+              fromUser: turn.role == 'user',
+            ),
+          ),
+        );
+    }
+    if (notify && mounted) {
+      setState(apply);
+    } else {
+      apply();
+    }
+  }
+
+  Future<void> _newConversation() async {
+    final conversation = _ChatConversation(
+      id: 'chat_${DateTime.now().microsecondsSinceEpoch}',
+      title: context.t('aiChatNewConversation'),
+      turns: const [],
+    );
+    setState(() {
+      _conversations.insert(0, conversation);
+      _selectConversation(conversation, notify: false);
+    });
+    await _persistConversations();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  Future<void> _persistHistory() async {
+    final activeId = _activeConversationId;
+    if (activeId == null) return;
+    final conversation = _conversations.cast<_ChatConversation?>().firstWhere(
+      (item) => item?.id == activeId,
+      orElse: () => null,
+    );
+    if (conversation == null) return;
+    conversation.turns
+      ..clear()
+      ..addAll(
+        _history.length > 40 ? _history.sublist(_history.length - 40) : _history,
+      );
+    conversation.title = _conversationTitle(conversation.turns);
+    await _persistConversations();
   }
 
   @override
@@ -377,6 +498,16 @@ class _AIChatPageState extends State<AIChatPage> {
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
+
+    if (_activeConversationId == null) {
+      final conversation = _ChatConversation(
+        id: 'chat_${DateTime.now().microsecondsSinceEpoch}',
+        title: context.t('aiChatNewConversation'),
+        turns: const [],
+      );
+      _conversations.insert(0, conversation);
+      _selectConversation(conversation, notify: false);
+    }
 
     // Make sure anonymous auth is in place before touching the network.
     final authed = await _ensureAuth();
@@ -597,9 +728,71 @@ class _AIChatPageState extends State<AIChatPage> {
     return 'aiChatActionAppliedPermission';
   }
 
+  Widget _buildConversationDrawer(BuildContext context) {
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.forum_outlined),
+              title: Text(context.t('aiChatTitle')),
+              subtitle: Text(context.t('aiChatHistory')),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _newConversation,
+                  icon: const Icon(Icons.add),
+                  label: Text(context.t('aiChatNewConversation')),
+                ),
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: _conversations.isEmpty
+                  ? Center(child: Text(context.t('aiChatNoConversations')))
+                  : ListView.builder(
+                      itemCount: _conversations.length,
+                      itemBuilder: (context, index) {
+                        final conversation = _conversations[index];
+                        final selected = conversation.id == _activeConversationId;
+                        return ListTile(
+                          selected: selected,
+                          leading: Icon(
+                            selected
+                                ? Icons.chat
+                                : Icons.chat_bubble_outline,
+                          ),
+                          title: Text(
+                            conversation.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          subtitle: Text(
+                            context
+                                .t('aiChatMessageCount')
+                                .replaceFirst('{count}', '${conversation.turns.length}'),
+                          ),
+                          onTap: () {
+                            _selectConversation(conversation);
+                            Navigator.of(context).pop();
+                          },
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: _buildConversationDrawer(context),
       appBar: AppBar(title: Text(context.t('aiChatTitle'))),
       body: Column(
         children: [
