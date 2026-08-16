@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../core/app_texts.dart';
 import '../core/app_theme.dart';
@@ -1836,6 +1837,16 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _shareApp() async {
+    await SharePlus.instance.share(
+      ShareParams(
+        text:
+            'Nikotin Away ile sigarayı bırakma sürecini takip et, tetikleyicilerini tanı ve daha sağlıklı adımlar at.',
+        subject: 'Nikotin Away',
+      ),
+    );
+  }
+
   AppBar _buildAppBar(BuildContext context) {
     return AppBar(
       title: Row(
@@ -1847,6 +1858,12 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       actions: [
+        IconButton(
+          key: const ValueKey('share_app_button'),
+          tooltip: 'Bizi Paylaş',
+          icon: const Icon(Icons.share_rounded),
+          onPressed: _shareApp,
+        ),
         // Notifications stay pinned in the app bar so the user can open
         // the full notification history from anywhere on the dashboard.
         Padding(
