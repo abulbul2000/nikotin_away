@@ -1631,25 +1631,10 @@ class _BreathTestPageState extends State<BreathTestPage>
                         child: AnimatedScale(
                           scale: 1.0,
                           duration: const Duration(milliseconds: 180),
-                          child: Container(
-                            width: diameter * 0.36,
-                            height: diameter * 0.36,
-                            decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.94),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.22),
-                                  blurRadius: 12,
-                                  spreadRadius: 1,
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.check_rounded,
-                              color: Colors.white,
-                              size: diameter * 0.22,
-                            ),
+                          child: Icon(
+                            Icons.check_rounded,
+                            color: const Color(0xFF52D66B),
+                            size: diameter * 0.40,
                           ),
                         ),
                       ),
