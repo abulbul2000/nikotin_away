@@ -121,20 +121,24 @@ void main() {
     },
   );
 
-  testWidgets('craving SOS button remains visible regardless of selected tab', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_wrap());
-    await tester.pump();
+  testWidgets(
+    'notification and share buttons remain visible regardless of selected tab',
+    (tester) async {
+      await tester.pumpWidget(_wrap());
+      await tester.pump();
 
-    expect(find.byKey(const ValueKey('craving_sos_button')), findsOneWidget);
+      expect(find.byKey(const ValueKey('notifications_button')), findsOneWidget);
+      expect(find.byKey(const ValueKey('share_app_button')), findsOneWidget);
 
-    await tester.tap(find.text('Takip'));
-    await tester.pump();
-    expect(find.byKey(const ValueKey('craving_sos_button')), findsOneWidget);
+      await tester.tap(find.text('Takip'));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('notifications_button')), findsOneWidget);
+      expect(find.byKey(const ValueKey('share_app_button')), findsOneWidget);
 
-    await tester.tap(find.text('Ayarlar'));
-    await tester.pump();
-    expect(find.byKey(const ValueKey('craving_sos_button')), findsOneWidget);
-  });
+      await tester.tap(find.text('Ayarlar'));
+      await tester.pump();
+      expect(find.byKey(const ValueKey('notifications_button')), findsOneWidget);
+      expect(find.byKey(const ValueKey('share_app_button')), findsOneWidget);
+    },
+  );
 }

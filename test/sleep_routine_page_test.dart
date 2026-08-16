@@ -487,7 +487,7 @@ void main() {
   );
 
   testWidgets(
-    'with a discrepancy: the question step appears between cough and report',
+    'with a discrepancy: the routine still proceeds directly to the report',
     (tester) async {
       final fakeStorage = _FakeDiscrepancyStorageService(
         discrepancy: _withDiscrepancy,
@@ -510,19 +510,8 @@ void main() {
       await _completeBreathTestStep(tester);
       await _completeCoughTestStep(tester);
 
-      // The report has not appeared yet — the discrepancy question is in
-      // between.
-      expect(find.byType(DailyProgressReportView), findsNothing);
-      expect(find.byType(ElevatedButton), findsWidgets);
-      expect(find.byType(OutlinedButton), findsOneWidget);
-
-      // "No, my log is correct" advances straight past the question. What
-      // follows (DailyProgressReportView) may itself show a loading spinner.
-      await tester.tap(find.byType(OutlinedButton));
-      for (var i = 0; i < 10; i += 1) {
-        await _pumpRealTime(tester, const Duration(milliseconds: 50));
-      }
-
+      // The old smoking-hours discrepancy question was removed from the
+      // sleep routine. The daily report is now always the next step.
       expect(find.byType(DailyProgressReportView), findsOneWidget);
       expect(fakeStorage.recalledHoursCallCount, 0);
     },
