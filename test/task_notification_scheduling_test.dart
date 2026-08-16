@@ -53,8 +53,11 @@ void main() {
 
   test('the plan is the only source of task times', () {
     final lines = codeLines();
+    // The public entry point is now an idempotent wrapper that coalesces
+    // concurrent calls. The actual plan-based scheduling lives in the
+    // internal async method, so inspect that method rather than the wrapper.
     final notifyStart = lines.indexWhere(
-      (line) => line.contains('Future<void> _notifyNewTasks() async {'),
+      (line) => line.contains('Future<void> _notifyNewTasksInternal() async {'),
     );
     expect(notifyStart, isNot(-1));
 
