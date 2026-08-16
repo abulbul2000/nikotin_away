@@ -23,7 +23,6 @@ import '../services/breath_test_service.dart';
 import '../services/notification_service.dart';
 import '../services/permission_service.dart';
 import '../services/storage_service.dart';
-import '../widgets/success_check_overlay.dart';
 import 'breath_spirometry_result_page.dart';
 import 'home_page.dart';
 import 'risk_result_page.dart';
@@ -144,6 +143,7 @@ class _BreathTestPageState extends State<BreathTestPage>
   bool _wasBackgroundedDuringAttempt = false;
   bool _acousticListeningActive = false;
   bool _autoFinishing = false;
+  bool _showSuccessCheck = false;
   _AttemptStep _step = _AttemptStep.notStarted;
   // Real spirometry uses a brief pause between maximal inhale and forceful
   // exhale, not a long held breath. Long enough to give
@@ -765,10 +765,12 @@ class _BreathTestPageState extends State<BreathTestPage>
     final detected = acoustic != null && acoustic.exhaleDetected;
 
     if (detected) {
-      await SuccessCheckOverlay.show(context);
+      setState(() => _showSuccessCheck = true);
+      await Future.delayed(const Duration(milliseconds: 900));
       if (!mounted) {
         return;
       }
+      setState(() => _showSuccessCheck = false);
     } else if (hadMicrophoneReading) {
       final retry = await showDialog<bool>(
         context: context,
@@ -1621,6 +1623,35 @@ class _BreathTestPageState extends State<BreathTestPage>
                           alpha: isExhaling ? 0.55 : 0.85,
                         ),
                         letterSpacing: 2,
+                      ),
+                    ),
+                  if (_showSuccessCheck)
+                    Positioned.fill(
+                      child: Center(
+                        child: AnimatedScale(
+                          scale: 1.0,
+                          duration: const Duration(milliseconds: 180),
+                          child: Container(
+                            width: diameter * 0.36,
+                            height: diameter * 0.36,
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.94),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.22),
+                                  blurRadius: 12,
+                                  spreadRadius: 1,
+                                ),
+                              ],
+                            ),
+                            child: Icon(
+                              Icons.check_rounded,
+                              color: Colors.white,
+                              size: diameter * 0.22,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                 ],
