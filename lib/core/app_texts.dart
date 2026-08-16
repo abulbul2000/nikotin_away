@@ -178,6 +178,9 @@ class AppTexts {
     'shareProgressAction': 'Paylas',
     'shareProgressText':
         'Nikotin Away ile sigarayi birakma surecimi takip ediyorum. Guncel risk skorum: {score}/100 ({level}).',
+    'shareAppTitle': 'Nikotin Away\'i Paylaş',
+    'shareAppMessage':
+        'Nikotin Away uygulamasını keşfet: sigarayı bırakma sürecini takip et, tetikleyicilerini tanı ve kişisel koçluğundan yararlan.\n\n{url}',
     'saveErrorRetry': 'Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.',
     'loadErrorRetry':
         'Veriler yuklenirken bir hata olustu. Lutfen tekrar deneyin.',
@@ -2089,6 +2092,9 @@ class AppTexts {
     'shareProgressAction': 'Share',
     'shareProgressText':
         'I\'m tracking my quit-smoking journey with Nikotin Away. My current risk score: {score}/100 ({level}).',
+    'shareAppTitle': 'Share Nikotin Away',
+    'shareAppMessage':
+        'Discover Nikotin Away: track your quit-smoking journey, understand your triggers, and get personal coaching.\n\n{url}',
     'saveErrorRetry': 'An error occurred while saving. Please try again.',
     'loadErrorRetry':
         'Something went wrong loading this data. Please try again.',

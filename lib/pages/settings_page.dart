@@ -12,6 +12,7 @@ import '../services/language_service.dart';
 import '../services/notification_service.dart';
 import '../models/wearable_health_snapshot.dart';
 import '../services/health_connect_service.dart';
+import '../services/app_share_service.dart';
 import '../services/sleep_intelligence_service.dart';
 import '../services/smoked_log_button_service.dart';
 import '../services/snoring_detection_service.dart';
@@ -323,6 +324,12 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
 
+  Future<void> _shareApp() async {
+    final languageCode = await LanguageService.loadSelectedLanguageCode();
+    if (!mounted) return;
+    await AppShareService.shareApp(languageCode: languageCode);
+  }
+
   Future<void> _openNotifications() async {
     await Navigator.push(
       context,
@@ -599,6 +606,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: Text(context.t('settingsLanguageRow')),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: _openLanguageSettings,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.share_outlined),
+                title: Text(context.t('shareAppTitle')),
+                subtitle: Text(context.t('shareAppMessage').split('\n').first),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _shareApp,
               ),
               const Divider(height: 1),
               ListTile(
