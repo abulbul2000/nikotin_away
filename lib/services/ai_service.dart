@@ -216,7 +216,7 @@ Future<AiChatResult> sendMessageToAI(List<AiChatTurn> history) async {
       'history': history
           .map((turn) => {'role': turn.role, 'content': turn.content.trim()})
           .toList(),
-      'language': _resolveAppLanguage(),
+      'language': await _resolveAppLanguage(),
     });
 
     final reply = result.data['reply'] as String? ?? '';
