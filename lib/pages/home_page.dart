@@ -20,6 +20,7 @@ import '../pages/craving_sos_page.dart';
 import '../pages/smoked_log_consent_page.dart';
 import '../pages/health_metrics_page.dart';
 import '../pages/mandatory_task_page.dart';
+import '../pages/notifications_page.dart';
 import '../pages/personal_progress_page.dart';
 import '../pages/protocol_violations_page.dart';
 import '../pages/reports_page.dart';
@@ -1800,22 +1801,17 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       actions: [
-        // Pinned in the app bar (not a floating button) so it stays visible
-        // at the top no matter how far the page is scrolled, rather than
-        // floating over — and sometimes obscuring — page content.
+        // Notifications stay pinned in the app bar so the user can open
+        // the full notification history from anywhere on the dashboard.
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          child: TextButton.icon(
-            key: const ValueKey('craving_sos_button'),
-            onPressed: () => unawaited(_openQuickActionMenu()),
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.redAccent,
-              foregroundColor: Colors.white,
-              shape: const StadiumBorder(),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: IconButton(
+            key: const ValueKey('notifications_button'),
+            tooltip: context.t('notificationsPageTitle'),
+            icon: const Icon(Icons.notifications_none_rounded),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationsPage()),
             ),
-            icon: const Icon(Icons.sos, size: 18),
-            label: Text(context.t('cravingSosButton')),
           ),
         ),
       ],

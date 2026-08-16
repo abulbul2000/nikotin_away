@@ -28,6 +28,32 @@ import 'home_page.dart';
 import 'risk_result_page.dart';
 import 'weekly_survey_page.dart';
 
+class _SuccessCheckPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+
+  const _SuccessCheckPainter({required this.color, required this.strokeWidth});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final path = Path()
+      ..moveTo(size.width * 0.12, size.height * 0.52)
+      ..lineTo(size.width * 0.40, size.height * 0.78)
+      ..lineTo(size.width * 0.88, size.height * 0.22);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _SuccessCheckPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
+}
+
 class BreathTestPage extends StatefulWidget {
   final String name;
   final String packsPerDay;
@@ -1631,10 +1657,15 @@ class _BreathTestPageState extends State<BreathTestPage>
                         child: AnimatedScale(
                           scale: 1.0,
                           duration: const Duration(milliseconds: 180),
-                          child: Icon(
-                            Icons.check_rounded,
-                            color: const Color(0xFF52D66B),
-                            size: diameter * 0.40,
+                          child: SizedBox(
+                            width: diameter * 0.52,
+                            height: diameter * 0.52,
+                            child: CustomPaint(
+                              painter: _SuccessCheckPainter(
+                                color: const Color(0xFF52D66B),
+                                strokeWidth: diameter * 0.045,
+                              ),
+                            ),
                           ),
                         ),
                       ),

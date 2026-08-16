@@ -1100,65 +1100,47 @@ class NotificationService {
     }
     final type = payload['type'];
 
-    // Navigate to Notifications page when tapped
+    final code = await LanguageService.loadSelectedLanguageCode();
+
+    // Every notification body tap opens the app and presents the relevant
+    // content full-screen. This avoids landing on whichever Flutter page was
+    // previously visible.
     if (type == 'notifications') {
-      if (allowNavigation) {
-        final context = _navigatorKey?.currentContext;
-        if (context != null) {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const NotificationsPage()),
-          );
-        }
-      }
+      await AndroidWatchdogService.showInfoOverlayFromNotification(
+        title: _text(code, 'notificationsPageTitle'),
+        body: payload['body'] ?? _text(code, 'notificationsEmpty'),
+        dismissLabel: _text(code, 'doneShort'),
+      );
       return;
     }
 
-    if (type == _typeBreath && allowNavigation) {
-      // Never deep-link into BreathTestPage before the user has finished
-      // the initial survey — a stale/queued daily reminder firing during
-      // onboarding (splash/language-select/mid-survey) used to be able to
-      // push BreathTestPage over whatever screen was active and, on
-      // completion, route straight to HomePage — skipping SurveyPage
-      // entirely and leaving the user stranded with no onboarding data.
-      final hasOnboarded = await StorageService().hasCompletedInitialSurvey();
-      if (!hasOnboarded) {
-        return;
-      }
-      _pushNotificationRoute(const BreathTestPage());
-
+    if (type == _typeBreath) {
+      await AndroidWatchdogService.showInfoOverlayFromNotification(
+        title: _text(code, 'breathReminderTitle'),
+        body: payload['body'] ?? _text(code, 'breathReminderBody'),
+        dismissLabel: _text(code, 'doneShort'),
+      );
       return;
     }
 
     if (type == _typeWeeklySurvey) {
-      // Action buttons cancel the notification without opening the app (see
-      // _taskTriggerActions-style actions above); tapping the body itself is
-      // the only path that should land on the survey.
-      if (allowNavigation && (response.actionId ?? '').isEmpty) {
-        _pushNotificationRoute(const WeeklySurveyPage());
-      }
+      await AndroidWatchdogService.showInfoOverlayFromNotification(
+        title: _text(code, 'weeklySurvey'),
+        body: payload['body'] ?? _text(code, 'weeklySurveyPromptAsk'),
+        dismissLabel: _text(code, 'doneShort'),
+      );
       return;
     }
 
     if (type == _typeMedicationReminder) {
       final actionId = response.actionId ?? '';
       if (actionId.isEmpty) {
-        // Tapping the notification body (not an action button) opens the
-        // same full-screen Tamam/Ertele prompt the notification's own
-        // actions resolve, instead of silently logging taken/postponed.
-        if (allowNavigation) {
-          final context = _navigatorKey?.currentContext;
-          if (context != null) {
-            // ignore: use_build_context_synchronously
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => MedicationReminderPage(
-                  medicationId: payload['medicationId'] ?? '',
-                  medicationName: payload['medicationName'] ?? '',
-                ),
-              ),
-            );
-          }
-        }
+        final medicationName = payload['medicationName'] ?? '';
+        await AndroidWatchdogService.showInfoOverlayFromNotification(
+          title: _text(code, 'medicationReminderTitle'),
+          body: _text(code, 'medicationReminderBody').replaceAll('{name}', medicationName),
+          dismissLabel: _text(code, 'doneShort'),
+        );
         return;
       }
       unawaited(
@@ -1172,19 +1154,11 @@ class NotificationService {
     }
 
     if (type == _typeHealthTip) {
-      // No action buttons on this notification — only ever reached by
-      // tapping the body.
-      if (allowNavigation) {
-        final context = _navigatorKey?.currentContext;
-        if (context != null) {
-          // ignore: use_build_context_synchronously
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => HealthTipPage(body: payload['body'] ?? ''),
-            ),
-          );
-        }
-      }
+      await AndroidWatchdogService.showInfoOverlayFromNotification(
+        title: _text(code, 'healthTipTitle'),
+        body: payload['body'] ?? '',
+        dismissLabel: _text(code, 'doneShort'),
+      );
       return;
     }
 
@@ -1195,26 +1169,11 @@ class NotificationService {
           ? payload['canonicalTitle']!.trim()
           : (payload['taskTitle'] ?? '');
       if (actionId.isEmpty) {
-        // Tapping the body opens the same Içtim/İçmedim question the
-        // notification's own action buttons resolve.
-        if (allowNavigation) {
-          final context = _navigatorKey?.currentContext;
-          if (context != null) {
-            // ignore: use_build_context_synchronously
-            final clean = await Navigator.of(context).push<bool>(
-              MaterialPageRoute(
-                builder: (_) => TaskSmokedConfirmPage(
-                  taskTitle: payload['taskTitle'] ?? '',
-                  canonicalTitle:
-                      payload['canonicalTitle'] ?? payload['taskTitle'] ?? '',
-                ),
-              ),
-            );
-            if (clean != null && canonicalTitle.isNotEmpty) {
-              await _resolveTaskConfirmOutcome(canonicalTitle, smoked: !clean);
-            }
-          }
-        }
+        await AndroidWatchdogService.showInfoOverlayFromNotification(
+          title: _text(code, 'taskConfirmQuestionTitle'),
+          body: _text(code, 'taskConfirmQuestion'),
+          dismissLabel: _text(code, 'doneShort'),
+        );
         return;
       }
       if (actionId == _actionConfirmSmokedYes) {

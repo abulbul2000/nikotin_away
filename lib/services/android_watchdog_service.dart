@@ -70,6 +70,27 @@ class AndroidWatchdogService {
   /// Opens the native task overlay for a notification body tap. This works
   /// while another app is visible and avoids routing to whichever Flutter
   /// page happened to be open.
+  /// Opens a read-only full-screen overlay for non-task notification taps.
+  static Future<void> showInfoOverlayFromNotification({
+    required String title,
+    required String body,
+    required String dismissLabel,
+  }) async {
+    if (!_isAndroid) {
+      return;
+    }
+    try {
+      await _channel.invokeMethod('showInfoOverlayFromNotification', {
+        'title': title,
+        'body': body,
+        'dismissLabel': dismissLabel,
+      });
+    } catch (_) {
+      // The regular notification remains available if the overlay is not
+      // available on this device.
+    }
+  }
+
   static Future<void> showTaskOverlayFromNotification({
     required String title,
     required String body,

@@ -339,6 +339,16 @@ class MainActivity : FlutterActivity() {
 						result.success(true)
 					}
 
+					"showInfoOverlayFromNotification" -> {
+						TaskOverlayService.showInfo(
+							context = this,
+							title = call.argument<String>("title").orEmpty(),
+							body = call.argument<String>("body").orEmpty(),
+							dismissLabel = call.argument<String>("dismissLabel").orEmpty(),
+						)
+						result.success(true)
+					}
+
 					"showTaskOverlayFromNotification" -> {
 						TaskOverlayService.show(
 							context = this,
