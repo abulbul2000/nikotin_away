@@ -1,7 +1,9 @@
 package com.nikotinaway.app
 
+import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -11,6 +13,7 @@ import android.content.SharedPreferences
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -57,7 +60,39 @@ class SmokedLogOverlayService : Service() {
         screenReceiver?.let { runCatching { unregisterReceiver(it) } }
         screenReceiver = null
         detachButton()
+        scheduleRestartIfEnabled()
         super.onDestroy()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Removing the app from Recents must not remove the standing quick-log
+        // button. Android may destroy the service with the task, so schedule a
+        // short, permission-safe restart rather than relying only on STICKY.
+        scheduleRestartIfEnabled()
+        super.onTaskRemoved(rootIntent)
+    }
+
+    private fun scheduleRestartIfEnabled() {
+        if (!prefs().getBoolean(KEY_ENABLED, false)) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
+            !Settings.canDrawOverlays(this)
+        ) return
+
+        val restartIntent = Intent(this, SmokedLogOverlayService::class.java).apply {
+            action = ACTION_RESTART
+        }
+        val pendingIntent = PendingIntent.getService(
+            this,
+            RESTART_REQUEST_CODE,
+            restartIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val alarm = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarm.setAndAllowWhileIdle(
+            AlarmManager.ELAPSED_REALTIME_WAKEUP,
+            SystemClock.elapsedRealtime() + RESTART_DELAY_MS,
+            pendingIntent,
+        )
     }
 
     private fun isScreenOn(): Boolean {
@@ -330,6 +365,9 @@ class SmokedLogOverlayService : Service() {
 
     companion object {
         const val ACTION_STOP = "com.nikotinaway.app.smokedlog.STOP"
+        private const val ACTION_RESTART = "com.nikotinaway.app.smokedlog.RESTART"
+        private const val RESTART_REQUEST_CODE = 74202
+        private const val RESTART_DELAY_MS = 2_000L
         const val CHANNEL_ID = "smoked_log_overlay_channel"
         const val FOREGROUND_NOTIFICATION_ID = 74201
 
