@@ -1386,9 +1386,11 @@ class StorageService {
         body TEXT NOT NULL,
         type TEXT NOT NULL DEFAULT '',
         receivedAt TEXT NOT NULL,
-        expiresAt TEXT NOT NULL
+        expiresAt TEXT NOT NULL,
+        availableAt TEXT
       )
     ''');
+    await _ensureTableColumn(db, _notificationsHistoryTable, 'availableAt', 'TEXT');
   }
 
   Future<void> _ensureFailureTriggersTable(Database db) async {

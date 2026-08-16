@@ -15,6 +15,7 @@ import '../pages/breath_test_page.dart';
 import '../pages/craving_sos_page.dart';
 import '../pages/health_tip_page.dart';
 import '../pages/medication_reminder_page.dart';
+import '../pages/notifications_page.dart';
 import '../pages/task_smoked_confirm_page.dart';
 import '../pages/weekly_survey_page.dart';
 import 'android_watchdog_service.dart';
@@ -54,12 +55,73 @@ class NotificationService {
     required String title,
     required String body,
     required String type,
+    DateTime? receivedAt,
+    DateTime? availableAt,
   }) {
     unawaited(NotificationHistoryService.record(
       title: title,
       body: body,
       type: type,
+      receivedAt: receivedAt,
+      availableAt: availableAt,
     ));
+  }
+
+  static Future<void> _show(
+    int id,
+    String? title,
+    String? body,
+    NotificationDetails details, {
+    String? payload,
+  }) async {
+    await _plugin.show(id, title, body, details, payload: payload);
+    _recordNotificationHistory(
+      title: title ?? '',
+      body: body ?? '',
+      type: _historyTypeFromPayload(payload),
+    );
+  }
+
+  static Future<void> _zonedSchedule(
+    int id,
+    String? title,
+    String? body,
+    tz.TZDateTime scheduledDate,
+    NotificationDetails details, {
+    required AndroidScheduleMode androidScheduleMode,
+    String? payload,
+    UILocalNotificationDateInterpretation? uiLocalNotificationDateInterpretation,
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      scheduledDate,
+      details,
+      androidScheduleMode: androidScheduleMode,
+      payload: payload,
+      uiLocalNotificationDateInterpretation:
+          uiLocalNotificationDateInterpretation,
+      matchDateTimeComponents: matchDateTimeComponents,
+    );
+    _recordNotificationHistory(
+      title: title ?? '',
+      body: body ?? '',
+      type: _historyTypeFromPayload(payload),
+      receivedAt: scheduledDate,
+      availableAt: scheduledDate,
+    );
+  }
+
+  static String _historyTypeFromPayload(String? payload) {
+    if (payload == null || payload.isEmpty) return 'general';
+    try {
+      final type = (jsonDecode(payload) as Map<String, dynamic>)['type'];
+      return type is String && type.isNotEmpty ? type : 'general';
+    } catch (_) {
+      return 'general';
+    }
   }
 
   static const String _typeBreath = 'breath';
@@ -202,7 +264,7 @@ class NotificationService {
     final code = await LanguageService.loadSelectedLanguageCode();
     final id = _postponeChoiceIdFor(taskTitle);
 
-    await _plugin.show(
+    await _show(
       id,
       _text(code, 'postponeChoiceTitle'),
       _text(code, 'postponeChoiceBody'),
@@ -261,7 +323,7 @@ class NotificationService {
     final scheduleMode = await _resolveAndroidScheduleMode();
     final fireAt = tz.TZDateTime.now(tz.local).add(delay);
 
-    await _plugin.zonedSchedule(
+    await _zonedSchedule(
       _confirmIdFor(taskTitle),
       _text(code, 'taskConfirmQuestionTitle'),
       _text(code, 'taskConfirmQuestion'),
@@ -773,7 +835,7 @@ class NotificationService {
         body = _text(code, 'snoringResultNotificationBodyClear');
       }
 
-      await _plugin.show(
+      await _show(
         _snoringResultNotificationId,
         _text(code, 'snoringResultNotificationTitle'),
         body,
@@ -834,7 +896,7 @@ class NotificationService {
             ).replaceAll('{count}', '$coughCount')
           : _text(code, 'coughTestSeverityNormal');
 
-      await _plugin.show(
+      await _show(
         _coughTestResultNotificationId,
         _text(code, 'coughTestNotificationTitle'),
         body,
@@ -863,7 +925,7 @@ class NotificationService {
   static Future<void> _showSleepActivityAdvisory() async {
     final code = await LanguageService.loadSelectedLanguageCode();
     final body = _text(code, 'sleepActivityAdvisoryBody');
-    await _plugin.show(
+    await _show(
       _sleepActivityAdvisoryNotificationId,
       _text(code, 'sleepActivityAdvisoryTitle'),
       body,
@@ -1064,6 +1126,12 @@ class NotificationService {
     return AndroidScheduleMode.inexactAllowWhileIdle;
   }
 
+  static Future<void> _openHistoryBeforeOverlay(bool allowNavigation) async {
+    if (!allowNavigation) return;
+    _pushNotificationRoute(const NotificationsPage());
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+  }
+
   static void _handleNotificationResponse(NotificationResponse response) {
     unawaited(_processNotificationResponse(response, allowNavigation: true));
   }
@@ -1105,6 +1173,7 @@ class NotificationService {
     // content full-screen. This avoids landing on whichever Flutter page was
     // previously visible.
     if (type == 'notifications') {
+      await _openHistoryBeforeOverlay(allowNavigation);
       await AndroidWatchdogService.showInfoOverlayFromNotification(
         title: _text(code, 'notificationsPageTitle'),
         body: payload['body'] ?? _text(code, 'notificationsEmpty'),
@@ -1114,6 +1183,7 @@ class NotificationService {
     }
 
     if (type == _typeBreath) {
+      await _openHistoryBeforeOverlay(allowNavigation);
       await AndroidWatchdogService.showInfoOverlayFromNotification(
         title: _text(code, 'breathReminderTitle'),
         body: payload['body'] ?? _text(code, 'breathReminderBody'),
@@ -1123,6 +1193,7 @@ class NotificationService {
     }
 
     if (type == _typeWeeklySurvey) {
+      await _openHistoryBeforeOverlay(allowNavigation);
       await AndroidWatchdogService.showInfoOverlayFromNotification(
         title: _text(code, 'weeklySurvey'),
         body: payload['body'] ?? _text(code, 'weeklySurveyPromptAsk'),
@@ -1134,6 +1205,7 @@ class NotificationService {
     if (type == _typeMedicationReminder) {
       final actionId = response.actionId ?? '';
       if (actionId.isEmpty) {
+        await _openHistoryBeforeOverlay(allowNavigation);
         final medicationName = payload['medicationName'] ?? '';
         await AndroidWatchdogService.showInfoOverlayFromNotification(
           title: _text(code, 'medicationReminderTitle'),
@@ -1153,6 +1225,7 @@ class NotificationService {
     }
 
     if (type == _typeHealthTip) {
+      await _openHistoryBeforeOverlay(allowNavigation);
       await AndroidWatchdogService.showInfoOverlayFromNotification(
         title: _text(code, 'healthTipTitle'),
         body: payload['body'] ?? '',
@@ -1168,6 +1241,7 @@ class NotificationService {
           ? payload['canonicalTitle']!.trim()
           : (payload['taskTitle'] ?? '');
       if (actionId.isEmpty) {
+        await _openHistoryBeforeOverlay(allowNavigation);
         await AndroidWatchdogService.showInfoOverlayFromNotification(
           title: _text(code, 'taskConfirmQuestionTitle'),
           body: _text(code, 'taskConfirmQuestion'),
@@ -1191,6 +1265,7 @@ class NotificationService {
 
       final actionId = response.actionId ?? '';
       if (actionId.isEmpty) {
+        await _openHistoryBeforeOverlay(allowNavigation);
         // A body tap must show the same native overlay over the current app,
         // rather than navigating to whichever Flutter page was open. This
         // also works after a cold start because main.dart processes the launch
@@ -1490,7 +1565,7 @@ class NotificationService {
       'medicationReminderBody',
     ).replaceAll('{name}', medicationName);
 
-    await _plugin.zonedSchedule(
+    await _zonedSchedule(
       // Outside the recurring-slot id range so it can't collide with, or
       // get cancelled by, the daily reminders scheduleMedicationReminders
       // manages.
@@ -1633,7 +1708,7 @@ class NotificationService {
         ? triggerAt.add(_unansweredReminderDelay)
         : null;
 
-    await _plugin.zonedSchedule(
+    await _zonedSchedule(
       reminderId,
       title,
       body,
@@ -1722,7 +1797,7 @@ class NotificationService {
     final dueAt = DateTime.now().add(
       _unansweredReminderDelay * _maxTaskAttempts,
     );
-    await _plugin.show(
+    await _show(
       id,
       _text(code, 'disciplineCommand'),
       '${_text(code, 'disciplineCommandBody')}\n$adjustedDescription',
@@ -1768,7 +1843,6 @@ class NotificationService {
         'watchdogId': watchdogId,
       }),
     );
-    _recordNotificationHistory(title: _text(code, 'disciplineCommand'), body: _text(code, 'disciplineCommandBody'), type: 'task_start');
 
     await AndroidWatchdogService.startWatchdog(
       taskTitle: taskTitle,
@@ -1823,7 +1897,7 @@ class NotificationService {
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
     final reminderId = _deriveReminderId(id);
     final watchdogId = 'wdg_$id';
-    await _plugin.zonedSchedule(
+    await _zonedSchedule(
       id,
       _text(code, 'disciplineCommand'),
       '${_text(code, 'disciplineCommandBody')}\n$adjustedDescription',
@@ -2037,7 +2111,7 @@ class NotificationService {
           ? _text(code, 'breathReminderPostMeal')
           : _text(code, 'breathReminderBody');
 
-      await _plugin.zonedSchedule(
+      await _zonedSchedule(
         _dailyBreathReminderBaseId + i,
         _text(code, 'breathReminderTitle'),
         body,
@@ -2063,7 +2137,6 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: jsonEncode({'type': _typeBreath}),
       );
-      _recordNotificationHistory(title: _text(code, 'dailyBreathOverdueNotificationTitle'), body: _text(code, 'dailyBreathOverdueNotificationBody'), type: 'breath');
     }
 
     if (safeMinimum <= count) {
@@ -2075,7 +2148,7 @@ class NotificationService {
       final fallbackAt = await _reserveNonConflictingTime(
         now.add(Duration(minutes: 60 + (i * 45))),
       );
-      await _plugin.zonedSchedule(
+      await _zonedSchedule(
         _dailyBreathReminderBaseId + i,
         _text(code, 'breathReminderTitle'),
         _text(code, 'breathReminderBody'),
@@ -2202,7 +2275,7 @@ class NotificationService {
       final body =
           '${_text(code, tipKey)}\n${_text(code, 'medicationAdviceDisclaimer')}';
 
-      await _plugin.zonedSchedule(
+      await _zonedSchedule(
         _healthTipBaseId + i,
         _text(code, 'healthTipTitle'),
         body,
@@ -2275,7 +2348,7 @@ class NotificationService {
             ? reminder
             : '$reminder\n\n💡 $tip\n${_text(code, 'medicationAdviceDisclaimer')}';
 
-        await _plugin.zonedSchedule(
+        await _zonedSchedule(
           _medicationReminderBaseId + slot,
           _text(code, 'medicationReminderTitle'),
           body,
@@ -2358,7 +2431,7 @@ class NotificationService {
     );
     final reminderId = _deriveReminderId(notificationId);
 
-    await _plugin.zonedSchedule(
+    await _zonedSchedule(
       notificationId,
       _text(code, 'taskFollowUpTitlePush'),
       followUpBody,
@@ -2440,7 +2513,7 @@ class NotificationService {
     fireAt = await _reserveNonConflictingTime(fireAt);
 
     await _plugin.cancel(_weeklySurveyNotificationId);
-    await _plugin.zonedSchedule(
+    await _zonedSchedule(
       _weeklySurveyNotificationId,
       _text(code, 'weeklySurveyReminderTitle'),
       _text(code, 'weeklySurveyReminderBody'),
@@ -2465,7 +2538,6 @@ class NotificationService {
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: jsonEncode({'type': _typeWeeklySurvey}),
     );
-    _recordNotificationHistory(title: _text(code, 'weeklySurveyReminderTitle'), body: _text(code, 'weeklySurveyReminderBody'), type: 'weekly_survey');
   }
 
   static Future<void> cancelWeeklySurveyReminder() async {
@@ -2481,7 +2553,7 @@ class NotificationService {
   }) async {
     final code = await LanguageService.loadSelectedLanguageCode();
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
-    await _plugin.show(
+    await _show(
       id,
       _text(code, 'taskTimerStartedTitle'),
       '${_text(code, 'taskTimerStartedBody')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}\n${_text(code, 'taskTimerDuration')}: ${duration.inMinutes} ${_text(code, 'minutesShort')}.',
@@ -2517,7 +2589,7 @@ class NotificationService {
       code,
       'barrierStartedInstruction',
     ).replaceAll('{duration}', durationText);
-    await _plugin.show(
+    await _show(
       id,
       _text(code, 'barrierStartedTitle'),
       '$instruction\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}\n${_text(code, 'barrierStartedDuration')}: $durationText.',
@@ -2557,7 +2629,7 @@ class NotificationService {
       return;
     }
     final code = await LanguageService.loadSelectedLanguageCode();
-    await _plugin.show(
+    await _show(
       _sedentaryReminderNotificationId,
       _text(code, 'sedentaryReminderTitle'),
       _text(code, 'sedentaryReminderBody'),
@@ -2592,7 +2664,7 @@ class NotificationService {
   /// stacking a fresh copy every time the app is opened.
   static Future<void> showBreathTestOverdueNotification() async {
     final code = await LanguageService.loadSelectedLanguageCode();
-    await _plugin.show(
+    await _show(
       _breathOverdueNotificationId,
       _text(code, 'dailyBreathOverdueNotificationTitle'),
       _text(code, 'dailyBreathOverdueNotificationBody'),
@@ -2682,7 +2754,7 @@ class NotificationService {
         2147483647,
       );
 
-      await _plugin.zonedSchedule(
+      await _zonedSchedule(
         id,
         _text(code, 'coachCommandTitle'),
         AppTexts.localizeCanonicalTextForCode(code, commands[i]),

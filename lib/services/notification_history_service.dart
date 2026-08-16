@@ -47,11 +47,13 @@ class NotificationHistoryService {
     required String title,
     required String body,
     required String type,
+    DateTime? receivedAt,
+    DateTime? availableAt,
   }) async {
     try {
       final storage = StorageService();
       final db = await storage.database;
-      final now = DateTime.now();
+      final now = receivedAt ?? DateTime.now();
       final expiresAt = now.add(_retention);
 
       await db.insert('notification_history', {
@@ -61,6 +63,7 @@ class NotificationHistoryService {
         'type': type,
         'receivedAt': now.toIso8601String(),
         'expiresAt': expiresAt.toIso8601String(),
+        'availableAt': (availableAt ?? now).toIso8601String(),
       });
     } catch (e) {
       // Best effort — never let history recording break the notification flow.
@@ -83,6 +86,8 @@ class NotificationHistoryService {
 
       final rows = await db.query(
         'notification_history',
+        where: 'availableAt IS NULL OR availableAt <= ?',
+        whereArgs: [now],
         orderBy: 'receivedAt DESC',
       );
 
@@ -102,8 +107,9 @@ class NotificationHistoryService {
       final now = DateTime.now().toIso8601String();
 
       final result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM notification_history WHERE expiresAt >= ?',
-        [now],
+        'SELECT COUNT(*) as count FROM notification_history '
+        'WHERE expiresAt >= ? AND (availableAt IS NULL OR availableAt <= ?)',
+        [now, now],
       );
 
       return (result.first['count'] as int?) ?? 0;
