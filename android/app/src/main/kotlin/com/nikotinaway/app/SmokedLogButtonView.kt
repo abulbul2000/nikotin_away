@@ -39,11 +39,6 @@ class SmokedLogButtonView(
         strokeCap = Paint.Cap.ROUND
         color = ACCENT
     }
-    private val trackPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = dp(3f)
-        color = Color.argb(60, 255, 255, 255)
-    }
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = dp(4f)
@@ -173,7 +168,6 @@ class SmokedLogButtonView(
         }
         if (!holding) return
 
-        canvas.drawArc(bounds, 0f, 360f, false, trackPaint)
         canvas.drawArc(bounds, -90f, 360f * progress(), false, ringPaint)
     }
 
