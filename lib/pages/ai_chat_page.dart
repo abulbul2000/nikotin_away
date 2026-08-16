@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:permission_handler/permission_handler.dart' as ph;
@@ -328,8 +330,9 @@ class _AIChatPageState extends State<AIChatPage> {
     try {
       if (auth.FirebaseAuth.instance.currentUser == null) {
         debugPrint('[AIChat] No currentUser, attempting anonymous sign-in…');
-        final userCredential =
-            await auth.FirebaseAuth.instance.signInAnonymously();
+        final userCredential = await auth.FirebaseAuth.instance
+            .signInAnonymously()
+            .timeout(const Duration(seconds: 15));
         debugPrint(
           '[AIChat] Anonymous sign-in result: uid=${userCredential.user?.uid}',
         );
@@ -392,7 +395,9 @@ class _AIChatPageState extends State<AIChatPage> {
     }
 
     try {
-      final result = await sendMessageToAI(_history);
+      final result = await sendMessageToAI(_history).timeout(
+        const Duration(seconds: 30),
+      );
       if (!mounted) return;
       setState(() {
         if (result.reply.isNotEmpty) {
@@ -432,6 +437,28 @@ class _AIChatPageState extends State<AIChatPage> {
         SnackBar(
           content: Text('${context.t('aiChatError')}$detail'),
           duration: const Duration(seconds: 5),
+        ),
+      );
+    } on TimeoutException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${context.t('aiChatError')}\nSunucu zamanında yanıt vermedi. İnternet bağlantını ve Firebase kurulumunu kontrol et.',
+          ),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('[AIChat] unexpected send failure: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${context.t('aiChatError')}\nBeklenmeyen hata: $error',
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
     } finally {
