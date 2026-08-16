@@ -484,6 +484,9 @@ class _HomePageState extends State<HomePage> {
     AdaptiveTaskPlan? adaptivePlan;
     AdaptiveTaskPlanItem? sleepRoutinePlanItem;
     if (registrationCompleted) {
+      final observationStartedAt = await _storageService
+          .ensureAdaptiveObservationStartedAt();
+      final wakeRaw = await _storageService.loadSetting('wake_time') ?? '07:00';
       final sleepRaw = await _storageService.loadSleepTime() ?? '21:00';
       final parts = sleepRaw.split(':');
       final sleepHour = int.tryParse(parts.first) ?? 21;
@@ -500,11 +503,22 @@ class _HomePageState extends State<HomePage> {
         sleepAt = sleepAt.add(const Duration(days: 1));
       }
 
-      adaptivePlan = await _storageService.buildAdaptiveNoSmokePlan(
+      // The first 24 hours are observation-only. After that, the first
+      // duration-barrier plan is allowed only after the next day's wake time,
+      // so the behavior engine has a full baseline and never interrupts a
+      // freshly installed user with a generic schedule.
+      final planningEligible = _storageService.isAdaptivePlanningEligible(
         now: now,
-        sleepAt: sleepAt,
-        riskyHours: behavior?.riskyHours ?? const <String>[],
+        observationStartedAt: observationStartedAt,
+        wakeTime: wakeRaw,
       );
+      if (planningEligible) {
+        adaptivePlan = await _storageService.buildAdaptiveNoSmokePlan(
+          now: now,
+          sleepAt: sleepAt,
+          riskyHours: behavior?.riskyHours ?? const <String>[],
+        );
+      }
       sleepRoutinePlanItem = TaskAssignmentService.buildSleepRoutinePlanItem(
         sleepAt: sleepAt,
       );

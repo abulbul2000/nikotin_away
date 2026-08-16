@@ -2014,6 +2014,58 @@ class StorageService {
   }
 
   static const String _missedTaskTitleKey = 'missed_task_title';
+  static const String _adaptiveObservationStartedAtKey =
+      'adaptive_observation_started_at';
+
+  /// Returns the moment the app first became eligible to collect adaptive
+  /// planning data. Existing installs are initialized on their next HomePage
+  /// open, so the rollout never schedules a barrier retroactively.
+  Future<DateTime> ensureAdaptiveObservationStartedAt({DateTime? now}) async {
+    final stored = await loadSetting(_adaptiveObservationStartedAtKey);
+    final parsed = stored == null ? null : DateTime.tryParse(stored);
+    if (parsed != null) {
+      return parsed;
+    }
+    final startedAt = now ?? DateTime.now();
+    await saveSetting(
+      _adaptiveObservationStartedAtKey,
+      startedAt.toIso8601String(),
+    );
+    return startedAt;
+  }
+
+  Future<DateTime?> loadAdaptiveObservationStartedAt() async {
+    final stored = await loadSetting(_adaptiveObservationStartedAtKey);
+    return stored == null ? null : DateTime.tryParse(stored);
+  }
+
+  /// Duration-barrier tasks begin only after a full 24-hour observation
+  /// period and after the next calendar day's wake-up time. This prevents a
+  /// freshly installed app from issuing a generic plan before it has learned
+  /// the user's first smoking pattern.
+  bool isAdaptivePlanningEligible({
+    required DateTime now,
+    required DateTime observationStartedAt,
+    required String wakeTime,
+  }) {
+    if (now.isBefore(observationStartedAt.add(const Duration(hours: 24)))) {
+      return false;
+    }
+    final startedDate = DateTime(
+      observationStartedAt.year,
+      observationStartedAt.month,
+      observationStartedAt.day,
+    );
+    final today = DateTime(now.year, now.month, now.day);
+    if (!today.isAfter(startedDate)) {
+      return false;
+    }
+    final parts = wakeTime.split(':');
+    final hour = int.tryParse(parts.first) ?? 7;
+    final minute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+    final wakeAt = DateTime(now.year, now.month, now.day, hour, minute);
+    return !now.isBefore(wakeAt);
+  }
 
   /// Remembers a task the overdue-grace branch in HomePage closed out
   /// without ever showing it, so the home screen can offer it back on next

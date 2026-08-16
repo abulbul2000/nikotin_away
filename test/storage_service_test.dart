@@ -1091,5 +1091,56 @@ void main() {
         expect(record.schemaVersion, BreathProgressRecord.currentSchemaVersion);
       },
     );
+
+    test('adaptive observation starts with a stable persisted timestamp', () async {
+      final storage = StorageService();
+      final first = await storage.ensureAdaptiveObservationStartedAt(
+        now: DateTime(2026, 8, 16, 10),
+      );
+      final second = await storage.ensureAdaptiveObservationStartedAt(
+        now: DateTime(2026, 8, 17, 10),
+      );
+
+      expect(first, DateTime(2026, 8, 16, 10));
+      expect(second, first);
+    });
+
+    test('adaptive planning waits for a full day and the next wake time', () {
+      final storage = StorageService();
+      final startedAt = DateTime(2026, 8, 16, 10);
+
+      expect(
+        storage.isAdaptivePlanningEligible(
+          now: DateTime(2026, 8, 17, 9, 59),
+          observationStartedAt: startedAt,
+          wakeTime: '07:00',
+        ),
+        isFalse,
+      );
+      expect(
+        storage.isAdaptivePlanningEligible(
+          now: DateTime(2026, 8, 17, 10),
+          observationStartedAt: startedAt,
+          wakeTime: '07:00',
+        ),
+        isTrue,
+      );
+      expect(
+        storage.isAdaptivePlanningEligible(
+          now: DateTime(2026, 8, 18, 6, 59),
+          observationStartedAt: startedAt,
+          wakeTime: '07:00',
+        ),
+        isFalse,
+      );
+      expect(
+        storage.isAdaptivePlanningEligible(
+          now: DateTime(2026, 8, 18, 7),
+          observationStartedAt: startedAt,
+          wakeTime: '07:00',
+        ),
+        isTrue,
+      );
+    });
   });
 }
