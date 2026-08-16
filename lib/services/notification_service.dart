@@ -90,7 +90,7 @@ class NotificationService {
     NotificationDetails details, {
     required AndroidScheduleMode androidScheduleMode,
     String? payload,
-    UILocalNotificationDateInterpretation? uiLocalNotificationDateInterpretation,
+    required UILocalNotificationDateInterpretation uiLocalNotificationDateInterpretation,
     DateTimeComponents? matchDateTimeComponents,
   }) async {
     await _plugin.zonedSchedule(
