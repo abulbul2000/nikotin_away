@@ -146,7 +146,7 @@ async function requestFromProvider(provider, apiKey, messages) {
     messages,
     tools: TOOLS,
     tool_choice: "auto",
-    max_tokens: 800,
+    max_tokens: 1600,
   });
 }
 

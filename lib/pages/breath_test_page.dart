@@ -43,9 +43,9 @@ class _SuccessCheckPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     final path = Path()
-      ..moveTo(size.width * 0.12, size.height * 0.52)
-      ..lineTo(size.width * 0.40, size.height * 0.78)
-      ..lineTo(size.width * 0.88, size.height * 0.22);
+      ..moveTo(size.width * 0.08, size.height * 0.39)
+      ..lineTo(size.width * 0.42, size.height * 0.79)
+      ..lineTo(size.width * 0.94, size.height * 0.12);
     canvas.drawPath(path, paint);
   }
 
@@ -1663,7 +1663,7 @@ class _BreathTestPageState extends State<BreathTestPage>
                             child: CustomPaint(
                               painter: _SuccessCheckPainter(
                                 color: const Color(0xFF52D66B),
-                                strokeWidth: diameter * 0.045,
+                                strokeWidth: diameter * 0.105,
                               ),
                             ),
                           ),

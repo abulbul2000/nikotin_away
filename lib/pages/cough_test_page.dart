@@ -19,7 +19,7 @@ import '../widgets/success_check_overlay.dart';
 
 enum _CoughTestPhase { notStarted, listening, finished }
 
-/// A short (default 30s), user-initiated test that listens for acoustic
+/// A short (10s), user-initiated test that listens for acoustic
 /// wheeze patterns while the user coughs several times.
 
 class CoughTestPage extends StatefulWidget {
@@ -56,7 +56,7 @@ class CoughTestPage extends StatefulWidget {
 }
 
 class _CoughTestPageState extends State<CoughTestPage> {
-  static const int _testDurationSeconds = 30;
+  static const int _testDurationSeconds = 10;
 
   late final BreathAudioService _audioService;
   late final CoughAcousticEngine _acousticEngine;
@@ -152,7 +152,7 @@ class _CoughTestPageState extends State<CoughTestPage> {
     );
 
     // No separate "sit-relax" step here (unlike BreathTestPage) — the test
-    // is a single 30s listen, so the ambient check runs against whatever
+    // is a single 10s listen, so the ambient check runs against whatever
     // was captured in the first 1.5s of that same window, before the user
     // has had time to cough.
     Timer(const Duration(milliseconds: 1500), () {

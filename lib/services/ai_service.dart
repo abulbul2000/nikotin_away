@@ -50,8 +50,8 @@ class AiChatResult {
 
 // Keep the client-side validation aligned with functions/auth.js.
 const int _maxHistoryTurns = 20;
-const int _maxTurnCharacters = 4000;
-const int _maxTotalHistoryCharacters = 12000;
+const int _maxTurnCharacters = 8000;
+const int _maxTotalHistoryCharacters = 16000;
 const int _maxMedicationNameCharacters = 100;
 const int _maxMedicationTimes = 8;
 

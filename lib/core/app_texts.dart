@@ -849,7 +849,7 @@ class AppTexts {
     'menuSnoringTest': 'Horlama Testi',
     'coughTestTitle': 'Oksuruk Testi',
     'coughTestIntro':
-        'Mikrofonu 30 saniye acik tutacagiz. Bu surede senden birkac kez oksurmen istenecek ve sesindeki hirilti paterni analiz edilecek.',
+        'Mikrofonu 10 saniye acik tutacagiz. Bu surede senden birkac kez oksurmen istenecek ve sesindeki hirilti paterni analiz edilecek.',
     'coughTestInstructions':
         'Sessiz bir ortamda basla. Normal nefes al ve senden istendiginde birkac kez oksur. Ses kaydedilmez veya disariya gonderilmez; yalnizca hirilti paterni analiz edilir.',
 
@@ -2669,7 +2669,7 @@ class AppTexts {
     'menuSnoringTest': 'Snoring Test',
     'coughTestTitle': 'Cough Test',
     'coughTestIntro':
-        'We\'ll keep the microphone on for 30 seconds. You\'ll be asked to cough a few times while the sound is checked for wheeze patterns.',
+        'We\'ll keep the microphone on for 10 seconds. You\'ll be asked to cough a few times while the sound is checked for wheeze patterns.',
     'coughTestInstructions':
         'Start somewhere quiet. Breathe normally and cough a few times when prompted. Audio is not recorded or sent anywhere; only the wheeze pattern is analysed.',
 
