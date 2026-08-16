@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_texts.dart';
+import '../services/cloud_backup_service.dart';
 import '../services/firestore_sync_service.dart';
 import '../services/google_auth_service.dart';
 import '../services/storage_service.dart';
@@ -235,6 +236,164 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _onEmailSignIn() async {
+    if (_busy) return;
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    var createAccount = false;
+    final request = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(dialogContext.t('loginEmailButton')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: dialogContext.t('loginEmailAddress'),
+                ),
+              ),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: dialogContext.t('loginEmailPassword'),
+                ),
+              ),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: createAccount,
+                onChanged: (value) =>
+                    setDialogState(() => createAccount = value ?? false),
+                title: Text(dialogContext.t('loginEmailCreate')),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(dialogContext.t('cancel')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, {
+                'email': emailController.text,
+                'password': passwordController.text,
+                'create': createAccount,
+              }),
+              child: Text(dialogContext.t('loginEmailButton')),
+            ),
+          ],
+        ),
+      ),
+    );
+    emailController.dispose();
+    passwordController.dispose();
+    if (!mounted || request == null) return;
+
+    setState(() {
+      _busy = true;
+      _restoring = true;
+      _status = '';
+    });
+    final ok = await GoogleAuthService.signInWithEmail(
+      email: request['email']?.toString() ?? '',
+      password: request['password']?.toString() ?? '',
+      createAccount: request['create'] == true,
+    );
+    if (!ok) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _restoring = false;
+        _status = context.t('loginEmailInvalid');
+      });
+      return;
+    }
+
+    await LoginPage.markLoginAsked();
+    final storage = StorageService();
+    await FirestoreSyncService.restoreLocalDatabaseBackup(storage);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _restoring = false;
+    });
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const TrialInfoPage()),
+    );
+  }
+
+  Future<void> _onRestoreBackup() async {
+    if (_busy) return;
+    final controller = TextEditingController();
+    final passphrase = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dialogContext.t('cloudRestoreRow')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: dialogContext.t('cloudRestorePassphrase'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(dialogContext.t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: Text(dialogContext.t('cloudRestoreRow')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || passphrase == null || passphrase.trim().isEmpty) return;
+
+    setState(() {
+      _busy = true;
+      _restoring = true;
+      _status = '';
+    });
+    try {
+      final restored = await CloudBackupService().restore(
+        passphrase: passphrase.trim(),
+      );
+      if (!mounted) return;
+      if (!restored) {
+        setState(() {
+          _busy = false;
+          _restoring = false;
+          _status = context.t('cloudRestoreNotFound');
+        });
+        return;
+      }
+      await LoginPage.markLoginAsked();
+      setState(() {
+        _busy = false;
+        _restoring = false;
+      });
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const TrialInfoPage()),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _busy = false;
+        _restoring = false;
+        _status = context.t('cloudRestoreFailed');
+      });
+    }
+  }
+
   void _onSkip() async {
     // Mark as "asked once" so we don't show again
     await LoginPage.markLoginAsked();
@@ -309,7 +468,43 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 16),
 
-                // Skip button
+                // Email/Firebase account option.
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : _onEmailSignIn,
+                  icon: const Icon(Icons.email_outlined),
+                  label: Text(
+                    context.t('loginEmailButton'),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // Restore an encrypted passphrase backup without Google.
+                OutlinedButton.icon(
+                  onPressed: _busy ? null : _onRestoreBackup,
+                  icon: const Icon(Icons.cloud_download_outlined),
+                  label: Text(
+                    context.t('cloudRestoreRow'),
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 52),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+
+                // First-time user button.
                 OutlinedButton(
                   onPressed: _busy ? null : _onSkip,
                   style: OutlinedButton.styleFrom(

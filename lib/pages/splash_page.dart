@@ -7,6 +7,8 @@ import '../core/home_seed_resolver.dart';
 import '../main.dart';
 import '../services/ambient_audio_service.dart';
 import '../services/language_service.dart';
+import '../services/firestore_sync_service.dart';
+import '../services/google_auth_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/subscription_service.dart';
@@ -91,11 +93,26 @@ class _SplashPageState extends State<SplashPage> {
     if (!mounted) return;
 
     final storage = StorageService();
-    final records = await storage.loadSurveyHistory();
-
-    final hasInitialSetup = await storage.hasCompletedInitialSurvey(
+    var records = await storage.loadSurveyHistory();
+    var hasInitialSetup = await storage.hasCompletedInitialSurvey(
       records: records,
     );
+
+    // Google credentials persist across reinstall/login. If this is a fresh
+    // local install but the account is already present, restore the full
+    // account snapshot before showing onboarding; do not ask the user again.
+    if (!hasInitialSetup && GoogleAuthService.isGoogleUser) {
+      final restored = await FirestoreSyncService.restoreLocalDatabaseBackup(
+        storage,
+      );
+      if (restored) {
+        records = await storage.loadSurveyHistory();
+        hasInitialSetup = await storage.hasCompletedInitialSurvey(
+          records: records,
+        );
+      }
+      await LoginPage.markLoginAsked();
+    }
 
     if (!mounted) return;
 

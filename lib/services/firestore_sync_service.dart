@@ -17,10 +17,10 @@ class FirestoreSyncService {
 
   static String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
-  static bool get _isGoogleUser =>
-      FirebaseAuth.instance.currentUser?.providerData
-          .any((p) => p.providerId == 'google.com') ??
-      false;
+  static bool get _isCloudUser {
+    final user = FirebaseAuth.instance.currentUser;
+    return user != null && !user.isAnonymous;
+  }
 
   static DocumentReference<Map<String, dynamic>> get _backupRoot =>
       _db
@@ -33,7 +33,7 @@ class FirestoreSyncService {
   /// permissions and notification schedules are intentionally recreated by
   /// the new phone; the user data and learning state are not device-bound.
   static Future<void> syncLocalDatabaseBackup(StorageService storage) async {
-    if (!_isGoogleUser || _uid.isEmpty) return;
+    if (!_isCloudUser || _uid.isEmpty) return;
     try {
       final backup = await storage.exportCloudBackup();
       await _backupRoot.set({
@@ -87,7 +87,7 @@ class FirestoreSyncService {
   /// Restores the full local database backup. Returns false when the account
   /// has no full backup yet, allowing the legacy survey-only migration path.
   static Future<bool> restoreLocalDatabaseBackup(StorageService storage) async {
-    if (!_isGoogleUser || _uid.isEmpty) return false;
+    if (!_isCloudUser || _uid.isEmpty) return false;
     try {
       final root = await _backupRoot.get();
       if (!root.exists || root.data()?['state'] != 'ready') return false;
@@ -125,7 +125,7 @@ class FirestoreSyncService {
     required List<SurveyRecord> records,
     required Map<String, Map<String, dynamic>> context,
   }) async {
-    if (!_isGoogleUser) return;
+    if (!_isCloudUser) return;
 
     try {
       // Save survey records as a sub-collection
@@ -181,7 +181,7 @@ class FirestoreSyncService {
   /// Returns (records, context) — both may be empty.
   static Future<(List<SurveyRecord>, Map<String, Map<String, dynamic>>)>
   restoreFromCloud() async {
-    if (!_isGoogleUser || _uid.isEmpty) {
+    if (!_isCloudUser || _uid.isEmpty) {
       return (
         <SurveyRecord>[],
         <String, Map<String, dynamic>>{},
@@ -246,7 +246,7 @@ class FirestoreSyncService {
 
   /// Check if there is cloud data available for the current user.
   static Future<bool> hasCloudData() async {
-    if (!_isGoogleUser || _uid.isEmpty) return false;
+    if (!_isCloudUser || _uid.isEmpty) return false;
     try {
       final snap = await _db
           .collection('user_data')
@@ -265,7 +265,7 @@ class FirestoreSyncService {
     required String id,
     required Map<String, dynamic> data,
   }) async {
-    if (!_isGoogleUser) return;
+    if (!_isCloudUser) return;
     try {
       await _db
           .collection('user_data')
@@ -284,7 +284,7 @@ class FirestoreSyncService {
 
   /// Download breath progress records from Firestore.
   static Future<List<Map<String, dynamic>>> restoreBreathProgress() async {
-    if (!_isGoogleUser || _uid.isEmpty) return [];
+    if (!_isCloudUser || _uid.isEmpty) return [];
     try {
       final snap = await _db
           .collection('user_data')

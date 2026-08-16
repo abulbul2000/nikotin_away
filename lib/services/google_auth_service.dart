@@ -66,6 +66,32 @@ class GoogleAuthService {
     }
   }
 
+  /// Creates or signs in to a Firebase email/password account.
+  static Future<bool> signInWithEmail({
+    required String email,
+    required String password,
+    required bool createAccount,
+  }) async {
+    try {
+      if (createAccount) {
+        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        );
+      } else {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        );
+      }
+      return true;
+    } catch (error, stackTrace) {
+      debugPrint('[Auth] Email account operation failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      return false;
+    }
+  }
+
   /// Sign out (both Google and Firebase).
   static Future<void> signOut() async {
     try {
@@ -79,6 +105,11 @@ class GoogleAuthService {
   /// Whether user is signed in (any method — Google or anonymous).
   static bool get isLoggedIn =>
       FirebaseAuth.instance.currentUser != null;
+
+  /// Whether signed in with a cloud-backed non-anonymous account.
+  static bool get isCloudUser =>
+      FirebaseAuth.instance.currentUser != null &&
+      !(FirebaseAuth.instance.currentUser?.isAnonymous ?? true);
 
   /// Whether signed in specifically with Google.
   static bool get isGoogleUser =>
