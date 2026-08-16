@@ -19,6 +19,15 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+// Some third-party Android plugins still declare Java 8 source/target levels.
+// The application itself already compiles with Java 17; suppress only the
+// obsolete-options warning without changing those plugins' bytecode contract.
+subprojects {
+    tasks.withType<JavaCompile>().configureEach {
+        options.compilerArgs.add("-Xlint:-options")
+    }
+}
+
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
