@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,17 +23,44 @@ const int _saltLength = 16;
 const int _nonceLength = 12;
 const int _macLength = 16;
 
-/// Storage path a backup for [passphrase] lives at — a one-way hash of the
-/// passphrase, so the path itself never reveals or lets anyone guess the
-/// passphrase, and two different users never collide on the same object
-/// unless they picked the same passphrase. No I/O beyond the hash itself,
-/// so it's plain testable.
-Future<String> storagePathFor(String passphrase) async {
+/// Pure path builder used by production code and tests.
+Future<String> storagePathForUid(String uid, String passphrase) async {
+  if (uid.isEmpty) {
+    throw StateError('A Firebase UID is required for cloud backups.');
+  }
   final digest = await Sha256().hash(utf8.encode(passphrase));
   final hex = digest.bytes
       .map((b) => b.toRadixString(16).padLeft(2, '0'))
       .join();
-  return 'backups/$hex.enc';
+  return 'backups/$uid/$hex.enc';
+}
+
+/// Storage path for a passphrase backup. The passphrase hash is scoped to the
+/// authenticated Firebase UID, so one user cannot access another user's file.
+Future<String> storagePathFor(String passphrase) async {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null || uid.isEmpty) {
+    throw StateError('A signed-in account is required for cloud backups.');
+  }
+  return storagePathForUid(uid, passphrase);
+}
+
+/// Deletes every passphrase backup owned by the current Firebase account.
+/// The Storage rule enforces the same UID boundary server-side.
+Future<void> deleteAllBackupsForCurrentUser() async {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null || uid.isEmpty) return;
+  final folder = FirebaseStorage.instance.ref('backups/$uid');
+  final listing = await folder.listAll();
+  for (final item in listing.items) {
+    await item.delete();
+  }
+  for (final prefix in listing.prefixes) {
+    final nested = await prefix.listAll();
+    for (final item in nested.items) {
+      await item.delete();
+    }
+  }
 }
 
 Future<SecretKey> _deriveKey(String passphrase, List<int> salt) async {
@@ -145,10 +173,9 @@ Future<Uint8List> decryptBackupPayload(
 }
 
 /// Optional, opt-in, zero-knowledge backup of the local database to
-/// Firebase Storage: the passphrase never leaves the device, is used both
-/// to derive the AES-256-GCM key and (hashed, one-way) to derive the
-/// storage path, so nothing readable — and nothing that identifies which
-/// backup belongs to which user — ever reaches the server. Restoring on a
+/// Firebase Storage: the passphrase never leaves the device, is used to
+/// derive the AES-256-GCM key and (hashed, one-way) path scoped to the
+/// authenticated UID. Restoring on a
 /// new device/reinstall means re-entering the exact same passphrase; there
 /// is deliberately no recovery path around that, since the whole point is
 /// that we cannot read the backup either.
@@ -239,6 +266,20 @@ class CloudBackupService {
           payload,
           SettableMetadata(contentType: 'application/octet-stream'),
         );
+  }
+
+  /// Deletes the encrypted zero-knowledge backup for [passphrase].
+  /// A passphrase is required because it identifies the encrypted object
+  /// within the authenticated account's backup folder.
+  Future<bool> delete({required String passphrase}) async {
+    final path = await storagePathFor(passphrase);
+    try {
+      await FirebaseStorage.instance.ref(path).delete();
+      return true;
+    } on FirebaseException catch (error) {
+      if (error.code == 'object-not-found') return false;
+      rethrow;
+    }
   }
 
   /// Downloads and decrypts the backup for [passphrase], then restores the

@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'notifications_page.dart';
 
 import '../core/app_texts.dart';
 import '../main.dart';
 import '../services/cloud_backup_service.dart';
+import '../services/firestore_sync_service.dart';
+import '../services/google_auth_service.dart';
 import '../services/device_compatibility_service.dart';
 import '../services/feature_access.dart';
 import '../services/language_service.dart';
@@ -346,6 +349,58 @@ class _SettingsPageState extends State<SettingsPage> {
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const MedicationsPage()));
+  }
+
+  Future<void> _deleteAccountAndCloudData() async {
+    if (!GoogleAuthService.isCloudUser) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('accountDeleteRequiresLogin'))),
+      );
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('accountDeleteTitle')),
+        content: Text(context.t('accountDeleteMessage')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('no')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('accountDeleteAction')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await FirestoreSyncService.deleteAllCloudData();
+      await deleteAllBackupsForCurrentUser();
+      await _storageService.clearAllData();
+      await GoogleAuthService.deleteCurrentAccount();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('accountDeleteDone'))),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      final message = error.code == 'requires-recent-login'
+          ? context.t('accountDeleteRecentLogin')
+          : context.t('accountDeleteFailed');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('accountDeleteFailed'))),
+      );
+    }
   }
 
   Future<void> _confirmResetData() async {
@@ -839,6 +894,13 @@ class _SettingsPageState extends State<SettingsPage> {
                 title: Text(context.t('cloudRestoreRow')),
                 subtitle: Text(context.t('cloudRestoreRowSubtitle')),
                 onTap: _confirmCloudRestore,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.person_remove_outlined, color: Colors.redAccent),
+                title: Text(context.t('accountDeleteRow')),
+                subtitle: Text(context.t('accountDeleteSubtitle')),
+                onTap: _deleteAccountAndCloudData,
               ),
             ],
           ),

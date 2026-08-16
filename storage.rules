@@ -2,10 +2,11 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // The payload is AES-256-GCM encrypted on the device. Still require an
-    // authenticated Firebase session before allowing any object access.
-    match /backups/{allPaths=**} {
-      allow read, write: if request.auth != null;
+    // Backups are encrypted on the device, but access is still restricted to
+    // the Firebase account that owns the UID-prefixed object path.
+    match /backups/{uid}/{backupFile} {
+      allow read, write, delete: if request.auth != null
+        && request.auth.uid == uid;
     }
 
     match /{allPaths=**} {

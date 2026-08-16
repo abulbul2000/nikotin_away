@@ -92,6 +92,17 @@ class GoogleAuthService {
     }
   }
 
+  /// Deletes the current Firebase account. The caller must remove cloud
+  /// documents first; Firebase may require recent authentication.
+  static Future<void> deleteCurrentAccount() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || user.isAnonymous) return;
+    await user.delete();
+    try {
+      await GoogleSignIn.instance.signOut();
+    } catch (_) {}
+  }
+
   /// Sign out (both Google and Firebase).
   static Future<void> signOut() async {
     try {

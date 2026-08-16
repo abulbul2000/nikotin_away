@@ -1,70 +1,69 @@
 # Nikotin Away — Gizlilik Politikası
 
-**Son güncelleme:** [TARİH GİRİN]
+**Son güncelleme:** 17 Ağustos 2026
 
-> **Yayınlamadan önce doldurulması gerekenler** (aşağıda `[...]` ile işaretli): geliştirici/şirket adı, iletişim e-postası, ve bu belgenin barındırılacağı URL. Bu belge, `docs/PLAY_STORE_DATA_SAFETY.md` ile aynı kod-tabanlı denetime dayanır (2026-07-22) — kod değiştikçe ikisi birlikte güncellenmeli.
+> Yayınlamadan önce `[GELİŞTİRİCİ/ŞİRKET ADI]`, `[İLETİŞİM E-POSTASI]` ve bu belgenin herkese açık URL'si gerçek bilgilerle doldurulmalıdır. Bu metin hukuki danışmanlık değildir; yayın öncesi geliştirici tarafından doğrulanmalıdır.
 
-## 1. Bu Politika Neyi Kapsar
+## 1. Kapsam
 
-Bu Gizlilik Politikası, **Nikotin Away** mobil uygulamasının ("Uygulama") kişisel verilerinizi nasıl işlediğini açıklar. Uygulama [GELİŞTİRİCİ/ŞİRKET ADI] ("biz") tarafından geliştirilmiştir. Sorularınız için: [İLETİŞİM E-POSTASI].
+Bu Gizlilik Politikası, **Nikotin Away** mobil uygulamasının kişisel verileri nasıl işlediğini açıklar. Uygulama `[GELİŞTİRİCİ/ŞİRKET ADI]` tarafından geliştirilmiştir. Sorular için `[İLETİŞİM E-POSTASI]` adresi kullanılabilir.
 
-## 2. Temel İlke: Verileriniz Varsayılan Olarak Cihazınızda Kalır
+## 2. Verilerin saklandığı yer
 
-Uygulamaya girdiğiniz veya uygulamanın topladığı hemen hemen her şey **varsayılan olarak yalnızca telefonunuzda**, uygulamanın kendi özel deposunda saklanır ve bizimle veya üçüncü bir tarafla paylaşılmaz. Uygulamanın kendi sunucusu ve kullanıcı hesabı yoktur.
+Uygulama temel olarak verileri Android uygulamasının korumalı alanındaki SQLite veritabanında ve cihaz ayarlarında saklar. Kullanıcı isteğine veya hesap girişine bağlı olarak bazı veriler Firebase altyapısına da aktarılabilir.
 
-Üç istisna var, hepsi aşağıda (madde 3 ve 5) ayrıntılı açıklanmıştır: (a) isteğe bağlı, sizin açtığınız durumda kullanılan **şifreli bulut yedekleme**, (b) uygulama çöktüğünde otomatik gönderilen **anonim hata raporları**, ve (c) yalnızca siz Yapay Zeka Mentörü ekranını açıp mesaj yazarsanız kullanılan **AI sohbet**.
+Google veya e-posta hesabıyla giriş yapan kullanıcının uygulama yedeği, Firebase Authentication tarafından verilen kullanıcı UID'si altında Firebase Firestore'da tutulur. Parola tabanlı şifreli yedekler ise `backups/{kullanıcı UID}/{parola özeti}.enc` yolunda Firebase Storage'da tutulur. Yedek içeriği cihazda AES-256-GCM ile şifrelenir; parola sunucuya gönderilmez.
 
-## 3. Toplanan Veriler
+Uygulama Gmail, Google Drive, Google Fotoğraflar, rehber veya takvim verilerine erişmez. Google hesabı yalnızca kullanıcı kimliği ve Nikotin Away hesabına ait bulut yedeğini eşleştirmek için kullanılır.
 
-| Veri türü | Ne topluyoruz | Neden |
+## 3. İşlenen veri türleri ve amaçları
+
+| Veri türü | Amaç | Saklama şekli |
 |---|---|---|
-| Profil bilgisi | Ad, yaş, cinsiyet, meslek (ilk anket) | Risk değerlendirmesini kişiselleştirmek |
-| Sigara alışkanlığı | Günlük/haftalık anket cevapları | Risk skoru ve görev planlaması |
-| Nefes testi | Test sırasında mikrofon kullanılır; ses **anlık işlenir, hiçbir zaman kaydedilmez** | Nefes performansı ölçümü |
-| Uyku tahmini *(isteğe bağlı)* | Ekran açık/kapalı ve şarj durumu, gece boyunca birkaç kez | Uyku-risk ilişkisini öğrenmek |
-| Konum *(isteğe bağlı)* | Sık gidilen yerlerin öğrenilmiş merkez noktaları (ham GPS geçmişi **saklanmaz**) | Riskli ortamları tanımak |
-| Adım sayısı | Telefonun donanım adım sayacı | Aktivite-risk ilişkisi, raporlar |
-| Nabız / uyku süresi *(isteğe bağlı)* | Health Connect üzerinden — yalnızca zaten bir akıllı saat/bileklik uygulamanız varsa okunur | Risk değerlendirmesine ek sinyal |
-| Kullanım verisi | Görev tamamlama/erteleme, bildirim yanıtları | Kişiselleştirme, hatırlatma zamanlaması |
+| Profil, yaş, cinsiyet ve meslek bilgileri | Kişiselleştirilmiş bırakma koçluğu | Cihazda; kullanıcı hesabıyla yedekleme seçilirse Firestore'da |
+| Sigara kayıtları, tetikleyiciler ve zaman bilgileri | Davranış motoru ve ilerleme takibi | Cihazda; seçilen bulut yedekleme yönteminde |
+| Öğrenilmiş yer kimlikleri ve isteğe bağlı konum özetleri | Riskli ortamları anlamak | Ham GPS rotası tutulmaz; seçilen bulut yedekleme yönteminde özetlenmiş veri bulunabilir |
+| Nefes, öksürük ve uyku/horlama sonuçları | Sağlık ve yaşam koçluğu | Cihazda; seçilen bulut yedekleme yönteminde |
+| Adım, Health Connect ve uyku sinyalleri | Aktivite ve uyku ile sigara davranışı arasındaki ilişkiyi anlamak | İlgili özellik açılırsa cihazda; bulut yedeği seçilirse yedekte |
+| AI sohbet mesajları ve uygulama bağlamı | AI koçunun yanıt üretmesi | İstek sırasında Firebase Functions üzerinden AI sağlayıcısına gönderilebilir; kalıcı sunucu sohbet geçmişi tutulmaz |
+| Hesap kimliği ve e-posta | Hesabı ve yedeği doğru kullanıcıya bağlamak | Firebase Authentication ve kullanıcıya özel Firestore yolu |
+| Teknik çökme bilgileri | Hataları düzeltmek | Firebase Crashlytics |
 
-"İsteğe bağlı" olarak işaretlenen her özellik **varsayılan olarak kapalıdır**; siz açana kadar hiçbir veri toplanmaz. Her birini Ayarlar ekranından istediğiniz zaman açıp kapatabilirsiniz.
+Mikrofonla yapılan nefes, öksürük ve gece ses analizlerinde ham ses dosyası uygulamanın kalıcı veritabanına kaydedilmez; analiz için gereken sinyaller işlenerek sonuç olarak saklanır.
 
-**Bulut yedekleme** *(isteğe bağlı, varsayılan kapalı):* Ayarlar → Bulut Yedekleme'den kendi belirlediğiniz bir şifreyle açabileceğiniz bir özellik. Açtığınızda, cihazınızdaki tüm uygulama verileri bu şifreyle (cihaz üzerinde, gönderilmeden önce) şifrelenir ve Google'ın Firebase Storage altyapısına yüklenir. Şifreniz bize hiçbir zaman gönderilmez ve sunucuda saklanmaz — yalnızca sizde bulunur; şifrenizi kaybederseniz yedeğinizi biz de geri getiremeyiz.
+## 4. AI koçluğu
 
-**Yapay Zeka Mentörü** *(isteğe bağlı, siz açana kadar hiç çalışmaz):* Ana sayfadaki Mentör kartından bu sohbet ekranını açıp mesaj yazarsanız, mesajınız ve o oturumdaki sohbet geçmişi, yanıt üretmesi için bir yapay zeka servis sağlayıcısına (NVIDIA API, Firebase Functions üzerinden) gönderilir. Sohbet geçmişi yalnızca ekran açıkken cihazınızın belleğinde tutulur, ekranı kapattığınızda silinir — cihazınıza kalıcı olarak kaydedilmez. Yapay zekanın önerdiği uygulama ayarı değişiklikleri (ör. Koç Modu, ilaç hatırlatma saati) siz sohbette "Uygula" demeden hiçbir şeyi değiştirmez.
+AI koçu; sigara bırakma, uyku, stres, günlük rutin, hareket, su tüketimi ve genel yaşam alışkanlıkları hakkında davranış değişikliği önerileri verir. AI tanı koymaz, tedavi belirlemez, ilaç başlatmaz veya doz önermez. Ciddi belirtilerde sağlık profesyoneline ve acil durumda yerel acil yardım hizmetine başvurulması gerektiğini belirtir.
 
-## 4. Toplamadığımız Veriler
+Kullanıcı AI sohbetini açıp mesaj gönderdiğinde, mesaj ve ihtiyaç duyulan sınırlı uygulama özeti yanıt üretmek amacıyla Firebase Functions üzerinden yapılandırılmış AI sağlayıcısına gönderilebilir. Gmail, Drive veya uygulama dışı Google hesabı verileri AI'ye gönderilmez.
 
-Fotoğraf/video, kişi listesi, takvim, mesajlar, finansal bilgi, web geçmişi veya reklam kimliği toplamıyoruz. Uygulamada reklam SDK'sı veya analitik/izleme SDK'sı bulunmamaktadır.
+## 5. Üçüncü taraf hizmetleri
 
-## 5. Üçüncü Taraflarla Paylaşım
+Veriler satılmaz ve reklam amacıyla paylaşılmaz. Kullanılan hizmetler şunlardır:
 
-Verilerinizi **hiçbir zaman satmıyor veya reklam/analitik amacıyla paylaşmıyoruz.**
+- **Firebase Authentication:** Google veya e-posta hesabıyla kimlik doğrulama.
+- **Firebase Firestore:** Kullanıcıya özel uygulama yedekleri ve senkronizasyon.
+- **Firebase Storage:** Kullanıcı UID'si altında saklanan, cihazda şifrelenmiş parola yedekleri.
+- **Firebase Crashlytics:** Teknik hata ve çökme raporları.
+- **Firebase Functions ve yapılandırılmış AI sağlayıcısı:** Kullanıcı AI sohbetini başlattığında yanıt üretimi.
+- **Google Play Billing:** Uygulama içi satın alma varsa ödeme işlemi; kart bilgisi uygulamaya ulaşmaz.
 
-Uygulamanın internete çıktığı **yalnızca üç** durum var:
+## 6. Kullanıcı kontrolü
 
-- **Hata raporlama (Firebase Crashlytics):** Uygulama beklenmedik şekilde çökerse, hatanın türünü ve teknik ayrıntılarını (hangi ekranda, hangi hata) — isim, anket cevabı veya sağlık verisi **olmadan** — otomatik olarak Google'ın Firebase Crashlytics servisine göndeririz. Amaç yalnızca hataları bulup düzeltmektir.
-- **Bulut yedekleme (Firebase Storage):** Yukarıda (madde 3) açıklandığı gibi, yalnızca siz açtığınızda ve yalnızca sizin şifrenizle şifrelenmiş halde, Google'ın Firebase Storage servisine gönderilir. Şifrelenmemiş içerik bize veya Google'a hiçbir zaman ulaşmaz.
-- **AI sohbet (NVIDIA API, Firebase Functions üzerinden):** Yukarıda (madde 3) açıklandığı gibi, yalnızca siz Yapay Zeka Mentörü ekranını açıp mesaj yazdığınızda, mesajınız yanıt üretmesi için NVIDIA'nın servislerine gönderilir. Bu, yalnızca yanıt üretmek amacıyla yapılan bir hizmet-sağlayıcı paylaşımıdır; reklam veya pazarlama amaçlı değildir.
+Konum, Health Connect, uyku zekâsı, gece ses/horlama analizi ve bildirim gibi özellikler kullanıcı ayarlarıyla açılıp kapatılabilir. Kullanıcı buluta yedekleme başlatabilir veya yedekten geri yükleyebilir. Geri yükleme mevcut yerel verinin üzerine yazabileceği için uygulama işlemden önce açık uyarı gösterir.
 
-## 6. Verilerinizin Güvenliği
+## 7. Verilerin silinmesi
 
-Ana veriler, Android'in uygulamaya özel korumalı deposunda (SQLite veritabanı) saklanır ve cihazınızın otomatik bulut yedeklemesine dahil edilmez. Uygulamayı kaldırdığınızda cihazdaki tüm veriler silinir (yalnızca siz açtıysanız, bulutta şifreli yedeğiniz şifrenizle korunmuş halde kalmaya devam eder — istediğiniz zaman geri yükleyebilirsiniz).
+- **Verilerimi Sıfırla:** Cihazdaki uygulama verilerini ve bildirim geçmişini siler.
+- **Hesabımı ve bulut verilerimi sil:** Kullanıcı onayından sonra kullanıcıya ait Firestore verilerini, UID'ye bağlı Storage yedeğini, yerel verileri ve Firebase Authentication hesabını silmeyi dener.
+- Parola tabanlı bir yedeğin silinmesi için kullanıcıdan yedekleme parolası istenebilir. Parola unutulursa yedek çözülemez ve geri getirilemez; kullanıcı bunu bilerek kullanır.
 
-## 7. Haklarınız
+Hesap silme isteği tamamlanamazsa uygulama hata gösterir ve kullanıcıya hangi adımın başarısız olduğunu bildirir. Hesap silme akışı Play Console'daki hesap silme bağlantısıyla da erişilebilir olmalıdır.
 
-- **Görme:** Uygulama içindeki ilgili ekranlardan (Ayarlar, Raporlar, Anket Geçmişi) topladığımız verileri her zaman görebilirsiniz.
-- **Silme:** Ayarlar → "Verilerimi Sıfırla" ile tüm verilerinizi (rıza kayıtları dahil) kalıcı olarak silebilirsiniz.
-- **Rıza geri çekme:** İsteğe bağlı her özelliği (Uyku Zekası, Konum Zekası, Bileklik Verisi) istediğiniz an kapatabilirsiniz; her açma/kapama kararı, ne zaman ve hangi açıklama metnine göre verildiği bilgisiyle kaydedilir.
+## 8. Çocuklar
 
-## 8. Çocukların Gizliliği
+Uygulama genel kitleye yöneliktir ve bilerek 13 yaş altı çocuklardan veri toplamak amaçlanmaz.
 
-Uygulama genel kitleye yöneliktir ve bilerek 13 yaş altı çocuklardan veri toplamaz.
+## 9. Değişiklikler ve iletişim
 
-## 9. Bu Politikadaki Değişiklikler
-
-Uygulamanın veri toplama şekli değiştiğinde bu belge güncellenir ve "Son güncelleme" tarihi buna göre yenilenir.
-
-## 10. İletişim
-
-Sorularınız için: [İLETİŞİM E-POSTASI]
+Veri işleme biçimi değişirse bu politika güncellenir. Sorular için `[İLETİŞİM E-POSTASI]` adresine başvurulabilir.

@@ -29,6 +29,33 @@ class FirestoreSyncService {
           .collection('database_backup')
           .doc('snapshot');
 
+  /// Deletes every cloud document owned by the currently signed-in user.
+  /// The UID is always taken from FirebaseAuth, never supplied by the caller.
+  static Future<void> deleteAllCloudData() async {
+    if (!_isCloudUser || _uid.isEmpty) return;
+
+    Future<void> deleteCollection(
+      CollectionReference<Map<String, dynamic>> collection,
+    ) async {
+      final snapshot = await collection.get();
+      for (final doc in snapshot.docs) {
+        await deleteCollection(doc.reference.collection('chunks'));
+        await doc.reference.delete();
+      }
+    }
+
+    final root = _db.collection('user_data').doc(_uid);
+    for (final name in <String>[
+      'database_backup',
+      'surveys',
+      'meta',
+      'breath_progress',
+    ]) {
+      await deleteCollection(root.collection(name));
+    }
+    await root.delete();
+  }
+
   /// Uploads every user-owned SQLite table in small JSON chunks. Device-only
   /// permissions and notification schedules are intentionally recreated by
   /// the new phone; the user data and learning state are not device-bound.
