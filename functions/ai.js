@@ -107,31 +107,47 @@ const TOOLS = [
   },
 ];
 
-export async function chatWithAI(apiKey, history, language = "en") {
-  const normalizedLanguage = SUPPORTED_AI_LANGUAGES.has(language) ? language : "en";
-  const languageInstruction = `Kullanıcının uygulama dili ${normalizedLanguage} kodudur. Yanıtının görünen tüm doğal dil bölümlerini bu dilde yaz. Teknik araç adlarını, enum değerlerini ve saat biçimlerini değiştirme.`;
-  const client = new OpenAI({
-    baseURL: "https://integrate.api.nvidia.com/v1",
-    apiKey,
-  });
+const PROVIDERS = [
+  {
+    name: "gemini",
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    model: "gemini-2.5-flash",
+    keyName: "geminiApiKey",
+  },
+  {
+    name: "openai",
+    baseURL: "https://api.openai.com/v1",
+    model: "gpt-4o-mini",
+    keyName: "openaiApiKey",
+  },
+];
 
-  const completion = await client.chat.completions.create({
-    model: "nvidia/nemotron-3.5-lightning-30b-a3b",
-    messages: [
-      { role: "system", content: `${SYSTEM_PROMPT}\n\n${languageInstruction}` },
-      ...history,
-    ],
+function hasUsableKey(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+async function requestFromProvider(provider, apiKey, messages) {
+  const client = new OpenAI({ baseURL: provider.baseURL, apiKey });
+  return client.chat.completions.create({
+    model: provider.model,
+    messages,
     tools: TOOLS,
+    tool_choice: "auto",
     max_tokens: 800,
   });
+}
 
-  const choice = completion.choices[0].message;
+function normalizeCompletion(completion, normalizedLanguage, providerName) {
+  const choice = completion.choices?.[0]?.message;
+  if (!choice) {
+    throw new Error(`${providerName} returned an empty completion`);
+  }
+
   const toolCall = choice.tool_calls?.[0];
-
   if (toolCall) {
     let args = {};
     try {
-      args = JSON.parse(toolCall.function.arguments);
+      args = JSON.parse(toolCall.function.arguments || "{}");
     } catch {
       args = {};
     }
@@ -139,6 +155,7 @@ export async function chatWithAI(apiKey, history, language = "en") {
       reply: choice.content?.trim() || "",
       action: { name: toolCall.function.name, arguments: args },
       language: normalizedLanguage,
+      provider: providerName,
     };
   }
 
@@ -146,5 +163,33 @@ export async function chatWithAI(apiKey, history, language = "en") {
     reply: choice.content?.trim() || "",
     action: null,
     language: normalizedLanguage,
+    provider: providerName,
   };
+}
+
+export async function chatWithAI({ geminiApiKey, openaiApiKey }, history, language = "en") {
+  const normalizedLanguage = SUPPORTED_AI_LANGUAGES.has(language) ? language : "en";
+  const languageInstruction = `Kullanıcının uygulama dili ${normalizedLanguage} kodudur. Yanıtının görünen tüm doğal dil bölümlerini bu dilde yaz. Teknik araç adlarını, enum değerlerini ve saat biçimlerini değiştirme.`;
+  const messages = [
+    { role: "system", content: `${SYSTEM_PROMPT}\n\n${languageInstruction}` },
+    ...history,
+  ];
+  const errors = [];
+
+  for (const provider of PROVIDERS) {
+    const apiKey = provider.keyName === "geminiApiKey" ? geminiApiKey : openaiApiKey;
+    if (!hasUsableKey(apiKey)) {
+      errors.push(`${provider.name}: missing API key`);
+      continue;
+    }
+    try {
+      const completion = await requestFromProvider(provider, apiKey, messages);
+      return normalizeCompletion(completion, normalizedLanguage, provider.name);
+    } catch (error) {
+      console.error(`${provider.name} AI request failed; trying next provider`, error);
+      errors.push(`${provider.name}: ${error?.message || "request failed"}`);
+    }
+  }
+
+  throw new Error(`No AI provider succeeded: ${errors.join("; ")}`);
 }

@@ -9,8 +9,9 @@ import { requireAuth, sanitizeHistory } from "./auth.js";
 initializeApp();
 const db = getFirestore();
 
-// NVIDIA API key is stored as a Firebase Secret (not in source code).
-const NVIDIA_API_KEY = defineSecret("NVIDIA_API_KEY");
+// Provider keys are stored as Firebase Secrets (never in source code or the Flutter app).
+const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 
 const TRIAL_DURATION_MS = 14 * 24 * 60 * 60 * 1000;
 const DAILY_MESSAGE_LIMIT = 50;
@@ -82,9 +83,13 @@ async function consumeDailyMessageQuota(uid) {
 }
 
 // AI requests must carry a verified App Check token so a copied client
-// cannot freely consume the NVIDIA secret or forge the app's trial flow.
+// cannot freely consume provider secrets or forge the app's trial flow.
 export const aiChat = onCall(
-  { region: "europe-west1", enforceAppCheck: true, secrets: [NVIDIA_API_KEY] },
+  {
+    region: "europe-west1",
+    enforceAppCheck: true,
+    secrets: [GEMINI_API_KEY, OPENAI_API_KEY],
+  },
   async (request) => {
     const uid = requireAuth(request);
 
@@ -120,7 +125,10 @@ export const aiChat = onCall(
 
     try {
       const result = await chatWithAI(
-        NVIDIA_API_KEY.value(),
+        {
+          geminiApiKey: GEMINI_API_KEY.value(),
+          openaiApiKey: OPENAI_API_KEY.value(),
+        },
         history,
         language
       );
