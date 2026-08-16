@@ -23,6 +23,18 @@ class SmokedLogButtonView(
     private val onDragFinished: () -> Unit,
 ) : View(context) {
 
+    init {
+        // This is a transparent overlay asset, not a Material button. Explicitly
+        // clear every platform-provided background/state layer so no faint
+        // circle, pressed halo, elevation shadow, or default surface appears
+        // behind the logo on different Android/OEM versions.
+        background = null
+        setBackgroundColor(Color.TRANSPARENT)
+        elevation = 0f
+        stateListAnimator = null
+        clipToOutline = false
+    }
+
     private val mark = BitmapFactory.decodeResource(resources, R.drawable.smoked_log_mark)
 
     private val markPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
