@@ -9,10 +9,10 @@ import '../services/cloud_backup_service.dart';
 import '../services/device_compatibility_service.dart';
 import '../services/feature_access.dart';
 import '../services/language_service.dart';
+import '../widgets/share_app_sheet.dart';
 import '../services/notification_service.dart';
 import '../models/wearable_health_snapshot.dart';
 import '../services/health_connect_service.dart';
-import '../services/app_share_service.dart';
 import '../services/sleep_intelligence_service.dart';
 import '../services/smoked_log_button_service.dart';
 import '../services/snoring_detection_service.dart';
@@ -324,14 +324,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
 
-  Future<String> _selectedLanguageCode() async {
-    return LanguageService.loadSelectedLanguageCode();
-  }
-
   Future<void> _shareApp() async {
-    final languageCode = await _selectedLanguageCode();
-    if (!mounted) return;
-    await AppShareService.shareApp(languageCode: languageCode);
+    await showShareAppSheet(context);
   }
 
 

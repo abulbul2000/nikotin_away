@@ -10,8 +10,7 @@ import 'cough_test_page.dart';
 import 'home_page.dart';
 import '../services/behavior_engine.dart';
 import '../services/storage_service.dart';
-import '../services/app_share_service.dart';
-import '../services/language_service.dart';
+import '../widgets/share_app_sheet.dart';
 import '../widgets/consecutive_smoking_section.dart';
 import '../widgets/packs_per_day_section.dart';
 import '../widgets/survey_section_header.dart';
@@ -838,31 +837,9 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     );
   }
 
-  /// Offers app sharing after the weekly survey without blocking the save flow.
+  /// Offers the shared in-app social panel after the weekly survey.
   Future<void> _offerShareProgress() async {
-    final wantsToShare = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(context.t('shareProgressTitle')),
-        content: Text(context.t('shareProgressMessage')),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(context.t('shareProgressSkip')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(context.t('shareProgressAction')),
-          ),
-        ],
-      ),
-    );
-    if (wantsToShare != true || !mounted || !context.mounted) {
-      return;
-    }
-    final languageCode = await LanguageService.loadSelectedLanguageCode();
-    if (!mounted) return;
-    await AppShareService.shareApp(languageCode: languageCode);
+    await showShareAppSheet(context);
   }
 
   @override
