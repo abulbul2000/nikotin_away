@@ -1,0 +1,814 @@
+{
+  "language_count": 40,
+  "parsed_language_count": 40,
+  "languages": {
+    "tr": {
+      "name": "Türkçe",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "breathAnalysisChartRawLabel",
+        "coachModeNormalTitle",
+        "exhaleLabel",
+        "inhaleLabel",
+        "maxLabel",
+        "minLabel",
+        "premium",
+        "risk",
+        "test",
+        "trendLabel"
+      ],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": [
+        "test",
+        "breathAnalysisChartRawLabel",
+        "breathAnalysisSummaryTestCountLabel",
+        "breathBadgeTotal30Title",
+        "selfChallengeDurationOption",
+        "totalTestCount",
+        "firstTestDate",
+        "snoringTestResultTitle",
+        "coughTestResultTitle",
+        "latestVsPrevious",
+        "breathPreviousComparison",
+        "taskEscalationBodyPrefix"
+      ]
+    },
+    "en": {
+      "name": "English",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "ar": {
+      "name": "Arabic",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "be": {
+      "name": "Belarusian",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "snoringCaptureChannelName"
+      ],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "bn": {
+      "name": "Bengali",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "cs": {
+      "name": "Czech",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "breathAnalysisChartRawLabel",
+        "maxLabel",
+        "minLabel",
+        "professionStudent",
+        "reportsPdfTitle",
+        "settingsSectionData",
+        "test",
+        "trendLabel"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "permissionMicrophoneTitle"
+      ],
+      "english_hint_candidates": []
+    },
+    "da": {
+      "name": "Danish",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "aiChatSend",
+        "breathAnalysisChartRawLabel",
+        "coachModeNormalTitle",
+        "diabetes",
+        "durationBarrierNeutral",
+        "failureTriggerStress",
+        "minLabel",
+        "missedTaskStartLabel",
+        "premium",
+        "professionOfficer",
+        "quickReplyOkAck",
+        "settingsSectionData",
+        "sosPhaseHold",
+        "start",
+        "status",
+        "taskTimerDuration",
+        "test",
+        "weeklyMotivation",
+        "weeklyTrigger_stress"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "respStable",
+        "permissionMicrophoneTitle",
+        "premium",
+        "trendStable"
+      ],
+      "english_hint_candidates": []
+    },
+    "de": {
+      "name": "German",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "asthma",
+        "breathAnalysisChartRawLabel",
+        "breathBadgeTotal30Title",
+        "coachModeNormalTitle",
+        "diabetes",
+        "durationBarrierNeutral",
+        "failureTriggerStress",
+        "levelLabel",
+        "name",
+        "premium",
+        "premiumUpsellUpgrade",
+        "professionStudent",
+        "progressRegression",
+        "status",
+        "tabTests",
+        "taskTimerDuration",
+        "test",
+        "trendLabel",
+        "weeklyMotivation",
+        "weeklyTrigger_stress"
+      ],
+      "turkish_mix_candidates": [
+        "respStable",
+        "trendStable",
+        "premium",
+        "permissionMicrophoneTitle"
+      ],
+      "english_hint_candidates": []
+    },
+    "el": {
+      "name": "Greek",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "snoringCaptureChannelName"
+      ],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "es": {
+      "name": "Spanish",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "coachModeNormalTitle",
+        "diabetes",
+        "durationBarrierNeutral",
+        "failureTriggerAlcohol",
+        "no",
+        "premium",
+        "settingsSectionGeneral",
+        "taskConfirmNoLabel",
+        "taskFollowUpActionNo",
+        "taskOutcomeNo",
+        "triggerAlcohol",
+        "weeklyIrregular",
+        "weeklyRegular",
+        "weeklyTrigger_alcohol"
+      ],
+      "turkish_mix_candidates": [
+        "premium"
+      ],
+      "english_hint_candidates": []
+    },
+    "fi": {
+      "name": "Finnish",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "diabetes",
+        "premium"
+      ],
+      "turkish_mix_candidates": [
+        "premium"
+      ],
+      "english_hint_candidates": []
+    },
+    "fil": {
+      "name": "Filipino",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "channelNameSmokedLogQuickAction",
+        "diabetes",
+        "durationBarrierNeutral",
+        "maxLabel",
+        "minLabel",
+        "premium",
+        "reportsPdfTitle",
+        "snoringCaptureChannelName",
+        "weeklyTrigger_stress"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "premium"
+      ],
+      "english_hint_candidates": []
+    },
+    "fr": {
+      "name": "French",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "achievementsPageTitle",
+        "breathAnalysisBadgesTitle",
+        "breathAnalysisChartRawLabel",
+        "cigaretteUnit",
+        "coachModeNormalTitle",
+        "failureTriggerStress",
+        "fivePlusCig",
+        "fourCig",
+        "hypertension",
+        "interventionIntensityStrict",
+        "maxLabel",
+        "minLabel",
+        "minutesShort",
+        "notificationsPageTitle",
+        "permissionMicrophoneTitle",
+        "permissionNotificationsTitle",
+        "pointShort",
+        "postpone10Label",
+        "postpone15Label",
+        "postpone5Label",
+        "premium",
+        "professionLabel",
+        "recoveryMin20Title",
+        "respStable",
+        "secShort",
+        "selfChallengeDurationOption",
+        "smokeFree0to15",
+        "smokeFree120to240",
+        "smokeFree15to30",
+        "smokeFree240plus",
+        "smokeFree60to120",
+        "tabTests",
+        "test",
+        "threeCig",
+        "trendStable",
+        "twoCig",
+        "violationSource",
+        "weeklyMotivation",
+        "weeklyTrigger_stress"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "premium"
+      ],
+      "english_hint_candidates": []
+    },
+    "gu": {
+      "name": "Gujarati",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "permissionActionManage",
+        "pointShort"
+      ],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "hi": {
+      "name": "Hindi",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "hr": {
+      "name": "Croatian",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "breathAnalysisChartRawLabel",
+        "minLabel",
+        "premium",
+        "professionStudent",
+        "status",
+        "test",
+        "trendLabel"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "permissionMicrophoneTitle",
+        "premium"
+      ],
+      "english_hint_candidates": []
+    },
+    "hu": {
+      "name": "Hungarian",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "snoringCaptureChannelName"
+      ],
+      "turkish_mix_candidates": [
+        "respStable",
+        "permissionMicrophoneTitle",
+        "trendStable"
+      ],
+      "english_hint_candidates": []
+    },
+    "id": {
+      "name": "Indonesian",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "coachModeNormalTitle",
+        "diabetes",
+        "minLabel",
+        "premium",
+        "settingsSectionData",
+        "status"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "respStable",
+        "premiumActive",
+        "trendStable",
+        "premium",
+        "active",
+        "passive",
+        "permissionMicrophoneTitle"
+      ],
+      "english_hint_candidates": []
+    },
+    "it": {
+      "name": "Italian",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "breathAnalysisChartRawLabel",
+        "failureTriggerStress",
+        "maxLabel",
+        "medicationTimeSlotLabel",
+        "minLabel",
+        "no",
+        "premium",
+        "secShort",
+        "taskConfirmNoLabel",
+        "taskFollowUpActionNo",
+        "taskOutcomeNo",
+        "taskTimerDuration",
+        "test",
+        "weeklyTrigger_stress"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "premium"
+      ],
+      "english_hint_candidates": []
+    },
+    "ja": {
+      "name": "Japanese",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "kn": {
+      "name": "Kannada",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "ko": {
+      "name": "Korean",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "ml": {
+      "name": "Malayalam",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "mr": {
+      "name": "Marathi",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "ms": {
+      "name": "Malay",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "diabetes",
+        "durationBarrierNeutral",
+        "minLabel",
+        "premium",
+        "settingsSectionData",
+        "status"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "respStable",
+        "premiumActive",
+        "trendStable",
+        "premium",
+        "active",
+        "passive",
+        "permissionMicrophoneTitle"
+      ],
+      "english_hint_candidates": []
+    },
+    "nl": {
+      "name": "Dutch",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "breathAnalysisChartRawLabel",
+        "dailyBreathLater",
+        "diabetes",
+        "failureTriggerAlcohol",
+        "failureTriggerStress",
+        "maxLabel",
+        "minLabel",
+        "missedTaskStartLabel",
+        "miuiPermissionSkip",
+        "pointShort",
+        "premium",
+        "professionStudent",
+        "quickReplyLater",
+        "secShort",
+        "start",
+        "status",
+        "test",
+        "triggerAlcohol",
+        "weeklyTrigger_alcohol",
+        "weeklyTrigger_stress"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "premium"
+      ],
+      "english_hint_candidates": []
+    },
+    "no": {
+      "name": "Norwegian",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "aiChatSend",
+        "breathAnalysisChartRawLabel",
+        "coachModeNormalTitle",
+        "diabetes",
+        "failureTriggerStress",
+        "minLabel",
+        "missedTaskStartLabel",
+        "premium",
+        "professionStudent",
+        "settingsSectionData",
+        "start",
+        "status",
+        "test",
+        "trendLabel",
+        "weeklyTrigger_stress"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "respStable",
+        "permissionMicrophoneTitle",
+        "premium",
+        "trendStable"
+      ],
+      "english_hint_candidates": []
+    },
+    "pa": {
+      "name": "Punjabi",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "pl": {
+      "name": "Polish",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "breathAnalysisChartRawLabel",
+        "premium",
+        "professionStudent",
+        "status",
+        "test",
+        "trendLabel"
+      ],
+      "turkish_mix_candidates": [
+        "premium",
+        "permissionMicrophoneTitle"
+      ],
+      "english_hint_candidates": []
+    },
+    "pt": {
+      "name": "Portuguese",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "coachModeNormalTitle",
+        "diabetes",
+        "medicationTimeSlotLabel",
+        "pointShort",
+        "premium",
+        "weeklyIrregular",
+        "weeklyRegular"
+      ],
+      "turkish_mix_candidates": [
+        "premium"
+      ],
+      "english_hint_candidates": []
+    },
+    "ro": {
+      "name": "Romanian",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "breathAnalysisChartRawLabel",
+        "coachModeNormalTitle",
+        "interventionIntensityStrict",
+        "maxLabel",
+        "minLabel",
+        "premium",
+        "professionStudent",
+        "secShort",
+        "settingsSectionGeneral",
+        "test"
+      ],
+      "turkish_mix_candidates": [
+        "minLabel",
+        "respStable",
+        "premium",
+        "trendStable",
+        "reportsAvertedCigarettes",
+        "reportsSmokingTimePattern",
+        "reportsNoDataYet"
+      ],
+      "english_hint_candidates": []
+    },
+    "ru": {
+      "name": "Russian",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "sr": {
+      "name": "Serbian",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "professionStudent",
+        "status",
+        "trendLabel"
+      ],
+      "turkish_mix_candidates": [
+        "permissionMicrophoneTitle"
+      ],
+      "english_hint_candidates": []
+    },
+    "sv": {
+      "name": "Swedish",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [
+        "breathAnalysisChartRawLabel",
+        "coachModeNormalTitle",
+        "diabetes",
+        "durationBarrierNeutral",
+        "failureTriggerStress",
+        "maxLabel",
+        "minLabel",
+        "premium",
+        "professionOfficer",
+        "professionStudent",
+        "risk",
+        "settingsSectionData",
+        "status",
+        "taskTimerDuration",
+        "test",
+        "trendLabel",
+        "weeklyMotivation",
+        "weeklyTrigger_stress"
+      ],
+      "turkish_mix_candidates": [
+        "risk",
+        "minLabel",
+        "respStable",
+        "permissionMicrophoneTitle",
+        "premium",
+        "trendStable"
+      ],
+      "english_hint_candidates": []
+    },
+    "ta": {
+      "name": "Tamil",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "te": {
+      "name": "Telugu",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "th": {
+      "name": "Thai",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "uk": {
+      "name": "Ukrainian",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "vi": {
+      "name": "Vietnamese",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    },
+    "zh": {
+      "name": "Chinese",
+      "keys": 1442,
+      "missing": [],
+      "extra": [],
+      "empty": [],
+      "placeholder_errors": [],
+      "english_fallback_candidates": [],
+      "turkish_mix_candidates": [],
+      "english_hint_candidates": []
+    }
+  },
+  "global": {
+    "source_key_count": 1442,
+    "total_missing": 0,
+    "total_extra": 0,
+    "total_empty": 0,
+    "total_placeholder_errors": 0,
+    "total_english_fallback_candidates": 238,
+    "total_turkish_mix_candidates": 65,
+    "total_english_hint_candidates": 12
+  }
+}
