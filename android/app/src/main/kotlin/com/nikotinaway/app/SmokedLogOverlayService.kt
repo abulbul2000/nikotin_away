@@ -301,20 +301,6 @@ class SmokedLogOverlayService : Service() {
             )
         }
 
-        // Also the lock-screen route: an overlay cannot draw over the keyguard,
-        // so this action is how the button is reachable there at all. One tap
-        // rather than a hold, with an undo window on the Dart side instead.
-        val logIntent = Intent(this, SmokedLogActionReceiver::class.java).apply {
-            action = SmokedLogActionReceiver.ACTION_LOG
-        }
-        val pending = android.app.PendingIntent.getBroadcast(
-            this,
-            0,
-            logIntent,
-            android.app.PendingIntent.FLAG_UPDATE_CURRENT or
-                android.app.PendingIntent.FLAG_IMMUTABLE,
-        )
-
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
@@ -331,12 +317,6 @@ class SmokedLogOverlayService : Service() {
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_edit)
             .setContentTitle(prefs().getString(KEY_NOTIF_TITLE, "Nikotin Away"))
-            .setContentText(prefs().getString(KEY_NOTIF_BODY, "Log it if you smoked"))
-            .addAction(
-                0,
-                prefs().getString(KEY_NOTIF_ACTION, "I Smoked"),
-                pending,
-            )
             .setOngoing(true)
             .setSilent(true)
             .setShowWhen(false)
