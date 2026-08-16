@@ -5,6 +5,7 @@ import '../core/app_texts.dart';
 import '../services/device_permission_service.dart';
 import '../services/feature_access.dart';
 import '../services/notification_service.dart';
+import '../services/sleep_intelligence_service.dart';
 import '../widgets/premium_upsell_dialog.dart';
 import 'location_intelligence_page.dart';
 
@@ -24,6 +25,7 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
   bool _locationGranted = false;
   bool _isMiuiDevice = false;
   bool _batteryExemptionGranted = false;
+  bool _sleepIntelligenceEnabled = false;
   bool _loading = true;
 
   @override
@@ -54,6 +56,7 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
     final location = await Permission.locationWhenInUse.status;
     final isMiui = await DevicePermissionService.isMiuiDevice();
     final batteryExemption = await Permission.ignoreBatteryOptimizations.status;
+    final sleepIntelligenceEnabled = await SleepIntelligenceService().isEnabled();
     if (!mounted) return;
     setState(() {
       _notificationsGranted = notifications;
@@ -63,6 +66,7 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
       _locationGranted = location.isGranted;
       _isMiuiDevice = isMiui;
       _batteryExemptionGranted = batteryExemption.isGranted;
+      _sleepIntelligenceEnabled = sleepIntelligenceEnabled;
       _loading = false;
     });
   }
@@ -74,6 +78,11 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
 
   Future<void> _openAutostartSettings() async {
     await DevicePermissionService.openAutostartSettings();
+  }
+
+  Future<void> _enableSleepIntelligence() async {
+    await SleepIntelligenceService().enable();
+    await _refreshStatuses();
   }
 
   Future<void> _requestNotifications() async {
@@ -114,6 +123,14 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
                   granted: _batteryExemptionGranted,
                   onRequestExemption: _requestBatteryExemption,
                   onOpenAutostart: _openAutostartSettings,
+                ),
+                _PermissionCard(
+                  icon: Icons.bedtime_outlined,
+                  title: context.t('sleepIntelligenceTitle'),
+                  description: context.t('sleepIntelligenceDescription'),
+                  purpose: context.t('sleepIntelligencePurpose'),
+                  granted: _sleepIntelligenceEnabled,
+                  onRequest: _enableSleepIntelligence,
                 ),
                 _PermissionCard(
                   icon: Icons.notifications_outlined,

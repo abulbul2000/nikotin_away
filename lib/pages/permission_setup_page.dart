@@ -6,6 +6,7 @@ import '../services/device_permission_service.dart';
 import '../services/health_connect_service.dart';
 import '../services/notification_service.dart';
 import '../services/permission_service.dart';
+import '../services/sleep_intelligence_service.dart';
 
 /// One screen for the permissions the task system needs, each with its own
 /// live status.
@@ -145,6 +146,17 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
         isGranted: () => HealthConnectService().hasPermissions(),
         request: () async {
           await HealthConnectService().requestPermissions();
+        },
+        required: false,
+      ),
+      _PermissionItem(
+        titleKey: 'sleepIntelligenceTitle',
+        descriptionKey: 'sleepIntelligenceDescription',
+        purposeKey: 'sleepIntelligencePurpose',
+        icon: Icons.bedtime_outlined,
+        isGranted: () => SleepIntelligenceService().isEnabled(),
+        request: () async {
+          await SleepIntelligenceService().enable();
         },
         required: false,
       ),
