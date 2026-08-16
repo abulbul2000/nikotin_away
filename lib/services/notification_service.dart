@@ -1231,7 +1231,26 @@ class NotificationService {
         unawaited(AndroidWatchdogService.acknowledgeWatchdog(watchdogId));
       }
 
-      final actionId = response.actionId;
+      final actionId = response.actionId ?? '';
+      if (actionId.isEmpty) {
+        // A body tap must show the same native overlay over the current app,
+        // rather than navigating to whichever Flutter page was open. This
+        // also works after a cold start because main.dart processes the launch
+        // response after the navigator/engine is ready.
+        final code = await LanguageService.loadSelectedLanguageCode();
+        await AndroidWatchdogService.showTaskOverlayFromNotification(
+          title: _text(code, 'disciplineCommand'),
+          body: '${_text(code, 'disciplineCommandBody')}\n${payload['taskTitle'] ?? ''}',
+          doneLabel: _text(code, 'taskActionDoneLabel'),
+          postponeLabel: _text(code, 'taskActionNotNowLabel'),
+          declineLabel: _text(code, 'taskActionDeclineLabel'),
+          sosLabel: _text(code, 'taskActionSosLabel'),
+          watchdogId: payload['watchdogId'] ?? '',
+          taskTitle: payload['taskTitle'] ?? payload['canonicalTitle'] ?? '',
+        );
+        return;
+      }
+
       final event = {
         'type': type ?? '',
         'taskTitle': payload['taskTitle'] ?? '',
@@ -1240,10 +1259,7 @@ class NotificationService {
         // same as the behaviour they already had.
         'canonicalTitle':
             payload['canonicalTitle'] ?? payload['taskTitle'] ?? '',
-        // Empty when the user tapped the notification body rather than an
-        // action button — home_page.dart's listener treats this as "open the
-        // mandatory-task screen now" instead of resolving the task.
-        'actionId': actionId ?? '',
+        'actionId': actionId,
       };
 
       _dispatchTaskAction(event);

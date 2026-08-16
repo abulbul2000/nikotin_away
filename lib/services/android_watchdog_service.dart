@@ -67,6 +67,39 @@ class AndroidWatchdogService {
     await _channel.invokeMethod('ackWatchdog', {'watchdogId': watchdogId});
   }
 
+  /// Opens the native task overlay for a notification body tap. This works
+  /// while another app is visible and avoids routing to whichever Flutter
+  /// page happened to be open.
+  static Future<void> showTaskOverlayFromNotification({
+    required String title,
+    required String body,
+    required String doneLabel,
+    required String postponeLabel,
+    required String declineLabel,
+    required String sosLabel,
+    required String watchdogId,
+    required String taskTitle,
+  }) async {
+    if (!_isAndroid) {
+      return;
+    }
+    try {
+      await _channel.invokeMethod('showTaskOverlayFromNotification', {
+        'title': title,
+        'body': body,
+        'doneLabel': doneLabel,
+        'postponeLabel': postponeLabel,
+        'declineLabel': declineLabel,
+        'sosLabel': sosLabel,
+        'watchdogId': watchdogId,
+        'taskTitle': taskTitle,
+      });
+    } catch (_) {
+      // The regular notification remains available if overlay permission or
+      // the native service is unavailable.
+    }
+  }
+
   static Future<List<Map<String, dynamic>>> consumeViolations() async {
     if (!_isAndroid) {
       return const [];

@@ -339,6 +339,21 @@ class MainActivity : FlutterActivity() {
 						result.success(true)
 					}
 
+					"showTaskOverlayFromNotification" -> {
+						TaskOverlayService.show(
+							context = this,
+							title = call.argument<String>("title").orEmpty(),
+							body = call.argument<String>("body").orEmpty(),
+							acceptLabel = call.argument<String>("doneLabel").orEmpty(),
+							postponeLabel = call.argument<String>("postponeLabel").orEmpty(),
+							declineLabel = call.argument<String>("declineLabel").orEmpty(),
+							sosLabel = call.argument<String>("sosLabel").orEmpty(),
+							watchdogId = call.argument<String>("watchdogId").orEmpty(),
+							taskTitle = call.argument<String>("taskTitle").orEmpty(),
+						)
+						result.success(true)
+					}
+
 					"noteTransitContext" -> {
 						val isLikely = call.argument<Boolean>("isLikely") ?: false
 						DeliveryGateEvaluator.noteTransitContext(this, isLikely)
