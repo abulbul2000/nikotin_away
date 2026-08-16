@@ -33,7 +33,10 @@ void main() {
     storage = StorageService();
     await storage.clearAllData();
     featureAccess = FeatureAccess(
-      subscriptionService: SubscriptionService(storageService: storage),
+      subscriptionService: SubscriptionService(
+        storageService: storage,
+        allowDebugAccess: false,
+      ),
     );
   });
 
@@ -43,42 +46,31 @@ void main() {
     }
   });
 
-  test('canAccess is true while inside the trial window', () async {
-    await storage.startTrialIfNeeded();
-
+  test('release access is false without an active subscription', () async {
     final allowed = await featureAccess.canAccess(PremiumFeature.aiMentor);
+    expect(allowed, isFalse);
+  });
 
+  test('debug access is true without a subscription', () async {
+    final debugAccess = FeatureAccess(
+      subscriptionService: SubscriptionService(
+        storageService: storage,
+        allowDebugAccess: true,
+      ),
+    );
+
+    final allowed = await debugAccess.canAccess(PremiumFeature.aiMentor);
     expect(allowed, isTrue);
   });
 
   test(
-    'canAccess is false once the trial has elapsed with no subscription',
-    () async {
-      await storage.saveSubscriptionState(
-        SubscriptionState(
-          trialStartedAt: DateTime.now().subtract(const Duration(days: 20)),
-          status: SubscriptionStatus.trial,
-          updatedAt: DateTime.now(),
-        ),
-      );
-
-      final allowed = await featureAccess.canAccess(
-        PremiumFeature.breathCoughTests,
-      );
-
-      expect(allowed, isFalse);
-    },
-  );
-
-  test(
-    'canAccess is true with an active, recently-verified subscription',
+    'release access is true with an active, recently-verified subscription',
     () async {
       final now = DateTime.now();
       await storage.saveSubscriptionState(
         SubscriptionState(
-          trialStartedAt: now.subtract(const Duration(days: 20)),
           status: SubscriptionStatus.active,
-          productId: 'monthly_sub',
+          productId: SubscriptionService.starterProductId,
           lastVerifiedAt: now.subtract(const Duration(hours: 1)),
           updatedAt: now,
         ),

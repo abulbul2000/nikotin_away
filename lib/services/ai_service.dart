@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/subscription_state.dart';
 import 'language_service.dart';
@@ -217,6 +218,9 @@ Future<AiChatResult> sendMessageToAI(List<AiChatTurn> history) async {
           .map((turn) => {'role': turn.role, 'content': turn.content.trim()})
           .toList(),
       'language': await _resolveAppLanguage(),
+      // Only the separate development Firebase project accepts this flag.
+      // Release builds always send false and require a verified Play purchase.
+      'debugClient': kDebugMode,
     });
 
     final reply = result.data['reply'] as String? ?? '';

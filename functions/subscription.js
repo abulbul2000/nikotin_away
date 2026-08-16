@@ -14,14 +14,9 @@ async function getAndroidPublisherClient() {
   return google.androidpublisher({ version: "v3", auth });
 }
 
-// Stateless on purpose: this function never persists anything about the
-// purchase it's asked to verify. It just asks Google "is this token
-// active right now" and hands the answer straight back — the app itself
-// (subscription_state table, device-side) is the only place a durable
-// record of the result lives. See the subscription plan doc for why: the
-// project keeps user data on-device by default, and adding a server-side
-// user/subscription database here would be a bigger architectural change
-// than this feature needs.
+// This helper only talks to Google Play and returns the current entitlement.
+// The caller stores the verified product/token server-side so aiChat can
+// enforce access and quotas without trusting the Flutter client.
 export async function verifyPlaySubscription({ productId, purchaseToken }) {
   const publisher = await getAndroidPublisherClient();
   const res = await publisher.purchases.subscriptionsv2.get({

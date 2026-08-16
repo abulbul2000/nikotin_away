@@ -220,17 +220,10 @@ class _SubscriptionGatePageState extends State<SubscriptionGatePage> {
                         ),
                       )
                     else ...[
-                      for (final id in [
-                        SubscriptionService.monthlyProductId,
-                        SubscriptionService.yearlyProductId,
-                      ])
+                      for (final id in SubscriptionService.productIds)
                         if (_productFor(id) case final product?) ...[
                           _SubscriptionOptionCard(
-                            title: context.t(
-                              id == SubscriptionService.monthlyProductId
-                                  ? 'subscriptionMonthlyTitle'
-                                  : 'subscriptionYearlyTitle',
-                            ),
+                            title: SubscriptionService.productTitle(id),
                             price: product.price,
                             enabled: !_purchaseInFlight,
                             onTap: () => _buy(product),
