@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../core/app_texts.dart';
 import '../models/survey_record.dart';
@@ -11,6 +10,8 @@ import 'cough_test_page.dart';
 import 'home_page.dart';
 import '../services/behavior_engine.dart';
 import '../services/storage_service.dart';
+import '../services/app_share_service.dart';
+import '../services/language_service.dart';
 import '../widgets/consecutive_smoking_section.dart';
 import '../widgets/packs_per_day_section.dart';
 import '../widgets/survey_section_header.dart';
@@ -837,15 +838,8 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     );
   }
 
-  /// A skippable "share your progress" moment right after completing the
-  /// weekly survey — the point in the flow where the user has just seen
-  /// their updated risk score, so motivation to share is highest. Never
-  /// blocks the normal save/navigate flow: dismissing (or the platform
-  /// share sheet being cancelled) just continues on exactly as before.
-  Future<void> _offerShareProgress({
-    required int score,
-    required String level,
-  }) async {
+  /// Offers app sharing after the weekly survey without blocking the save flow.
+  Future<void> _offerShareProgress() async {
     final wantsToShare = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -866,11 +860,9 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     if (wantsToShare != true || !mounted || !context.mounted) {
       return;
     }
-    final text = context
-        .t('shareProgressText')
-        .replaceAll('{score}', '$score')
-        .replaceAll('{level}', level);
-    unawaited(SharePlus.instance.share(ShareParams(text: text)));
+    final languageCode = await LanguageService.loadSelectedLanguageCode();
+    if (!mounted) return;
+    await AppShareService.shareApp(languageCode: languageCode);
   }
 
   @override
@@ -1433,7 +1425,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                     if (!mounted) return;
                     if (!context.mounted) return;
 
-                    await _offerShareProgress(score: score, level: level);
+                    await _offerShareProgress();
                     if (!mounted) return;
                     if (!context.mounted) return;
 

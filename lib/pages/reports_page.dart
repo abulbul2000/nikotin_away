@@ -5,6 +5,8 @@ import '../engines/report_engine.dart';
 import '../models/period_report.dart';
 import '../services/pdf_report_service.dart';
 import '../services/storage_service.dart';
+import '../services/app_share_service.dart';
+import '../services/language_service.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -110,9 +112,36 @@ class _ReportsPageState extends State<ReportsPage> {
     setState(() => _busy = false);
   }
 
+  Future<bool> _askToShareApp() async {
+    final wantsToShare = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('shareProgressTitle')),
+        content: Text(context.t('shareProgressMessage')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('shareProgressSkip')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('shareProgressAction')),
+          ),
+        ],
+      ),
+    );
+    if (wantsToShare != true || !mounted) return false;
+    final languageCode = await LanguageService.loadSelectedLanguageCode();
+    if (!mounted) return false;
+    await AppShareService.shareApp(languageCode: languageCode);
+    return true;
+  }
+
   Future<void> _share() async {
     final report = _report;
     if (report == null) return;
+    if (await _askToShareApp()) return;
+    if (!mounted) return;
     setState(() => _busy = true);
     await _pdfReportService.shareReport(
       report: report,
