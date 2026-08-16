@@ -66,7 +66,7 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final StorageService _storageService = StorageService();
   final StepTrackingService _stepTrackingService = StepTrackingService();
   final ProtocolViolationService _protocolViolationService =
@@ -146,6 +146,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _taskActionSubscription = NotificationService.taskActionStream.listen(
       _handleTaskNotificationAction,
     );
@@ -155,7 +156,6 @@ class _HomePageState extends State<HomePage> {
     unawaited(_stepTrackingService.ensureDailyProbeScheduled());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_handlePendingQuickLogRoute());
-      unawaited(_offerPendingSmokingTriggerPrompts());
       unawaited(_offerQuickLogButtonOnce());
     });
   }
@@ -170,12 +170,21 @@ class _HomePageState extends State<HomePage> {
   /// dashboard.
   Future<void> _handlePendingQuickLogRoute() async {
     final route = await SmokedLogButtonService().drainPendingRoute();
-    if (route != SmokedLogButtonService.routeSos || !mounted) {
+    if (!mounted || route == null) return;
+
+    if (route == SmokedLogButtonService.routeSos) {
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const CravingSosPage()));
       return;
     }
-    await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const CravingSosPage()));
+
+    if (route == SmokedLogButtonService.routeSmokedTrigger) {
+      final events = await _storageService.loadSmokingEventsWithoutTrigger();
+      if (!mounted || events.isEmpty) return;
+      await _offerSmokingTriggerPrompt(events.last.id);
+      if (mounted) await _loadHomeMetrics();
+    }
   }
 
   /// Offers the floating "I smoked" button to someone who was already set up
@@ -196,7 +205,21 @@ class _HomePageState extends State<HomePage> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_syncPendingQuickLogOnResume());
+    }
+  }
+
+  Future<void> _syncPendingQuickLogOnResume() async {
+    await NotificationService.syncSmokedLogEventsFromNative();
+    await _handlePendingQuickLogRoute();
+    if (mounted) await _loadHomeMetrics();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _taskActionSubscription?.cancel();
     _mandatoryGateCallRetryTimer?.cancel();
     _mandatoryPostponeRetryTimer?.cancel();
@@ -354,17 +377,6 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
     );
-  }
-
-  Future<void> _offerPendingSmokingTriggerPrompts() async {
-    final events = await _storageService.loadSmokingEventsWithoutTrigger();
-    for (final event in events) {
-      if (!mounted) return;
-      await _offerSmokingTriggerPrompt(event.id);
-    }
-    if (events.isNotEmpty && mounted) {
-      await _loadHomeMetrics();
-    }
   }
 
   Future<void> _offerSmokingTriggerPrompt(String eventId) async {

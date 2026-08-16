@@ -12,15 +12,10 @@ import android.view.View
 
 /// The floating quick-log button.
 ///
-/// Deliberately press-and-hold rather than tap: this thing sits on top of
-/// whatever the user is doing all day, and a stray brush against it writing
-/// "I smoked" into their history would quietly corrupt the very data the
-/// barrier and the risky-hour ranking are computed from. Three seconds is
-/// long enough that no accidental contact reaches it.
-///
-/// The ring is not decoration — without visible progress a three-second hold
-/// reads as a dead button, and people let go at one second and conclude it's
-/// broken.
+/// Uses a short hold rather than a tap: this thing sits on top of whatever
+/// the user is doing all day, and a stray brush against it should not write
+/// "I smoked" into their history. The visual itself stays transparent and
+/// does not draw a progress ring or border.
 class SmokedLogButtonView(
     context: Context,
     private val onHoldCompleted: () -> Unit,
@@ -32,12 +27,6 @@ class SmokedLogButtonView(
 
     private val markPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         alpha = RESTING_ALPHA
-    }
-    private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = dp(3f)
-        strokeCap = Paint.Cap.ROUND
-        color = ACCENT
     }
     private val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -162,26 +151,11 @@ class SmokedLogButtonView(
             markPaint,
         )
 
-        if (confirming) {
-            drawTick(canvas)
-            return
-        }
-        if (!holding) return
-
-        canvas.drawArc(bounds, -90f, 360f * progress(), false, ringPaint)
     }
 
-    private fun drawTick(canvas: Canvas) {
-        canvas.drawArc(bounds, 0f, 360f, false, ringPaint)
-        val cx = width / 2f
-        val cy = height / 2f
-        val s = dp(9f)
-        canvas.drawLine(cx - s, cy, cx - s / 3f, cy + s * 0.8f, tickPaint)
-        canvas.drawLine(cx - s / 3f, cy + s * 0.8f, cx + s, cy - s * 0.7f, tickPaint)
-    }
 
     companion object {
-        const val HOLD_DURATION_MS = 3000L
+        const val HOLD_DURATION_MS = 1000L
         private const val CONFIRM_HOLD_MS = 800L
 
         /// Findable at a glance, full stop.

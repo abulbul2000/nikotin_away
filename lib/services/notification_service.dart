@@ -668,6 +668,13 @@ class NotificationService {
     }
   }
 
+  /// Drains native quick-log events when the already-running app resumes.
+  /// Cold starts call the private initializer path above; resume needs an
+  /// explicit public entry point so the HomePage can then consume its route.
+  static Future<void> syncSmokedLogEventsFromNative() {
+    return _syncSmokedLogEventsFromNative();
+  }
+
   static Future<void> syncWatchdogViolationsFromNative() {
     return _syncWatchdogViolationsFromNative();
   }

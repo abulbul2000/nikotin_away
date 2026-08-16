@@ -75,7 +75,7 @@ class AppTexts {
     'smokedLogButtonRow': 'Sigara Ictim butonu',
     'smokedLogButtonTitle': 'Sigara Ictim Butonu',
     'smokedLogButtonDescription':
-        'Ekranda kucuk, seffaf bir buton belirir. Sigara ictiginizde 3 saniye basili tutun — cevresindeki halka doldugunda tik isareti cikar ve kayit alinir. Yanlislikla dokunmaniz durumunda kayit alinmaz.',
+        'Ekranda kucuk, seffaf bir buton belirir. Sigara ictiginizde 1 saniye basili tutun; secenekler acilir ve kayit alinir. Yanlislikla dokunmaniz durumunda kayit alinmaz.',
     'smokedLogButtonPurpose':
         'Uygulama boylece hangi saatlerde ve hangi yerlerde sigara icme egiliminiz oldugunu ogrenir, gorevleri tam o riskli anlara denk getirir. Konum bilgisi yalnizca daha once tanimlanmis sik gittiginiz yerlerle eslestirilir; adres veya hareket gecmisiniz saklanmaz. Tum kayitlar yalnizca cihazinizda tutulur.',
     'smokedLogButtonEnabled': 'Sigara Ictim butonu acildi.',
@@ -84,7 +84,7 @@ class AppTexts {
         'Bu buton icin "diger uygulamalarin ustunde goster" izni gerekiyor.',
     'smokedLogButtonNotificationTitle': 'Nikotin Away',
     'smokedLogButtonNotificationBody':
-        'Yüzen butona 3 saniye basılı tutun, seçenekler açılsın',
+        'Yüzen butona 1 saniye basılı tutun, seçenekler açılsın',
     'smokedLogButtonAction': 'Sigara Ictim',
     'smokedLogMenuTitle': 'Ne yapmak istiyorsun?',
     'smokedLogMenuSos': 'SOS — Krizdeyim',
@@ -681,7 +681,7 @@ class AppTexts {
     'aiChatActionAppliedCoachMode': 'Koc Modu ayari guncellendi.',
     'aiChatActionAppliedMedication': 'Ilac hatirlatma saatleri guncellendi.',
     'aiChatActionAppliedPermission': 'Izin istegi acildi.',
-    'aiChatMicTooltip': 'Basili tutup konusun',
+    'aiChatMicTooltip': 'Dokunup konusun',
     'aiChatListening': 'Dinliyorum...',
     'aiChatMicPermissionDenied': 'Sesli giris icin mikrofon izni gerekiyor.',
     'aiChatMicUnavailable': 'Bu cihazda sesli giris kullanilamiyor.',
@@ -1978,7 +1978,7 @@ class AppTexts {
     'smokedLogButtonRow': 'I Smoked button',
     'smokedLogButtonTitle': 'I Smoked Button',
     'smokedLogButtonDescription':
-        'A small, translucent button appears on screen. When you smoke, press and hold it for 3 seconds — the ring around it fills, a tick appears, and the moment is recorded. A stray tap records nothing.',
+        'A small, translucent button appears on screen. When you smoke, press and hold it for 1 second to open the options and record the moment. A stray tap records nothing.',
     'smokedLogButtonPurpose':
         'This is how the app learns which hours and which places you tend to smoke in, so it can aim tasks at exactly those moments. Location is only matched against the handful of places you already visit often; no address or movement history is stored. Everything stays on your device.',
     'smokedLogButtonEnabled': 'I Smoked button is on.',
@@ -1987,7 +1987,7 @@ class AppTexts {
         'This button needs the "display over other apps" permission.',
     'smokedLogButtonNotificationTitle': 'Nikotin Away',
     'smokedLogButtonNotificationBody':
-        'Hold the floating button for 3 seconds to open the options',
+        'Hold the floating button for 1 second to open the options',
     'smokedLogButtonAction': 'I Smoked',
     'smokedLogMenuTitle': 'What do you need?',
     'smokedLogMenuSos': 'SOS — Craving',
@@ -2491,7 +2491,7 @@ class AppTexts {
     'aiChatHint': 'Type a message...',
     'aiChatSend': 'Send',
     'aiChatActionAppliedPermission': 'Permission request opened.',
-    'aiChatMicTooltip': 'Hold and speak',
+    'aiChatMicTooltip': 'Tap to speak',
     'aiChatListening': 'Listening...',
     'aiChatMicPermissionDenied':
         'Microphone permission is required for voice input.',

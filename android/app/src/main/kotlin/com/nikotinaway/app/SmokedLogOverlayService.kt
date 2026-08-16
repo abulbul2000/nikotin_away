@@ -249,6 +249,7 @@ class SmokedLogOverlayService : Service() {
         container.addView(
             choice(prefs.getString(KEY_NOTIF_ACTION, "I Smoked")!!) {
                 SmokedLogStore.enqueue(this)
+                SmokedLogStore.enqueueRoute(this, SmokedLogStore.ROUTE_SMOKED_TRIGGER)
                 launchApp()
             },
         )

@@ -42,6 +42,7 @@ object SmokedLogStore {
     private const val KEY_PENDING_ROUTE = "pending_route"
 
     const val ROUTE_SOS = "sos"
+    const val ROUTE_SMOKED_TRIGGER = "smoked_trigger"
 
     fun enqueueRoute(context: Context, route: String) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

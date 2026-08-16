@@ -148,6 +148,7 @@ class SmokedLogButtonService {
   /// it can only leave a note and start the activity — same queue-and-drain
   /// shape as the presses themselves.
   static const String routeSos = 'sos';
+  static const String routeSmokedTrigger = 'smoked_trigger';
 
   Future<String?> drainPendingRoute() async {
     if (!_isAndroid) {

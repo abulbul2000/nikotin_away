@@ -261,12 +261,10 @@ class _AIChatPageState extends State<AIChatPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(context.t('aiChatMicPermissionDenied')),
+          content: Text(context.t('aiChatMicUnavailable')),
           action: SnackBarAction(
-            label: 'OK',
-            onPressed: () {
-              ph.Permission.microphone.request();
-            },
+            label: 'Ayarlar',
+            onPressed: () => ph.openAppSettings(),
           ),
         ),
       );
@@ -716,27 +714,22 @@ class _AIChatPageState extends State<AIChatPage> {
                 const SizedBox(width: 8),
                 Tooltip(
                   message: context.t('aiChatMicTooltip'),
-                  child: GestureDetector(
-                    onTap: _sending
+                  child: IconButton.filled(
+                    onPressed: _sending
                         ? null
                         : () => _listening
                             ? _stopListening()
                             : _startListening(),
-                    child: Material(
-                      color: _listening
+                    style: IconButton.styleFrom(
+                      backgroundColor: _listening
                           ? Theme.of(context).colorScheme.error
                           : Theme.of(context).colorScheme.primary,
+                      foregroundColor: _listening
+                          ? Theme.of(context).colorScheme.onError
+                          : Theme.of(context).colorScheme.onPrimary,
                       shape: const CircleBorder(),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Icon(
-                          _listening ? Icons.mic : Icons.mic_none,
-                          color: _listening
-                              ? Theme.of(context).colorScheme.onError
-                              : Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
                     ),
+                    icon: Icon(_listening ? Icons.mic : Icons.mic_none),
                   ),
                 ),
                 const SizedBox(width: 8),

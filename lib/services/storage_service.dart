@@ -5598,6 +5598,7 @@ class StorageService {
       await txn.delete(_stepCounterSamplesTable);
       await txn.delete(_consentEventsTable);
       await txn.delete(_medicationsTable);
+      await txn.delete(_notificationsHistoryTable);
     });
   }
 }
