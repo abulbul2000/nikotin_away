@@ -5,6 +5,7 @@ import '../core/home_seed_resolver.dart';
 import '../services/storage_service.dart';
 import '../widgets/no_smoke_logo.dart';
 import 'home_page.dart';
+import 'how_it_works_page.dart';
 import 'survey_page.dart';
 
 class TrialInfoPage extends StatelessWidget {
@@ -22,10 +23,19 @@ class TrialInfoPage extends StatelessWidget {
     }
 
     if (!hasInitialSetup) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const SurveyPage()),
-      );
+      final guideSeen =
+          await storage.loadSetting(HowItWorksPage.seenSettingKey) == '1';
+      if (!guideSeen) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HowItWorksPage()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const SurveyPage()),
+        );
+      }
       return;
     }
 
