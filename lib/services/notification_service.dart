@@ -2313,6 +2313,9 @@ class NotificationService {
             'healthTipSmoking${(smokingSlot % _healthTipsSmokingCount) + 1}';
       } else {
         final diseaseSlot = i - _healthTipGeneralCount - _healthTipSmokingCount;
+        if (diseaseSlot >= _healthTipDiseaseCount) {
+          continue;
+        }
         if (conditions.isEmpty) {
           tipKey =
               'healthTipGeneralDisease${(diseaseSlot % _healthTipsGeneralDiseaseCount) + 1}';
