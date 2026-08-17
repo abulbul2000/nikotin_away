@@ -113,7 +113,9 @@ async function consumeQuota(uid, plan) {
 export const aiChat = onCall(
   {
     region: "europe-west1",
-    enforceAppCheck: true,
+    // Development bypass avoids requiring a registered Android debug token.
+    // Production keeps App Check enforcement because DEBUG_AI_BYPASS is false.
+    enforceAppCheck: !DEBUG_AI_BYPASS,
     secrets: [GEMINI_API_KEY],
   },
   async (request) => {
@@ -170,7 +172,11 @@ export const aiChat = onCall(
 );
 
 export const verifySubscription = onCall(
-  { region: "europe-west1", enforceAppCheck: true },
+  {
+    region: "europe-west1",
+    // Keep production verification strict; development bypass is explicit.
+    enforceAppCheck: !DEBUG_AI_BYPASS,
+  },
   async (request) => {
     const uid = requireAuth(request);
     const { productId, purchaseToken } = request.data ?? {};
