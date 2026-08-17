@@ -124,7 +124,7 @@ const PROVIDERS = [
   {
     name: "gemini",
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-    model: "gemini-1.5-flash",
+    model: "gemini-3.6-flash",
     keyName: "geminiApiKey",
   },
   {
