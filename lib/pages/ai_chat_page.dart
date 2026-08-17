@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:permission_handler/permission_handler.dart' as ph;
@@ -17,6 +18,7 @@ import '../services/health_connect_service.dart';
 import '../services/language_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/tts_voice_selector.dart';
 import 'subscription_gate_page.dart';
 
 /// A voice command recognised locally, before any AI round-trip. Keeping this
@@ -202,6 +204,7 @@ class _AIChatPageState extends State<AIChatPage> {
   final StorageService _storage = StorageService();
   String? _activeConversationId;
   final SpeechToText _speech = SpeechToText();
+  final FlutterTts _tts = FlutterTts();
   bool _sending = false;
   bool _listening = false;
   String _textBeforeListening = '';
@@ -209,7 +212,54 @@ class _AIChatPageState extends State<AIChatPage> {
   @override
   void initState() {
     super.initState();
+    _configureTts();
     _loadSavedHistory();
+  }
+
+  Future<void> _configureTts() async {
+    try {
+      await _tts.awaitSpeakCompletion(true);
+      await _tts.setSpeechRate(0.48);
+      await _tts.setVolume(1.0);
+      await _tts.setPitch(1.0);
+    } catch (error) {
+      debugPrint('[AIChat] TTS setup failed: $error');
+    }
+  }
+
+  String _ttsLanguageTag(String code) {
+    const regions = <String, String>{
+      'tr': 'TR', 'en': 'US', 'de': 'DE', 'ar': 'SA', 'fr': 'FR',
+      'es': 'ES', 'pt': 'BR', 'it': 'IT', 'pl': 'PL', 'ru': 'RU',
+      'ja': 'JP', 'zh': 'CN', 'ko': 'KR', 'hi': 'IN', 'bn': 'BD',
+      'pa': 'IN', 'te': 'IN', 'mr': 'IN', 'ta': 'IN', 'gu': 'IN',
+      'kn': 'IN', 'ml': 'IN', 'th': 'TH', 'vi': 'VN', 'id': 'ID',
+      'ms': 'MY', 'fil': 'PH', 'uk': 'UA', 'ro': 'RO', 'el': 'GR',
+      'hu': 'HU', 'cs': 'CZ', 'sv': 'SE', 'da': 'DK', 'no': 'NO',
+      'fi': 'FI', 'nl': 'NL', 'be': 'BY', 'sr': 'RS', 'hr': 'HR',
+    };
+    final normalized = code.toLowerCase();
+    return '$normalized-${regions[normalized] ?? normalized.toUpperCase()}';
+  }
+
+  Future<void> _speakAssistantReply(String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || !mounted) return;
+    try {
+      final languageCode = await LanguageService.loadSelectedLanguageCode();
+      final locale = _ttsLanguageTag(languageCode);
+      await _tts.setLanguage(locale);
+      await configureBestVoice(
+        _tts,
+        locale: locale,
+        preferLocalVoice: false,
+      );
+      await _tts.stop();
+      await _tts.speak(trimmed);
+    } catch (error) {
+      // TTS is optional and must never block text chat.
+      debugPrint('[AIChat] TTS reply failed: $error');
+    }
   }
 
   Future<void> _loadSavedHistory() async {
@@ -358,6 +408,7 @@ class _AIChatPageState extends State<AIChatPage> {
     if (_listening) {
       _speech.stop();
     }
+    _tts.stop();
     super.dispose();
   }
 
@@ -436,8 +487,9 @@ class _AIChatPageState extends State<AIChatPage> {
         );
       },
       listenOptions: SpeechListenOptions(
-        listenFor: const Duration(seconds: 60),
-        pauseFor: const Duration(seconds: 3),
+        // A short pause ended recognition while users were still speaking.
+        listenFor: const Duration(seconds: 120),
+        pauseFor: const Duration(seconds: 8),
         partialResults: true,
         cancelOnError: true,
         listenMode: ListenMode.confirmation,
@@ -588,6 +640,7 @@ class _AIChatPageState extends State<AIChatPage> {
         );
       });
       await _persistHistory();
+      await _speakAssistantReply(result.reply);
     } on AiSubscriptionRequiredException {
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
