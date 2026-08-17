@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_texts.dart';
 import '../core/app_theme.dart';
@@ -39,7 +40,9 @@ import '../services/protocol_violation_service.dart';
 import '../services/smoked_log_button_service.dart';
 import '../services/snoring_detection_service.dart';
 import '../services/storage_service.dart';
+import '../services/cloud_backup_service.dart';
 import '../services/firestore_sync_service.dart';
+import '../services/google_auth_service.dart';
 import '../services/feature_access.dart';
 import '../services/task_assignment_service.dart';
 import '../widgets/background_reliability_prompt.dart';
@@ -1658,6 +1661,83 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _offerInitialCloudBackup() async {
+    if (!GoogleAuthService.isCloudUser || !mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    const promptKey = 'initial_cloud_backup_prompt_shown';
+    if (prefs.getBool(promptKey) == true || !mounted) return;
+
+    final controller = TextEditingController();
+    final passphrase = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('cloudBackupRow')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.t('cloudBackupPhoneChangeWarning')),
+            const SizedBox(height: 12),
+            Text(context.t('cloudBackupPassphraseHint')),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              obscureText: true,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: context.t('cloudBackupPassphraseLabel'),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(context.t('no')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+            child: Text(context.t('cloudBackupRow')),
+          ),
+        ],
+      ),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
+    final trimmed = passphrase?.trim() ?? '';
+    if (passphrase == null) {
+      await prefs.setBool(promptKey, true);
+      return;
+    }
+    if (trimmed.length < 6 || !mounted) {
+      if (passphrase != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.t('cloudBackupPassphraseTooShort'))),
+        );
+      }
+      return;
+    }
+
+    try {
+      await CloudBackupService(storageService: _storageService).backup(
+        passphrase: trimmed,
+      );
+      await prefs.setBool(promptKey, true);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('cloudBackupSuccess'))),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('[HomePage] Initial cloud backup failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('cloudBackupFailed'))),
+      );
+    }
+  }
+
   Future<void> _completeRegistration() async {
     if (_isCompletingRegistration || _registrationCompleted) {
       return;
@@ -1730,6 +1810,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       }
       debugPrint('[CompleteRegistration] Refreshing Home metrics');
       await _loadHomeMetrics();
+      await _offerInitialCloudBackup();
 
       if (!mounted) {
         return;
