@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -154,8 +155,23 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<bool> _clearLocalDataWhenAccountChanged(String? previousUid) async {
+    final currentUid = FirebaseAuth.instance.currentUser?.uid;
+    if (previousUid == null || currentUid == null || previousUid == currentUid) {
+      return false;
+    }
+    await StorageService().clearAllData();
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in CloudBackupService.backedUpPrefsKeys) {
+      await prefs.remove(key);
+    }
+    await prefs.remove('initial_cloud_backup_prompt_shown');
+    return true;
+  }
+
   Future<void> _onGoogleSignIn() async {
     if (_busy) return;
+    final previousUid = FirebaseAuth.instance.currentUser?.uid;
     setState(() {
       _busy = true;
       _status = '';
@@ -173,6 +189,10 @@ class _LoginPageState extends State<LoginPage> {
 
     // Mark as asked so we don't show again
     await LoginPage.markLoginAsked();
+
+    // If credentials switched from the anonymous UID to another existing
+    // account, never merge the old local user's rows into that account.
+    await _clearLocalDataWhenAccountChanged(previousUid);
 
     // Try to restore from cloud
     if (!mounted) return;
@@ -238,6 +258,7 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _onEmailSignIn() async {
     if (_busy) return;
+    final previousUid = FirebaseAuth.instance.currentUser?.uid;
     final emailController = TextEditingController();
     final passwordController = TextEditingController();
     var createAccount = false;
@@ -314,6 +335,9 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     await LoginPage.markLoginAsked();
+    // If credentials switched from the anonymous UID to another existing
+    // account, never merge the old local user's rows into that account.
+    await _clearLocalDataWhenAccountChanged(previousUid);
     final storage = StorageService();
     final fullBackupRestored =
         await FirestoreSyncService.restoreLocalDatabaseBackup(storage);
