@@ -14,11 +14,12 @@ import 'package:no_smoke/pages/smoked_log_consent_page.dart';
 import 'package:no_smoke/pages/snoring_test_page.dart';
 import 'package:no_smoke/pages/survey_review_page.dart';
 import 'package:no_smoke/pages/task_smoked_confirm_page.dart';
+import 'package:no_smoke/services/language_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-/// Simulates ~1000 "virtual users" across the app's 24 fully-translated
-/// languages (the set in generated_language_data.dart): widget-level
+/// Simulates virtual users across every language declared by
+/// LanguageService.supportedLanguages: widget-level
 /// smoke coverage for the app's user-facing screens (test results, health
 /// recovery milestones, survey review/trend, duration-barrier/task
 /// confirmation, smoked-log consent) plus a full sweep of every canonical
@@ -45,32 +46,9 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   }
 }
 
-const _languageCodes = [
-  'de',
-  'ar',
-  'fr',
-  'es',
-  'pt',
-  'it',
-  'pl',
-  'ru',
-  'ja',
-  'zh',
-  'ko',
-  'hi',
-  'bn',
-  'pa',
-  'te',
-  'mr',
-  'ta',
-  'gu',
-  'kn',
-  'ml',
-  'th',
-  'vi',
-  'id',
-  'ms',
-];
+final _languageCodes = LanguageService.supportedLanguages.keys.toList(
+  growable: false,
+);
 
 /// A handful of names chosen to stress different string lengths/scripts —
 /// including a very long one, since translated labels next to a long user
