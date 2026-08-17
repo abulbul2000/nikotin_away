@@ -157,9 +157,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _handleTaskNotificationAction,
     );
     if (widget.mentorCardTestMode) {
-      // Widget tests need the mentor card, not the dashboard's full startup
-      // graph (location, steps, notifications, sync and route handling).
-      unawaited(_ensureMentorMessageCadence());
+      // Widget tests need a deterministic mentor card, not the production
+      // startup graph or SQLite timing. The message still uses canonical
+      // codes, so the real localization/rendering path remains exercised.
+      _latestMentorMessage = MentorMessage(
+        id: 'mentor_widget_test',
+        createdAt: DateTime(2000, 1, 1),
+        type: 'daily',
+        text: MentorMessageCodes.dailySupportive,
+        tone: 'supportive',
+        quickReplies: const [
+          MentorMessageCodes.quickReplyOk,
+          MentorMessageCodes.quickReplyStruggling,
+          MentorMessageCodes.quickReplyNoTalk,
+        ],
+        read: false,
+      );
       return;
     }
     _loadHomeMetrics();
