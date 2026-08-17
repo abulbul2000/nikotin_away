@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/core/app_texts.dart';
+import 'package:no_smoke/core/mentor_command_codes.dart';
 import 'package:no_smoke/pages/home_page.dart';
 import 'package:no_smoke/services/storage_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -18,6 +20,12 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   @override
   Future<String?> getApplicationDocumentsPath() async => _documentsPath;
 }
+
+String _replyLabel(String code) =>
+    AppTexts.localizeMentorReplyCode('tr', code);
+
+String _messageLabel(String code) =>
+    AppTexts.localizeMentorMessage('tr', code);
 
 Widget _wrap() => const MaterialApp(
   locale: Locale('tr'),
@@ -95,8 +103,20 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 25));
       });
       await tester.pump(const Duration(milliseconds: 25));
-      if (find.widgetWithText(OutlinedButton, 'Zorlanıyorum').evaluate().isNotEmpty ||
-          find.widgetWithText(OutlinedButton, 'İyiyim').evaluate().isNotEmpty) {
+      if (find
+              .widgetWithText(
+                OutlinedButton,
+                _replyLabel(MentorMessageCodes.quickReplyStruggling),
+              )
+              .evaluate()
+              .isNotEmpty ||
+          find
+              .widgetWithText(
+                OutlinedButton,
+                _replyLabel(MentorMessageCodes.quickReplyOk),
+              )
+              .evaluate()
+              .isNotEmpty) {
         break;
       }
     }
@@ -109,28 +129,48 @@ void main() {
 
       final strugglingButton = find.widgetWithText(
         OutlinedButton,
-        'Zorlanıyorum',
+        _replyLabel(MentorMessageCodes.quickReplyStruggling),
       );
       expect(strugglingButton, findsOneWidget);
 
       await tester.tap(strugglingButton);
       await tester.pump();
 
-      expect(find.text('Ne tür yardım istersin?'), findsOneWidget);
       expect(
-        find.widgetWithText(OutlinedButton, 'Görevleri azalt'),
+        find.text(
+          _messageLabel(MentorMessageCodes.followUpStrugglingQuestion),
+        ),
         findsOneWidget,
       );
       expect(
-        find.widgetWithText(OutlinedButton, 'Bariyeri gevşet'),
+        find.widgetWithText(
+          OutlinedButton,
+          _replyLabel(MentorMessageCodes.quickReplyReduceTasks),
+        ),
         findsOneWidget,
       );
       expect(
-        find.widgetWithText(OutlinedButton, 'Sadece konuşmak istedim'),
+        find.widgetWithText(
+          OutlinedButton,
+          _replyLabel(MentorMessageCodes.quickReplyEaseBarrier),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.widgetWithText(
+          OutlinedButton,
+          _replyLabel(MentorMessageCodes.quickReplyNoTalk),
+        ),
         findsOneWidget,
       );
       // The original quick-reply buttons are gone now that we're answered.
-      expect(find.widgetWithText(OutlinedButton, 'İyiyim'), findsNothing);
+      expect(
+        find.widgetWithText(
+          OutlinedButton,
+          _replyLabel(MentorMessageCodes.quickReplyOk),
+        ),
+        findsNothing,
+      );
     },
   );
 
@@ -139,17 +179,33 @@ void main() {
   ) async {
     await pumpUntilMentorCard(tester);
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Zorlanıyorum'));
+    await tester.tap(
+      find.widgetWithText(
+        OutlinedButton,
+        _replyLabel(MentorMessageCodes.quickReplyStruggling),
+      ),
+    );
     await tester.pump();
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Görevleri azalt'));
+    await tester.tap(
+      find.widgetWithText(
+        OutlinedButton,
+        _replyLabel(MentorMessageCodes.quickReplyReduceTasks),
+      ),
+    );
     await tester.pump();
 
-    expect(find.textContaining('görevlerini azalttım'), findsOneWidget);
+    expect(
+      find.text(_messageLabel(MentorMessageCodes.followUpAckReduceTasks)),
+      findsOneWidget,
+    );
     expect(find.byType(SnackBar), findsOneWidget);
     // The follow-up buttons are gone now that a choice was made.
     expect(
-      find.widgetWithText(OutlinedButton, 'Bariyeri gevşet'),
+      find.widgetWithText(
+        OutlinedButton,
+        _replyLabel(MentorMessageCodes.quickReplyEaseBarrier),
+      ),
       findsNothing,
     );
   });
@@ -159,12 +215,25 @@ void main() {
   ) async {
     await pumpUntilMentorCard(tester);
 
-    await tester.tap(find.widgetWithText(OutlinedButton, 'İyiyim'));
+    await tester.tap(
+      find.widgetWithText(
+        OutlinedButton,
+        _replyLabel(MentorMessageCodes.quickReplyOk),
+      ),
+    );
     await tester.pump();
 
-    expect(find.text('Ne tür yardım istersin?'), findsNothing);
+    expect(
+      find.text(_messageLabel(MentorMessageCodes.followUpStrugglingQuestion)),
+      findsNothing,
+    );
     // "Yanitin: İyiyim" — the pre-existing "reply sent" acknowledgement,
     // proving the struggling-only follow-up branch was never taken.
-    expect(find.textContaining('Yanitin'), findsOneWidget);
+    expect(
+      find.textContaining(
+        _messageLabel(MentorMessageCodes.quickReplyOk),
+      ),
+      findsOneWidget,
+    );
   });
 }
