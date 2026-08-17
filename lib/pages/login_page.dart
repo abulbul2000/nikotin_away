@@ -410,9 +410,88 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<bool> _askForLocalCloudAccount() async {
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final request = await showDialog<Map<String, String>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(dialogContext.t('loginEmailButton')),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(dialogContext.t('cloudBackupPhoneChangeWarning')),
+            const SizedBox(height: 12),
+            Text(dialogContext.t('cloudBackupRowSubtitle')),
+            const SizedBox(height: 12),
+            TextField(
+              controller: emailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: dialogContext.t('loginEmailAddress'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: dialogContext.t('loginEmailPassword'),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, <String, String>{}),
+            child: Text(dialogContext.t('loginFirstUserButton')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, {
+              'email': emailController.text.trim(),
+              'password': passwordController.text,
+            }),
+            child: Text(dialogContext.t('loginEmailButton')),
+          ),
+        ],
+      ),
+    );
+    emailController.dispose();
+    passwordController.dispose();
+    if (!mounted || request == null || request.isEmpty) return false;
+
+    setState(() {
+      _busy = true;
+      _status = '';
+    });
+    final ok = await GoogleAuthService.signInWithEmail(
+      email: request['email'] ?? '',
+      password: request['password'] ?? '',
+      createAccount: true,
+    );
+    if (!ok) {
+      if (!mounted) return false;
+      setState(() {
+        _busy = false;
+        _status = context.t('loginEmailInvalid');
+      });
+      return false;
+    }
+    return true;
+  }
+
   void _onSkip() async {
-    // Mark as "asked once" so we don't show again
+    // A local-only user is allowed, but the cloud-account choice is explicit
+    // before the survey so no one misses the data-loss implication.
+    await _askForLocalCloudAccount();
+    if (!mounted) return;
+    // Keep the user on this screen after a failed account creation attempt.
+    // An empty status means the user explicitly chose local-only use.
+    if (_status.isNotEmpty) return;
     await LoginPage.markLoginAsked();
+    setState(() => _busy = false);
     if (!mounted) return;
     Navigator.pushReplacement(
       context,
