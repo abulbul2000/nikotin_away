@@ -330,8 +330,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _handleTaskNotificationAction(Map<String, String> event) async {
     final taskTitle = event['taskTitle']?.trim() ?? '';
+    final canonicalTitle = event['canonicalTitle']?.trim().isNotEmpty == true
+        ? event['canonicalTitle']!.trim()
+        : taskTitle;
     final actionId = event['actionId']?.trim() ?? '';
-    if (taskTitle.isEmpty || actionId.isEmpty) {
+    if (taskTitle.isEmpty || canonicalTitle.isEmpty || actionId.isEmpty) {
       return;
     }
 
@@ -341,16 +344,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // below — the row itself becomes unreadable-as-"just succeeded" the
       // moment it's transitioned.
       final plannedMinutes = actionId == TaskActionId.confirmSmokedNo
-          ? MentorCommandCodes.durationBarrierMinutes(taskTitle)
+          ? MentorCommandCodes.durationBarrierMinutes(canonicalTitle)
           : null;
-      // canonicalTitle isn't threaded through HomePage's stream events today
-      // — taskTitle already *is* the canonical ADAPTIVE_NO_SMOKE:<n> form
-      // for every task this stream carries, same as the background isolate
-      // path in notification_service.dart assumes when canonicalTitle is
-      // absent from the payload.
+      // The notification payload carries localized display text and the
+      // canonical ADAPTIVE_NO_SMOKE:<n> code separately. Use the code for
+      // persistence and the display text only for the UI.
       final followUp = await TaskAssignmentService(_storageService)
           .handleTaskAction(
-            canonicalTitle: taskTitle,
+            canonicalTitle: canonicalTitle,
             taskTitle: taskTitle,
             actionId: actionId,
           );
@@ -366,7 +367,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       if (followUp == TaskActionFollowUp.openSosPage) {
         Navigator.of(context).push(
           MaterialPageRoute<void>(
-            builder: (_) => CravingSosPage(taskCanonicalTitle: taskTitle),
+            builder: (_) => CravingSosPage(taskCanonicalTitle: canonicalTitle),
           ),
         );
       } else if (followUp == TaskActionFollowUp.openSleepRoutinePage) {
@@ -375,7 +376,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         Navigator.of(context).push(
           MaterialPageRoute<void>(
             builder: (_) => SleepRoutinePage(
-              canonicalTitle: taskTitle,
+              canonicalTitle: canonicalTitle,
               name: widget.name,
               packsPerDay: packsPerDay,
             ),

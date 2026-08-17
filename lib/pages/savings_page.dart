@@ -33,7 +33,9 @@ class _SavingsPageState extends State<SavingsPage> {
 
   Future<SavingsSnapshot> _load() async {
     final price = await _service.getPackPrice();
-    _priceController.text = price.toStringAsFixed(0);
+    if (mounted) {
+      _priceController.text = price.toStringAsFixed(0);
+    }
     return _service.computeSavings(
       quitDate: widget.quitDate,
       packsPerDay: widget.packsPerDay,
@@ -44,6 +46,7 @@ class _SavingsPageState extends State<SavingsPage> {
     final value = double.tryParse(_priceController.text.replaceAll(',', '.'));
     if (value == null || value <= 0) return;
     await _service.setPackPrice(value);
+    if (!mounted) return;
     setState(() {
       _future = _load();
     });

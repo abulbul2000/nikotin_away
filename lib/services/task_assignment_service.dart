@@ -195,7 +195,7 @@ class TaskAssignmentService {
         return TaskActionFollowUp.openSleepRoutinePage;
       }
 
-      final delay = resolveInitialTaskDelay(taskTitle);
+      final delay = resolveInitialTaskDelay(canonicalTitle);
       // Acceptance itself is already durably recorded on the task_assignments
       // row via the transition below (state=accepted, barrierStartedAt) --
       // writing a second 'started' row into TaskHistory served no reader and
@@ -203,12 +203,12 @@ class TaskAssignmentService {
       // permanent "not completed" entry to the risk-scoring history.
       await _transitionTask(canonicalTitle, TaskLifecycleState.accepted);
       await NotificationService.showTaskTimerStartedNotification(
-        taskTitle: taskTitle,
+        taskTitle: canonicalTitle,
         duration: delay,
       );
       // The end-of-window question, asked as "did you smoke?".
       await NotificationService.scheduleTaskConfirmationPrompt(
-        taskTitle: taskTitle,
+        taskTitle: canonicalTitle,
         delay: delay,
       );
       // A quieter repeat of the same question if the first one never gets
@@ -216,7 +216,7 @@ class TaskAssignmentService {
       // shares the same deadline and closes the task out as barrierUnknown
       // if the user never sees either notification.
       await NotificationService.scheduleBarrierResolutionReminder(
-        taskTitle: taskTitle,
+        taskTitle: canonicalTitle,
         delay: delay,
       );
       return TaskActionFollowUp.none;
@@ -224,7 +224,7 @@ class TaskAssignmentService {
 
     if (actionId == TaskActionId.notNow) {
       await NotificationService.showPostponeChoiceNotification(
-        taskTitle: taskTitle,
+        taskTitle: canonicalTitle,
       );
       return TaskActionFollowUp.none;
     }
@@ -237,7 +237,7 @@ class TaskAssignmentService {
         postponeMinutes: postponeChosen,
       );
       await NotificationService.scheduleFirstTaskTriggerNotification(
-        taskDescription: taskTitle,
+        taskDescription: canonicalTitle,
         delay: Duration(minutes: postponeChosen),
       );
       return TaskActionFollowUp.none;

@@ -1453,34 +1453,34 @@ class NotificationService {
     final now = DateTime.now();
 
     if (actionId == _actionTaskDone) {
-      final delay = _resolveInitialTaskDelay(taskTitle);
+      final delay = _resolveInitialTaskDelay(canonicalTitle);
       // Mirrors what HomePage's foreground handler persists, so a task
       // accepted with the app closed leaves the same trail as one accepted
       // with it open.
       await storage.saveTaskResult(
-        taskTitle: taskTitle,
+        taskTitle: canonicalTitle,
         taskResult: 'started',
         completedAt: now,
       );
       await storage.saveTaskFollowUp(
-        taskTitle: taskTitle,
+        taskTitle: canonicalTitle,
         scheduledAt: now.add(delay),
       );
       await _transitionTask(canonicalTitle, TaskLifecycleState.accepted);
       await showTaskTimerStartedNotification(
-        taskTitle: taskTitle,
+        taskTitle: canonicalTitle,
         duration: delay,
       );
       // The end-of-window question, asked as "did you smoke?". Replaces the
       // old follow-up, which asked whether the task was completed — the same
       // moment, the opposite polarity.
-      await scheduleTaskConfirmationPrompt(taskTitle: taskTitle, delay: delay);
+      await scheduleTaskConfirmationPrompt(taskTitle: canonicalTitle, delay: delay);
       return;
     }
 
     // "Ertele" asks how long rather than picking for the user.
     if (actionId == _actionTaskNotNow) {
-      await showPostponeChoiceNotification(taskTitle: taskTitle);
+      await showPostponeChoiceNotification(taskTitle: canonicalTitle);
       return;
     }
 
@@ -1497,7 +1497,7 @@ class NotificationService {
         postponeMinutes: chosen,
       );
       await scheduleFirstTaskTriggerNotification(
-        taskDescription: taskTitle,
+        taskDescription: canonicalTitle,
         delay: Duration(minutes: chosen),
       );
       return;
@@ -1538,23 +1538,23 @@ class NotificationService {
     // that proves a task succeeded.
     if (actionId == _actionFollowUpDone) {
       await storage.recordAdaptiveTaskOutcome(
-        taskTitle: taskTitle,
+        taskTitle: canonicalTitle,
         outcome: AdaptiveTaskOutcome.success,
-        plannedDurationMinutes: _resolveInitialTaskDelay(taskTitle).inMinutes,
+        plannedDurationMinutes: _resolveInitialTaskDelay(canonicalTitle).inMinutes,
         respondedAt: now,
       );
       await storage.saveTaskResult(
-        taskTitle: taskTitle,
+        taskTitle: canonicalTitle,
         taskResult: 'willpower_success',
         completedAt: now,
       );
-      await storage.resolveTaskFollowUpByTitle(taskTitle);
+      await storage.resolveTaskFollowUpByTitle(canonicalTitle);
       return;
     }
 
     if (actionId == _actionFollowUpLater || actionId == _actionSmokedNo) {
       await scheduleTaskFollowUpReminder(
-        taskTitle: taskTitle,
+        taskTitle: canonicalTitle,
         delay: const Duration(minutes: 10),
       );
     }
