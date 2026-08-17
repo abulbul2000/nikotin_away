@@ -216,7 +216,7 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
       context: context,
       initialTime: TimeOfDay(hour: current ~/ 60, minute: current % 60),
     );
-    if (picked == null) return;
+    if (picked == null || !mounted) return;
     setState(() {
       _times[index] =
           '${picked.hour.toString().padLeft(2, '0')}:'
