@@ -18,6 +18,7 @@ import '../services/health_connect_service.dart';
 import '../services/language_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/tts_locale.dart';
 import '../services/tts_voice_selector.dart';
 import 'subscription_gate_page.dart';
 
@@ -227,19 +228,20 @@ class _AIChatPageState extends State<AIChatPage> {
     }
   }
 
-  String _ttsLanguageTag(String code) {
-    const regions = <String, String>{
-      'tr': 'TR', 'en': 'US', 'de': 'DE', 'ar': 'SA', 'fr': 'FR',
-      'es': 'ES', 'pt': 'BR', 'it': 'IT', 'pl': 'PL', 'ru': 'RU',
-      'ja': 'JP', 'zh': 'CN', 'ko': 'KR', 'hi': 'IN', 'bn': 'BD',
-      'pa': 'IN', 'te': 'IN', 'mr': 'IN', 'ta': 'IN', 'gu': 'IN',
-      'kn': 'IN', 'ml': 'IN', 'th': 'TH', 'vi': 'VN', 'id': 'ID',
-      'ms': 'MY', 'fil': 'PH', 'uk': 'UA', 'ro': 'RO', 'el': 'GR',
-      'hu': 'HU', 'cs': 'CZ', 'sv': 'SE', 'da': 'DK', 'no': 'NO',
-      'fi': 'FI', 'nl': 'NL', 'be': 'BY', 'sr': 'RS', 'hr': 'HR',
-    };
-    final normalized = code.toLowerCase();
-    return '$normalized-${regions[normalized] ?? normalized.toUpperCase()}';
+  Future<String?> _resolveTtsLocale(String languageCode) async {
+    final requested = ttsLocaleForLanguageCode(languageCode);
+    if (requested == null) return null;
+    final languages = await _tts.getLanguages;
+    if (languages is! List) return null;
+    final normalizedCode = languageCode.toLowerCase();
+    for (final raw in languages) {
+      final available = raw.toString().replaceAll('_', '-').toLowerCase();
+      if (available == requested.toLowerCase() ||
+          available.split('-').first == normalizedCode) {
+        return raw.toString().replaceAll('_', '-');
+      }
+    }
+    return null;
   }
 
   Future<void> _speakAssistantReply(String text) async {
@@ -247,7 +249,14 @@ class _AIChatPageState extends State<AIChatPage> {
     if (trimmed.isEmpty || !mounted) return;
     try {
       final languageCode = await LanguageService.loadSelectedLanguageCode();
-      final locale = _ttsLanguageTag(languageCode);
+      final locale = await _resolveTtsLocale(languageCode);
+      // Never let the platform silently choose English or Turkish. If the
+      // selected language has no installed voice, text chat remains available
+      // but this reply is not spoken.
+      if (locale == null) {
+        debugPrint('[AIChat] No TTS voice installed for $languageCode');
+        return;
+      }
       await _tts.setLanguage(locale);
       await configureBestVoice(
         _tts,
@@ -328,7 +337,7 @@ class _AIChatPageState extends State<AIChatPage> {
       orElse: () => const AiChatTurn(role: 'assistant', content: ''),
     );
     final text = firstUser.content.trim();
-    if (text.isEmpty) return 'Yeni sohbet';
+    if (text.isEmpty) return context.t('aiChatNewConversation');
     return text.length > 30 ? '${text.substring(0, 30)}…' : text;
   }
 
@@ -422,7 +431,7 @@ class _AIChatPageState extends State<AIChatPage> {
         SnackBar(
           content: Text(context.t('aiChatMicPermissionDenied')),
           action: SnackBarAction(
-            label: 'Ayarlar',
+            label: context.t('openSettings'),
             onPressed: () => ph.openAppSettings(),
           ),
         ),
@@ -443,7 +452,7 @@ class _AIChatPageState extends State<AIChatPage> {
         if (!mounted) return;
         setState(() => _listening = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Mikrofon kullanılamadı: ${error.errorMsg}')),
+          SnackBar(content: Text(context.t('aiChatMicUnavailable'))),
         );
       },
     ).timeout(const Duration(seconds: 10), onTimeout: () => false);
@@ -453,7 +462,7 @@ class _AIChatPageState extends State<AIChatPage> {
         SnackBar(
           content: Text(context.t('aiChatMicUnavailable')),
           action: SnackBarAction(
-            label: 'Ayarlar',
+            label: context.t('openSettings'),
             onPressed: () => ph.openAppSettings(),
           ),
         ),
@@ -468,6 +477,13 @@ class _AIChatPageState extends State<AIChatPage> {
     }
 
     final locale = await _resolveListeningLocale();
+    if (locale == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('aiChatMicUnavailable'))),
+      );
+      return;
+    }
     if (!mounted) return;
     _textBeforeListening = _controller.text;
     setState(() => _listening = true);
@@ -499,25 +515,22 @@ class _AIChatPageState extends State<AIChatPage> {
   }
 
   /// Picks a listening locale the device speech engine actually supports.
-  /// Falls back to the current locale first, then English, and finally lets
-  /// the platform choose when nothing works.
+  /// Returns null instead of selecting a different language.
   Future<String?> _resolveListeningLocale() async {
     final locales = await _speech.locales();
     final localeIds = locales.map((l) => l.localeId).toList();
     final preferred = await LanguageService.loadSelectedLanguageCode();
-    final candidates = <String>[
-      preferred,
-      'tr_TR',
-      'tr',
-      'en_US',
-      'en',
-    ];
+    final candidates = <String>[preferred];
     for (final candidate in candidates) {
       if (localeIds.contains(candidate)) return candidate;
     }
-    // Fallback to any locale whose language prefix matches the preference.
+    // Only match the selected language. Never switch silently to English or
+    // Turkish when the device does not expose the requested locale.
     for (final id in localeIds) {
-      if (id.startsWith(preferred)) return id;
+      if (id.toLowerCase().replaceAll('_', '-').split('-').first ==
+          preferred.toLowerCase()) {
+        return id;
+      }
     }
     return null;
   }
@@ -585,11 +598,9 @@ class _AIChatPageState extends State<AIChatPage> {
     if (!authed) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Firebase girişi yapılamadı. İnternet bağlantını kontrol et ve tekrar dene.',
-          ),
-          duration: Duration(seconds: 5),
+        SnackBar(
+          content: Text(context.t('aiChatAuthNotReady')),
+          duration: const Duration(seconds: 5),
         ),
       );
       return;
@@ -672,9 +683,8 @@ class _AIChatPageState extends State<AIChatPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            '${context.t('aiChatError')}\nSunucu zamanında yanıt vermedi. İnternet bağlantını ve Firebase kurulumunu kontrol et.',
-          ),
+          content: Text(context.t('aiChatError')),
+
           duration: const Duration(seconds: 6),
         ),
       );
@@ -684,9 +694,8 @@ class _AIChatPageState extends State<AIChatPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            '${context.t('aiChatError')}\nBeklenmeyen hata: $error',
-          ),
+          content: Text(context.t('aiChatError')),
+
           duration: const Duration(seconds: 6),
         ),
       );
@@ -860,7 +869,7 @@ class _AIChatPageState extends State<AIChatPage> {
   Future<void> _copyConversation(_ChatConversation conversation) async {
     final copy = _ChatConversation(
       id: 'chat_${DateTime.now().microsecondsSinceEpoch}',
-      title: '${conversation.title} (Copy)',
+      title: conversation.title,
       turns: conversation.turns,
       project: conversation.project,
     );

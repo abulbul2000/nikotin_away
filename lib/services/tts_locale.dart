@@ -1,8 +1,5 @@
-/// Maps every language code the app's UI supports (see LanguageService /
-/// generated_language_data.dart) to a BCP-47 locale tag the platform TTS
-/// engine understands. Shared by every feature that speaks app text aloud
-/// (breath test voice cues, the mandatory-task voice announcement) so a
-/// language gets added here once and every TTS caller picks it up.
+/// Maps every language code the app's UI supports to a BCP-47 locale tag.
+/// A missing voice must never silently switch the user to English or Turkish.
 const Map<String, String> ttsLocaleByLanguageCode = {
   'tr': 'tr-TR',
   'en': 'en-US',
@@ -30,8 +27,21 @@ const Map<String, String> ttsLocaleByLanguageCode = {
   'vi': 'vi-VN',
   'id': 'id-ID',
   'ms': 'ms-MY',
+  'fil': 'fil-PH',
+  'uk': 'uk-UA',
+  'ro': 'ro-RO',
+  'el': 'el-GR',
+  'hu': 'hu-HU',
+  'cs': 'cs-CZ',
+  'sv': 'sv-SE',
+  'da': 'da-DK',
+  'no': 'no-NO',
+  'fi': 'fi-FI',
+  'nl': 'nl-NL',
+  'be': 'be-BY',
+  'sr': 'sr-RS',
+  'hr': 'hr-HR',
 };
 
-String ttsLocaleForLanguageCode(String languageCode) {
-  return ttsLocaleByLanguageCode[languageCode] ?? 'en-US';
-}
+String? ttsLocaleForLanguageCode(String languageCode) =>
+    ttsLocaleByLanguageCode[languageCode.toLowerCase()];

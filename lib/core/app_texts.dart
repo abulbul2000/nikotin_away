@@ -4433,20 +4433,13 @@ class AppTexts {
   };
 
   static String textForCode(String code, String key) {
-    if (code == 'tr') {
-      return _tr[key] ?? _en[key] ?? key;
-    }
-    if (code == 'en') {
-      return _en[key] ?? _tr[key] ?? key;
-    }
+    if (code == 'tr') return _tr[key] ?? key;
+    if (code == 'en') return _en[key] ?? key;
 
-    final generatedMap = generatedLanguageData[code];
-    if (generatedMap != null && generatedMap.containsKey(key)) {
-      return generatedMap[key] ?? _en[key] ?? _tr[key] ?? key;
-    }
-
-    final langMap = _data[code] ?? _data['en']!;
-    return langMap[key] ?? _data['en']![key] ?? _data['tr']![key] ?? key;
+    // Every supported language is bundled in generatedLanguageData. Never
+    // silently substitute English or Turkish: a missing entry must remain
+    // visible as its key so validation catches it before release.
+    return generatedLanguageData[code]?[key] ?? key;
   }
 
   /// Kept so callers do not have to know whether a language needs loading.
@@ -4455,7 +4448,8 @@ class AppTexts {
   /// on first use of any language without bundled data — an undocumented
   /// endpoint, and a network call in an app whose data-safety declaration
   /// says nothing leaves the device. Every language now resolves from the
-  /// bundle, falling back to English for keys not yet translated.
+  /// bundle. Missing entries are intentionally not replaced by another
+  /// language; validation must expose them before release.
   static Future<void> ensureLanguageLoaded(String code) async {}
 
   static String text(BuildContext context, String key) {

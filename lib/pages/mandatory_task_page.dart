@@ -40,6 +40,7 @@ class _MandatoryTaskPageState extends State<MandatoryTaskPage> {
   Future<void> _speakAnnouncement(String languageCode, String text) async {
     try {
       final locale = ttsLocaleForLanguageCode(languageCode);
+      if (locale == null) return;
       final storedGender = await StorageService().loadSetting('gender');
       final tts = FlutterTts();
       await tts.setLanguage(locale);

@@ -52,6 +52,12 @@ void main() {
     }
   });
 
+  test('unknown language or key never silently falls back to another language', () {
+    expect(AppTexts.textForCode('xx', 'save'), 'save');
+    expect(AppTexts.textForCode('en', '__missing_key__'), '__missing_key__');
+    expect(AppTexts.textForCode('tr', '__missing_key__'), '__missing_key__');
+  });
+
   test('no language ever shows a raw key to the user', () {
     for (final code in supported) {
       for (final key in criticalKeys) {
@@ -115,6 +121,16 @@ void main() {
   });
 
   group('coverage', () {
+    test('every generated language has the complete bundled key set', () {
+      final referenceKeys = generatedLanguageData.values.first.keys.toSet();
+      final gaps = <String, int>{};
+      for (final entry in generatedLanguageData.entries) {
+        final missing = referenceKeys.difference(entry.value.keys.toSet());
+        if (missing.isNotEmpty) gaps[entry.key] = missing.length;
+      }
+      expect(gaps, isEmpty, reason: 'language bundles are incomplete: $gaps');
+    });
+
     test('bundled languages cover the keys the English table defines', () {
       // Reported per language rather than as one pass/fail so the gap is
       // visible and can be closed language by language.
