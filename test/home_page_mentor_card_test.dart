@@ -232,15 +232,13 @@ void main() {
     await tester.pump();
 
     expect(
-      find.text(_messageLabel(MentorMessageCodes.followUpStrugglingQuestion)),
+      find.byKey(const ValueKey('mentor_follow_up_question')),
       findsNothing,
     );
     // "Yanitin: İyiyim" — the pre-existing "reply sent" acknowledgement,
     // proving the struggling-only follow-up branch was never taken.
     expect(
-      find.textContaining(
-        _messageLabel(MentorMessageCodes.quickReplyOk),
-      ),
+      find.byKey(const ValueKey('mentor_reply_ack')),
       findsOneWidget,
     );
   });

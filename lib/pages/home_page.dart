@@ -906,30 +906,32 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (message == null) {
       return;
     }
-    await _storageService.replyToMentorMessage(message.id, reply);
     final isStruggling = reply == MentorMessageCodes.quickReplyStruggling;
+    final updatedMessage = message.copyWith(
+      read: true,
+      userReply: reply,
+      followUpQuestion: isStruggling
+          ? MentorMessageCodes.followUpStrugglingQuestion
+          : null,
+      followUpQuickReplies: isStruggling
+          ? const [
+              MentorMessageCodes.quickReplyReduceTasks,
+              MentorMessageCodes.quickReplyEaseBarrier,
+              MentorMessageCodes.quickReplyJustTalking,
+            ]
+          : const [],
+    );
+
+    // Render the immediate answer before awaiting SQLite. A slow or unavailable
+    // local database must not make the mentor card appear unresponsive.
+    if (mounted) {
+      setState(() => _latestMentorMessage = updatedMessage);
+    }
+
+    await _storageService.replyToMentorMessage(message.id, reply);
     if (isStruggling) {
       await _storageService.attachMentorFollowUpQuestion(message.id);
     }
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _latestMentorMessage = message.copyWith(
-        read: true,
-        userReply: reply,
-        followUpQuestion: isStruggling
-            ? MentorMessageCodes.followUpStrugglingQuestion
-            : null,
-        followUpQuickReplies: isStruggling
-            ? const [
-                MentorMessageCodes.quickReplyReduceTasks,
-                MentorMessageCodes.quickReplyEaseBarrier,
-                MentorMessageCodes.quickReplyJustTalking,
-              ]
-            : const [],
-      );
-    });
   }
 
   Future<void> _replyToMentorFollowUp(String choice) async {
@@ -937,14 +939,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (message == null) {
       return;
     }
-    await _storageService.applyMentorFollowUpChoice(message.id, choice);
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _latestMentorMessage = message.copyWith(followUpReply: choice);
-    });
 
+    // Update the card and show feedback immediately; persistence follows.
+    if (mounted) {
+      setState(() {
+        _latestMentorMessage = message.copyWith(followUpReply: choice);
+      });
+    }
     String? snackCode;
     if (choice == MentorMessageCodes.quickReplyReduceTasks) {
       snackCode = MentorMessageCodes.followUpAckReduceTasks;
@@ -961,6 +962,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       );
     }
+    await _storageService.applyMentorFollowUpChoice(message.id, choice);
   }
 
   Color _respiratoryBandColor() {
@@ -2174,6 +2176,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
+            key: const ValueKey('mentor_follow_up_question'),
             AppTexts.localizeMentorMessage(
               languageCode,
               message.followUpQuestion!,
@@ -2219,6 +2222,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     return Text(
+      key: const ValueKey('mentor_reply_ack'),
       '${context.t('mentorReplySentPrefix')}: '
       '${AppTexts.localizeMentorReplyCode(languageCode, message.userReply!)}',
       style: const TextStyle(
