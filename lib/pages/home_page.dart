@@ -1711,7 +1711,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return;
     }
     if (trimmed.length < 6 || !mounted) {
-      if (passphrase != null && mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.t('cloudBackupPassphraseTooShort'))),
         );
