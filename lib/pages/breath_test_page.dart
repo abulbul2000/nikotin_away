@@ -36,17 +36,57 @@ class _SuccessCheckPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
+    final w = size.width;
+    final h = size.height;
+
+    // A filled, balanced checkmark rather than the previous thin stroke.
+    // The proportions are deliberately close to the approved visual reference.
+    final path = Path()
+      ..moveTo(w * 0.08, h * 0.40)
+      ..lineTo(w * 0.24, h * 0.24)
+      ..lineTo(w * 0.45, h * 0.52)
+      ..lineTo(w * 0.82, h * 0.10)
+      ..lineTo(w * 0.97, h * 0.24)
+      ..lineTo(w * 0.47, h * 0.86)
+      ..close();
+
+    final shadowPaint = Paint()
+      ..color = const Color(0xFF168B32).withValues(alpha: 0.72)
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
+    canvas.save();
+    canvas.translate(0, h * 0.035);
+    canvas.drawPath(path, shadowPaint);
+    canvas.restore();
+
+    final fillPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          color.withValues(alpha: 1.0),
+          const Color(0xFF27B947),
+          const Color(0xFF0B8E2B),
+        ],
+        stops: const [0.0, 0.48, 1.0],
+      ).createShader(Offset.zero & size)
+      ..style = PaintingStyle.fill;
+    canvas.drawPath(path, fillPaint);
+
+    // A restrained highlight gives the mark the same polished 3D character
+    // as the approved reference without making it visually noisy.
+    final highlight = Path()
+      ..moveTo(w * 0.13, h * 0.39)
+      ..lineTo(w * 0.24, h * 0.29)
+      ..lineTo(w * 0.45, h * 0.57)
+      ..lineTo(w * 0.80, h * 0.17);
+    final highlightPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.58)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
+      ..strokeWidth = (strokeWidth * 0.24).clamp(1.2, 4.0)
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
-    final path = Path()
-      ..moveTo(size.width * 0.08, size.height * 0.39)
-      ..lineTo(size.width * 0.42, size.height * 0.79)
-      ..lineTo(size.width * 0.94, size.height * 0.12);
-    canvas.drawPath(path, paint);
+    canvas.drawPath(highlight, highlightPaint);
   }
 
   @override

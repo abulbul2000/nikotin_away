@@ -28,7 +28,6 @@ import '../pages/reports_page.dart';
 import '../pages/self_challenge_page.dart';
 import '../pages/settings_page.dart';
 import '../pages/sleep_routine_page.dart';
-import '../pages/snoring_test_page.dart';
 import '../pages/survey_history_page.dart';
 import '../pages/weekly_survey_page.dart';
 import '../services/device_compatibility_service.dart';
@@ -1022,19 +1021,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     await _loadHomeMetrics();
   }
 
-  Future<void> _openSnoringTestFromMenu() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const SnoringTestPage(navigateToHomeOnComplete: true),
-      ),
-    );
-    if (!mounted) {
-      return;
-    }
-    await _loadHomeMetrics();
-  }
-
   Future<void> _openWeeklySurveyFromMenu() async {
     await Navigator.push(
       context,
@@ -1996,11 +1982,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           children: [
             Row(
               children: [
-                Icon(Icons.bedtime_outlined, color: toneColor, size: 18),
+                Icon(Icons.graphic_eq, color: toneColor, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    context.t('snoringHomeSummaryCardTitle'),
+                    context.t('sleepIntelligenceTitle'),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: toneColor,
@@ -2015,7 +2001,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ? context
                         .t('snoringHomeSummaryCardBodyDetected')
                         .replaceAll('{count}', '$_snoringSummaryCount')
-                  : context.t('snoringHomeSummaryCardBodyClear'),
+                  : context.t('snoringSeverityNone'),
               style: const TextStyle(fontSize: 14, height: 1.5),
             ),
             if (_snoringSummaryCount > 0) ...[
@@ -2318,36 +2304,84 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Widget _buildSummaryStats(BuildContext context) {
+    final score = _adaptiveRiskScore == 0 ? widget.riskScore : _adaptiveRiskScore;
+    final hasBreathData = _lastBreathText != 'noRecordYet';
+    final breathStatus = _dailyBreathStatus == 'breathTestDoneToday'
+        ? context.t('breathTestRecordTitle')
+        : context.t('noRecordYet');
+
     return Column(
       children: [
-        Text(
-          '${context.t('riskLevel')}: ${_localizedRiskLabel()}',
-          style: const TextStyle(fontSize: 18),
+        Card(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  child: Text(
+                    '$score',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        context.t('riskScore'),
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${context.t('riskLevel')}: ${_localizedRiskLabel()}',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 3),
+                      Text('$score / 100', style: const TextStyle(fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          '${context.t('riskScore')}: ${_adaptiveRiskScore == 0 ? widget.riskScore : _adaptiveRiskScore} / 100',
-          style: const TextStyle(fontSize: 16),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.t('lastBreathTest'),
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  hasBreathData ? _lastBreathText : context.t('noRecordYet'),
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 6),
+                Text('${context.t('dailyBreathStatus')}: $breathStatus'),
+                if (hasBreathData) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '${context.t('lastExhale')}: $_latestExhaleSeconds${context.t('secShort')} • ${context.t('lastInhale')}: $_latestInhaleSeconds${context.t('secShort')}',
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 12),
         Text(
           '${context.t('lastSurveyDate')}: ${_lastSurveyDateText == 'noRecordYet' ? context.t('noRecordYet') : _lastSurveyDateText}',
-          style: const TextStyle(fontSize: 16),
-        ),
-        const SizedBox(height: 16),
-        Text(
-          '${context.t('lastBreathTest')}: ${_lastBreathText == 'noRecordYet' ? context.t('noRecordYet') : _lastBreathText}',
-          style: const TextStyle(fontSize: 16),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '${context.t('dailyBreathStatus')}: ${context.t(_dailyBreathStatus)}',
-          style: const TextStyle(fontSize: 16),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '${context.t('lastExhale')}: $_latestExhaleSeconds${context.t('secShort')} • ${context.t('lastInhale')}: $_latestInhaleSeconds${context.t('secShort')}',
-          style: const TextStyle(fontSize: 16),
+          style: const TextStyle(fontSize: 13),
         ),
       ],
     );
@@ -2574,14 +2608,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               onPressed: _openCoughTestFromMenu,
               icon: const Icon(Icons.sick_outlined),
               label: Text(context.t('menuCoughTest')),
-            ),
-          ),
-          SizedBox(
-            width: 160,
-            child: OutlinedButton.icon(
-              onPressed: _openSnoringTestFromMenu,
-              icon: const Icon(Icons.bedtime_outlined),
-              label: Text(context.t('menuSnoringTest')),
             ),
           ),
         ]),
@@ -2953,6 +2979,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Widget _buildBreathTrendCard() {
+    final hasAnyData = _dailyAverage > 0 || _weeklyAverage > 0 || _monthlyAverage > 0;
     final maxValue = [
       _dailyAverage,
       _weeklyAverage,
@@ -2972,49 +2999,77 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           children: [
             Text(
               context.t('breathTrend'),
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                _buildTrendBar(
-                  context.t('daily'),
-                  values[0],
-                  _dailyAverage,
-                  _calculateImprovementLabel(_dailyAverage, _weeklyAverage),
+            if (!hasAnyData)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                child: Center(
+                  child: Text(
+                    context.t('noRecordYet'),
+                    style: const TextStyle(fontSize: 14),
+                  ),
                 ),
-                _buildTrendBar(
-                  context.t('weekly'),
-                  values[1],
-                  _weeklyAverage,
-                  _weeklyImprovementText,
-                ),
-                _buildTrendBar(
-                  context.t('monthly'),
-                  values[2],
-                  _monthlyAverage,
-                  _monthlyImprovementText,
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '${context.t('weeklyImprovement')}: ${_translateTrend(_weeklyImprovementText)}',
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${context.t('monthlyImprovement')}: ${_translateTrend(_monthlyImprovementText)}',
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${context.t('breathPreviousComparison')}: $_breathPreviousReportText',
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${context.t('breathAverageComparison')}: $_breathAverageReportText',
-            ),
+              )
+            else
+              Row(
+                children: [
+                  _buildTrendBar(
+                    context.t('daily'),
+                    values[0],
+                    _dailyAverage,
+                    _calculateImprovementLabel(_dailyAverage, _weeklyAverage),
+                  ),
+                  _buildTrendBar(
+                    context.t('weekly'),
+                    values[1],
+                    _weeklyAverage,
+                    _weeklyImprovementText,
+                  ),
+                  _buildTrendBar(
+                    context.t('monthly'),
+                    values[2],
+                    _monthlyAverage,
+                    _monthlyImprovementText,
+                  ),
+                ],
+              ),
+            if (hasAnyData) ...[
+              const SizedBox(height: 12),
+              _buildTrendSummaryRow(
+                context.t('weeklyImprovement'),
+                _translateTrend(_weeklyImprovementText),
+              ),
+              _buildTrendSummaryRow(
+                context.t('monthlyImprovement'),
+                _translateTrend(_monthlyImprovementText),
+              ),
+              _buildTrendSummaryRow(
+                context.t('breathPreviousComparison'),
+                _breathPreviousReportText,
+              ),
+              _buildTrendSummaryRow(
+                context.t('breathAverageComparison'),
+                _breathAverageReportText,
+              ),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTrendSummaryRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: Text('$label:')),
+          const SizedBox(width: 8),
+          Flexible(child: Text(value, textAlign: TextAlign.end)),
+        ],
       ),
     );
   }
@@ -3086,9 +3141,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
-                      value.toStringAsFixed(1),
+                      value > 0 ? value.toStringAsFixed(1) : context.t('noRecordYet'),
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
                         shadows: [Shadow(color: Colors.black54, blurRadius: 3)],
@@ -3101,7 +3157,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             const SizedBox(height: 8),
             Text(label, style: const TextStyle(fontSize: 12)),
             Text(
-              '${value.toStringAsFixed(1)}${context.t('secShort')}',
+              value > 0
+                  ? '${value.toStringAsFixed(1)}${context.t('secShort')}'
+                  : context.t('noRecordYet'),
+              textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 11),
             ),
           ],

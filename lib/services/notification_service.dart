@@ -808,12 +808,9 @@ class NotificationService {
   static const String _lastSnoringResultNotificationDateKey =
       'last_snoring_result_notification_date';
 
-  /// Tells the user what last night's (opt-in) Snoring Test actually found —
-  /// until now the count only ever surfaced if they opened Settings and
-  /// looked. Runs once per calendar day (keyed by date, not a rolling
-  /// cooldown, since this is a once-a-night summary rather than an
-  /// event-driven alert) and only when there's something to report: at
-  /// least one probe fired, so the window wasn't skipped entirely.
+  /// Shows a short, gentle morning Sleep Intelligence summary once per day.
+  /// The overnight sound signal is only one input to this summary; this is
+  /// not presented as a separate medical or snoring test.
   static Future<void> _syncSnoringResultFromNative() async {
     try {
       final storage = StorageService();
@@ -858,26 +855,29 @@ class NotificationService {
           snoreCount: snoreCount,
           healthConditions: healthConditions,
         );
-        final tipKey = switch (tier) {
-          'mild' => 'snoringTipMild',
-          'moderate' => 'snoringTipModerate',
-          'severe' => 'snoringTipSevere',
+        final severityKey = switch (tier) {
+          'mild' => 'snoringSeverityMild',
+          'moderate' => 'snoringSeverityModerate',
+          'severe' => 'snoringSeveritySevere',
+          _ => 'snoringSeverityNone',
+        };
+        final adviceKey = switch (tier) {
+          'mild' => 'snoringAdviceMild',
+          'moderate' => 'snoringAdviceModerate',
+          'severe' => 'snoringAdviceSevere',
           _ => null,
         };
-        final detected = _text(
-          code,
-          'snoringResultNotificationBodyDetected',
-        ).replaceAll('{count}', '$snoreCount');
-        body = tipKey == null
-            ? detected
-            : '$detected\n\n💡 ${_text(code, tipKey)}';
+        body = _text(code, severityKey);
+        if (adviceKey != null) {
+          body = '$body\n\n${_text(code, adviceKey)}';
+        }
       } else {
-        body = _text(code, 'snoringResultNotificationBodyClear');
+        body = _text(code, 'snoringSeverityNone');
       }
 
       await _show(
         _snoringResultNotificationId,
-        _text(code, 'snoringResultNotificationTitle'),
+        _text(code, 'sleepIntelligenceTitle'),
         body,
         NotificationDetails(
           android: AndroidNotificationDetails(
@@ -886,8 +886,8 @@ class NotificationService {
             importance: Importance.defaultImportance,
             visibility: NotificationVisibility.private,
             priority: Priority.defaultPriority,
-            playSound: true,
-            enableVibration: true,
+            playSound: false,
+            enableVibration: false,
             audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
             category: AndroidNotificationCategory.reminder,
           ),
