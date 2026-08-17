@@ -46,6 +46,7 @@ import '../widgets/background_reliability_prompt.dart';
 import '../widgets/no_smoke_logo.dart';
 import '../widgets/premium_upsell_dialog.dart';
 import '../widgets/quick_action_menu.dart';
+import '../widgets/draggable_butterfly_button.dart';
 
 class HomePage extends StatefulWidget {
   final String name;
@@ -1796,20 +1797,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(context),
-      body: IndexedStack(
-        index: _selectedTabIndex,
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          _buildHomeTab(context),
-          _buildTestsTab(context),
-          _buildTrackingTab(context),
-          _buildSettingsTab(context),
+          IndexedStack(
+            index: _selectedTabIndex,
+            children: [
+              _buildHomeTab(context),
+              _buildTestsTab(context),
+              _buildTrackingTab(context),
+              _buildSettingsTab(context),
+            ],
+          ),
+          Positioned.fill(
+            child: DraggableButterflyButton(
+              key: const ValueKey('quick_action_butterfly'),
+              semanticLabel: context.t('quickMenuTitle'),
+              onPressed: () => unawaited(_openQuickActionMenu()),
+            ),
+          ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        key: const ValueKey('quick_action_fab'),
-        backgroundColor: AppTheme.brandPrimary,
-        onPressed: () => unawaited(_openQuickActionMenu()),
-        child: const Icon(Icons.bolt, color: Colors.black87),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedTabIndex,
