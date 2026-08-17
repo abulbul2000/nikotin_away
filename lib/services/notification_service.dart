@@ -2388,7 +2388,9 @@ class NotificationService {
         if (!fireAt.isAfter(now)) {
           fireAt = fireAt.add(const Duration(days: 1));
         }
-        fireAt = await _reserveNonConflictingTime(fireAt);
+        // Medication times are intentional, including when they fall inside
+        // the user's sleep window. Do not move them to avoid another kind of
+        // notification; the exact dose time must be preserved.
 
         final reminder = _text(
           code,
