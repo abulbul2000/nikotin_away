@@ -27,7 +27,12 @@ Widget _wrap() => const MaterialApp(
     GlobalWidgetsLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
   ],
-  home: HomePage(name: 'Ada', riskScore: 10, riskLevel: 'DUSUK'),
+  home: HomePage(
+    name: 'Ada',
+    riskScore: 10,
+    riskLevel: 'DUSUK',
+    mentorCardTestMode: true,
+  ),
 );
 
 // These widget tests exercise the real HomePage mentor-card interaction.
@@ -81,14 +86,9 @@ void main() {
     }
   });
 
-  /// Pumps HomePage and waits for the mentor card's async daily-message
-  /// load to land, without pumpAndSettle() (this screen has ambient
-  /// animations elsewhere that never go idle on their own).
-  ///
-  /// _ensureMentorMessageCadence only runs once registration reads back as
-  /// completed (see HomePage's _loadHomeMetrics), so that's set up first.
+  /// Pumps the lightweight mentor-card-only HomePage mode and waits for the
+  /// async daily-message load without pumpAndSettle().
   Future<void> pumpUntilMentorCard(WidgetTester tester) async {
-    await StorageService().saveInitialRegistrationCompleted(true);
     await tester.pumpWidget(_wrap());
     for (var i = 0; i < 20; i += 1) {
       await tester.runAsync(() async {

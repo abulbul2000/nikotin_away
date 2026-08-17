@@ -56,6 +56,8 @@ class HomePage extends StatefulWidget {
   final int riskScore;
   final String riskLevel;
   final bool autoCompleteRegistrationOnLoad;
+  @visibleForTesting
+  final bool mentorCardTestMode;
 
   const HomePage({
     super.key,
@@ -63,6 +65,7 @@ class HomePage extends StatefulWidget {
     required this.riskScore,
     required this.riskLevel,
     this.autoCompleteRegistrationOnLoad = false,
+    this.mentorCardTestMode = false,
   });
 
   @override
@@ -153,6 +156,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _taskActionSubscription = NotificationService.taskActionStream.listen(
       _handleTaskNotificationAction,
     );
+    if (widget.mentorCardTestMode) {
+      // Widget tests need the mentor card, not the dashboard's full startup
+      // graph (location, steps, notifications, sync and route handling).
+      unawaited(_ensureMentorMessageCadence());
+      return;
+    }
     _loadHomeMetrics();
     unawaited(LocationIntelligenceService().sampleCurrentLocationIfDue());
     unawaited(_stepTrackingService.sampleCurrentStepsIfDue());
