@@ -61,8 +61,8 @@ class _SuccessCheckPainter extends CustomPainter {
 
     final fillPaint = Paint()
       ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+        begin: AlignmentDirectional.topStart,
+        end: AlignmentDirectional.bottomEnd,
         colors: [
           color.withValues(alpha: 1.0),
           const Color(0xFF27B947),
