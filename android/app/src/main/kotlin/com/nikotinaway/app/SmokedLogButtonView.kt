@@ -170,9 +170,9 @@ class SmokedLogButtonView(
         const val HOLD_DURATION_MS = 1000L
         private const val CONFIRM_HOLD_MS = 1_000L
 
-        /// The resting button should stay visible without feeling opaque.
-        /// While holding, it becomes solid so the confirmation state is clear.
-        private const val RESTING_ALPHA = 72
+        /// The asset itself has a transparent background. Keep the butterfly
+        /// and chain marks fully opaque so they remain readable on the page.
+        private const val RESTING_ALPHA = 255
         private const val ACTIVE_ALPHA = 255
 
         private val ACCENT = Color.parseColor("#00B8D4")
