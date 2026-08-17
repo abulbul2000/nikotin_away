@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:permission_handler/permission_handler.dart' as ph;
 import 'package:speech_to_text/speech_to_text.dart';
@@ -142,16 +144,22 @@ class _ChatConversation {
     required this.id,
     required this.title,
     required List<AiChatTurn> turns,
+    this.pinned = false,
+    this.project,
   }) : turns = List<AiChatTurn>.from(turns);
 
   final String id;
   String title;
   final List<AiChatTurn> turns;
+  bool pinned;
+  String? project;
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
     'turns': turns.map((turn) => turn.toJson()).toList(growable: false),
+    'pinned': pinned,
+    if (project != null && project!.trim().isNotEmpty) 'project': project,
   };
 
   static _ChatConversation? fromJson(dynamic raw) {
@@ -169,7 +177,13 @@ class _ChatConversation {
         turns.add(AiChatTurn(role: role, content: content));
       }
     }
-    return _ChatConversation(id: id, title: title, turns: turns);
+    return _ChatConversation(
+      id: id,
+      title: title,
+      turns: turns,
+      pinned: raw['pinned'] == true,
+      project: raw['project'] is String ? raw['project'] as String : null,
+    );
   }
 }
 
@@ -246,6 +260,10 @@ class _AIChatPageState extends State<AIChatPage> {
 
       if (!mounted) return;
       if (_conversations.isNotEmpty) {
+        _conversations.sort((a, b) {
+          if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
+          return 0;
+        });
         _selectConversation(_conversations.first, notify: false);
       }
       await _persistConversations();
@@ -728,6 +746,285 @@ class _AIChatPageState extends State<AIChatPage> {
     return 'aiChatActionAppliedPermission';
   }
 
+  String _conversationShareText(_ChatConversation conversation) {
+    final buffer = StringBuffer('${conversation.title}\n\n');
+    for (final turn in conversation.turns) {
+      final speaker = turn.role == 'user' ? 'You' : 'AI';
+      buffer.writeln('$speaker: ${turn.content}');
+      buffer.writeln();
+    }
+    return buffer.toString().trim();
+  }
+
+  Future<void> _togglePinned(_ChatConversation conversation) async {
+    setState(() => conversation.pinned = !conversation.pinned);
+    _conversations.sort((a, b) {
+      if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
+      return 0;
+    });
+    await _persistConversations();
+  }
+
+  Future<void> _renameConversation(_ChatConversation conversation) async {
+    final controller = TextEditingController(text: conversation.title);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('aiChatRenameTitle')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 80,
+          textInputAction: TextInputAction.done,
+          decoration: InputDecoration(hintText: context.t('aiChatRenameTitle')),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.t('aiChatMenuCancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: Text(context.t('save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (name == null || name.isEmpty) return;
+    setState(() => conversation.title = name);
+    await _persistConversations();
+  }
+
+  Future<void> _shareConversation(_ChatConversation conversation) async {
+    final text = _conversationShareText(conversation);
+    await SharePlus.instance.share(
+      ShareParams(text: text, subject: conversation.title),
+    );
+  }
+
+  Future<void> _copyConversation(_ChatConversation conversation) async {
+    final copy = _ChatConversation(
+      id: 'chat_${DateTime.now().microsecondsSinceEpoch}',
+      title: '${conversation.title} (Copy)',
+      turns: conversation.turns,
+      project: conversation.project,
+    );
+    setState(() {
+      _conversations.insert(0, copy);
+      _selectConversation(copy, notify: false);
+    });
+    await _persistConversations();
+  }
+
+  Future<void> _showConversationSummary(_ChatConversation conversation) async {
+    final userTurn = conversation.turns.cast<AiChatTurn?>().firstWhere(
+      (turn) => turn?.role == 'user' && turn!.content.trim().isNotEmpty,
+      orElse: () => null,
+    );
+    final assistantTurn = conversation.turns.cast<AiChatTurn?>().lastWhere(
+      (turn) => turn?.role == 'assistant' && turn!.content.trim().isNotEmpty,
+      orElse: () => null,
+    );
+    final content = conversation.turns.isEmpty
+        ? context.t('aiChatSummaryEmpty')
+        : 'Messages: ${conversation.turns.length}\\n\\n'
+            'First question: ${userTurn?.content ?? '-'}\\n\\n'
+            'Latest mentor response: ${assistantTurn?.content ?? '-'}';
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('aiChatSummaryTitle')),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(child: SelectableText(content)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(ClipboardData(text: content));
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+            },
+            child: Text(context.t('aiChatMenuCopy')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.t('aiChatMenuCancel')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _moveConversationToProject(_ChatConversation conversation) async {
+    final controller = TextEditingController(text: conversation.project ?? '');
+    final project = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('aiChatProjectTitle')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 60,
+          decoration: InputDecoration(hintText: context.t('aiChatProjectHint')),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.t('aiChatMenuCancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: Text(context.t('save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (project == null || project.isEmpty) return;
+    setState(() => conversation.project = project);
+    await _persistConversations();
+  }
+
+  Future<void> _reportConversation(_ChatConversation conversation) async {
+    final controller = TextEditingController();
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('aiChatReportTitle')),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 3,
+          decoration: InputDecoration(hintText: context.t('aiChatReportHint')),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(context.t('aiChatMenuCancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text.trim()),
+            child: Text(context.t('aiChatMenuReport')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (!mounted || reason == null || reason.isEmpty) return;
+    await _storage.saveSetting(
+      'ai_chat_report_${conversation.id}',
+      jsonEncode({'conversation': conversation.title, 'reason': reason, 'createdAt': DateTime.now().toIso8601String()}),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.t('aiChatReportTitle'))));
+  }
+
+  Future<void> _deleteConversation(_ChatConversation conversation) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('aiChatMenuDelete')),
+        content: Text(context.t('aiChatDeleteConfirm')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(context.t('aiChatMenuCancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(context.t('aiChatMenuDelete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      _conversations.removeWhere((item) => item.id == conversation.id);
+      if (_activeConversationId == conversation.id) {
+        if (_conversations.isNotEmpty) {
+          _selectConversation(_conversations.first, notify: false);
+        } else {
+          _activeConversationId = null;
+          _history.clear();
+          _messages.clear();
+        }
+      }
+    });
+    await _persistConversations();
+  }
+
+  Future<void> _showConversationMenu(
+    _ChatConversation conversation,
+    BuildContext rowContext,
+  ) async {
+    final rowBox = rowContext.findRenderObject() as RenderBox?;
+    final overlayBox = Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (rowBox == null || overlayBox == null) return;
+    final topLeft = rowBox.localToGlobal(Offset.zero, ancestor: overlayBox);
+    final position = RelativeRect.fromLTRB(
+      topLeft.dx,
+      topLeft.dy,
+      overlayBox.size.width - topLeft.dx - rowBox.size.width,
+      overlayBox.size.height - topLeft.dy - rowBox.size.height,
+    );
+    final action = await showMenu<String>(
+      context: context,
+      position: position,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      items: [
+        PopupMenuItem(value: 'pin', child: _menuItem(Icons.push_pin_outlined, context.t(conversation.pinned ? 'aiChatMenuUnpin' : 'aiChatMenuPin'))),
+        PopupMenuItem(value: 'rename', child: _menuItem(Icons.edit_outlined, context.t('aiChatMenuRename'))),
+        PopupMenuItem(value: 'invite', child: _menuItem(Icons.group_add_outlined, context.t('aiChatMenuInvite'))),
+        PopupMenuItem(value: 'copy', child: _menuItem(Icons.copy_outlined, context.t('aiChatMenuCopy'))),
+        PopupMenuItem(value: 'summary', child: _menuItem(Icons.summarize_outlined, context.t('aiChatMenuSummary'))),
+        PopupMenuItem(value: 'move', child: _menuItem(Icons.folder_outlined, context.t('aiChatMenuMove'))),
+        PopupMenuItem(value: 'report', child: _menuItem(Icons.report_outlined, context.t('aiChatMenuReport'))),
+        PopupMenuItem(
+          value: 'delete',
+          child: _menuItem(Icons.delete_outline, context.t('aiChatMenuDelete'), destructive: true),
+        ),
+      ],
+    );
+    switch (action) {
+      case 'pin':
+        await _togglePinned(conversation);
+        break;
+      case 'rename':
+        await _renameConversation(conversation);
+        break;
+      case 'invite':
+        await _shareConversation(conversation);
+        break;
+      case 'copy':
+        await _copyConversation(conversation);
+        break;
+      case 'summary':
+        await _showConversationSummary(conversation);
+        break;
+      case 'move':
+        await _moveConversationToProject(conversation);
+        break;
+      case 'report':
+        await _reportConversation(conversation);
+        break;
+      case 'delete':
+        await _deleteConversation(conversation);
+        break;
+    }
+  }
+
+  Widget _menuItem(IconData icon, String label, {bool destructive = false}) {
+    final color = destructive ? Theme.of(context).colorScheme.error : null;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: 12),
+        Text(label, style: TextStyle(color: color)),
+      ],
+    );
+  }
+
   Widget _buildConversationDrawer(BuildContext context) {
     return Drawer(
       child: SafeArea(
@@ -761,9 +1058,11 @@ class _AIChatPageState extends State<AIChatPage> {
                         return ListTile(
                           selected: selected,
                           leading: Icon(
-                            selected
-                                ? Icons.chat
-                                : Icons.chat_bubble_outline,
+                            conversation.pinned
+                                ? Icons.push_pin
+                                : selected
+                                    ? Icons.chat
+                                    : Icons.chat_bubble_outline,
                           ),
                           title: Text(
                             conversation.title,
@@ -779,6 +1078,7 @@ class _AIChatPageState extends State<AIChatPage> {
                             _selectConversation(conversation);
                             Navigator.of(context).pop();
                           },
+                          onLongPress: () => _showConversationMenu(conversation, context),
                         );
                       },
                     ),
