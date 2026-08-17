@@ -4650,6 +4650,22 @@ class StorageService {
     final repeatedSmokingPlaceIds = _behaviorEngine.findRepeatedSmokingPlaceIds(
       recentSmokingEvents.map((event) => event.placeId).toList(),
     );
+    // Native geofences persist ENTER events even while Flutter is closed.
+    // Consume those events here as an additional, bounded signal: an arrival
+    // at a place where smoking has repeatedly happened keeps the daily plan
+    // location-aware after the app is reopened, without creating one task per
+    // geofence event.
+    final locationVisitCutoff = DateTime.now().subtract(
+      const Duration(days: 28),
+    );
+    final recentRiskPlaceVisits = (await loadLocationVisitEvents(limit: 200))
+        .where(
+          (event) =>
+              event.transitionType == 'enter' &&
+              event.createdAt.isAfter(locationVisitCutoff) &&
+              repeatedSmokingPlaceIds.contains(event.placeId),
+        )
+        .length;
 
     final riskyHours = _behaviorEngine.calculateRiskyHoursFromTimestamps(
       surveyTimes: surveyRecords.map((record) => record.completedAt).toList(),
@@ -4917,9 +4933,12 @@ class StorageService {
         : recentSuccessCount >= recentFailureCount + 4
         ? 2
         : 3;
-    // Repeated smoking at a learned place is a direct, user-specific signal.
-    // Add at most one task so location awareness never overwhelms the user.
-    final adaptiveTaskCount = repeatedSmokingPlaceIds.isNotEmpty
+    // Repeated smoking at a learned place, or a recent geofence arrival at
+    // that place, is a direct user-specific signal. Add at most one task so
+    // location awareness never overwhelms the user.
+    final hasRecentRiskLocationSignal =
+        repeatedSmokingPlaceIds.isNotEmpty || recentRiskPlaceVisits > 0;
+    final adaptiveTaskCount = hasRecentRiskLocationSignal
         ? min(5, baseAdaptiveTaskCount + 1)
         : baseAdaptiveTaskCount;
     final baseTasks = _behaviorEngine.generateAdaptiveTasks(
