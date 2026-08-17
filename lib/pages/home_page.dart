@@ -2141,6 +2141,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         children: message.quickReplies
             .map(
               (reply) => OutlinedButton(
+                key: ValueKey('mentor_reply_$reply'),
                 onPressed: () => _replyToMentorMessage(reply),
                 child: Text(
                   AppTexts.localizeMentorReplyCode(languageCode, reply),
@@ -2173,6 +2174,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             children: message.followUpQuickReplies
                 .map(
                   (reply) => OutlinedButton(
+                    key: ValueKey('mentor_follow_up_reply_$reply'),
                     onPressed: () => _replyToMentorFollowUp(reply),
                     child: Text(
                       AppTexts.localizeMentorReplyCode(languageCode, reply),

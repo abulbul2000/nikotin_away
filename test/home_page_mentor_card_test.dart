@@ -107,18 +107,14 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 25));
       });
       await tester.pump(const Duration(milliseconds: 25));
-      if (find
-              .widgetWithText(
-                OutlinedButton,
-                _replyLabel(MentorMessageCodes.quickReplyStruggling),
-              )
+      if (find.byKey(
+            const ValueKey('mentor_reply_${MentorMessageCodes.quickReplyStruggling}'),
+          )
               .evaluate()
               .isNotEmpty ||
-          find
-              .widgetWithText(
-                OutlinedButton,
-                _replyLabel(MentorMessageCodes.quickReplyOk),
-              )
+          find.byKey(
+            const ValueKey('mentor_reply_${MentorMessageCodes.quickReplyOk}'),
+          )
               .evaluate()
               .isNotEmpty) {
         break;
@@ -131,9 +127,10 @@ void main() {
     (tester) async {
       await pumpUntilMentorCard(tester);
 
-      final strugglingButton = find.widgetWithText(
-        OutlinedButton,
-        _replyLabel(MentorMessageCodes.quickReplyStruggling),
+      final strugglingButton = find.byKey(
+        const ValueKey(
+          'mentor_reply_${MentorMessageCodes.quickReplyStruggling}',
+        ),
       );
       expect(strugglingButton, findsOneWidget);
 
@@ -147,31 +144,35 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.widgetWithText(
-          OutlinedButton,
-          _replyLabel(MentorMessageCodes.quickReplyReduceTasks),
+        find.byKey(
+          const ValueKey(
+            'mentor_follow_up_reply_${MentorMessageCodes.quickReplyReduceTasks}',
+          ),
         ),
         findsOneWidget,
       );
       expect(
-        find.widgetWithText(
-          OutlinedButton,
-          _replyLabel(MentorMessageCodes.quickReplyEaseBarrier),
+        find.byKey(
+          const ValueKey(
+            'mentor_follow_up_reply_${MentorMessageCodes.quickReplyEaseBarrier}',
+          ),
         ),
         findsOneWidget,
       );
       expect(
-        find.widgetWithText(
-          OutlinedButton,
-          _replyLabel(MentorMessageCodes.quickReplyNoTalk),
+        find.byKey(
+          const ValueKey(
+            'mentor_follow_up_reply_${MentorMessageCodes.quickReplyNoTalk}',
+          ),
         ),
         findsOneWidget,
       );
       // The original quick-reply buttons are gone now that we're answered.
       expect(
-        find.widgetWithText(
-          OutlinedButton,
-          _replyLabel(MentorMessageCodes.quickReplyOk),
+        find.byKey(
+          const ValueKey(
+            'mentor_reply_${MentorMessageCodes.quickReplyOk}',
+          ),
         ),
         findsNothing,
       );
@@ -184,17 +185,19 @@ void main() {
     await pumpUntilMentorCard(tester);
 
     await tester.tap(
-      find.widgetWithText(
-        OutlinedButton,
-        _replyLabel(MentorMessageCodes.quickReplyStruggling),
+      find.byKey(
+        const ValueKey(
+          'mentor_reply_${MentorMessageCodes.quickReplyStruggling}',
+        ),
       ),
     );
     await tester.pump();
 
     await tester.tap(
-      find.widgetWithText(
-        OutlinedButton,
-        _replyLabel(MentorMessageCodes.quickReplyReduceTasks),
+      find.byKey(
+        const ValueKey(
+          'mentor_follow_up_reply_${MentorMessageCodes.quickReplyReduceTasks}',
+        ),
       ),
     );
     await tester.pump();
@@ -220,9 +223,10 @@ void main() {
     await pumpUntilMentorCard(tester);
 
     await tester.tap(
-      find.widgetWithText(
-        OutlinedButton,
-        _replyLabel(MentorMessageCodes.quickReplyOk),
+      find.byKey(
+        const ValueKey(
+          'mentor_reply_${MentorMessageCodes.quickReplyOk}',
+        ),
       ),
     );
     await tester.pump();
