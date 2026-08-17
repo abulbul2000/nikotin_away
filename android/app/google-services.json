@@ -1,95 +1,26 @@
 {
   "project_info": {
-    "project_number": "269922488535",
-    "project_id": "no-smoke-7dd2e",
-    "storage_bucket": "no-smoke-7dd2e.firebasestorage.app"
+    "project_number": "204994363768",
+    "project_id": "nikotin-away-development-eb94d",
+    "storage_bucket": "nikotin-away-development-eb94d.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:269922488535:android:14ba91f65a04f912422092",
-        "android_client_info": {
-          "package_name": "com.example.no_smoke"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "269922488535-it8hmk5chtde1e1c72qgth6qmg1jk6br.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.no_smoke",
-            "certificate_hash": "180927cb13e7c80e8eebcb6fbb71ee3a319ae74f"
-          }
-        },
-        {
-          "client_id": "269922488535-ku41a5487u3mql48s2l2o6hculqgqskm.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyC-22688NMly2DeumJH8mEDdJFfNmQ_DlM"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "269922488535-ku41a5487u3mql48s2l2o6hculqgqskm.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "269922488535-p36i4n50fepdm3pih3usn8ke4mtq0okp.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.noSmoke"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:269922488535:android:76a3e835681baec3422092",
+        "mobilesdk_app_id": "1:204994363768:android:57fe83151d02bdc61c088d",
         "android_client_info": {
           "package_name": "com.nikotinaway.app"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "269922488535-c22n5m2nf1eu071nlg2s34gfmbu0rt6l.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.nikotinaway.app",
-            "certificate_hash": "180927cb13e7c80e8eebcb6fbb71ee3a319ae74f"
-          }
-        },
-        {
-          "client_id": "269922488535-ku41a5487u3mql48s2l2o6hculqgqskm.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyC-22688NMly2DeumJH8mEDdJFfNmQ_DlM"
+          "current_key": "AIzaSyD2GoIIVyDQbLKLH83jLCa2dMuQPITxhdg"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "269922488535-ku41a5487u3mql48s2l2o6hculqgqskm.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "269922488535-p36i4n50fepdm3pih3usn8ke4mtq0okp.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.example.noSmoke"
-              }
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }

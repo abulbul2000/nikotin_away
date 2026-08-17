@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "no-smoke-7dd2e"
+    "default": "no-smoke-7dd2e",
+    "dev": "nikotin-away-development-eb94d"
   }
 }
