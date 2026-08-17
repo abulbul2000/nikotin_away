@@ -1915,12 +1915,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         children: [
           IndexedStack(
             index: _selectedTabIndex,
-            children: [
-              _buildHomeTab(context),
-              _buildTestsTab(context),
-              _buildTrackingTab(context),
-              _buildSettingsTab(context),
-            ],
+            children: widget.mentorCardTestMode
+                ? [_buildHomeTab(context)]
+                : [
+                    _buildHomeTab(context),
+                    _buildTestsTab(context),
+                    _buildTrackingTab(context),
+                    _buildSettingsTab(context),
+                  ],
           ),
           Positioned.fill(
             child: DraggableButterflyButton(

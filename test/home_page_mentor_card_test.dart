@@ -22,12 +22,6 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   Future<String?> getApplicationDocumentsPath() async => _documentsPath;
 }
 
-String _replyLabel(String code) =>
-    AppTexts.localizeMentorReplyCode('tr', code);
-
-String _messageLabel(String code) =>
-    AppTexts.localizeMentorMessage('tr', code);
-
 Widget _wrap() => const MaterialApp(
   locale: Locale('tr'),
   supportedLocales: [Locale('tr'), Locale('en')],
