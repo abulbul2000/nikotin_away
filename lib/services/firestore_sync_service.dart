@@ -59,8 +59,8 @@ class FirestoreSyncService {
   /// Uploads every user-owned SQLite table in small JSON chunks. Device-only
   /// permissions and notification schedules are intentionally recreated by
   /// the new phone; the user data and learning state are not device-bound.
-  static Future<void> syncLocalDatabaseBackup(StorageService storage) async {
-    if (!_isCloudUser || _uid.isEmpty) return;
+  static Future<bool> syncLocalDatabaseBackup(StorageService storage) async {
+    if (!_isCloudUser || _uid.isEmpty) return false;
     try {
       final backup = await storage.exportCloudBackup();
       await _backupRoot.set({
@@ -105,9 +105,11 @@ class FirestoreSyncService {
         'updatedAt': DateTime.now().toIso8601String(),
       });
       debugPrint('[FirestoreSync] Full local database backup synced');
+      return true;
     } catch (error, stackTrace) {
       debugPrint('[FirestoreSync] Full backup sync failed: $error');
       debugPrintStack(stackTrace: stackTrace);
+      return false;
     }
   }
 

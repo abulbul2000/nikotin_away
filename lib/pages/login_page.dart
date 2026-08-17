@@ -315,7 +315,22 @@ class _LoginPageState extends State<LoginPage> {
 
     await LoginPage.markLoginAsked();
     final storage = StorageService();
-    await FirestoreSyncService.restoreLocalDatabaseBackup(storage);
+    final fullBackupRestored =
+        await FirestoreSyncService.restoreLocalDatabaseBackup(storage);
+
+    // Keep email/password accounts compatible with the older survey-only
+    // backup format as well as the newer full SQLite snapshot.
+    if (!fullBackupRestored) {
+      final restoredResult = await FirestoreSyncService.restoreFromCloud();
+      final restoredRecords = restoredResult.$1;
+      final restoredContext = restoredResult.$2;
+      if (restoredRecords.isNotEmpty) {
+        await storage.saveSurveyHistory(restoredRecords);
+        await _restoreSurveyContext(restoredContext);
+        await storage.saveInitialRegistrationCompleted(true);
+      }
+    }
+
     if (!mounted) return;
     setState(() {
       _busy = false;

@@ -509,6 +509,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _confirmCloudBackup() async {
+    if (!GoogleAuthService.isCloudUser) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('accountDeleteRequiresLogin'))),
+      );
+      return;
+    }
     final passphrase = await _promptPassphrase(isRestore: false);
     if (passphrase == null) {
       if (!mounted) return;
@@ -540,6 +547,13 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _confirmCloudRestore() async {
+    if (!GoogleAuthService.isCloudUser) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('accountDeleteRequiresLogin'))),
+      );
+      return;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(

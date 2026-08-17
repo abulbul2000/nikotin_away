@@ -215,6 +215,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     await NotificationService.syncSmokedLogEventsFromNative();
     await _handlePendingQuickLogRoute();
     if (mounted) await _loadHomeMetrics();
+    // A resume can follow a native quick-log action or an offline period.
+    // Upload the complete local snapshot so the latest progress is not left
+    // only on this device until the next cold start.
+    unawaited(
+      FirestoreSyncService.syncLocalDatabaseBackup(_storageService),
+    );
   }
 
   @override
