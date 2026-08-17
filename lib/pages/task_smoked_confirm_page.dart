@@ -72,7 +72,7 @@ class TaskSmokedConfirmPage extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.redAccent,
                       textStyle: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
                       ),
                       shape: RoundedRectangleBorder(
@@ -92,7 +92,7 @@ class TaskSmokedConfirmPage extends StatelessWidget {
                       backgroundColor: AppTheme.brandPrimary,
                       foregroundColor: Colors.black,
                       textStyle: const TextStyle(
-                        fontSize: 22,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
                       ),
                       shape: RoundedRectangleBorder(
