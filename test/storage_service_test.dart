@@ -1142,5 +1142,28 @@ void main() {
         isTrue,
       );
     });
+
+    test('cloud backup table contract covers every user-owned table', () {
+      expect(
+        StorageService.cloudBackupTableNames,
+        containsAll(<String>[
+          'app_events',
+          'app_settings',
+          'survey_details',
+          'user_profile_snapshots',
+          'smoking_events',
+          'task_assignments',
+          'mentor_messages',
+          'medications',
+          'medication_dose_log',
+          'failure_triggers',
+          'notification_history',
+        ]),
+      );
+      expect(
+        StorageService.cloudBackupTableNames,
+        isNot(contains('subscription_state')),
+      );
+    });
   });
 }

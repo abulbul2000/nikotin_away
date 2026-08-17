@@ -5591,31 +5591,12 @@ class StorageService {
           value TEXT NOT NULL
         )
       ''');
-      await txn.delete(_tableName);
-      await txn.delete(_settingsTable);
-      await txn.delete(_surveyDetailsTable);
-      await txn.delete(_profileSnapshotTable);
-      await txn.delete(_languageHistoryTable);
-      await txn.delete(_sensorUsageTable);
-      await txn.delete(_breathTestResultsTable);
-      await txn.delete(_breathProgressRecordsTable);
-      await txn.delete(_breathNoiseBaselinesTable);
-      await txn.delete(_behaviorSnapshotTable);
-      await txn.delete(_taskFollowUpTable);
-      await txn.delete(_protocolViolationTable);
-      await txn.delete(_adaptiveTaskStateTable);
-      await txn.delete(_adaptiveTaskEventTable);
-      await txn.delete(_adaptiveHourlyProfileTable);
-      await txn.delete(_smokingEventsTable);
-      await txn.delete(_mentorMessagesTable);
-      await txn.delete(_sleepProbeTable);
-      await txn.delete(_snoringProbeTable);
-      await txn.delete(_significantPlacesTable);
-      await txn.delete(_locationVisitEventsTable);
-      await txn.delete(_stepCounterSamplesTable);
-      await txn.delete(_consentEventsTable);
-      await txn.delete(_medicationsTable);
-      await txn.delete(_notificationsHistoryTable);
+      for (final table in <String>[
+        ...cloudBackupTableNames,
+        _subscriptionStateTable,
+      ]) {
+        await txn.delete(table);
+      }
     });
   }
 }
