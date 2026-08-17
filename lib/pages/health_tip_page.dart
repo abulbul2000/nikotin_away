@@ -9,8 +9,13 @@ import '../core/app_theme.dart';
 /// screens continue using their own task action label.
 class HealthTipPage extends StatelessWidget {
   final String body;
+  final Future<void> Function()? onAcknowledged;
 
-  const HealthTipPage({super.key, required this.body});
+  const HealthTipPage({
+    super.key,
+    required this.body,
+    this.onAcknowledged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +62,10 @@ class HealthTipPage extends StatelessWidget {
                 width: double.infinity,
                 child: ElevatedButton(
                   key: const ValueKey('health_tip_done_button'),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () async {
+                    await onAcknowledged?.call();
+                    if (context.mounted) Navigator.of(context).pop();
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.brandPrimary,
                     foregroundColor: Colors.white,

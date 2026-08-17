@@ -546,6 +546,18 @@ class MainActivity : FlutterActivity() {
 									SmokedLogOverlayService.KEY_MENU_CANCEL,
 									call.argument<String>("menuCancelLabel"),
 								)
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_TITLE, call.argument<String>("triggerTitle"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_STRESS, call.argument<String>("triggerStress"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_COFFEE, call.argument<String>("triggerCoffee"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_MEAL, call.argument<String>("triggerMeal"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_ALCOHOL, call.argument<String>("triggerAlcohol"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_PHONE, call.argument<String>("triggerPhone"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_DRIVING, call.argument<String>("triggerDriving"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_WORK, call.argument<String>("triggerWork"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_SOCIAL, call.argument<String>("triggerSocial"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_BOREDOM, call.argument<String>("triggerBoredom"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_HABIT, call.argument<String>("triggerHabit"))
+								.putString(SmokedLogOverlayService.KEY_TRIGGER_UNKNOWN, call.argument<String>("triggerUnknown"))
 								.putString(
 									SmokedLogOverlayService.KEY_CHANNEL_NAME,
 									call.argument<String>("channelName"),

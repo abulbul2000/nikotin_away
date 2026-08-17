@@ -100,6 +100,23 @@ class NotificationHistoryService {
     }
   }
 
+  /// Marks a notification as delivered after the user presses the full-screen
+  /// advice acknowledgement button.
+  static Future<void> markAcknowledged({required String dedupeKey}) async {
+    if (dedupeKey.isEmpty) return;
+    try {
+      final db = await StorageService().database;
+      await db.update(
+        'notification_history',
+        {'acknowledgedAt': DateTime.now().toIso8601String()},
+        where: 'dedupeKey = ?',
+        whereArgs: [dedupeKey],
+      );
+    } catch (_) {
+      // Acknowledgement is best effort; the advice page must still close.
+    }
+  }
+
   /// Load all non-expired notification entries, newest first.
   static Future<List<NotificationHistoryEntry>> loadEntries() async {
     try {

@@ -196,7 +196,7 @@ class NotificationService {
   static const Duration _medicationPostponeDelay = Duration(minutes: 15);
 
   static const String _postponeChannelId = 'task_postpone_channel_v1';
-  static const String _taskConfirmChannelId = 'task_confirm_channel_v1';
+  static const String _taskConfirmChannelId = 'task_confirm_channel_v2';
 
   /// How many times one task may be postponed, and how many times SOS may be
   /// used on it.
@@ -423,8 +423,8 @@ class NotificationService {
   // changes afterward unless the channel ID itself changes — this forces
   // a fresh channel on devices that already had the app installed, so the
   // new alarm sound/vibration pattern actually takes effect.
-  static const String _taskStartChannelId = 'task_start_channel_v5';
-  static const String _taskFollowUpChannelId = 'task_followup_channel_v6';
+  static const String _taskStartChannelId = 'task_start_channel_v7';
+  static const String _taskFollowUpChannelId = 'task_followup_channel_v7';
   static const String _taskEscalationChannelId = 'task_escalation_channel_v2';
   static const String _breathReminderChannelId = 'breath_reminder_channel_v3';
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
@@ -439,13 +439,16 @@ class NotificationService {
   static const int _weeklySurveyNotificationId = 700001;
   static const int _dailyBreathReminderBaseId = 420100;
   static const int _dailyBreathReminderMaxSlots = 6;
-  static const String _healthTipChannelId = 'health_tip_channel_v2';
+  static const String _healthTipChannelId = 'health_tip_channel_v3';
   static const int _healthTipBaseId = 430100;
 
-  /// Upper bound for [scheduleHealthConditionAdviceNotifications] — mirrors
-  /// the range NotificationKindsCard's picker offers. The actual per-day
-  /// count (default 3) comes from [StorageService.loadDailyHealthTipCount].
-  static const int _healthTipDailyCountMax = 10;
+  /// Daily mentor advice quota: 5 general health tips, 15 smoking-related
+  /// tips, and 10 disease-related tips. These are intentionally fixed so the
+  /// phone receives the same complete daily programme in every language.
+  static const int _healthTipDailyCountMax = 30;
+  static const int _healthTipGeneralCount = 5;
+  static const int _healthTipSmokingCount = 15;
+  static const int _healthTipDiseaseCount = 10;
 
   /// Slots previously used to key the native health-tip-overlay alarm.
   /// Notifications no longer arm that overlay, but the same slot numbers are
@@ -459,7 +462,7 @@ class NotificationService {
   static const String _routeBreathTest = 'breathTest';
   static const String _routeWeeklySurvey = 'weeklySurvey';
   static const String _medicationReminderChannelId =
-      'medication_reminder_channel_v1';
+      'medication_reminder_channel_v2';
   static const int _medicationReminderBaseId = 440100;
   static const int _medicationReminderMaxSlots = 30;
 
@@ -480,6 +483,9 @@ class NotificationService {
   /// English/Turkish text rather than showing a raw key, so a pool that has
   /// grown ahead of the translations degrades quietly.
   static const int _healthTipsPerCondition = 33;
+  static const int _healthTipsGeneralCount = 5;
+  static const int _healthTipsSmokingCount = 15;
+  static const int _healthTipsGeneralDiseaseCount = 10;
 
   /// Picks a tip for the user's conditions, rotating so the same sentence
   /// doesn't arrive with every dose.
@@ -1259,11 +1265,16 @@ class NotificationService {
     }
 
     if (type == _typeHealthTip) {
-      await _openHistoryBeforeOverlay(allowNavigation);
-      await AndroidWatchdogService.showInfoOverlayFromNotification(
-        title: _text(code, 'healthTipTitle'),
-        body: payload['body'] ?? '',
-        dismissLabel: _text(code, 'doneShort'),
+      if (!allowNavigation) return;
+      await _openHistoryBeforeOverlay(true);
+      final notificationId = payload['notificationId']?.trim() ?? '';
+      _pushNotificationRoute(
+        HealthTipPage(
+          body: payload['body'] ?? '',
+          onAcknowledged: () => NotificationHistoryService.markAcknowledged(
+            dedupeKey: '$_typeHealthTip:$notificationId',
+          ),
+        ),
       );
       return;
     }
@@ -1619,7 +1630,8 @@ class NotificationService {
           playSound: true,
           enableVibration: true,
           vibrationPattern: _taskVibrationPattern,
-          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+          sound: _taskAlarmSound,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
@@ -2242,14 +2254,6 @@ class NotificationService {
     final resolvedWakeTime = effectiveWindow.wakeTime ?? wakeTime;
     final resolvedSleepTime = effectiveWindow.sleepTime ?? sleepTime;
 
-    // Anyone with medication already gets their tip attached to a reminder
-    // they receive anyway (see scheduleMedicationReminders). Sending this as
-    // well would say the same thing twice in one day.
-    final takesMedication =
-        (await StorageService().loadMedications()).isNotEmpty;
-    if (takesMedication) {
-      return;
-    }
 
     // This mode intentionally delivers the full daily health-tip quota.
     // The ten slots are distributed across the resolved waking window below;
@@ -2279,6 +2283,9 @@ class NotificationService {
     final windowMinutes = sleepAt.difference(wakeAt).inMinutes;
     final intervalMinutes = windowMinutes ~/ (dailyCount + 1);
 
+    final conditions = (await StorageService().loadHealthConditions())
+        .where(_healthTipPrefixByCondition.containsKey)
+        .toList(growable: false);
     var conditionCursor = 0;
     var variantCursor = 0;
     for (var i = 0; i < dailyCount; i++) {
@@ -2297,15 +2304,29 @@ class NotificationService {
         continue;
       }
 
-      final condition =
-          healthConditions[conditionCursor % healthConditions.length];
-      final prefix = _healthTipPrefixByCondition[condition];
-      conditionCursor++;
-      if (prefix == null) {
-        continue;
+      final String tipKey;
+      if (i < _healthTipGeneralCount) {
+        tipKey = 'healthTipGeneral${(i % _healthTipsGeneralCount) + 1}';
+      } else if (i < _healthTipGeneralCount + _healthTipSmokingCount) {
+        final smokingSlot = i - _healthTipGeneralCount;
+        tipKey =
+            'healthTipSmoking${(smokingSlot % _healthTipsSmokingCount) + 1}';
+      } else {
+        final diseaseSlot = i - _healthTipGeneralCount - _healthTipSmokingCount;
+        if (diseaseSlot >= _healthTipDiseaseCount) {
+          continue;
+        }
+        if (conditions.isEmpty) {
+          tipKey =
+              'healthTipGeneralDisease${(diseaseSlot % _healthTipsGeneralDiseaseCount) + 1}';
+        } else {
+          final condition = conditions[conditionCursor % conditions.length];
+          final prefix = _healthTipPrefixByCondition[condition]!;
+          conditionCursor++;
+          tipKey = '$prefix${(variantCursor % _healthTipsPerCondition) + 1}';
+          variantCursor++;
+        }
       }
-      final tipKey = '$prefix${(variantCursor % _healthTipsPerCondition) + 1}';
-      variantCursor++;
       final body =
           '${_text(code, tipKey)}\n${_text(code, 'medicationAdviceDisclaimer')}';
 
@@ -2318,27 +2339,29 @@ class NotificationService {
           android: AndroidNotificationDetails(
             _healthTipChannelId,
             _text(code, 'channelNameHealthTip'),
-            importance: Importance.max,
+            importance: Importance.low,
             visibility: NotificationVisibility.private,
-            priority: Priority.high,
-            playSound: true,
-            enableVibration: true,
-            vibrationPattern: _taskVibrationPattern,
-            audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
-            category: AndroidNotificationCategory.reminder,
+            priority: Priority.low,
+            playSound: false,
+            enableVibration: false,
+            category: AndroidNotificationCategory.status,
           ),
-          iOS: const DarwinNotificationDetails(presentSound: true),
+          iOS: const DarwinNotificationDetails(presentSound: false),
         ),
         androidScheduleMode: scheduleMode,
         matchDateTimeComponents: DateTimeComponents.time,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        payload: jsonEncode({'type': _typeHealthTip, 'body': body}),
+        payload: jsonEncode({
+          'type': _typeHealthTip,
+          'body': body,
+          'notificationId': '${_healthTipBaseId + i}',
+        }),
       );
     }
   }
-
   static Future<void> scheduleMedicationReminders(
+
     List<Medication> medications,
   ) async {
     for (var i = 0; i < _medicationReminderMaxSlots; i++) {
@@ -2397,7 +2420,8 @@ class NotificationService {
               playSound: true,
               enableVibration: true,
               vibrationPattern: _taskVibrationPattern,
-              audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+              sound: _taskAlarmSound,
+              audioAttributesUsage: AudioAttributesUsage.alarm,
               category: AndroidNotificationCategory.reminder,
               actions: <AndroidNotificationAction>[
                 AndroidNotificationAction(

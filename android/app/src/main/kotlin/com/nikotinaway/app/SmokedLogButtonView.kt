@@ -168,13 +168,10 @@ class SmokedLogButtonView(
 
     companion object {
         const val HOLD_DURATION_MS = 1000L
-        private const val CONFIRM_HOLD_MS = 800L
+        private const val CONFIRM_HOLD_MS = 1_000L
 
-        /// Findable at a glance, full stop.
-        // Resting opacity. Was 105/255 (~40%), then 190/255 (~75%) — still
-        // lost against a busy wallpaper. This is a standing offer; the point
-        // of the drag support is that anyone bothered by it moves it rather
-        // than the button making itself harder to see.
+        /// The asset itself has a transparent background. Keep the butterfly
+        /// and chain marks fully opaque so they remain readable on the page.
         private const val RESTING_ALPHA = 255
         private const val ACTIVE_ALPHA = 255
 

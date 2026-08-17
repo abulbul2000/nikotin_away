@@ -17,21 +17,29 @@ object SmokedLogStore {
     private const val PREFS = "no_smoke_smoked_log"
     private const val KEY_PENDING = "pending_events"
 
-    fun enqueue(context: Context) {
+    fun enqueue(context: Context, trigger: String? = null) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val current = prefs.getStringSet(KEY_PENDING, emptySet())?.toMutableSet()
             ?: mutableSetOf()
-        // Millisecond timestamps double as the entry's identity, so a set
-        // can't silently collapse two presses into one.
-        current.add(System.currentTimeMillis().toString())
+        // The trigger is a canonical, language-independent code. Keeping it in
+        // the same queue means the overlay never has to launch Flutter.
+        val encoded = "${System.currentTimeMillis()}|${trigger.orEmpty()}"
+        current.add(encoded)
         prefs.edit().putStringSet(KEY_PENDING, current).apply()
     }
 
-    fun drain(context: Context): List<Long> {
+    fun drain(context: Context): List<Map<String, Any>> {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val items = prefs.getStringSet(KEY_PENDING, emptySet())?.toList() ?: emptyList()
         prefs.edit().remove(KEY_PENDING).apply()
-        return items.mapNotNull { it.toLongOrNull() }.sorted()
+        return items.mapNotNull { raw ->
+            val parts = raw.split('|', limit = 2)
+            val timestamp = parts.firstOrNull()?.toLongOrNull() ?: return@mapNotNull null
+            mapOf(
+                "timestamp" to timestamp,
+                "trigger" to (parts.getOrNull(1).orEmpty()),
+            )
+        }.sortedBy { it["timestamp"] as Long }
     }
 
     /// Where the app should land when it is opened from the button's menu.
