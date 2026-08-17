@@ -4,9 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final notificationSource =
-      File('lib/services/notification_service.dart').readAsStringSync();
+      File('lib/services/notification_service.dart')
+          .readAsStringSync()
+          .replaceAll('\r\n', '\n');
   final assignmentSource =
-      File('lib/services/task_assignment_service.dart').readAsStringSync();
+      File('lib/services/task_assignment_service.dart')
+          .readAsStringSync()
+          .replaceAll('\r\n', '\n');
 
   test('background task actions use canonical title for persistence and scheduling', () {
     final start = notificationSource.indexOf(
