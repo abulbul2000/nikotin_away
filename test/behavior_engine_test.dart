@@ -378,6 +378,59 @@ void main() {
       expect(trend, 'trendImproving');
     });
 
+    test('finds repeated smoking places and ignores unavailable locations', () {
+      final engine = BehaviorEngine();
+
+      final places = engine.findRepeatedSmokingPlaceIds([
+        'home',
+        null,
+        'work',
+        'home',
+        '',
+        'work',
+        'work',
+      ]);
+
+      expect(places, ['work', 'home']);
+    });
+
+    group('habit-sensitive adaptive tasks', () {
+      final engine = BehaviorEngine();
+
+      test('prioritizes trigger-management task for an easy high-risk user', () {
+        final tasks = engine.generateAdaptiveTasks(
+          riskScore: 80,
+          taskSuccessRates: const {},
+          count: 1,
+          riskyTriggers: const ['Kahve'],
+        );
+
+        expect(tasks, ['Kriz anini not et']);
+      });
+
+      test('prioritizes risky-hour task for a medium-risk user', () {
+        final tasks = engine.generateAdaptiveTasks(
+          riskScore: 50,
+          taskSuccessRates: const {},
+          count: 1,
+          riskyHours: const ['18:00-20:00'],
+        );
+
+        expect(tasks, ['Riskli saatte seker sakiz kullan']);
+      });
+
+      test('uses support task when recent smoking is frequent', () {
+        final tasks = engine.generateAdaptiveTasks(
+          riskScore: 20,
+          taskSuccessRates: const {},
+          count: 1,
+          recentSmokingCount: 7,
+        );
+
+        expect(tasks, ['Aksam saatinde destek kisisiyle iletisim kur']);
+      });
+    });
+
     group('risky hours', () {
       final engine = BehaviorEngine();
 

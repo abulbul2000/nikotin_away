@@ -4643,6 +4643,13 @@ class StorageService {
       triggerScores[entry.key] = (triggerScores[entry.key] ?? 0) + entry.value;
     }
     final riskyTriggers = _behaviorEngine.calculateRiskyTriggers(triggerScores);
+    final recentSmokingEvents = await loadSmokingEvents(
+      since: DateTime.now().subtract(const Duration(days: 28)),
+    );
+
+    final repeatedSmokingPlaceIds = _behaviorEngine.findRepeatedSmokingPlaceIds(
+      recentSmokingEvents.map((event) => event.placeId).toList(),
+    );
 
     final riskyHours = _behaviorEngine.calculateRiskyHoursFromTimestamps(
       surveyTimes: surveyRecords.map((record) => record.completedAt).toList(),
@@ -4666,9 +4673,9 @@ class StorageService {
       // the user had actually reported smoking sat unused in the database.
       // That left the day's tasks aimed at the app's usage pattern rather
       // than the habit they exist to interrupt.
-      smokingTimes: (await loadSmokingEvents(
-        since: DateTime.now().subtract(const Duration(days: 28)),
-      )).map((event) => event.timestamp).toList(),
+      smokingTimes: recentSmokingEvents
+          .map((event) => event.timestamp)
+          .toList(),
     );
 
     final smokingTrend = _behaviorEngine.calculateSmokingTrendFromRecords(
@@ -4903,18 +4910,26 @@ class StorageService {
       riskyTriggers: riskyTriggers,
     );
 
-    final adaptiveTaskCount = recentFailureCount >= recentSuccessCount + 3
+    final baseAdaptiveTaskCount = recentFailureCount >= recentSuccessCount + 3
         ? 5
         : recentFailureCount > recentSuccessCount
         ? 4
         : recentSuccessCount >= recentFailureCount + 4
         ? 2
         : 3;
+    // Repeated smoking at a learned place is a direct, user-specific signal.
+    // Add at most one task so location awareness never overwhelms the user.
+    final adaptiveTaskCount = repeatedSmokingPlaceIds.isNotEmpty
+        ? min(5, baseAdaptiveTaskCount + 1)
+        : baseAdaptiveTaskCount;
     final baseTasks = _behaviorEngine.generateAdaptiveTasks(
       riskScore: dynamicRisk,
       taskSuccessRates: taskRates,
       isFirstProfile: isFirstProfile,
       count: isFirstProfile ? 1 : adaptiveTaskCount,
+      riskyTriggers: riskyTriggers,
+      riskyHours: riskyHours,
+      recentSmokingCount: recentSmokingEvents.length,
     );
     final progressiveCadenceTask = _behaviorEngine
         .generateProgressiveCadenceTask180(

@@ -168,6 +168,29 @@ class BehaviorEngine {
     return _selectRiskyTriggers(triggerScores);
   }
 
+  /// Returns place ids where smoking was recorded repeatedly. Null place ids
+  /// are ignored because location is optional and must never block logging.
+  List<String> findRepeatedSmokingPlaceIds(
+    List<String?> placeIds, {
+    int minimumOccurrences = 2,
+  }) {
+    final counts = <String, int>{};
+    for (final placeId in placeIds) {
+      if (placeId == null || placeId.trim().isEmpty) {
+        continue;
+      }
+      counts[placeId] = (counts[placeId] ?? 0) + 1;
+    }
+    final repeated = counts.entries
+        .where((entry) => entry.value >= minimumOccurrences)
+        .toList()
+      ..sort((a, b) {
+        final byCount = b.value.compareTo(a.value);
+        return byCount != 0 ? byCount : a.key.compareTo(b.key);
+      });
+    return repeated.map((entry) => entry.key).toList();
+  }
+
   List<String> calculateRiskyHours(List<SurveyHistory> surveys) {
     final frequency = <String, int>{};
 
@@ -975,6 +998,9 @@ class BehaviorEngine {
     required Map<String, double> taskSuccessRates,
     bool isFirstProfile = false,
     int count = 3,
+    List<String> riskyTriggers = const <String>[],
+    List<String> riskyHours = const <String>[],
+    int recentSmokingCount = 0,
   }) {
     if (isFirstProfile) {
       if (riskScore >= 70) {
@@ -1000,6 +1026,16 @@ class BehaviorEngine {
     }).toList();
 
     final selected = <String>{};
+    final contextualTask = _selectContextualTask(
+      difficulty: difficulty,
+      riskyTriggers: riskyTriggers,
+      riskyHours: riskyHours,
+      recentSmokingCount: recentSmokingCount,
+    );
+    if (contextualTask != null && weighted.any((item) => item.key == contextualTask)) {
+      selected.add(contextualTask);
+    }
+
     while (selected.length < min(count, weighted.length)) {
       final totalWeight = weighted.fold<double>(
         0,
@@ -1016,6 +1052,36 @@ class BehaviorEngine {
       }
     }
     return selected.toList();
+  }
+
+  /// Chooses one task that directly addresses the strongest observed habit
+  /// signal. The returned values are existing canonical task texts, so the
+  /// normal AppTexts localization path remains responsible for all languages.
+  String? _selectContextualTask({
+    required String difficulty,
+    required List<String> riskyTriggers,
+    required List<String> riskyHours,
+    required int recentSmokingCount,
+  }) {
+    final hasRepeatedRiskWindow = riskyHours.isNotEmpty;
+    final hasTriggerSignal = riskyTriggers.isNotEmpty;
+    if (!hasRepeatedRiskWindow && !hasTriggerSignal && recentSmokingCount < 2) {
+      return null;
+    }
+
+    if (difficulty == 'easy') {
+      return hasTriggerSignal
+          ? 'Kriz anini not et'
+          : '2 dakikalik nefes egzersizi yap';
+    }
+    if (difficulty == 'medium') {
+      return hasRepeatedRiskWindow
+          ? 'Riskli saatte seker sakiz kullan'
+          : '30 dakika sigarasiz kal';
+    }
+    return recentSmokingCount >= 7
+        ? 'Aksam saatinde destek kisisiyle iletisim kur'
+        : '60 dakika sigarasiz kal';
   }
 
   /// Bounded risk adjustment from the most recent cough test result. No
