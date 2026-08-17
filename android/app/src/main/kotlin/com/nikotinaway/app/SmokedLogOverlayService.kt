@@ -248,9 +248,8 @@ class SmokedLogOverlayService : Service() {
 
         container.addView(
             choice(prefs.getString(KEY_NOTIF_ACTION, "I Smoked")!!) {
-                SmokedLogStore.enqueue(this)
-                SmokedLogStore.enqueueRoute(this, SmokedLogStore.ROUTE_SMOKED_TRIGGER)
-                launchApp()
+                dismissChoicePanel()
+                showTriggerPanel()
             },
         )
         container.addView(
@@ -289,6 +288,66 @@ class SmokedLogOverlayService : Service() {
         runCatching {
             wm.addView(container, menuParams)
             menuView = container
+        }
+    }
+
+    private fun showTriggerPanel() {
+        val wm = windowManager ?: return
+        val density = resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).toInt()
+        val prefs = prefs()
+        val panel = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(android.graphics.Color.parseColor("#F20B1F2B"))
+            setPadding(dp(20), dp(20), dp(20), dp(20))
+            gravity = Gravity.CENTER
+        }
+        panel.addView(android.widget.TextView(this).apply {
+            text = prefs.getString(KEY_TRIGGER_TITLE, "What triggered it?")
+            setTextColor(android.graphics.Color.WHITE)
+            textSize = 18f
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(12))
+        })
+        val triggers = listOf(
+            KEY_TRIGGER_STRESS to "Stres",
+            KEY_TRIGGER_COFFEE to "Kahve",
+            KEY_TRIGGER_MEAL to "Yemek",
+            KEY_TRIGGER_ALCOHOL to "Alkol",
+            KEY_TRIGGER_PHONE to "Telefon",
+            KEY_TRIGGER_DRIVING to "Arac",
+            KEY_TRIGGER_WORK to "Is Molasi",
+            KEY_TRIGGER_SOCIAL to "Sosyal Ortam",
+            KEY_TRIGGER_BOREDOM to "Can Sikintisi",
+            KEY_TRIGGER_HABIT to "Aliskanlik",
+            KEY_TRIGGER_UNKNOWN to "unknown",
+        )
+        triggers.forEach { (labelKey, canonical) ->
+            panel.addView(android.widget.Button(this).apply {
+                text = prefs.getString(labelKey, canonical)
+                minHeight = dp(48)
+                setOnClickListener {
+                    SmokedLogStore.enqueue(this@SmokedLogOverlayService, canonical)
+                    dismissChoicePanel()
+                }
+            })
+        }
+        val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            overlayType,
+            0,
+            PixelFormat.TRANSLUCENT,
+        ).apply { gravity = Gravity.CENTER }
+        runCatching {
+            wm.addView(panel, params)
+            menuView = panel
         }
     }
 
@@ -382,6 +441,18 @@ class SmokedLogOverlayService : Service() {
         const val KEY_MENU_SOS = "menu_sos"
         const val KEY_MENU_OPEN = "menu_open"
         const val KEY_MENU_CANCEL = "menu_cancel"
+        const val KEY_TRIGGER_TITLE = "trigger_title"
+        const val KEY_TRIGGER_STRESS = "trigger_stress"
+        const val KEY_TRIGGER_COFFEE = "trigger_coffee"
+        const val KEY_TRIGGER_MEAL = "trigger_meal"
+        const val KEY_TRIGGER_ALCOHOL = "trigger_alcohol"
+        const val KEY_TRIGGER_PHONE = "trigger_phone"
+        const val KEY_TRIGGER_DRIVING = "trigger_driving"
+        const val KEY_TRIGGER_WORK = "trigger_work"
+        const val KEY_TRIGGER_SOCIAL = "trigger_social"
+        const val KEY_TRIGGER_BOREDOM = "trigger_boredom"
+        const val KEY_TRIGGER_HABIT = "trigger_habit"
+        const val KEY_TRIGGER_UNKNOWN = "trigger_unknown"
         const val KEY_CHANNEL_NAME = "channel_name"
         const val KEY_CHANNEL_DESCRIPTION = "channel_description"
 

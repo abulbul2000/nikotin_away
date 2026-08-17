@@ -168,7 +168,7 @@ class SmokedLogButtonView(
 
     companion object {
         const val HOLD_DURATION_MS = 1000L
-        private const val CONFIRM_HOLD_MS = 800L
+        private const val CONFIRM_HOLD_MS = 1_000L
 
         /// The resting button should stay visible without feeling opaque.
         /// While holding, it becomes solid so the confirmation state is clear.

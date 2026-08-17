@@ -189,13 +189,20 @@ class SmokedLogButtonService {
     final placeId = await _resolvePlaceId();
     final ids = <String>[];
     for (final entry in raw) {
-      final millis = entry is int ? entry : int.tryParse('$entry');
+      final map = entry is Map ? entry : null;
+      final millis = map?['timestamp'] is num
+          ? (map!['timestamp'] as num).toInt()
+          : int.tryParse('$entry');
       if (millis == null) continue;
       final id = await _storageService.logSmokingNow(
         timestamp: DateTime.fromMillisecondsSinceEpoch(millis),
         placeId: placeId,
       );
       ids.add(id);
+      final trigger = map?['trigger']?.toString() ?? '';
+      if (trigger.isNotEmpty) {
+        await _storageService.saveFailureTrigger(trigger);
+      }
     }
     return ids;
   }
