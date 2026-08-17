@@ -11,12 +11,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
+  static final String _documentsPath = Directory.systemTemp
+      .createTempSync('no_smoke_home_mentor_card')
+      .path;
+
   @override
-  Future<String?> getApplicationDocumentsPath() async {
-    return Directory.systemTemp
-        .createTempSync('no_smoke_home_mentor_card')
-        .path;
-  }
+  Future<String?> getApplicationDocumentsPath() async => _documentsPath;
 }
 
 Widget _wrap() => const MaterialApp(
@@ -52,8 +52,9 @@ void main() {
     PathProviderPlatform.instance = _FakePathProviderPlatform();
   });
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    await StorageService().clearAllData();
     for (final channel in [
       notificationsChannel,
       watchdogChannel,
@@ -66,7 +67,8 @@ void main() {
     }
   });
 
-  tearDown(() {
+  tearDown(() async {
+    await StorageService().closeDatabaseConnection();
     for (final channel in [
       notificationsChannel,
       watchdogChannel,
