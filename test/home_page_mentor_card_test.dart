@@ -30,16 +30,10 @@ Widget _wrap() => const MaterialApp(
   home: HomePage(name: 'Ada', riskScore: 10, riskLevel: 'DUSUK'),
 );
 
-// Every test below hangs indefinitely (confirmed by isolated runs — the
-// process stays alive and burns CPU but never prints past the test's start
-// line) after pumpUntilMentorCard's pump loop, the same unexplained
-// no-exception freeze documented in sleep_routine_page_test.dart for a
-// HomePage-adjacent widget tree. Root cause not isolated; the behavior
-// itself is already covered without a widget tree by
-// mentor_relief_service_test.dart (pure relief math) and
-// mentor_message_storage_test.dart (attachMentorFollowUpQuestion/
-// applyMentorFollowUpChoice, including the today's-plan-unaffected
-// guarantee). Verify this flow on-device in the meantime.
+// These widget tests exercise the real HomePage mentor-card interaction.
+// HomePage performs several sqflite/plugin-backed async reads during startup,
+// so pumpUntilMentorCard gives those futures a real async turn before polling
+// the rendered card.
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -94,8 +88,15 @@ void main() {
   Future<void> pumpUntilMentorCard(WidgetTester tester) async {
     await StorageService().saveInitialRegistrationCompleted(true);
     await tester.pumpWidget(_wrap());
-    for (var i = 0; i < 10; i += 1) {
-      await tester.pump(const Duration(milliseconds: 50));
+    for (var i = 0; i < 20; i += 1) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 25));
+      });
+      await tester.pump(const Duration(milliseconds: 25));
+      if (find.widgetWithText(OutlinedButton, 'Zorlanıyorum').evaluate().isNotEmpty ||
+          find.widgetWithText(OutlinedButton, 'İyiyim').evaluate().isNotEmpty) {
+        break;
+      }
     }
   }
 
@@ -129,8 +130,7 @@ void main() {
       // The original quick-reply buttons are gone now that we're answered.
       expect(find.widgetWithText(OutlinedButton, 'İyiyim'), findsNothing);
     },
-    skip: true,
-  ); // see comment above main()
+  );
 
   testWidgets('tapping Görevleri azalt shows the ack text and a SnackBar', (
     tester,
@@ -150,7 +150,7 @@ void main() {
       find.widgetWithText(OutlinedButton, 'Bariyeri gevşet'),
       findsNothing,
     );
-  }, skip: true); // see comment above main()
+  });
 
   testWidgets('tapping İyiyim never shows a follow-up question', (
     tester,
@@ -164,5 +164,5 @@ void main() {
     // "Yanitin: İyiyim" — the pre-existing "reply sent" acknowledgement,
     // proving the struggling-only follow-up branch was never taken.
     expect(find.textContaining('Yanitin'), findsOneWidget);
-  }, skip: true); // see comment above main()
+  });
 }
