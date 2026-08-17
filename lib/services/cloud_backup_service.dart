@@ -199,7 +199,20 @@ class CloudBackupService {
     'breath_badges_state_v1',
     'pack_price_try',
     'selected_language_code',
+    'login_asked_once',
+    'quick_butterfly_edge',
+    'quick_butterfly_vertical',
+    'how_it_works_guide_seen',
+    'smoked_log_button_enabled',
+    'smoked_log_button_consent_seen',
   ];
+
+  static const Set<String> _booleanPrefs = {
+    'login_asked_once',
+    'how_it_works_guide_seen',
+    'smoked_log_button_enabled',
+    'smoked_log_button_consent_seen',
+  };
 
   @visibleForTesting
   Future<Map<String, String>> readBackedUpPrefs() async {
@@ -222,8 +235,16 @@ class CloudBackupService {
     for (final entry in prefsJson.entries) {
       if (!backedUpPrefsKeys.contains(entry.key)) continue;
       final raw = entry.value as String;
+      if (_booleanPrefs.contains(entry.key)) {
+        final normalized = raw.trim().toLowerCase();
+        if (normalized == 'true' || normalized == 'false') {
+          await prefs.setBool(entry.key, normalized == 'true');
+        }
+        continue;
+      }
       switch (entry.key) {
         case 'pack_price_try':
+        case 'quick_butterfly_vertical':
           final parsed = double.tryParse(raw);
           if (parsed != null) await prefs.setDouble(entry.key, parsed);
           break;

@@ -57,13 +57,37 @@ class GoogleAuthService {
         idToken: idToken,
       );
 
-      await FirebaseAuth.instance.signInWithCredential(credential);
+      await _signInOrLink(credential);
       return true;
     } catch (error, stackTrace) {
       debugPrint('[GoogleAuth] Sign-in failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       return false;
     }
+  }
+
+  /// Signs in with [credential], linking it to the current anonymous user
+  /// when one exists. Linking is essential: replacing an anonymous UID with a
+  /// newly-created account would orphan the user's existing cloud identity.
+  /// If the credential already belongs to an account, normal sign-in is used;
+  /// the caller then restores that account's cloud snapshot into the same
+  /// local database instead of discarding local rows.
+  static Future<UserCredential> _signInOrLink(
+    AuthCredential credential,
+  ) async {
+    final current = FirebaseAuth.instance.currentUser;
+    if (current != null && current.isAnonymous) {
+      try {
+        return await current.linkWithCredential(credential);
+      } on FirebaseAuthException catch (error) {
+        if (error.code != 'credential-already-in-use' &&
+            error.code != 'email-already-in-use') {
+          rethrow;
+        }
+        return FirebaseAuth.instance.signInWithCredential(credential);
+      }
+    }
+    return FirebaseAuth.instance.signInWithCredential(credential);
   }
 
   /// Creates or signs in to a Firebase email/password account.
@@ -74,10 +98,11 @@ class GoogleAuthService {
   }) async {
     try {
       if (createAccount) {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        final credential = EmailAuthProvider.credential(
           email: email.trim(),
           password: password,
         );
+        await _signInOrLink(credential);
       } else {
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: email.trim(),

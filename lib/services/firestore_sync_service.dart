@@ -59,6 +59,8 @@ class FirestoreSyncService {
   /// Uploads every user-owned SQLite table in small JSON chunks. Device-only
   /// permissions and notification schedules are intentionally recreated by
   /// the new phone; the user data and learning state are not device-bound.
+  /// Subscription entitlements are intentionally excluded and must be
+  /// revalidated from Google Play/Firebase on the replacement device.
   static Future<bool> syncLocalDatabaseBackup(StorageService storage) async {
     if (!_isCloudUser || _uid.isEmpty) return false;
     try {
@@ -124,8 +126,17 @@ class FirestoreSyncService {
       final backup = <String, List<Map<String, dynamic>>>{};
       for (final tableDoc in tables.docs) {
         final chunks = await tableDoc.reference.collection('chunks').get();
+        final orderedChunks = [...chunks.docs]
+          ..sort((a, b) {
+            final aIndex = int.tryParse(a.id);
+            final bIndex = int.tryParse(b.id);
+            if (aIndex != null && bIndex != null) {
+              return aIndex.compareTo(bIndex);
+            }
+            return a.id.compareTo(b.id);
+          });
         final rows = <Map<String, dynamic>>[];
-        for (final chunk in chunks.docs) {
+        for (final chunk in orderedChunks) {
           final raw = chunk.data()['rowsJson'];
           if (raw is! String) continue;
           final decoded = jsonDecode(raw);
