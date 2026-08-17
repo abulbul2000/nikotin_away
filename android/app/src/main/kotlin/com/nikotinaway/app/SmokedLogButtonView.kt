@@ -170,12 +170,9 @@ class SmokedLogButtonView(
         const val HOLD_DURATION_MS = 1000L
         private const val CONFIRM_HOLD_MS = 800L
 
-        /// Findable at a glance, full stop.
-        // Resting opacity. Was 105/255 (~40%), then 190/255 (~75%) — still
-        // lost against a busy wallpaper. This is a standing offer; the point
-        // of the drag support is that anyone bothered by it moves it rather
-        // than the button making itself harder to see.
-        private const val RESTING_ALPHA = 255
+        /// The resting button should stay visible without feeling opaque.
+        /// While holding, it becomes solid so the confirmation state is clear.
+        private const val RESTING_ALPHA = 72
         private const val ACTIVE_ALPHA = 255
 
         private val ACCENT = Color.parseColor("#00B8D4")

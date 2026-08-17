@@ -196,7 +196,7 @@ class NotificationService {
   static const Duration _medicationPostponeDelay = Duration(minutes: 15);
 
   static const String _postponeChannelId = 'task_postpone_channel_v1';
-  static const String _taskConfirmChannelId = 'task_confirm_channel_v1';
+  static const String _taskConfirmChannelId = 'task_confirm_channel_v2';
 
   /// How many times one task may be postponed, and how many times SOS may be
   /// used on it.
@@ -423,8 +423,8 @@ class NotificationService {
   // changes afterward unless the channel ID itself changes — this forces
   // a fresh channel on devices that already had the app installed, so the
   // new alarm sound/vibration pattern actually takes effect.
-  static const String _taskStartChannelId = 'task_start_channel_v5';
-  static const String _taskFollowUpChannelId = 'task_followup_channel_v6';
+  static const String _taskStartChannelId = 'task_start_channel_v7';
+  static const String _taskFollowUpChannelId = 'task_followup_channel_v7';
   static const String _taskEscalationChannelId = 'task_escalation_channel_v2';
   static const String _breathReminderChannelId = 'breath_reminder_channel_v3';
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
@@ -459,7 +459,7 @@ class NotificationService {
   static const String _routeBreathTest = 'breathTest';
   static const String _routeWeeklySurvey = 'weeklySurvey';
   static const String _medicationReminderChannelId =
-      'medication_reminder_channel_v1';
+      'medication_reminder_channel_v2';
   static const int _medicationReminderBaseId = 440100;
   static const int _medicationReminderMaxSlots = 30;
 
@@ -1619,7 +1619,8 @@ class NotificationService {
           playSound: true,
           enableVibration: true,
           vibrationPattern: _taskVibrationPattern,
-          audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+          sound: _taskAlarmSound,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
@@ -2397,7 +2398,8 @@ class NotificationService {
               playSound: true,
               enableVibration: true,
               vibrationPattern: _taskVibrationPattern,
-              audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
+              sound: _taskAlarmSound,
+              audioAttributesUsage: AudioAttributesUsage.alarm,
               category: AndroidNotificationCategory.reminder,
               actions: <AndroidNotificationAction>[
                 AndroidNotificationAction(
