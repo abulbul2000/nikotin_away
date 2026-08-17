@@ -917,6 +917,7 @@ class _AIChatPageState extends State<AIChatPage> {
       'ai_chat_report_${conversation.id}',
       jsonEncode({'conversation': conversation.title, 'reason': reason, 'createdAt': DateTime.now().toIso8601String()}),
     );
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.t('aiChatReportTitle'))));
   }
 
