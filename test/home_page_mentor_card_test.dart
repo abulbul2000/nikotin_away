@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/core/app_texts.dart';
 import 'package:no_smoke/core/mentor_command_codes.dart';
 import 'package:no_smoke/pages/home_page.dart';
+import 'package:no_smoke/services/language_service.dart';
 import 'package:no_smoke/services/storage_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -68,6 +69,9 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     await StorageService().clearAllData();
+    // HomePage reads the persisted app language, not only MaterialApp.locale.
+    // Keep both the test labels and the rendered Mentor Card in Turkish.
+    await LanguageService.saveSelectedLanguageCode('tr');
     for (final channel in [
       notificationsChannel,
       watchdogChannel,
