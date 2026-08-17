@@ -141,12 +141,14 @@ class MainActivity : FlutterActivity() {
 						val notificationBody = call.argument<String>("notificationBody").orEmpty()
 						val channelName = call.argument<String>("channelName").orEmpty()
 						val channelDescription = call.argument<String>("channelDescription").orEmpty()
+						val riskPlaceIds = call.argument<List<String>>("riskPlaceIds") ?: emptyList()
 						registerGeofences(
 							places,
 							notificationTitle,
 							notificationBody,
 							channelName,
 							channelDescription,
+							riskPlaceIds,
 						)
 						result.success(true)
 					}
@@ -863,6 +865,7 @@ class MainActivity : FlutterActivity() {
 		notificationBody: String,
 		channelName: String,
 		channelDescription: String,
+		riskPlaceIds: List<String>,
 	) {
 		if (checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)
 				!= PackageManager.PERMISSION_GRANTED &&
@@ -874,6 +877,7 @@ class MainActivity : FlutterActivity() {
 
 		GeofenceStore.saveNotificationText(this, notificationTitle, notificationBody)
 		GeofenceStore.saveChannelInfo(this, channelName, channelDescription)
+		GeofenceStore.saveRiskPlaceIds(this, riskPlaceIds)
 
 		val geofencingClient = LocationServices.getGeofencingClient(this)
 		val pendingIntent = geofencePendingIntent()

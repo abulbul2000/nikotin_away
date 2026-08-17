@@ -23,6 +23,7 @@ class GeofencingService {
     required String notificationBody,
     required String channelName,
     required String channelDescription,
+    List<String> riskPlaceIds = const <String>[],
   }) async {
     try {
       await _channel
@@ -40,6 +41,7 @@ class GeofencingService {
             'notificationBody': notificationBody,
             'channelName': channelName,
             'channelDescription': channelDescription,
+            'riskPlaceIds': riskPlaceIds,
           })
           .timeout(_callTimeout);
     } catch (_) {

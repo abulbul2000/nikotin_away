@@ -3,6 +3,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../core/app_texts.dart';
 import '../engines/place_clustering_engine.dart';
+import 'behavior_engine.dart';
 import '../models/significant_place.dart';
 import 'geofencing_service.dart';
 import 'language_service.dart';
@@ -182,10 +183,19 @@ class LocationIntelligenceService {
         AppTexts.textForCode(code, 'appName');
     final body =
         await _storageService.loadSetting('location_notification_body') ?? '';
+    final recentSmokingEvents = await _storageService.loadSmokingEvents(
+      since: DateTime.now().subtract(const Duration(days: 28)),
+    );
+    final repeatedSmokingPlaceIds = BehaviorEngine()
+        .findRepeatedSmokingPlaceIds(
+          recentSmokingEvents.map((event) => event.placeId).toList(),
+        );
+
     await GeofencingService.registerGeofences(
       places: resolvedPlaces,
       notificationTitle: title,
       notificationBody: body,
+      riskPlaceIds: repeatedSmokingPlaceIds,
       channelName: AppTexts.textForCode(code, 'channelNameLocationReminder'),
       channelDescription: AppTexts.textForCode(
         code,

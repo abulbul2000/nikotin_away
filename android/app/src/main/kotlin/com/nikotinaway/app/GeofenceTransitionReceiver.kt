@@ -16,6 +16,7 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
+import org.json.JSONArray
 
 /// Handles Play Services geofence transition broadcasts. Fires even when the
 /// Flutter engine/Dart isolate isn't running — same "native writes straight
@@ -41,11 +42,15 @@ class GeofenceTransitionReceiver : BroadcastReceiver() {
         }
 
         val transitionLabel = if (transitionType == Geofence.GEOFENCE_TRANSITION_ENTER) "enter" else "exit"
+        var hasRiskPlaceEntry = false
         for (geofence in triggeringGeofences) {
             GeofenceStore.insertVisitEvent(context, placeId = geofence.requestId, transitionType = transitionLabel)
+            if (GeofenceStore.shouldNotifyForPlace(context, geofence.requestId)) {
+                hasRiskPlaceEntry = true
+            }
         }
 
-        if (transitionType == Geofence.GEOFENCE_TRANSITION_ENTER) {
+        if (transitionType == Geofence.GEOFENCE_TRANSITION_ENTER && hasRiskPlaceEntry) {
             showArrivalNotification(context)
         }
     }
@@ -102,6 +107,7 @@ object GeofenceStore {
     private const val KEY_BODY = "notification_body"
     private const val KEY_CHANNEL_NAME = "channel_name"
     private const val KEY_CHANNEL_DESCRIPTION = "channel_description"
+    private const val KEY_RISK_PLACE_IDS = "risk_place_ids"
     private const val TABLE = "location_visit_events"
     private const val RETENTION_DAYS = 60
 
@@ -135,6 +141,27 @@ object GeofenceStore {
             prefs.getString(KEY_CHANNEL_NAME, null).orEmpty(),
             prefs.getString(KEY_CHANNEL_DESCRIPTION, null).orEmpty(),
         )
+    }
+
+    fun saveRiskPlaceIds(context: Context, placeIds: List<String>) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_RISK_PLACE_IDS, JSONArray(placeIds).toString())
+            .apply()
+    }
+
+    fun shouldNotifyForPlace(context: Context, placeId: String): Boolean {
+        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_RISK_PLACE_IDS, null)
+            ?: return true
+        return try {
+            val ids = JSONArray(raw).let { array ->
+                (0 until array.length()).map { index -> array.getString(index) }.toSet()
+            }
+            ids.isEmpty() || placeId in ids
+        } catch (_: Throwable) {
+            true
+        }
     }
 
     fun insertVisitEvent(context: Context, placeId: String, transitionType: String) {
