@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:no_smoke/core/app_texts.dart';
 import 'package:no_smoke/core/mentor_command_codes.dart';
 import 'package:no_smoke/pages/home_page.dart';
 import 'package:no_smoke/services/language_service.dart';
