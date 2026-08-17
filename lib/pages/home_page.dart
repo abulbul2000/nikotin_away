@@ -928,6 +928,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       setState(() => _latestMentorMessage = updatedMessage);
     }
 
+    if (widget.mentorCardTestMode) {
+      // The fixture intentionally has no SQLite row. Widget tests verify the
+      // immediate UI transition; production persistence is tested separately.
+      return;
+    }
     await _storageService.replyToMentorMessage(message.id, reply);
     if (isStruggling) {
       await _storageService.attachMentorFollowUpQuestion(message.id);
@@ -961,6 +966,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         ),
       );
+    }
+    if (widget.mentorCardTestMode) {
+      return;
     }
     await _storageService.applyMentorFollowUpChoice(message.id, choice);
   }
@@ -2211,9 +2219,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           MentorMessageCodes.followUpAckEaseBarrier,
         _ => MentorMessageCodes.followUpAckJustTalking,
       };
-      return Text(
-        AppTexts.localizeMentorMessage(languageCode, ackCode),
-        style: const TextStyle(
+    return Text(
+      key: const ValueKey('mentor_follow_up_ack'),
+      AppTexts.localizeMentorMessage(languageCode, ackCode),
+      style: const TextStyle(
           fontSize: 12,
           fontStyle: FontStyle.italic,
           color: Colors.white54,

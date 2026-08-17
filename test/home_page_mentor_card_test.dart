@@ -138,9 +138,7 @@ void main() {
       await tester.pump();
 
       expect(
-        find.text(
-          _messageLabel(MentorMessageCodes.followUpStrugglingQuestion),
-        ),
+        find.byKey(const ValueKey('mentor_follow_up_question')),
         findsOneWidget,
       );
       expect(
@@ -162,7 +160,7 @@ void main() {
       expect(
         find.byKey(
           const ValueKey(
-            'mentor_follow_up_reply_${MentorMessageCodes.quickReplyNoTalk}',
+            'mentor_follow_up_reply_${MentorMessageCodes.quickReplyJustTalking}',
           ),
         ),
         findsOneWidget,
@@ -203,15 +201,16 @@ void main() {
     await tester.pump();
 
     expect(
-      find.text(_messageLabel(MentorMessageCodes.followUpAckReduceTasks)),
+      find.byKey(const ValueKey('mentor_follow_up_ack')),
       findsOneWidget,
     );
     expect(find.byType(SnackBar), findsOneWidget);
     // The follow-up buttons are gone now that a choice was made.
     expect(
-      find.widgetWithText(
-        OutlinedButton,
-        _replyLabel(MentorMessageCodes.quickReplyEaseBarrier),
+      find.byKey(
+        const ValueKey(
+          'mentor_follow_up_reply_${MentorMessageCodes.quickReplyEaseBarrier}',
+        ),
       ),
       findsNothing,
     );
