@@ -399,6 +399,7 @@ class _AIChatPageState extends State<AIChatPage> {
     }
 
     final locale = await _resolveListeningLocale();
+    if (!mounted) return;
     _textBeforeListening = _controller.text;
     setState(() => _listening = true);
     await _speech.listen(
@@ -791,6 +792,7 @@ class _AIChatPageState extends State<AIChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       drawer: _buildConversationDrawer(context),
       appBar: AppBar(title: Text(context.t('aiChatTitle'))),
@@ -802,7 +804,7 @@ class _AIChatPageState extends State<AIChatPage> {
               context.t('aiChatDisclaimer'),
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -827,8 +829,8 @@ class _AIChatPageState extends State<AIChatPage> {
                     ),
                     decoration: BoxDecoration(
                       color: message.fromUser
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : Theme.of(context).colorScheme.surfaceContainerHigh,
+                          ? colorScheme.primaryContainer
+                          : colorScheme.surfaceContainerHigh,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -915,11 +917,11 @@ class _AIChatPageState extends State<AIChatPage> {
                             : _startListening(),
                     style: IconButton.styleFrom(
                       backgroundColor: _listening
-                          ? Theme.of(context).colorScheme.error
-                          : Theme.of(context).colorScheme.primary,
+                          ? colorScheme.error
+                          : colorScheme.primary,
                       foregroundColor: _listening
-                          ? Theme.of(context).colorScheme.onError
-                          : Theme.of(context).colorScheme.onPrimary,
+                          ? colorScheme.onError
+                          : colorScheme.onPrimary,
                       shape: const CircleBorder(),
                     ),
                     icon: Icon(_listening ? Icons.mic : Icons.mic_none),
