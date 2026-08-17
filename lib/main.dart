@@ -61,16 +61,16 @@ Future<void> main() async {
     // App Check (needed by the enforceAppCheck Cloud Functions).
     const String debugSecret =
         String.fromEnvironment('APP_CHECK_DEBUG_SECRET');
-    final bool useDebugProvider =
-        kDebugMode || debugSecret.isNotEmpty;
-    if (useDebugProvider && debugSecret.isNotEmpty) {
-      await FirebaseAppCheck.instance.activate(
-        providerAndroid: AndroidDebugProvider(debugToken: debugSecret),
-      );
-    } else if (kDebugMode) {
-      await FirebaseAppCheck.instance.activate(
-        providerAndroid: const AndroidDebugProvider(),
-      );
+    if (kDebugMode) {
+      // Development Functions do not enforce App Check. Do not generate an
+      // unregistered debug token by default; that token is rejected as
+      // invalid by callable request verification. A registered token can
+      // still be supplied explicitly when needed.
+      if (debugSecret.isNotEmpty) {
+        await FirebaseAppCheck.instance.activate(
+          providerAndroid: AndroidDebugProvider(debugToken: debugSecret),
+        );
+      }
     } else {
       await FirebaseAppCheck.instance.activate(
         providerAndroid: const AndroidPlayIntegrityProvider(),
