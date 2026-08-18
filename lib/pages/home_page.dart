@@ -273,15 +273,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     });
   }
 
-  String _calculateImprovementLabel(double current, double baseline) {
-    if (current > baseline + 0.2) {
-      return 'trendImproving';
-    }
-    if (current < baseline - 0.2) {
-      return 'trendDeclining';
-    }
-    return 'trendStable';
-  }
+  String _calculateImprovementLabel(double current, double baseline) =>
+      _behaviorEngine.calculateImprovementLabel(current, baseline);
 
   String _translateTrend(String trendKey) {
     if (trendKey == 'trendImproving') {

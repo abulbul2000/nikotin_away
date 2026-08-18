@@ -165,6 +165,21 @@ class BehaviorEngine {
     return summarizeConsecutiveSmoking(habit: habit, count: count);
   }
 
+  /// Classifies [current] against [baseline] into a canonical trend key, for
+  /// any numeric average a caller wants to compare across two periods (e.g.
+  /// this week's breath score vs. last month's). A ±0.2 dead zone around
+  /// [baseline] absorbs measurement noise so a near-identical score reads
+  /// as stable rather than flipping the label on a rounding-sized change.
+  String calculateImprovementLabel(double current, double baseline) {
+    if (current > baseline + 0.2) {
+      return 'trendImproving';
+    }
+    if (current < baseline - 0.2) {
+      return 'trendDeclining';
+    }
+    return 'trendStable';
+  }
+
   List<String> calculateRiskyTriggers(Map<String, int> triggerScores) {
     return _selectRiskyTriggers(triggerScores);
   }

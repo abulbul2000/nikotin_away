@@ -772,6 +772,30 @@ void main() {
       });
     });
 
+    group('calculateImprovementLabel', () {
+      final engine = BehaviorEngine();
+
+      test('more than 0.2 above the baseline is improving', () {
+        expect(engine.calculateImprovementLabel(5.3, 5.0), 'trendImproving');
+      });
+
+      test('more than 0.2 below the baseline is declining', () {
+        expect(engine.calculateImprovementLabel(4.7, 5.0), 'trendDeclining');
+      });
+
+      test('within the 0.2 dead zone on either side is stable', () {
+        expect(engine.calculateImprovementLabel(5.2, 5.0), 'trendStable');
+        expect(engine.calculateImprovementLabel(4.8, 5.0), 'trendStable');
+        expect(engine.calculateImprovementLabel(5.0, 5.0), 'trendStable');
+      });
+
+      test('exactly at the 0.2 boundary is still stable, not improving', () {
+        // The comparison is strictly-greater-than, so landing exactly on
+        // baseline + 0.2 must not tip into "improving".
+        expect(engine.calculateImprovementLabel(5.2, 5.0), 'trendStable');
+      });
+    });
+
     group('resolveCoughAdvisoryTier', () {
       final engine = BehaviorEngine();
 
