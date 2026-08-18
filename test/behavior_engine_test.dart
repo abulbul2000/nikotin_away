@@ -231,43 +231,46 @@ void main() {
       );
     });
 
-    test('reports confidence, freshness, recovery mode and suggestion reasons', () {
-      final engine = BehaviorEngine();
-      final surveys = List.generate(
-        3,
-        (index) => SurveyHistory(
-          surveyDate: DateTime.now().subtract(Duration(days: index)),
-          packsPerDay: '1 paket',
-          longestSmokeFreeDuration: 8,
-          hardestHour: '20:00',
-          hardestDay: 'Pazartesi',
-          triggers: const ['stres'],
-          stressLevel: 5,
-          riskScore: 40,
-        ),
-      );
-      final tasks = List.generate(
-        5,
-        (index) => TaskHistory(
-          taskId: '$index',
-          taskTitle: 'Kısa yürüyüş',
-          completed: index < 2,
-          date: DateTime.now().subtract(Duration(days: index)),
-        ),
-      );
-      final profile = engine.generateBehaviorProfile(
-        surveys: surveys,
-        breathTests: const [],
-        taskHistory: tasks,
-      );
+    test(
+      'reports confidence, freshness, recovery mode and suggestion reasons',
+      () {
+        final engine = BehaviorEngine();
+        final surveys = List.generate(
+          3,
+          (index) => SurveyHistory(
+            surveyDate: DateTime.now().subtract(Duration(days: index)),
+            packsPerDay: '1 paket',
+            longestSmokeFreeDuration: 8,
+            hardestHour: '20:00',
+            hardestDay: 'Pazartesi',
+            triggers: const ['stres'],
+            stressLevel: 5,
+            riskScore: 40,
+          ),
+        );
+        final tasks = List.generate(
+          5,
+          (index) => TaskHistory(
+            taskId: '$index',
+            taskTitle: 'Kısa yürüyüş',
+            completed: index < 2,
+            date: DateTime.now().subtract(Duration(days: index)),
+          ),
+        );
+        final profile = engine.generateBehaviorProfile(
+          surveys: surveys,
+          breathTests: const [],
+          taskHistory: tasks,
+        );
 
-      expect(profile.dataConfidence, 'high');
-      expect(profile.dataFreshness, 'fresh');
-      expect(profile.recoveryMode, 'relapseRisk');
-      expect(profile.suggestionReasons, contains('trigger_risk'));
-      expect(profile.suggestionReasons, contains('relapse_recovery'));
-      expect(engine.buildHomeSummary(profile)['recoveryMode'], 'relapseRisk');
-    });
+        expect(profile.dataConfidence, 'high');
+        expect(profile.dataFreshness, 'fresh');
+        expect(profile.recoveryMode, 'relapseRisk');
+        expect(profile.suggestionReasons, contains('trigger_risk'));
+        expect(profile.suggestionReasons, contains('relapse_recovery'));
+        expect(engine.buildHomeSummary(profile)['recoveryMode'], 'relapseRisk');
+      },
+    );
 
     test('calculates consecutive smoking score and trend', () {
       final engine = BehaviorEngine();
@@ -397,16 +400,19 @@ void main() {
     group('habit-sensitive adaptive tasks', () {
       final engine = BehaviorEngine();
 
-      test('prioritizes trigger-management task for an easy high-risk user', () {
-        final tasks = engine.generateAdaptiveTasks(
-          riskScore: 80,
-          taskSuccessRates: const {},
-          count: 1,
-          riskyTriggers: const ['Kahve'],
-        );
+      test(
+        'prioritizes trigger-management task for an easy high-risk user',
+        () {
+          final tasks = engine.generateAdaptiveTasks(
+            riskScore: 80,
+            taskSuccessRates: const {},
+            count: 1,
+            riskyTriggers: const ['Kahve'],
+          );
 
-        expect(tasks, ['Kriz anini not et']);
-      });
+          expect(tasks, ['Kriz anini not et']);
+        },
+      );
 
       test('prioritizes risky-hour task for a medium-risk user', () {
         final tasks = engine.generateAdaptiveTasks(
@@ -428,6 +434,90 @@ void main() {
         );
 
         expect(tasks, ['Aksam saatinde destek kisisiyle iletisim kur']);
+      });
+    });
+
+    group('first-profile task', () {
+      final engine = BehaviorEngine();
+
+      // A brand-new profile's very first task used to be a hardcoded
+      // Turkish sentence (regression coverage for that): it now returns a
+      // canonical DELAY_FIRST_CIGARETTE:{minutes} code, which
+      // AppTexts.localizeCanonicalTextForCode resolves per user language —
+      // see delayFirstCigaretteTemplate in app_texts.dart.
+      test('delays by 10 minutes for a high-risk first profile', () {
+        final tasks = engine.generateAdaptiveTasks(
+          riskScore: 80,
+          taskSuccessRates: const {},
+          isFirstProfile: true,
+        );
+
+        expect(tasks, ['DELAY_FIRST_CIGARETTE:10']);
+      });
+
+      test('delays by 20 minutes for a medium-risk first profile', () {
+        final tasks = engine.generateAdaptiveTasks(
+          riskScore: 50,
+          taskSuccessRates: const {},
+          isFirstProfile: true,
+        );
+
+        expect(tasks, ['DELAY_FIRST_CIGARETTE:20']);
+      });
+
+      test('delays by 45 minutes for a low-risk first profile', () {
+        final tasks = engine.generateAdaptiveTasks(
+          riskScore: 10,
+          taskSuccessRates: const {},
+          isFirstProfile: true,
+        );
+
+        expect(tasks, ['DELAY_FIRST_CIGARETTE:45']);
+      });
+    });
+
+    group('buildRiskExplanation', () {
+      final engine = BehaviorEngine();
+
+      // Regression coverage: this used to return hardcoded Turkish
+      // sentences with the numbers interpolated directly, which got
+      // persisted to behavior_snapshot and shown under a translated title
+      // in every language. It now returns canonical RISK_*:{score} codes —
+      // AppTexts.localizeCanonicalTextForCode resolves each one.
+      test('returns canonical codes with the signed deltas embedded', () {
+        final lines = engine.buildRiskExplanation(
+          baseRisk: 40,
+          dynamicCoreRisk: 44,
+          personalizedAdjustment: -5,
+          profileAdjustment: 3,
+          taskAdjustment: -2,
+          finalRisk: 40,
+        );
+
+        expect(lines, [
+          'RISK_BASE:40',
+          'RISK_BEHAVIOR_DELTA:+4',
+          'RISK_PERSONALIZED_DELTA:-5',
+          'RISK_PROFILE_DELTA:+3',
+          'RISK_TASK_DELTA:-2',
+          'RISK_FINAL:40',
+        ]);
+      });
+
+      test('a zero delta has no leading sign', () {
+        final lines = engine.buildRiskExplanation(
+          baseRisk: 50,
+          dynamicCoreRisk: 50,
+          personalizedAdjustment: 0,
+          profileAdjustment: 0,
+          taskAdjustment: 0,
+          finalRisk: 50,
+        );
+
+        expect(lines[1], 'RISK_BEHAVIOR_DELTA:0');
+        expect(lines[2], 'RISK_PERSONALIZED_DELTA:0');
+        expect(lines[3], 'RISK_PROFILE_DELTA:0');
+        expect(lines[4], 'RISK_TASK_DELTA:0');
       });
     });
 

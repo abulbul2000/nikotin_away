@@ -658,6 +658,13 @@ class AppTexts {
     'commandScoreLabel': 'Komut başarı puanları',
     'categoryInsightLabel': 'Kategori başarı içgörüsü',
     'riskScoreExplanationTitle': 'Risk skoru açıklaması',
+    'riskExplanationBaseTemplate': 'Baz skor: {score}',
+    'riskExplanationBehaviorDeltaTemplate': 'Davranış/trend etkisi: {score}',
+    'riskExplanationPersonalizedDeltaTemplate':
+        'Nefes + anket kişisel etki: {score}',
+    'riskExplanationProfileDeltaTemplate': 'Profil etkisi: {score}',
+    'riskExplanationTaskDeltaTemplate': 'Görev performans etkisi: {score}',
+    'riskExplanationFinalTemplate': 'Sonuç risk skoru: {score}',
     'quickMenuTitle': 'Hızlı menu',
     'menuSectionTestsAndSurveys': 'Testler ve Anketler',
     'menuSectionTrackingAndReports': 'Takip ve Raporlar',
@@ -757,14 +764,18 @@ class AppTexts {
     'settingsResetDataConfirmAction': 'Evet, Sil',
     'settingsResetDataDone': 'Verilerin silindi.',
     'accountDeleteRow': 'Hesabımı ve bulut verilerimi sil',
-    'accountDeleteSubtitle': 'Hesabını ve Firebase bulut verilerini kalıcı olarak siler',
+    'accountDeleteSubtitle':
+        'Hesabını ve Firebase bulut verilerini kalıcı olarak siler',
     'accountDeleteTitle': 'Hesabı sil?',
-    'accountDeleteMessage': 'Hesabın, bulut verilerin ve bu cihazdaki kayıtların kalıcı olarak silinecek. Bu işlem geri alınamaz.',
+    'accountDeleteMessage':
+        'Hesabın, bulut verilerin ve bu cihazdaki kayıtların kalıcı olarak silinecek. Bu işlem geri alınamaz.',
     'accountDeleteAction': 'Hesabı ve verileri sil',
     'accountDeleteDone': 'Hesabın ve bulut verilerin silindi.',
     'accountDeleteFailed': 'Hesap silinemedi. Lütfen tekrar dene.',
-    'accountDeleteRecentLogin': 'Güvenlik nedeniyle önce yeniden giriş yapman gerekiyor.',
-    'accountDeleteRequiresLogin': 'Hesap silmek için önce Google veya e-posta hesabınla giriş yapmalısın.',
+    'accountDeleteRecentLogin':
+        'Güvenlik nedeniyle önce yeniden giriş yapman gerekiyor.',
+    'accountDeleteRequiresLogin':
+        'Hesap silmek için önce Google veya e-posta hesabınla giriş yapmalısın.',
     'permissionsCenterTitle': 'İzin Merkezi',
     'permissionsCenterIntro':
         'Bu izinleri neden istediğimizi ve nasıl kullandığımızı aşağıda bulabilirsin. Hepsi opsiyoneldir, istediğin zaman kapatabilirsin.',
@@ -943,35 +954,63 @@ class AppTexts {
         'Bir süre hareketsiz görünüyorsun. Kısa bir yürüyüş, hem bacaklarına hem de sigara isteklerine iyi gelir.',
     'healthTipTitle': 'Sağlık Tavsiyesi',
     'healthTipGeneral1': 'Bugün su içmeyi ve kısa bir yürüyüşü ihmal etme.',
-    'healthTipGeneral2': 'Düzenli uyku, bedenin ve zihnin toparlanmasina yardım eder.',
-    'healthTipGeneral3': 'Stres geldiğinde nefesini yavaşlat ve omuzlarını gevşet.',
-    'healthTipGeneral4': 'Mümkün olduğunca taze hava al ve uzun süre hareketsiz kalma.',
-    'healthTipGeneral5': 'Küçük ve tutarlı sağlık adımları uzun vadede büyük fark yaratır.',
-    'healthTipSmoking1': 'Sigara isteği dalga gibidir; birkaç dakika beklemek onu azaltır.',
-    'healthTipSmoking2': 'Bir sigarayı ertelemek bile kontrolun sende olduğunu hatırlatır.',
-    'healthTipSmoking3': 'Kahve, stres veya mola geldiğinde sigara yerine suyu dene.',
-    'healthTipSmoking4': 'Ellerini meşgul etmek sigara isteğinin geçmesine yardım eder.',
-    'healthTipSmoking5': 'Bugün içmediğin her sigara kalbin ve akciğerlerin için kazanç.',
+    'healthTipGeneral2':
+        'Düzenli uyku, bedenin ve zihnin toparlanmasina yardım eder.',
+    'healthTipGeneral3':
+        'Stres geldiğinde nefesini yavaşlat ve omuzlarını gevşet.',
+    'healthTipGeneral4':
+        'Mümkün olduğunca taze hava al ve uzun süre hareketsiz kalma.',
+    'healthTipGeneral5':
+        'Küçük ve tutarlı sağlık adımları uzun vadede büyük fark yaratır.',
+    'healthTipSmoking1':
+        'Sigara isteği dalga gibidir; birkaç dakika beklemek onu azaltır.',
+    'healthTipSmoking2':
+        'Bir sigarayı ertelemek bile kontrolun sende olduğunu hatırlatır.',
+    'healthTipSmoking3':
+        'Kahve, stres veya mola geldiğinde sigara yerine suyu dene.',
+    'healthTipSmoking4':
+        'Ellerini meşgul etmek sigara isteğinin geçmesine yardım eder.',
+    'healthTipSmoking5':
+        'Bugün içmediğin her sigara kalbin ve akciğerlerin için kazanç.',
     'healthTipSmoking6': 'Sigara molası yerine kısa bir yürüyüş yapmayi dene.',
-    'healthTipSmoking7': 'İstek geldiğinde dört sayıda nefes al, altı sayıda ver.',
-    'healthTipSmoking8': 'Sigara dumanından uzaklaşmak isteğinin daha çabuk azalmasını sağlar.',
-    'healthTipSmoking9': 'Bir arkadaşına hedefini söylemek kararını güçlendirebilir.',
-    'healthTipSmoking10': 'Bugün daha az içmek, yarınki kararın için somut bir başlangıçtır.',
-    'healthTipSmoking11': 'Alkol ve sigara isteği birlikte artabilir; ikisini ayırmayı dene.',
-    'healthTipSmoking12': 'Yemekten sonra hemen sigaraya uzanmak yerine sofradan kalkıp yürü.',
-    'healthTipSmoking13': 'Uykusuzluk isteği büyütebilir; bu gece dinlenmeye öncelik ver.',
-    'healthTipSmoking14': 'Sigara isteğini bastırmak yerine onu uc dakika gözlemle.',
-    'healthTipSmoking15': 'Her erteleme, beynine sigarasız da baş edebildiğini öğretir.',
-    'healthTipGeneralDisease1': 'Belirtilerin artarsa doktorunun önerilerine uy ve gecikmeden destek al.',
-    'healthTipGeneralDisease2': 'İlaçlarını doktorunun söylediği şekilde kullanmak düzenli takip kadar önemlidir.',
-    'healthTipGeneralDisease3': 'Sigara, birçok kronik hastalığın kontrolünü zorlaştırabilir.',
-    'healthTipGeneralDisease4': 'Nefes darlığı veya göğüs ağrısı varsa acil yardım gerekip gerekmediğini değerlendir.',
-    'healthTipGeneralDisease5': 'Bugün bir sigarayı atlamak, vücudunun iyileşme yükünü azaltır.',
-    'healthTipGeneralDisease6': 'Tansiyon, şeker veya nefes ölçümlerini doktorunun planına göre takip et.',
-    'healthTipGeneralDisease7': 'Kısa ve düzenli hareket, dolaşım ve enerji için yararlıdır.',
-    'healthTipGeneralDisease8': 'Dumanlı ortamlardan uzak durmak hastalık belirtilerini hafifletmeye yardım eder.',
-    'healthTipGeneralDisease9': 'Yeni veya şiddetlenen bir belirtiyi kendi kendine yorumlamak yerine sağlık uzmanına sor.',
-    'healthTipGeneralDisease10': 'Kendine uygun küçük bir hedef seç ve bugün onu gerçekleştir.',
+    'healthTipSmoking7':
+        'İstek geldiğinde dört sayıda nefes al, altı sayıda ver.',
+    'healthTipSmoking8':
+        'Sigara dumanından uzaklaşmak isteğinin daha çabuk azalmasını sağlar.',
+    'healthTipSmoking9':
+        'Bir arkadaşına hedefini söylemek kararını güçlendirebilir.',
+    'healthTipSmoking10':
+        'Bugün daha az içmek, yarınki kararın için somut bir başlangıçtır.',
+    'healthTipSmoking11':
+        'Alkol ve sigara isteği birlikte artabilir; ikisini ayırmayı dene.',
+    'healthTipSmoking12':
+        'Yemekten sonra hemen sigaraya uzanmak yerine sofradan kalkıp yürü.',
+    'healthTipSmoking13':
+        'Uykusuzluk isteği büyütebilir; bu gece dinlenmeye öncelik ver.',
+    'healthTipSmoking14':
+        'Sigara isteğini bastırmak yerine onu uc dakika gözlemle.',
+    'healthTipSmoking15':
+        'Her erteleme, beynine sigarasız da baş edebildiğini öğretir.',
+    'healthTipGeneralDisease1':
+        'Belirtilerin artarsa doktorunun önerilerine uy ve gecikmeden destek al.',
+    'healthTipGeneralDisease2':
+        'İlaçlarını doktorunun söylediği şekilde kullanmak düzenli takip kadar önemlidir.',
+    'healthTipGeneralDisease3':
+        'Sigara, birçok kronik hastalığın kontrolünü zorlaştırabilir.',
+    'healthTipGeneralDisease4':
+        'Nefes darlığı veya göğüs ağrısı varsa acil yardım gerekip gerekmediğini değerlendir.',
+    'healthTipGeneralDisease5':
+        'Bugün bir sigarayı atlamak, vücudunun iyileşme yükünü azaltır.',
+    'healthTipGeneralDisease6':
+        'Tansiyon, şeker veya nefes ölçümlerini doktorunun planına göre takip et.',
+    'healthTipGeneralDisease7':
+        'Kısa ve düzenli hareket, dolaşım ve enerji için yararlıdır.',
+    'healthTipGeneralDisease8':
+        'Dumanlı ortamlardan uzak durmak hastalık belirtilerini hafifletmeye yardım eder.',
+    'healthTipGeneralDisease9':
+        'Yeni veya şiddetlenen bir belirtiyi kendi kendine yorumlamak yerine sağlık uzmanına sor.',
+    'healthTipGeneralDisease10':
+        'Kendine uygun küçük bir hedef seç ve bugün onu gerçekleştir.',
     'healthTipHypertension1':
         'Sigara, kan basıncını anında yükseltir. Su an biraz derin nefes almak tansiyonuna iyi gelir.',
     'healthTipHypertension2':
@@ -1557,6 +1596,7 @@ class AppTexts {
     'taskNoSmoke90': '90 dakika sigarasız kal',
     'adaptiveNoSmokeTaskTemplate':
         'Önümüzdeki {duration} boyunca sigara içmeyin. Elinizde sigara varsa hemen söndürün.',
+    'delayFirstCigaretteTemplate': 'İlk sigaranızı {duration} geciktirin.',
     'adaptiveNoSmokeWindowTemplate':
         'Önümüzdeki {duration} boyunca sigara içmeyin, {window} penceresi öncesi hazir ol.',
     'checkInPrompt': 'Devam ediyor musunuz?',
@@ -1960,7 +2000,8 @@ class AppTexts {
     'loginEmailAddress': 'E-posta adresi',
     'loginEmailPassword': 'Şifre',
     'loginEmailInvalid': 'E-posta hesabı işlemi başarısız oldu.',
-    'loginGoogleFailed': 'Google ile giriş yapılamadı. Tekrar deneyin veya geçin.',
+    'loginGoogleFailed':
+        'Google ile giriş yapılamadı. Tekrar deneyin veya geçin.',
     'cancel': 'İptal',
     'loginFirstUserButton': 'İlk kez kullanıyorum',
     'loginSkipButton': 'Şimdilik Geç',
@@ -2016,7 +2057,8 @@ class AppTexts {
     'initialSurvey': 'Initial Survey',
     'taskResultTitle': 'Task Result',
     'reportsAvertedCigarettes': 'Estimated cigarettes not smoked',
-    'reportsDisclaimer': 'This report contains estimates based on your records; it is not a medical evaluation or diagnosis. Consult your doctor for personal health decisions.',
+    'reportsDisclaimer':
+        'This report contains estimates based on your records; it is not a medical evaluation or diagnosis. Consult your doctor for personal health decisions.',
     'reportsNoDataYet': 'Not enough data yet',
     'reportsPartAfternoon': 'Afternoon (13:00–17:00)',
     'reportsPartEvening': 'Evening (17:00–22:00)',
@@ -2555,6 +2597,13 @@ class AppTexts {
     'commandScoreLabel': 'Command success scores',
     'categoryInsightLabel': 'Category success insight',
     'riskScoreExplanationTitle': 'Risk score explanation',
+    'riskExplanationBaseTemplate': 'Base score: {score}',
+    'riskExplanationBehaviorDeltaTemplate': 'Behavior/trend effect: {score}',
+    'riskExplanationPersonalizedDeltaTemplate':
+        'Breath + survey personal effect: {score}',
+    'riskExplanationProfileDeltaTemplate': 'Profile effect: {score}',
+    'riskExplanationTaskDeltaTemplate': 'Task performance effect: {score}',
+    'riskExplanationFinalTemplate': 'Final risk score: {score}',
     'quickMenuTitle': 'Quick menu',
     'menuSectionTestsAndSurveys': 'Tests & Surveys',
     'menuSectionTrackingAndReports': 'Tracking & Reports',
@@ -2654,14 +2703,19 @@ class AppTexts {
     'settingsResetDataConfirmAction': 'Yes, Delete',
     'settingsResetDataDone': 'Your data has been deleted.',
     'accountDeleteRow': 'Delete my account and cloud data',
-    'accountDeleteSubtitle': 'Permanently deletes your account and Firebase cloud data',
+    'accountDeleteSubtitle':
+        'Permanently deletes your account and Firebase cloud data',
     'accountDeleteTitle': 'Delete account?',
-    'accountDeleteMessage': 'Your account, cloud data and records on this device will be permanently deleted. This cannot be undone.',
+    'accountDeleteMessage':
+        'Your account, cloud data and records on this device will be permanently deleted. This cannot be undone.',
     'accountDeleteAction': 'Delete account and data',
     'accountDeleteDone': 'Your account and cloud data were deleted.',
-    'accountDeleteFailed': 'The account could not be deleted. Please try again.',
-    'accountDeleteRecentLogin': 'For security, please sign in again before deleting your account.',
-    'accountDeleteRequiresLogin': 'Please sign in with Google or email before deleting an account.',
+    'accountDeleteFailed':
+        'The account could not be deleted. Please try again.',
+    'accountDeleteRecentLogin':
+        'For security, please sign in again before deleting your account.',
+    'accountDeleteRequiresLogin':
+        'Please sign in with Google or email before deleting an account.',
     'permissionsCenterTitle': 'Permissions Center',
     'permissionsCenterIntro':
         'Here\'s why we ask for each permission and how we use it. All of them are optional and can be turned off anytime.',
@@ -2840,34 +2894,61 @@ class AppTexts {
     'healthTipTitle': 'Health Tip',
     'healthTipGeneral1': 'Drink water today and do not skip a short walk.',
     'healthTipGeneral2': 'Regular sleep helps your body and mind recover.',
-    'healthTipGeneral3': 'When stress arrives, slow your breathing and relax your shoulders.',
-    'healthTipGeneral4': 'Get fresh air when possible and avoid sitting still for too long.',
-    'healthTipGeneral5': 'Small, consistent health steps create a meaningful long-term difference.',
-    'healthTipSmoking1': 'A cigarette urge is a wave; waiting a few minutes can reduce it.',
-    'healthTipSmoking2': 'Delaying one cigarette reminds you that you are still in control.',
-    'healthTipSmoking3': 'When coffee, stress or a break triggers you, try water instead.',
+    'healthTipGeneral3':
+        'When stress arrives, slow your breathing and relax your shoulders.',
+    'healthTipGeneral4':
+        'Get fresh air when possible and avoid sitting still for too long.',
+    'healthTipGeneral5':
+        'Small, consistent health steps create a meaningful long-term difference.',
+    'healthTipSmoking1':
+        'A cigarette urge is a wave; waiting a few minutes can reduce it.',
+    'healthTipSmoking2':
+        'Delaying one cigarette reminds you that you are still in control.',
+    'healthTipSmoking3':
+        'When coffee, stress or a break triggers you, try water instead.',
     'healthTipSmoking4': 'Keeping your hands busy can help the urge pass.',
-    'healthTipSmoking5': 'Every cigarette you skip today is a gain for your heart and lungs.',
-    'healthTipSmoking6': 'Try taking a short walk instead of taking a smoking break.',
-    'healthTipSmoking7': 'When an urge arrives, breathe in for four counts and out for six.',
-    'healthTipSmoking8': 'Moving away from smoke can help the urge fade faster.',
-    'healthTipSmoking9': 'Telling a friend about your goal can strengthen your decision.',
-    'healthTipSmoking10': 'Smoking less today is a concrete start for tomorrow’s decision.',
-    'healthTipSmoking11': 'Alcohol and smoking urges can rise together; try separating them.',
-    'healthTipSmoking12': 'After a meal, stand up and walk before reaching for a cigarette.',
-    'healthTipSmoking13': 'Poor sleep can amplify urges; give rest priority tonight.',
-    'healthTipSmoking14': 'Instead of fighting an urge, observe it for three minutes.',
-    'healthTipSmoking15': 'Every delay teaches your brain that you can cope without smoking.',
-    'healthTipGeneralDisease1': 'If symptoms worsen, follow your clinician’s advice and seek help promptly.',
-    'healthTipGeneralDisease2': 'Taking medicines as prescribed matters as much as regular follow-up.',
-    'healthTipGeneralDisease3': 'Smoking can make many chronic conditions harder to control.',
-    'healthTipGeneralDisease4': 'If you have breathlessness or chest pain, consider whether urgent help is needed.',
-    'healthTipGeneralDisease5': 'Skipping one cigarette today reduces the load on your body’s recovery.',
-    'healthTipGeneralDisease6': 'Track blood pressure, glucose or breathing as your clinician recommends.',
-    'healthTipGeneralDisease7': 'Short, regular movement can support circulation and energy.',
-    'healthTipGeneralDisease8': 'Avoiding smoky places can help ease disease-related symptoms.',
-    'healthTipGeneralDisease9': 'Ask a health professional about new or worsening symptoms instead of self-diagnosing.',
-    'healthTipGeneralDisease10': 'Choose one small goal that fits you and complete it today.',
+    'healthTipSmoking5':
+        'Every cigarette you skip today is a gain for your heart and lungs.',
+    'healthTipSmoking6':
+        'Try taking a short walk instead of taking a smoking break.',
+    'healthTipSmoking7':
+        'When an urge arrives, breathe in for four counts and out for six.',
+    'healthTipSmoking8':
+        'Moving away from smoke can help the urge fade faster.',
+    'healthTipSmoking9':
+        'Telling a friend about your goal can strengthen your decision.',
+    'healthTipSmoking10':
+        'Smoking less today is a concrete start for tomorrow’s decision.',
+    'healthTipSmoking11':
+        'Alcohol and smoking urges can rise together; try separating them.',
+    'healthTipSmoking12':
+        'After a meal, stand up and walk before reaching for a cigarette.',
+    'healthTipSmoking13':
+        'Poor sleep can amplify urges; give rest priority tonight.',
+    'healthTipSmoking14':
+        'Instead of fighting an urge, observe it for three minutes.',
+    'healthTipSmoking15':
+        'Every delay teaches your brain that you can cope without smoking.',
+    'healthTipGeneralDisease1':
+        'If symptoms worsen, follow your clinician’s advice and seek help promptly.',
+    'healthTipGeneralDisease2':
+        'Taking medicines as prescribed matters as much as regular follow-up.',
+    'healthTipGeneralDisease3':
+        'Smoking can make many chronic conditions harder to control.',
+    'healthTipGeneralDisease4':
+        'If you have breathlessness or chest pain, consider whether urgent help is needed.',
+    'healthTipGeneralDisease5':
+        'Skipping one cigarette today reduces the load on your body’s recovery.',
+    'healthTipGeneralDisease6':
+        'Track blood pressure, glucose or breathing as your clinician recommends.',
+    'healthTipGeneralDisease7':
+        'Short, regular movement can support circulation and energy.',
+    'healthTipGeneralDisease8':
+        'Avoiding smoky places can help ease disease-related symptoms.',
+    'healthTipGeneralDisease9':
+        'Ask a health professional about new or worsening symptoms instead of self-diagnosing.',
+    'healthTipGeneralDisease10':
+        'Choose one small goal that fits you and complete it today.',
     'healthTipHypertension1':
         'Smoking raises your blood pressure instantly. A few deep breaths right now will help it more.',
     'healthTipHypertension2':
@@ -3517,6 +3598,7 @@ class AppTexts {
     'taskNoSmoke90': 'Stay smoke-free for 90 minutes',
     'adaptiveNoSmokeTaskTemplate':
         'Do not smoke for the next {duration}. If you have a cigarette in your hand, put it out now.',
+    'delayFirstCigaretteTemplate': 'Delay your first cigarette by {duration}.',
     'adaptiveNoSmokeWindowTemplate':
         'Do not smoke for the next {duration}, get ready before the {window} window.',
     'checkInPrompt': 'Are you still holding on?',
@@ -4256,6 +4338,42 @@ class AppTexts {
       );
       final template = textForCode(code, 'coachHintTriggerTemplate');
       return template.replaceAll('{trigger}', localizedTrigger);
+    }
+
+    final delayFirstCigarette = RegExp(
+      r'^DELAY_FIRST_CIGARETTE:(\d+)$',
+    ).firstMatch(normalized);
+    if (delayFirstCigarette != null) {
+      final minutes = int.tryParse(delayFirstCigarette.group(1) ?? '10') ?? 10;
+      final template = textForCode(code, 'delayFirstCigaretteTemplate');
+      return template.replaceAll(
+        '{duration}',
+        formatAdaptiveDurationPhrase(code, minutes),
+      );
+    }
+
+    final riskExplanationLine = RegExp(
+      r'^(RISK_BASE|RISK_BEHAVIOR_DELTA|RISK_PERSONALIZED_DELTA|'
+      r'RISK_PROFILE_DELTA|RISK_TASK_DELTA|RISK_FINAL):([+-]?\d+)$',
+    ).firstMatch(normalized);
+    if (riskExplanationLine != null) {
+      final prefix = riskExplanationLine.group(1)!;
+      final score = riskExplanationLine.group(2)!;
+      final templateKey = switch (prefix) {
+        RiskExplanationCodes.baseScorePrefix => 'riskExplanationBaseTemplate',
+        RiskExplanationCodes.behaviorDeltaPrefix =>
+          'riskExplanationBehaviorDeltaTemplate',
+        RiskExplanationCodes.personalizedDeltaPrefix =>
+          'riskExplanationPersonalizedDeltaTemplate',
+        RiskExplanationCodes.profileDeltaPrefix =>
+          'riskExplanationProfileDeltaTemplate',
+        RiskExplanationCodes.taskDeltaPrefix =>
+          'riskExplanationTaskDeltaTemplate',
+        RiskExplanationCodes.finalScorePrefix => 'riskExplanationFinalTemplate',
+        _ => 'riskExplanationBaseTemplate',
+      };
+      final template = textForCode(code, templateKey);
+      return template.replaceAll('{score}', score);
     }
 
     switch (normalized) {

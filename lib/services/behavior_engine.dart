@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../core/mentor_command_codes.dart';
 import '../core/text_utils.dart';
 import '../models/adaptive_plan.dart';
 import '../models/behavior_dashboard.dart';
@@ -181,13 +182,14 @@ class BehaviorEngine {
       }
       counts[placeId] = (counts[placeId] ?? 0) + 1;
     }
-    final repeated = counts.entries
-        .where((entry) => entry.value >= minimumOccurrences)
-        .toList()
-      ..sort((a, b) {
-        final byCount = b.value.compareTo(a.value);
-        return byCount != 0 ? byCount : a.key.compareTo(b.key);
-      });
+    final repeated =
+        counts.entries
+            .where((entry) => entry.value >= minimumOccurrences)
+            .toList()
+          ..sort((a, b) {
+            final byCount = b.value.compareTo(a.value);
+            return byCount != 0 ? byCount : a.key.compareTo(b.key);
+          });
     return repeated.map((entry) => entry.key).toList();
   }
 
@@ -324,8 +326,7 @@ class BehaviorEngine {
       return 'Stable';
     }
 
-    final ordered = [...breathTests]
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final ordered = [...breathTests]..sort((a, b) => a.date.compareTo(b.date));
     final initialAverage = _averageBreathValue(ordered.first);
     final latestAverage = _averageBreathValue(ordered.last);
 
@@ -953,16 +954,16 @@ class BehaviorEngine {
     required int taskAdjustment,
     required int finalRisk,
   }) {
-    final lines = <String>[];
-
-    lines.add('Baz skor: $baseRisk');
-    lines.add('Davranis/trend etkisi: ${_signed(dynamicCoreRisk - baseRisk)}');
-    lines.add('Nefes + anket kisisel etki: ${_signed(personalizedAdjustment)}');
-    lines.add('Profil etki: ${_signed(profileAdjustment)}');
-    lines.add('Gorev performans etki: ${_signed(taskAdjustment)}');
-    lines.add('Sonuc risk skoru: $finalRisk');
-
-    return lines;
+    return [
+      '${RiskExplanationCodes.baseScorePrefix}:$baseRisk',
+      '${RiskExplanationCodes.behaviorDeltaPrefix}:'
+          '${_signed(dynamicCoreRisk - baseRisk)}',
+      '${RiskExplanationCodes.personalizedDeltaPrefix}:'
+          '${_signed(personalizedAdjustment)}',
+      '${RiskExplanationCodes.profileDeltaPrefix}:${_signed(profileAdjustment)}',
+      '${RiskExplanationCodes.taskDeltaPrefix}:${_signed(taskAdjustment)}',
+      '${RiskExplanationCodes.finalScorePrefix}:$finalRisk',
+    ];
   }
 
   int calculatePersonalizedRiskAdjustment({
@@ -1004,12 +1005,12 @@ class BehaviorEngine {
   }) {
     if (isFirstProfile) {
       if (riskScore >= 70) {
-        return const ['Ilk sigaranizi 10 dakika geciktirin.'];
+        return const ['${DelayFirstCigaretteCode.prefix}:10'];
       }
       if (riskScore >= 40) {
-        return const ['Ilk sigaranizi 20 dakika geciktirin.'];
+        return const ['${DelayFirstCigaretteCode.prefix}:20'];
       }
-      return const ['Ilk sigaranizi 45 dakika geciktirin.'];
+      return const ['${DelayFirstCigaretteCode.prefix}:45'];
     }
 
     final difficulty = chooseTaskDifficulty(riskScore);
@@ -1032,7 +1033,8 @@ class BehaviorEngine {
       riskyHours: riskyHours,
       recentSmokingCount: recentSmokingCount,
     );
-    if (contextualTask != null && weighted.any((item) => item.key == contextualTask)) {
+    if (contextualTask != null &&
+        weighted.any((item) => item.key == contextualTask)) {
       selected.add(contextualTask);
     }
 
@@ -1423,10 +1425,7 @@ class BehaviorEngine {
     return 'low';
   }
 
-  String _dataFreshness({
-    required DateTime? latestEvidenceAt,
-    DateTime? now,
-  }) {
+  String _dataFreshness({required DateTime? latestEvidenceAt, DateTime? now}) {
     if (latestEvidenceAt == null) return 'noData';
     final age = (now ?? DateTime.now()).difference(latestEvidenceAt);
     if (age.isNegative || age.inDays <= 7) return 'fresh';

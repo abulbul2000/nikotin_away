@@ -243,9 +243,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // A resume can follow a native quick-log action or an offline period.
     // Upload the complete local snapshot so the latest progress is not left
     // only on this device until the next cold start.
-    unawaited(
-      FirestoreSyncService.syncLocalDatabaseBackup(_storageService),
-    );
+    unawaited(FirestoreSyncService.syncLocalDatabaseBackup(_storageService));
   }
 
   @override
@@ -775,9 +773,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       unawaited(_presentMandatoryTaskIfNeeded());
       unawaited(_storageService.refreshWearableRiskSignal());
       unawaited(_scheduleSedentaryReminderIfNeeded());
-      unawaited(
-        FirestoreSyncService.syncLocalDatabaseBackup(_storageService),
-      );
+      unawaited(FirestoreSyncService.syncLocalDatabaseBackup(_storageService));
       await _ensureMentorMessageCadence();
       await _loadSnoringSummary();
       unawaited(_promptBackgroundReliabilityIfTasksUndelivered());
@@ -1753,21 +1749,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     try {
-      await CloudBackupService(storageService: _storageService).backup(
-        passphrase: trimmed,
-      );
+      await CloudBackupService(
+        storageService: _storageService,
+      ).backup(passphrase: trimmed);
       await prefs.setBool(promptKey, true);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('cloudBackupSuccess'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('cloudBackupSuccess'))));
     } catch (error, stackTrace) {
       debugPrint('[HomePage] Initial cloud backup failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('cloudBackupFailed'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('cloudBackupFailed'))));
     }
   }
 
@@ -2219,10 +2215,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           MentorMessageCodes.followUpAckEaseBarrier,
         _ => MentorMessageCodes.followUpAckJustTalking,
       };
-    return Text(
-      key: const ValueKey('mentor_follow_up_ack'),
-      AppTexts.localizeMentorMessage(languageCode, ackCode),
-      style: const TextStyle(
+      return Text(
+        key: const ValueKey('mentor_follow_up_ack'),
+        AppTexts.localizeMentorMessage(languageCode, ackCode),
+        style: const TextStyle(
           fontSize: 12,
           fontStyle: FontStyle.italic,
           color: Colors.white54,
@@ -2429,7 +2425,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Widget _buildSummaryStats(BuildContext context) {
-    final score = _adaptiveRiskScore == 0 ? widget.riskScore : _adaptiveRiskScore;
+    final score = _adaptiveRiskScore == 0
+        ? widget.riskScore
+        : _adaptiveRiskScore;
     final hasBreathData = _lastBreathText != 'noRecordYet';
     final breathStatus = _dailyBreathStatus == 'breathTestDoneToday'
         ? context.t('breathTestRecordTitle')
@@ -2439,7 +2437,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       children: [
         Card(
           color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(18),
             child: Row(
@@ -2449,7 +2449,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   child: Text(
                     '$score',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -2464,10 +2467,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                       const SizedBox(height: 3),
                       Text(
                         '${context.t('riskLevel')}: ${_localizedRiskLabel()}',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       const SizedBox(height: 3),
-                      Text('$score / 100', style: const TextStyle(fontSize: 13)),
+                      Text(
+                        '$score / 100',
+                        style: const TextStyle(fontSize: 13),
+                      ),
                     ],
                   ),
                 ),
@@ -2484,7 +2493,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               children: [
                 Text(
                   context.t('lastBreathTest'),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -2667,7 +2679,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ..._riskExplanation.map(
                 (line) => Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: Text('- $line'),
+                  child: Text(
+                    '- ${AppTexts.localizeCanonicalTextForCode(Localizations.localeOf(context).languageCode, line)}',
+                  ),
                 ),
               ),
             ],
@@ -3114,7 +3128,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Widget _buildBreathTrendCard() {
-    final hasAnyData = _dailyAverage > 0 || _weeklyAverage > 0 || _monthlyAverage > 0;
+    final hasAnyData =
+        _dailyAverage > 0 || _weeklyAverage > 0 || _monthlyAverage > 0;
     final maxValue = [
       _dailyAverage,
       _weeklyAverage,
@@ -3276,7 +3291,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
-                      value > 0 ? value.toStringAsFixed(1) : context.t('noRecordYet'),
+                      value > 0
+                          ? value.toStringAsFixed(1)
+                          : context.t('noRecordYet'),
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 12,

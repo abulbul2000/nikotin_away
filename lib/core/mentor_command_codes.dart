@@ -137,3 +137,28 @@ abstract final class MentorMessageCodes {
   static const followUpAckEaseBarrier = 'MENTOR_FOLLOWUP_ACK_EASE_BARRIER';
   static const followUpAckJustTalking = 'MENTOR_FOLLOWUP_ACK_JUST_TALKING';
 }
+
+/// Canonical, language-independent IDs for [BehaviorEngine.buildRiskExplanation]'s
+/// lines. These get persisted (`behavior_snapshot.riskExplanation`) and shown
+/// under the risk-score card's translated title, so — same reasoning as
+/// [MentorMessageCodes] — a hardcoded Turkish sentence here isn't just
+/// mis-rendered until the next locale change, it's baked into the user's
+/// history in the wrong language forever. AppTexts.localizeCanonicalTextForCode
+/// resolves each of these to the user's language at display time.
+abstract final class RiskExplanationCodes {
+  static const baseScorePrefix = 'RISK_BASE';
+  static const behaviorDeltaPrefix = 'RISK_BEHAVIOR_DELTA';
+  static const personalizedDeltaPrefix = 'RISK_PERSONALIZED_DELTA';
+  static const profileDeltaPrefix = 'RISK_PROFILE_DELTA';
+  static const taskDeltaPrefix = 'RISK_TASK_DELTA';
+  static const finalScorePrefix = 'RISK_FINAL';
+}
+
+/// `DELAY_FIRST_CIGARETTE:{minutes}` — the very first task a brand-new
+/// profile gets ([BehaviorEngine.generateAdaptiveTasks]'s `isFirstProfile`
+/// branch) used to be a hardcoded Turkish sentence, so a user who selected
+/// any other language got their first task in Turkish. Resolved the same
+/// way as `ADAPTIVE_NO_SMOKE:{minutes}`.
+abstract final class DelayFirstCigaretteCode {
+  static const prefix = 'DELAY_FIRST_CIGARETTE';
+}
