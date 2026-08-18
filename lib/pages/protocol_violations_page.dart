@@ -53,6 +53,36 @@ class _ProtocolViolationsPageState extends State<ProtocolViolationsPage> {
     }
   }
 
+  /// [type] is a canonical code (see ProtocolViolationService and
+  /// NoResponseWatchdogService.kt's `no_response_10_min`), not user-visible
+  /// text — this maps the known codes to a localized label. Falls back to
+  /// the raw code for anything unmapped, rather than crashing or hiding the
+  /// row, since new violation types are meant to be addable without every
+  /// caller needing to touch this page.
+  String _localizedType(BuildContext context, String type) {
+    const knownTypes = {
+      'suspicious_behavior': 'violationTypeSuspiciousBehavior',
+      'willpower_weakness': 'violationTypeWillpowerWeakness',
+      'deferred_start': 'violationTypeDeferredStart',
+      'followup_deferred': 'violationTypeFollowupDeferred',
+      'duration_barrier_failure': 'violationTypeDurationBarrierFailure',
+      'mandatory_gate': 'violationTypeMandatoryGate',
+      'followup_failed': 'violationTypeFollowupFailed',
+      'no_response_10_min': 'violationTypeNoResponse10Min',
+    };
+    final key = knownTypes[type];
+    return key == null ? type : context.t(key);
+  }
+
+  String _localizedSource(BuildContext context, String source) {
+    const knownSources = {
+      'app_flow': 'violationSourceAppFlow',
+      'queued_import': 'violationSourceQueuedImport',
+    };
+    final key = knownSources[source];
+    return key == null ? source : context.t(key);
+  }
+
   @override
   Widget build(BuildContext context) {
     final highCount = _rows
@@ -120,7 +150,7 @@ class _ProtocolViolationsPageState extends State<ProtocolViolationsPage> {
                                       children: [
                                         Expanded(
                                           child: Text(
-                                            row.type,
+                                            _localizedType(context, row.type),
                                             style: const TextStyle(
                                               fontWeight: FontWeight.w800,
                                             ),
@@ -152,9 +182,23 @@ class _ProtocolViolationsPageState extends State<ProtocolViolationsPage> {
                                       ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '${context.t('violationSource')}: ${row.source}',
+                                      '${context.t('violationSource')}: '
+                                      '${_localizedSource(context, row.source)}',
                                     ),
                                     const SizedBox(height: 4),
+                                    // row.details is free-text English prose
+                                    // written by both ProtocolViolationService
+                                    // and NoResponseWatchdogService.kt's
+                                    // NativeViolationStore (see CLAUDE.md's
+                                    // documented direct-SQLite exception) —
+                                    // unlike type/source above it isn't a
+                                    // closed set of canonical codes, so
+                                    // localizing it means changing what both
+                                    // the Dart and native writers persist,
+                                    // not just how this page reads it. Left
+                                    // as English pending that larger change;
+                                    // row.type above already tells the user
+                                    // what happened in their language.
                                     Text(row.details),
                                     const SizedBox(height: 4),
                                     Text(
