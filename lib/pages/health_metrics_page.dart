@@ -180,29 +180,39 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${test.completedAt.day}/${test.completedAt.month}/${test.completedAt.year}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${test.completedAt.day}/${test.completedAt.month}/${test.completedAt.year}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '${context.t('exhaleLabel')}: ${test.exhaleTestSeconds}s | ${context.t('inhaleLabel')}: ${test.inhaleTestSeconds}s',
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              AppTexts.localizeCanonicalText(
-                                context,
-                                test.riskLevel,
+                                  Text(
+                                    '${context.t('exhaleLabel')}: ${test.exhaleTestSeconds}s | ${context.t('inhaleLabel')}: ${test.inhaleTestSeconds}s',
+                                    style: const TextStyle(fontSize: 12),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: _riskColor(test.riskLevel),
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                AppTexts.localizeCanonicalText(
+                                  context,
+                                  test.riskLevel,
+                                ),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: _riskColor(test.riskLevel),
+                                ),
+                                textAlign: TextAlign.end,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
