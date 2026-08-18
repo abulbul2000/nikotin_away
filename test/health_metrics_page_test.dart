@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/core/app_texts.dart';
 import 'package:no_smoke/models/survey_record.dart';
 import 'package:no_smoke/pages/health_metrics_page.dart';
 import 'package:no_smoke/services/storage_service.dart';
@@ -99,6 +100,46 @@ void main() {
       // both out at 320px did not throw — already checked above via
       // takeException — this just confirms the row actually rendered.
       expect(find.textContaining('AŞIRI YÜKSEK'), findsNWidgets(2));
+    },
+  );
+
+  testWidgets(
+    'the risk-score summary card shows the translated risk level, not the raw canonical code',
+    (tester) async {
+      // Regression coverage: the top "Risk Score" card's subtitle used to
+      // interpolate riskLevel directly ('${context.t('levelLabel')}:
+      // $riskLevel'), skipping the AppTexts.localizeCanonicalText() wrap the
+      // "recent tests" row below it already used for the same field — so a
+      // non-Turkish user saw the raw code (e.g. "high") instead of their
+      // language's translated word, right next to a correctly translated
+      // "Level:" label.
+      final storage = StorageService();
+      await storage.saveSurveyRecord(
+        SurveyRecord(
+          id: 'breath_1',
+          completedAt: DateTime(2024, 1, 1),
+          type: 'breath_test',
+          title: 'Nefes Testi',
+          name: 'Ada',
+          packsPerDay: '1 paket',
+          exhaleTestSeconds: 8,
+          inhaleTestSeconds: 6,
+          riskScore: 72,
+          riskLevel: 'high',
+        ),
+      );
+
+      await tester.pumpWidget(wrap(const HealthMetricsPage(name: 'Ada')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.textContaining('high'), findsNothing);
+      expect(
+        find.textContaining(
+          AppTexts.localizeCanonicalTextForCode('tr', 'high'),
+        ),
+        findsWidgets,
+      );
     },
   );
 }

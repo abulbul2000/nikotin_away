@@ -135,7 +135,8 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
                   _buildMetricCard(
                     context.t('riskScore'),
                     '${_breathTests.last.riskScore}/100',
-                    '${context.t('levelLabel')}: ${_breathTests.last.riskLevel}',
+                    '${context.t('levelLabel')}: '
+                        '${AppTexts.localizeCanonicalText(context, _breathTests.last.riskLevel)}',
                   ),
                   const SizedBox(height: 24),
                   // Statistics
