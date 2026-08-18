@@ -2587,8 +2587,10 @@ class StorageService {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<AdaptiveTaskState> loadAdaptiveTaskState() async {
-    final db = await database;
+  Future<AdaptiveTaskState> loadAdaptiveTaskState({
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
     final rows = await db.query(
       _adaptiveTaskStateTable,
       where: 'id = ?',
@@ -2600,7 +2602,7 @@ class StorageService {
     }
 
     final initial = AdaptiveTaskState.initial();
-    await saveAdaptiveTaskState(initial);
+    await saveAdaptiveTaskState(initial, executor: executor);
     return initial;
   }
 
@@ -2616,8 +2618,10 @@ class StorageService {
     );
   }
 
-  Future<List<AdaptiveHourlyProfileEntry>> loadAdaptiveHourlyProfile() async {
-    final db = await database;
+  Future<List<AdaptiveHourlyProfileEntry>> loadAdaptiveHourlyProfile({
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
     final rows = await db.query(
       _adaptiveHourlyProfileTable,
       orderBy: 'hour ASC',
@@ -3360,12 +3364,22 @@ class StorageService {
     );
   }
 
+  /// [executor] lets a caller that already has its own transaction open
+  /// (see [transitionTaskAssignment]) fold this outcome's writes into it,
+  /// rather than opening a second, separate one — sqflite doesn't support
+  /// nested transactions, and the two are meant to be one atomic unit
+  /// there: without this, a process kill between the task's terminal-state
+  /// write and this call landing would leave the task stuck in a terminal
+  /// state (transitionTaskAssignment's own guard refuses to touch a
+  /// terminal row again) with the outcome it should have produced
+  /// permanently lost, never retried.
   Future<void> recordAdaptiveTaskOutcome({
     required String taskTitle,
     required String outcome,
     required int plannedDurationMinutes,
     DateTime? scheduledAt,
     DateTime? respondedAt,
+    DatabaseExecutor? executor,
   }) async {
     final responded = respondedAt ?? DateTime.now();
     final scheduled =
@@ -3377,8 +3391,8 @@ class StorageService {
         .clamp(1, 720)
         .toInt();
 
-    final state = await loadAdaptiveTaskState();
-    final hourly = await loadAdaptiveHourlyProfile();
+    final state = await loadAdaptiveTaskState(executor: executor);
+    final hourly = await loadAdaptiveHourlyProfile(executor: executor);
 
     final nextState = _disciplineProtocolService.evolveStateFromOutcome(
       current: state,
@@ -3411,12 +3425,20 @@ class StorageService {
     // All four writes describe one logical outcome — run them in a single
     // transaction so a process kill mid-sequence can't leave the adaptive
     // state, hourly profile, and event log out of sync with each other.
-    final db = await database;
-    await db.transaction((txn) async {
+    Future<void> writeAll(DatabaseExecutor txn) async {
       await saveAdaptiveTaskState(nextState, executor: txn);
       await saveAdaptiveHourlyProfileEntry(nextEntry, executor: txn);
       await saveAdaptiveTaskEvent(event, executor: txn);
       await saveSetting(_behaviorDirtyKey, '1', executor: txn);
+    }
+
+    if (executor != null) {
+      await writeAll(executor);
+      return;
+    }
+    final db = await database;
+    await db.transaction((txn) async {
+      await writeAll(txn);
     });
   }
 
@@ -3976,8 +3998,11 @@ class StorageService {
   // Task assignments
   // ---------------------------------------------------------------------
 
-  Future<void> saveTaskAssignment(TaskAssignment task) async {
-    final db = await database;
+  Future<void> saveTaskAssignment(
+    TaskAssignment task, {
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
     await db.insert(
       _taskAssignmentsTable,
       task.toJson(),
@@ -3985,8 +4010,11 @@ class StorageService {
     );
   }
 
-  Future<TaskAssignment?> loadTaskAssignment(String id) async {
-    final db = await database;
+  Future<TaskAssignment?> loadTaskAssignment(
+    String id, {
+    DatabaseExecutor? executor,
+  }) async {
+    final db = executor ?? await database;
     final rows = await db.query(
       _taskAssignmentsTable,
       where: 'id = ?',
@@ -4145,6 +4173,22 @@ class StorageService {
   /// is what stops a task from being counted twice — a notification answered
   /// just as the watchdog fires used to be able to record both an answer and
   /// a miss for the same task.
+  ///
+  /// The read (loadTaskAssignment), the state-machine decision, the write
+  /// (saveTaskAssignment), and the outcome report (recordAdaptiveTaskOutcome)
+  /// all run inside one transaction now — previously each ran against the
+  /// database independently, so the foreground app, a notification action in
+  /// the background isolate, and the native watchdog's drain could all read
+  /// the same row before any of them wrote it back, and whichever write
+  /// landed last silently discarded the others' transitions. Wrapping the
+  /// whole read-modify-write in a transaction gives SQLite's own write
+  /// serialization the job of ordering concurrent callers instead of leaving
+  /// it to whichever one happened to finish last. It also closes the second
+  /// gap this used to have: the terminal-state write and the outcome report
+  /// used to be two separate, unguarded operations, so a process kill
+  /// between them left the task stuck terminal (the isTerminal guard above
+  /// refuses to touch it again) with its outcome permanently lost — now
+  /// either both happen or neither does.
   Future<TaskAssignment?> transitionTaskAssignment({
     required String id,
     required String state,
@@ -4153,72 +4197,78 @@ class StorageService {
     int? sosMinutes,
     String? gateReason,
   }) async {
-    final existing = await loadTaskAssignment(id);
-    if (existing == null ||
-        existing.isTerminal ||
-        !TaskLifecycleState.canTransition(existing.state, state)) {
-      return existing;
-    }
+    final db = await database;
+    return db.transaction((txn) async {
+      final existing = await loadTaskAssignment(id, executor: txn);
+      if (existing == null ||
+          existing.isTerminal ||
+          !TaskLifecycleState.canTransition(existing.state, state)) {
+        return existing;
+      }
 
-    final now = at ?? DateTime.now();
-    var updated = existing.copyWith(
-      state: state,
-      respondedAt: TaskLifecycleState.terminal.contains(state) ? now : null,
-    );
+      final now = at ?? DateTime.now();
+      var updated = existing.copyWith(
+        state: state,
+        respondedAt: TaskLifecycleState.terminal.contains(state) ? now : null,
+      );
 
-    if (state == TaskLifecycleState.delivered && existing.deliveredAt == null) {
-      updated = updated.copyWith(deliveredAt: now);
-    }
-    if (state == TaskLifecycleState.retrying) {
-      updated = updated.copyWith(attemptCount: existing.attemptCount + 1);
-    }
-    if (state == TaskLifecycleState.postponed && postponeMinutes != null) {
-      updated = updated.copyWith(
-        postponeCount: existing.postponeCount + 1,
-        totalPostponedMinutes: existing.totalPostponedMinutes + postponeMinutes,
-        scheduledAt: now.add(Duration(minutes: postponeMinutes)),
-      );
-    }
-    if (state == TaskLifecycleState.sosActive) {
-      updated = updated.copyWith(sosCount: existing.sosCount + 1);
-    }
-    if (sosMinutes != null) {
-      updated = updated.copyWith(
-        sosTotalMinutes: existing.sosTotalMinutes + sosMinutes,
-      );
-    }
-    if (state == TaskLifecycleState.pendingDelivery) {
-      updated = updated.copyWith(
-        gateDeferCount: existing.gateDeferCount + 1,
-        gateReason: gateReason,
-      );
-    }
-    // Only stamped on the *first* arrival at `accepted` — resuming into it
-    // from `sosActive` (the barrier-was-running case, see
-    // TaskLifecycleState._allowedTransitions) must leave these alone so the
-    // barrier resumes at whatever time was actually left on it, not a fresh
-    // full window starting now.
-    if (state == TaskLifecycleState.accepted &&
-        existing.state != TaskLifecycleState.sosActive) {
-      updated = updated.copyWith(
-        barrierStartedAt: now,
-        barrierEndsAt: now.add(Duration(minutes: existing.durationMinutes)),
-      );
-    }
+      if (state == TaskLifecycleState.delivered &&
+          existing.deliveredAt == null) {
+        updated = updated.copyWith(deliveredAt: now);
+      }
+      if (state == TaskLifecycleState.retrying) {
+        updated = updated.copyWith(attemptCount: existing.attemptCount + 1);
+      }
+      if (state == TaskLifecycleState.postponed && postponeMinutes != null) {
+        updated = updated.copyWith(
+          postponeCount: existing.postponeCount + 1,
+          totalPostponedMinutes:
+              existing.totalPostponedMinutes + postponeMinutes,
+          scheduledAt: now.add(Duration(minutes: postponeMinutes)),
+        );
+      }
+      if (state == TaskLifecycleState.sosActive) {
+        updated = updated.copyWith(sosCount: existing.sosCount + 1);
+      }
+      if (sosMinutes != null) {
+        updated = updated.copyWith(
+          sosTotalMinutes: existing.sosTotalMinutes + sosMinutes,
+        );
+      }
+      if (state == TaskLifecycleState.pendingDelivery) {
+        updated = updated.copyWith(
+          gateDeferCount: existing.gateDeferCount + 1,
+          gateReason: gateReason,
+        );
+      }
+      // Only stamped on the *first* arrival at `accepted` — resuming into it
+      // from `sosActive` (the barrier-was-running case, see
+      // TaskLifecycleState._allowedTransitions) must leave these alone so the
+      // barrier resumes at whatever time was actually left on it, not a fresh
+      // full window starting now.
+      if (state == TaskLifecycleState.accepted &&
+          existing.state != TaskLifecycleState.sosActive) {
+        updated = updated.copyWith(
+          barrierStartedAt: now,
+          barrierEndsAt: now.add(Duration(minutes: existing.durationMinutes)),
+        );
+      }
 
-    await saveTaskAssignment(updated);
+      await saveTaskAssignment(updated, executor: txn);
 
-    final outcome = updated.outcome;
-    if (outcome != null) {
-      await recordAdaptiveTaskOutcome(
-        taskTitle: updated.canonicalTitle,
-        outcome: outcome,
-        plannedDurationMinutes: updated.durationMinutes,
-        scheduledAt: updated.barrierStartedAt ?? updated.scheduledAt,
-        respondedAt: now,
-      );
-    }
-    return updated;
+      final outcome = updated.outcome;
+      if (outcome != null) {
+        await recordAdaptiveTaskOutcome(
+          taskTitle: updated.canonicalTitle,
+          outcome: outcome,
+          plannedDurationMinutes: updated.durationMinutes,
+          scheduledAt: updated.barrierStartedAt ?? updated.scheduledAt,
+          respondedAt: now,
+          executor: txn,
+        );
+      }
+      return updated;
+    });
   }
 
   /// How today's logged cigarette count compares to what the user's survey

@@ -155,6 +155,46 @@ void main() {
     expect(rate, 1.0);
   });
 
+  test('a terminal transition and its learning-engine outcome land together '
+      '(regression coverage for the unguarded read-modify-write)', () async {
+    // Regression coverage: transitionTaskAssignment used to read, decide,
+    // and write against the database with no transaction around any of
+    // it, and recordAdaptiveTaskOutcome (its own separate transaction)
+    // ran as a second, independent operation after the task's own write
+    // landed — a process kill between the two left the task stuck
+    // terminal (the isTerminal guard refuses to touch it again) with its
+    // outcome never recorded and never retried. Both are now one
+    // transaction: this checks the task's new state and its
+    // AdaptiveTaskEvent both exist after a single call, proving the
+    // nested-transaction wiring (loadAdaptiveTaskState/
+    // loadAdaptiveHourlyProfile now also accept the same `executor`, per
+    // sqflite's "don't use the database object inside a transaction"
+    // rule) didn't silently drop the outcome write.
+    final storage = StorageService();
+    await storage.saveTaskAssignment(_task(id: 'atomic', durationMinutes: 30));
+
+    await storage.transitionTaskAssignment(
+      id: 'atomic',
+      state: TaskLifecycleState.succeeded,
+    );
+
+    final loaded = await storage.loadTaskAssignment('atomic');
+    expect(loaded!.state, TaskLifecycleState.succeeded);
+
+    final events = await storage.loadRecentAdaptiveTaskEvents(limit: 10);
+    expect(
+      events.any(
+        (e) =>
+            e.taskTitle == 'ADAPTIVE_NO_SMOKE:30' &&
+            e.outcome == AdaptiveTaskOutcome.success,
+      ),
+      isTrue,
+      reason:
+          'the learning-engine event must exist alongside the '
+          "task's terminal state, not be silently lost",
+    );
+  });
+
   test('declining is scored as smoking, per the agreed rule', () {
     expect(
       TaskLifecycleState.outcomeFor(TaskLifecycleState.failedDeclined),
