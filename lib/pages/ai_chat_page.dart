@@ -753,7 +753,7 @@ class _AIChatPageState extends State<AIChatPage> {
     }
     await _storage.saveSetting(
       'duration_barrier_enabled',
-      preference == 'off' ? '0' : '1',
+      coachModeShouldBeEnabled(preference) ? '1' : '0',
     );
     return 'aiChatActionAppliedCoachMode';
   }

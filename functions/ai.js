@@ -47,14 +47,15 @@ const TOOLS = [
     function: {
       name: "set_coach_mode",
       description:
-        "Kullanıcının Koç Modu tercihini (sigara arası bariyerin ne kadar zorlayıcı olacağı) ve sıklığını değiştirir.",
+        "Kullanıcının Koç Modu'nu (sigara arası bariyer görevlerini) açar veya kapatır, ve sıklığını değiştirir. Zorluk seviyesi diye ayrı bir eksen yok — kullanıcı 'sevmedim/kötü/beğenmedim' derse bunu kapatma isteği say.",
       parameters: {
         type: "object",
         properties: {
           preference: {
             type: "string",
             enum: ["like", "neutral", "dislike", "off"],
-            description: "like=zor/zorlayıcı, neutral=normal, dislike=kolay, off=kapalı",
+            description:
+              "like/neutral=açık, dislike/off=kapalı. dislike ve off aynı sonucu üretir; ikisi de sadece geriye dönük uyumluluk için var.",
           },
           frequency: {
             type: "string",

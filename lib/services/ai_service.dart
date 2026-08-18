@@ -42,6 +42,19 @@ class AiAction {
   final Map<String, dynamic> arguments;
 }
 
+/// Maps a `set_coach_mode` tool call's `preference` argument to whether
+/// `duration_barrier_enabled` should end up on.
+///
+/// `duration_barrier_preference` ('like'/'neutral'/'dislike' as a
+/// barrier-difficulty knob) no longer exists — see coach_mode_page.dart's
+/// doc comment — only on/off remains. 'dislike' used to mean "make it
+/// easier" while staying on; now that there is no difficulty axis left to
+/// soften, it means the same thing the "sevmedim/kötü/beğenmedim" voice
+/// intent's own confirmation text already promises the user: off. Only
+/// 'like'/'neutral' still mean on.
+bool coachModeShouldBeEnabled(String preference) =>
+    !const ['off', 'dislike'].contains(preference);
+
 class AiChatResult {
   const AiChatResult({required this.reply, this.action});
 
