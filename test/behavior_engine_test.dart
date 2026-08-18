@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/services/behavior_engine.dart';
+import 'package:no_smoke/models/adaptive_plan.dart';
 import 'package:no_smoke/models/breath_test_record.dart';
 import 'package:no_smoke/models/cough_test_record.dart';
 import 'package:no_smoke/models/survey_history.dart';
@@ -989,6 +990,138 @@ void main() {
               recentModerateOrWorseCountLast14Days: 2,
             ),
             'mild',
+          );
+        },
+      );
+    });
+
+    group('generateProgressiveCadenceTask180', () {
+      final engine = BehaviorEngine();
+
+      // Regression coverage: this used to escalate to open-ended multi-day
+      // full-abstinence goals ("1-week smoke-free goal: complete all tasks
+      // for 7 days") purely from elapsed calendar days since the user's
+      // first survey — the exact "time since join date" anti-pattern this
+      // app's architecture rejects everywhere else, since the product is
+      // gradual reduction and the user keeps smoking throughout it. It also
+      // bypassed the duration-barrier consent switch: StorageService
+      // .buildAdaptiveNoSmokePlan correctly returns no items when a user has
+      // turned duration-barrier tasks off, but this function's output still
+      // lands in todaysTasks as home_page.dart's fallback, so it could
+      // become someone's only assigned task despite opting out of exactly
+      // this kind of escalating commitment. Now capped at the same
+      // bounded-minute-interval ceiling _hardTasks already uses.
+      AdaptivePlan planAtDay(int day) => AdaptivePlan(
+        generatedAt: DateTime(2026, 1, 1),
+        targetDays: 180,
+        currentWeek: (day / 7).ceil(),
+        currentDay: day,
+        daysRemaining: 180 - day,
+        weeklyRiskTarget: 40,
+        difficulty: 'medium',
+        cadenceLevel: 'one_day',
+        focusAreas: const [],
+      );
+
+      test(
+        'never returns a multi-day full-abstinence goal at any elapsed day, with or without evidence',
+        () {
+          const bannedMultiDayGoals = [
+            '2 gun sigarasiz kalma plani: kriz aninda 10 derin nefes + su uygulayin.',
+            '1 hafta sigarasiz kalma hedefi: 7 gun boyunca tum gorevleri tamamlayin.',
+            '1 gun sigarasiz kalma gorevi: ilk sigarayi en az 90 dakika erteleyin.',
+            '2 gun sigarasiz kalma gorevi: 48 saat boyunca tetikleyicilerde sigarayi erteleyin.',
+          ];
+          for (final day in [1, 60, 90, 120, 179]) {
+            for (final evidence in [
+              (success: 0, failure: 0),
+              (success: 5, failure: 0),
+              (success: 0, failure: 5),
+              (success: 3, failure: 3),
+            ]) {
+              final task = engine.generateProgressiveCadenceTask180(
+                plan: planAtDay(day),
+                recentSuccessCount: evidence.success,
+                recentFailureCount: evidence.failure,
+              );
+              expect(
+                bannedMultiDayGoals.contains(task),
+                isFalse,
+                reason:
+                    'day $day, evidence $evidence produced a banned '
+                    'multi-day goal: "$task"',
+              );
+            }
+          }
+        },
+      );
+
+      test(
+        'day 120+ with real success evidence and no struggle escalates to the 120-minute bounded task',
+        () {
+          expect(
+            engine.generateProgressiveCadenceTask180(
+              plan: planAtDay(150),
+              recentSuccessCount: 4,
+              recentFailureCount: 1,
+            ),
+            '120 dakika sigarasiz kal',
+          );
+        },
+      );
+
+      test(
+        'day 60-119 with real success evidence and no struggle escalates to the 90-minute bounded task',
+        () {
+          expect(
+            engine.generateProgressiveCadenceTask180(
+              plan: planAtDay(70),
+              recentSuccessCount: 3,
+              recentFailureCount: 0,
+            ),
+            '90 dakika sigarasiz kal',
+          );
+        },
+      );
+
+      test(
+        'day 120+ with zero logged success never escalates, regardless of elapsed time',
+        () {
+          expect(
+            engine.generateProgressiveCadenceTask180(
+              plan: planAtDay(179),
+              recentSuccessCount: 0,
+              recentFailureCount: 0,
+            ),
+            '1 gun sigarasiz kalma gorevi: bugun tum kriz anlarinda sigarayi erteleyin.',
+          );
+        },
+      );
+
+      test(
+        'struggling (more recent failures than successes) always steps down to the easiest task',
+        () {
+          expect(
+            engine.generateProgressiveCadenceTask180(
+              plan: planAtDay(150),
+              recentSuccessCount: 1,
+              recentFailureCount: 3,
+            ),
+            'Ilk sigarayi 10 dakika ertele',
+          );
+        },
+      );
+
+      test(
+        'a fresh user (no evidence, early day) gets the same-day craving-delay task',
+        () {
+          expect(
+            engine.generateProgressiveCadenceTask180(
+              plan: planAtDay(1),
+              recentSuccessCount: 0,
+              recentFailureCount: 0,
+            ),
+            '1 gun sigarasiz kalma gorevi: bugun tum kriz anlarinda sigarayi erteleyin.',
           );
         },
       );

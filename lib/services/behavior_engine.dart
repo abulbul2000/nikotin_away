@@ -1386,25 +1386,44 @@ class BehaviorEngine {
     );
   }
 
+  /// Was a fixed elapsed-calendar-days -> full-multi-day-abstinence ladder
+  /// (e.g. "1-week smoke-free goal: complete all tasks for 7 days" once 120
+  /// days had passed since the user's first survey) — the exact "time since
+  /// join date" anti-pattern this app's own architecture rejects elsewhere
+  /// (see StorageService.loadReductionProgress/HealthRecoveryService: this
+  /// is gradual reduction, the user keeps smoking throughout it, so
+  /// "elapsed days" alone proves nothing about their actual progress). It
+  /// also bypassed the duration-barrier consent switch entirely: when a
+  /// user turns duration-barrier tasks off (coach_mode_page.dart),
+  /// StorageService.buildAdaptiveNoSmokePlan correctly returns no items, but
+  /// this function's output still lands in todaysTasks as the fallback (see
+  /// home_page.dart's _todaysTasks getter), so it could become someone's
+  /// only assigned task despite them having opted out of exactly this kind
+  /// of escalating commitment.
+  ///
+  /// Now scaled to match _easyTasks/_mediumTasks/_hardTasks's own ceiling —
+  /// bounded minute-interval extension, never an open-ended multi-day
+  /// commitment — and the escalation itself leans on the same
+  /// recentSuccessCount/recentFailureCount evidence the rest of the daily
+  /// plan already uses, not on raw elapsed days alone.
   String generateProgressiveCadenceTask180({
     required AdaptivePlan plan,
     required int recentSuccessCount,
     required int recentFailureCount,
   }) {
     final isStruggling = recentFailureCount > recentSuccessCount;
+    final hasEvidenceOfSuccess = recentSuccessCount > 0;
 
-    if (plan.currentDay >= 120) {
-      if (isStruggling) {
-        return '2 gun sigarasiz kalma plani: kriz aninda 10 derin nefes + su uygulayin.';
-      }
-      return '1 hafta sigarasiz kalma hedefi: 7 gun boyunca tum gorevleri tamamlayin.';
+    if (plan.currentDay >= 120 && hasEvidenceOfSuccess && !isStruggling) {
+      return '120 dakika sigarasiz kal';
     }
 
-    if (plan.currentDay >= 60) {
-      if (isStruggling) {
-        return '1 gun sigarasiz kalma gorevi: ilk sigarayi en az 90 dakika erteleyin.';
-      }
-      return '2 gun sigarasiz kalma gorevi: 48 saat boyunca tetikleyicilerde sigarayi erteleyin.';
+    if (plan.currentDay >= 60 && hasEvidenceOfSuccess && !isStruggling) {
+      return '90 dakika sigarasiz kal';
+    }
+
+    if (isStruggling) {
+      return 'Ilk sigarayi 10 dakika ertele';
     }
 
     return '1 gun sigarasiz kalma gorevi: bugun tum kriz anlarinda sigarayi erteleyin.';
