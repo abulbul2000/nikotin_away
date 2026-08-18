@@ -2972,9 +2972,21 @@ class NotificationService {
         return false;
       }
 
-      final when = at ?? DateTime.now();
+      // `now` is the real moment this scheduling decision happens — the
+      // daily budget resets by this, matching this method's own "counted
+      // when scheduled" doc above. `when` is the notification's fire
+      // time, which for an owed kind (a task alert, a medication
+      // reminder) can be hours away and land on the next calendar day;
+      // it only feeds the spacing check below, never the day-key
+      // bookkeeping. Conflating the two (passing `when` as `now` too) let
+      // a late-evening task alert silently reset the whole day's ledger —
+      // any offered notification checked afterward today would see the
+      // stored date as "tomorrow" and read a fresh, unspent budget. See
+      // StorageService.recordNotificationSent's doc comment.
+      final now = DateTime.now();
+      final when = at ?? now;
       final (sentToday, lastSentAt) = await storage.loadNotificationBudgetState(
-        now: when,
+        now: now,
       );
       final decision = budget.decide(
         kind: kind,
@@ -2990,6 +3002,7 @@ class NotificationService {
       await storage.recordNotificationSent(
         countsAgainstBudget: budget.classOf(kind) == NotificationClass.offered,
         at: when,
+        now: now,
       );
       return true;
     } catch (_) {

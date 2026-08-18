@@ -103,20 +103,16 @@ void main() {
 
       final storage = StorageService();
 
-      // Mirrors _atDeviceTimeOfDay + scheduleMedicationReminders' own
-      // "roll to tomorrow if already past" logic: the ledger is keyed by
-      // the day the reminder actually fires on, not the day it was
-      // scheduled from, so a dose time already passed for today (very
-      // plausible depending on wall-clock time when this suite runs) must
-      // be looked up under tomorrow's key instead of today's.
-      final now = DateTime.now();
-      var expectedFireAt = DateTime(now.year, now.month, now.day, 9, 0);
-      if (!expectedFireAt.isAfter(now)) {
-        expectedFireAt = expectedFireAt.add(const Duration(days: 1));
-      }
-
+      // The ledger's daily-budget bookkeeping is keyed by the real moment
+      // the notification is scheduled, never by its (possibly tomorrow,
+      // if the dose time already passed today) fire time — regression
+      // coverage for a bug where the two were conflated and a fire time
+      // rolling past midnight silently reset the whole day's ledger for
+      // anything checked afterward. So this looks the ledger up under
+      // today's real key, matching what recordNotificationSent now always
+      // writes under, regardless of what time '09:00' resolves to.
       final (beforeCount, beforeLastSent) = await storage
-          .loadNotificationBudgetState(now: expectedFireAt);
+          .loadNotificationBudgetState();
       expect(beforeLastSent, isNull);
 
       await NotificationService.scheduleMedicationReminders([
@@ -129,7 +125,7 @@ void main() {
       ]);
 
       final (afterCount, afterLastSent) = await storage
-          .loadNotificationBudgetState(now: expectedFireAt);
+          .loadNotificationBudgetState();
       expect(afterLastSent, isNotNull);
       // Owed kinds move the spacing clock but never spend the offered
       // allowance.

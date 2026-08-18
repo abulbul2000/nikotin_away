@@ -3034,16 +3034,33 @@ class StorageService {
     return (sent, lastSent);
   }
 
-  /// Records that a notification was sent. [countsAgainstBudget] is false for
-  /// the kinds the user is owed — they still move the spacing clock, because
-  /// two notifications a minute apart are one interruption regardless of who
-  /// sent them, but they must not consume the allowance.
+  /// Records that a notification was sent (or, for a scheduled one,
+  /// decided-and-scheduled — see NotificationService._budgetAllows'
+  /// doc comment: it's counted at that moment, not whenever it eventually
+  /// fires). [countsAgainstBudget] is false for the kinds the user is
+  /// owed — they still move the spacing clock, because two notifications
+  /// a minute apart are one interruption regardless of who sent them, but
+  /// they must not consume the allowance.
+  ///
+  /// [now] and [at] answer two different questions and must not be
+  /// conflated: [now] is the real moment this call happens, and is what
+  /// the daily-budget bookkeeping resets by. [at] is the notification's
+  /// fire time, which for an owed kind (a task alert, a medication
+  /// reminder) can be hours away and cross into the next calendar day —
+  /// a task scheduled tonight for three hours out must still count
+  /// against *tonight's* budget, not silently reset the ledger under
+  /// tomorrow's date while it's still actually today. [at] only feeds
+  /// the spacing timestamp, since two notifications landing close
+  /// together in real time is what "one interruption" actually means,
+  /// regardless of when the code that scheduled them ran.
   Future<void> recordNotificationSent({
     required bool countsAgainstBudget,
     DateTime? at,
+    DateTime? now,
   }) async {
-    final when = at ?? DateTime.now();
-    final todayKey = _dayKey(when);
+    final recordedAt = now ?? DateTime.now();
+    final firesAt = at ?? recordedAt;
+    final todayKey = _dayKey(recordedAt);
     final storedDate = await loadSetting(_budgetDateKey);
     var sent = storedDate == todayKey
         ? (int.tryParse(await loadSetting(_budgetSentKey) ?? '') ?? 0)
@@ -3053,7 +3070,7 @@ class StorageService {
     }
     await saveSetting(_budgetDateKey, todayKey);
     await saveSetting(_budgetSentKey, sent.toString());
-    await saveSetting(_budgetLastSentKey, when.toIso8601String());
+    await saveSetting(_budgetLastSentKey, firesAt.toIso8601String());
   }
 
   /// Whether the user wants a given *offered* notification kind at all.

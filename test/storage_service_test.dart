@@ -153,6 +153,76 @@ void main() {
     });
   });
 
+  group(
+    'recordNotificationSent / loadNotificationBudgetState (regression coverage)',
+    () {
+      // A task alert (or any owed notification) can be scheduled hours
+      // ahead and its fire time can land on the next calendar day even
+      // though the code scheduling it is running today. recordAt used to
+      // key the daily-budget ledger off that (possibly tomorrow) fire
+      // time instead of the real moment the call happens, so scheduling
+      // a late-evening task could silently reset the whole day's ledger
+      // for anything checked afterward — losing both the offered-count
+      // cap and the spacing lastSentAt.
+      test(
+        'a fire time on the next calendar day is still recorded under today, not tomorrow',
+        () async {
+          final storage = StorageService();
+          final today = DateTime(2026, 1, 1, 22, 0);
+          final tomorrowFireTime = DateTime(2026, 1, 2, 1, 0);
+
+          await storage.recordNotificationSent(
+            countsAgainstBudget: false,
+            at: tomorrowFireTime,
+            now: today,
+          );
+
+          final (todayCount, todayLastSent) = await storage
+              .loadNotificationBudgetState(now: today);
+          expect(todayLastSent, isNotNull);
+
+          final (tomorrowCount, tomorrowLastSent) = await storage
+              .loadNotificationBudgetState(now: tomorrowFireTime);
+          // The real next day has not arrived yet — looking the ledger up
+          // under it must not find anything, and must not have silently
+          // consumed today's ledger either.
+          expect(tomorrowLastSent, isNull);
+          expect(tomorrowCount, 0);
+          expect(todayCount, 0); // owed kind, never spends the allowance
+        },
+      );
+
+      test(
+        'a later same-day call accumulates against the ledger instead of resetting it',
+        () async {
+          final storage = StorageService();
+          final today = DateTime(2026, 1, 1, 9, 0);
+          final tonightFireTime = DateTime(2026, 1, 1, 23, 30);
+          final laterToday = DateTime(2026, 1, 1, 10, 0);
+
+          // An owed notification scheduled this morning for tonight...
+          await storage.recordNotificationSent(
+            countsAgainstBudget: false,
+            at: tonightFireTime,
+            now: today,
+          );
+          // ...must not make an offered notification checked an hour
+          // later today see a reset (0, null) ledger.
+          await storage.recordNotificationSent(
+            countsAgainstBudget: true,
+            now: laterToday,
+          );
+
+          final (count, lastSent) = await storage.loadNotificationBudgetState(
+            now: laterToday,
+          );
+          expect(count, 1);
+          expect(lastSent, isNotNull);
+        },
+      );
+    },
+  );
+
   test('saves task results in the local database', () async {
     final storage = StorageService();
 
