@@ -7,14 +7,7 @@ import '../widgets/load_error_view.dart';
 import '../widgets/statistic_card.dart';
 
 class SavingsPage extends StatefulWidget {
-  final DateTime quitDate;
-  final String packsPerDay;
-
-  const SavingsPage({
-    super.key,
-    required this.quitDate,
-    required this.packsPerDay,
-  });
+  const SavingsPage({super.key});
 
   @override
   State<SavingsPage> createState() => _SavingsPageState();
@@ -36,10 +29,7 @@ class _SavingsPageState extends State<SavingsPage> {
     if (mounted) {
       _priceController.text = price.toStringAsFixed(0);
     }
-    return _service.computeSavings(
-      quitDate: widget.quitDate,
-      packsPerDay: widget.packsPerDay,
-    );
+    return _service.computeSavings();
   }
 
   Future<void> _updatePrice() async {
