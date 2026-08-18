@@ -47,6 +47,11 @@ class StepTrendEngine {
     return result;
   }
 
+  /// Sums whole calendar days from [start] through [end], inclusive of
+  /// both ends — [end] itself (typically "today") used to be excluded by a
+  /// strict `isBefore(endDay)` check, silently dropping the current day's
+  /// steps from every range that ends at "now" (report_engine.dart's
+  /// totalStepsInRange call, avgStepsPerDay by extension).
   int totalStepsInRange(
     List<StepCounterSample> samples, {
     required DateTime start,
@@ -57,7 +62,7 @@ class StepTrendEngine {
     final endDay = _dateOnly(end);
     return daily
         .where(
-          (day) => !day.date.isBefore(startDay) && day.date.isBefore(endDay),
+          (day) => !day.date.isBefore(startDay) && !day.date.isAfter(endDay),
         )
         .fold(0, (sum, day) => sum + day.steps);
   }
@@ -80,20 +85,34 @@ class StepTrendEngine {
     return 'Stable';
   }
 
-  /// True when the most recent day's step count is markedly below the
-  /// average of the prior days — physical activity is well-established to
-  /// reduce cravings, so a sudden drop from the user's own baseline is a
-  /// small, personalized craving-risk signal (Phase 11). Requires at least
-  /// 2 prior days plus the most recent one — comparing against a single
-  /// prior day would be too noisy to trust.
+  /// True when the most recent *completed* day's step count is markedly
+  /// below the average of the prior days — physical activity is well-
+  /// established to reduce cravings, so a sudden drop from the user's own
+  /// baseline is a small, personalized craving-risk signal (Phase 11).
+  /// Requires at least 2 prior days plus the most recent one — comparing
+  /// against a single prior day would be too noisy to trust.
+  ///
+  /// [now] (defaults to [DateTime.now()]) is used to drop today's entry
+  /// from [dailyCounts] before picking "the most recent day", if it's
+  /// there — an ongoing, still-partial day has naturally walked fewer
+  /// steps than a full day's average purely because it isn't over yet,
+  /// which used to flag every single morning as sedentary regardless of
+  /// actual activity. Callers that already pre-filter today out (or are
+  /// working with data that can never include it) can pass a [now] that's
+  /// before every entry's date to disable this filtering.
   bool isMostRecentDaySedentary(
     List<DailyStepCount> dailyCounts, {
     double thresholdRatio = 0.4,
+    DateTime? now,
   }) {
-    if (dailyCounts.length < 3) {
+    final today = _dateOnly(now ?? DateTime.now());
+    final completedDays = dailyCounts
+        .where((day) => day.date.isBefore(today))
+        .toList();
+    if (completedDays.length < 3) {
       return false;
     }
-    final sorted = [...dailyCounts]..sort((a, b) => a.date.compareTo(b.date));
+    final sorted = [...completedDays]..sort((a, b) => a.date.compareTo(b.date));
     final mostRecent = sorted.last;
     final priorDays = sorted.sublist(0, sorted.length - 1);
     final average =

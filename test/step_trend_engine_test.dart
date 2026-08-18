@@ -63,7 +63,11 @@ void main() {
       expect(result.first.steps, 500);
     });
 
-    test('totalStepsInRange sums only days within [start, end)', () {
+    test('totalStepsInRange sums all days within [start, end], inclusive', () {
+      // Regression coverage: end used to be an exclusive boundary, so a
+      // range built with end: DateTime.now() (the normal case — reports
+      // and the risk-score step signal both do this) silently dropped
+      // today's steps from the total every single day.
       final samples = [
         _sample(DateTime(2025, 12, 31, 8), 0),
         _sample(DateTime(2026, 1, 1, 8), 1000),
@@ -77,9 +81,9 @@ void main() {
         end: DateTime(2026, 1, 3),
       );
 
-      // Day 1: 1000-0=1000, Day 2: 3000-1000=2000. Day 3 excluded (end is
-      // exclusive).
-      expect(total, 3000);
+      // Day 1: 1000-0=1000, Day 2: 3000-1000=2000, Day 3: 4000-3000=1000 —
+      // all three days count, including end's own day.
+      expect(total, 4000);
     });
 
     test('trendFor reports Increasing/Decreasing/Stable from first vs '
@@ -138,6 +142,54 @@ void main() {
           ]),
           isFalse,
         );
+      });
+
+      group('today excluded as incomplete (regression coverage)', () {
+        // Regression coverage: a still-ongoing day naturally has fewer
+        // steps logged than a full day's average purely because it isn't
+        // over yet — comparing it directly against completed-day averages
+        // used to flag "sedentary" (and add +3 to the live risk score)
+        // every single morning, regardless of actual activity that day.
+        test("today's partial count is not compared against the completed "
+            'days average at all', () {
+          final now = DateTime(2026, 1, 4, 8, 0); // 8am, day barely started
+          final result = engine.isMostRecentDaySedentary([
+            DailyStepCount(date: DateTime(2026, 1, 1), steps: 6000),
+            DailyStepCount(date: DateTime(2026, 1, 2), steps: 5000),
+            DailyStepCount(date: DateTime(2026, 1, 3), steps: 5500),
+            // Today so far: barely any steps yet — not a real signal.
+            DailyStepCount(date: DateTime(2026, 1, 4), steps: 200),
+          ], now: now);
+          // With today excluded, the most recent *completed* day (Jan 3,
+          // 5500) is close to the Jan 1-2 average (5500) — not sedentary.
+          expect(result, isFalse);
+        });
+
+        test('a genuinely low completed day is still caught once today is '
+            'excluded', () {
+          final now = DateTime(2026, 1, 5, 8, 0);
+          final result = engine.isMostRecentDaySedentary([
+            DailyStepCount(date: DateTime(2026, 1, 1), steps: 6000),
+            DailyStepCount(date: DateTime(2026, 1, 2), steps: 5000),
+            DailyStepCount(date: DateTime(2026, 1, 3), steps: 5500),
+            // Yesterday, completed, genuinely low.
+            DailyStepCount(date: DateTime(2026, 1, 4), steps: 1000),
+            // Today so far — must be excluded, not compared.
+            DailyStepCount(date: DateTime(2026, 1, 5), steps: 50),
+          ], now: now);
+          expect(result, isTrue);
+        });
+
+        test('fewer than 3 completed days after excluding today is not enough, '
+            'even with 3+ total entries', () {
+          final now = DateTime(2026, 1, 3, 8, 0);
+          final result = engine.isMostRecentDaySedentary([
+            DailyStepCount(date: DateTime(2026, 1, 1), steps: 6000),
+            DailyStepCount(date: DateTime(2026, 1, 2), steps: 5000),
+            DailyStepCount(date: DateTime(2026, 1, 3), steps: 100),
+          ], now: now);
+          expect(result, isFalse);
+        });
       });
     });
 
