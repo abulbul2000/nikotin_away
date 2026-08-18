@@ -52,11 +52,14 @@ void main() {
     }
   });
 
-  test('unknown language or key never silently falls back to another language', () {
-    expect(AppTexts.textForCode('xx', 'save'), 'save');
-    expect(AppTexts.textForCode('en', '__missing_key__'), '__missing_key__');
-    expect(AppTexts.textForCode('tr', '__missing_key__'), '__missing_key__');
-  });
+  test(
+    'unknown language or key never silently falls back to another language',
+    () {
+      expect(AppTexts.textForCode('xx', 'save'), 'save');
+      expect(AppTexts.textForCode('en', '__missing_key__'), '__missing_key__');
+      expect(AppTexts.textForCode('tr', '__missing_key__'), '__missing_key__');
+    },
+  );
 
   test('no language ever shows a raw key to the user', () {
     for (final code in supported) {
@@ -122,13 +125,38 @@ void main() {
 
   group('coverage', () {
     test('every generated language has the complete bundled key set', () {
-      final referenceKeys = generatedLanguageData.values.first.keys.toSet();
+      // Was generatedLanguageData.values.first.keys.toSet() — "reference"
+      // meant whichever language happened to be first in Dart's map
+      // literal insertion order, not a stable or even correct choice: a
+      // key present in English but missing from that first language would
+      // never be flagged as missing anywhere, because the check only ever
+      // compared every language against that one incomplete language's
+      // own gaps. AppTexts.referenceKeys is the actual source of truth
+      // (English is written first, per this file's own comments).
+      final referenceKeys = AppTexts.referenceKeys;
       final gaps = <String, int>{};
       for (final entry in generatedLanguageData.entries) {
         final missing = referenceKeys.difference(entry.value.keys.toSet());
         if (missing.isNotEmpty) gaps[entry.key] = missing.length;
       }
       expect(gaps, isEmpty, reason: 'language bundles are incomplete: $gaps');
+    });
+
+    test('no bundled key resolves to an empty or whitespace-only value', () {
+      // Key-presence alone (the test above) does not catch a key that
+      // exists but was bundled with an empty string — that renders as a
+      // blank line/label, and unlike a missing key it does not fall back
+      // to anything: textForCode only substitutes the key name when the
+      // map lookup itself misses, not when it succeeds with a blank value.
+      final blanks = <String>[];
+      for (final entry in generatedLanguageData.entries) {
+        for (final kv in entry.value.entries) {
+          if (kv.value.trim().isEmpty) {
+            blanks.add('${entry.key}/${kv.key}');
+          }
+        }
+      }
+      expect(blanks, isEmpty, reason: 'blank bundled values: $blanks');
     });
 
     test('bundled languages cover the keys the English table defines', () {

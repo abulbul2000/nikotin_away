@@ -4059,6 +4059,16 @@ class AppTexts {
     return generatedLanguageData[code]?[key] ?? key;
   }
 
+  /// The canonical set of translatable keys — English is the language
+  /// every key is guaranteed to be written in first (see this file's own
+  /// `_en` map), so it is the only trustworthy reference for "every
+  /// generated language should have this key" checks. Picking any other
+  /// language for that role (e.g. the first entry in
+  /// `generatedLanguageData`, whatever that happens to be after Dart's map
+  /// literal insertion order) inherits that language's own gaps as if
+  /// they were the target instead of the problem.
+  static Set<String> get referenceKeys => _en.keys.toSet();
+
   /// Kept so callers do not have to know whether a language needs loading.
   ///
   /// It used to fetch the whole string table from translate.googleapis.com
