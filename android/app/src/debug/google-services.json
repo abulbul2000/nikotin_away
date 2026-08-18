@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "204994363768",
+    "project_id": "nikotin-away-development-eb94d",
+    "storage_bucket": "nikotin-away-development-eb94d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:204994363768:android:57fe83151d02bdc61c088d",
+        "android_client_info": {
+          "package_name": "com.nikotinaway.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2GoIIVyDQbLKLH83jLCa2dMuQPITxhdg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

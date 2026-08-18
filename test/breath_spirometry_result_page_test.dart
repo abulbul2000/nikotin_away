@@ -3,11 +3,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:no_smoke/core/app_texts.dart';
 import 'package:no_smoke/pages/breath_spirometry_result_page.dart';
 import 'package:no_smoke/services/storage_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+String _tr(String key) => AppTexts.textForCode('tr', key);
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   final Directory _dir = Directory.systemTemp.createTempSync(
@@ -85,11 +88,11 @@ void main() {
         findsOneWidget,
       );
       expect(
-        find.text('Bu testte olagandisi bir ses paterni duyuldu.'),
+        find.text(_tr('breathUnusualSoundDetected')),
         findsOneWidget,
       );
       // No clinical severity wording should survive on this screen.
-      expect(find.textContaining('duzeyde'), findsNothing);
+      expect(find.textContaining('düzeyde'), findsNothing);
     },
   );
 
