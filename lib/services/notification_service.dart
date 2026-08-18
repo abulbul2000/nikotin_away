@@ -17,7 +17,6 @@ import '../pages/craving_sos_page.dart';
 import '../pages/health_tip_page.dart';
 import '../pages/medication_reminder_page.dart';
 import '../pages/notifications_page.dart';
-import '../pages/task_smoked_confirm_page.dart';
 import '../pages/weekly_survey_page.dart';
 import 'android_watchdog_service.dart';
 import 'behavior_engine.dart';
@@ -416,16 +415,78 @@ class NotificationService {
   static int _confirmIdFor(String taskTitle) =>
       (taskTitle.hashCode.abs() % 100000) + 820000;
 
-  /// Schedules the end-of-barrier resolution prompt using the same stable
-  /// notification id and payload as the task-confirmation flow.
+  static int _barrierResolutionReminderIdFor(String taskTitle) =>
+      (taskTitle.hashCode.abs() % 100000) + 850000;
+
+  /// A quieter repeat of [scheduleTaskConfirmationPrompt], fired
+  /// [barrierResolutionDeadline] after the first prompt in case it never
+  /// gets answered. Needs its own notification id — reusing
+  /// [_confirmIdFor]'s id would schedule it for the exact same instant as
+  /// the first prompt, replacing it outright instead of adding a later
+  /// reminder. The delay is deliberately kept in step with
+  /// [StorageService.closeStaleAcceptedBarriers]'s own cutoff math (see its
+  /// doc comment), which is what gives up on the barrier and closes it as
+  /// unknown once the deadline passes.
   static Future<void> scheduleBarrierResolutionReminder({
     required String taskTitle,
     required Duration delay,
-  }) => scheduleTaskConfirmationPrompt(taskTitle: taskTitle, delay: delay);
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final scheduleMode = await _resolveAndroidScheduleMode();
+    final fireAt = tz.TZDateTime.now(
+      tz.local,
+    ).add(delay + barrierResolutionDeadline);
+    await _budgetAllows(NotificationKind.taskConfirmation, at: fireAt);
 
-  /// Cancels a previously scheduled barrier-resolution prompt.
+    await _zonedSchedule(
+      _barrierResolutionReminderIdFor(taskTitle),
+      _text(code, 'taskConfirmQuestionTitle'),
+      _text(code, 'taskConfirmQuestion'),
+      fireAt,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _taskConfirmChannelId,
+          _text(code, 'channelNameTaskConfirm'),
+          importance: Importance.high,
+          priority: Priority.defaultPriority,
+          playSound: true,
+          enableVibration: true,
+          vibrationPattern: _taskVibrationPattern,
+          category: AndroidNotificationCategory.reminder,
+          visibility: NotificationVisibility.private,
+          actions: <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              _actionConfirmSmokedYes,
+              _text(code, 'taskConfirmYesLabel'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionConfirmSmokedNo,
+              _text(code, 'taskConfirmNoLabel'),
+              showsUserInterface: false,
+              cancelNotification: true,
+            ),
+          ],
+        ),
+        iOS: const DarwinNotificationDetails(
+          categoryIdentifier: _categoryTaskConfirm,
+        ),
+      ),
+      androidScheduleMode: scheduleMode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: jsonEncode({'type': _typeTaskConfirm, 'taskTitle': taskTitle}),
+    );
+  }
+
+  /// Cancels a previously scheduled barrier-resolution prompt, along with
+  /// the first task-confirmation prompt it repeats — both ask the same
+  /// question and only one should remain outstanding once the barrier
+  /// resolves.
   static Future<void> cancelBarrierResolutionReminder(String taskTitle) async {
     await _plugin.cancel(_confirmIdFor(taskTitle));
+    await _plugin.cancel(_barrierResolutionReminderIdFor(taskTitle));
   }
 
   static const String _categoryTaskStart = 'task_start_category';
@@ -1444,14 +1505,20 @@ class NotificationService {
     }
   }
 
-  /// Records the end-of-window answer, shared by the notification's own
-  /// Evet/Hayır action buttons and [TaskSmokedConfirmPage]'s full-screen buttons.
-  /// "Did you smoke?" — so yes is the failure. Getting this backwards would
-  /// invert every outcome the learning engine ever records.
+  /// Records the end-of-window answer, taken directly from the
+  /// notification's own Evet/Hayır action buttons (both the first prompt and
+  /// [scheduleBarrierResolutionReminder]'s later repeat share the same
+  /// payload type and route here). "Did you smoke?" — so yes is the
+  /// failure. Getting this backwards would invert every outcome the
+  /// learning engine ever records.
   static Future<void> _resolveTaskConfirmOutcome(
     String canonicalTitle, {
     required bool smoked,
   }) async {
+    // The question has now been answered — cancel whichever of the two
+    // prompts (first or reminder) didn't fire yet, or it would ask again for
+    // a window that's already resolved.
+    await cancelBarrierResolutionReminder(canonicalTitle);
     if (smoked) {
       await _transitionTask(canonicalTitle, TaskLifecycleState.failedSmoked);
       // An admission is also a real cigarette, so it belongs in the same
@@ -1522,6 +1589,15 @@ class NotificationService {
       // old follow-up, which asked whether the task was completed — the same
       // moment, the opposite polarity.
       await scheduleTaskConfirmationPrompt(
+        taskTitle: canonicalTitle,
+        delay: delay,
+      );
+      // A quieter repeat if the first prompt never gets answered — mirrors
+      // TaskAssignmentService.handleTaskAction's own acceptance branch. This
+      // path (app closed/backgrounded) is most task acceptances in practice,
+      // so omitting it here would leave the safety-net reminder missing for
+      // the majority case even after the foreground path schedules it.
+      await scheduleBarrierResolutionReminder(
         taskTitle: canonicalTitle,
         delay: delay,
       );
