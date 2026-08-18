@@ -4001,10 +4001,37 @@ class StorageService {
   ///
   /// Notification payloads still carry only `ADAPTIVE_NO_SMOKE:<minutes>`, so
   /// an answer arriving from a notification has to be matched back to a row
-  /// by title. Most recent wins: the same duration comes round again on later
-  /// days, and the answer can only ever be about the one currently in play.
+  /// by title. The same duration recurs across days (and, with jitter,
+  /// occasionally within the same day), so more than one row can share a
+  /// title — an in-flight (non-terminal) row is preferred over a resolved
+  /// one, since an answer can only ever be about a task still actually
+  /// awaiting one; a plain "most recent by scheduledAt" would otherwise
+  /// sometimes hand back an already-succeeded/failed row from later in the
+  /// day instead of the still-open one the response was actually about.
+  /// [TaskAssignment.transitionTaskAssignment]'s own terminal-state guard
+  /// already prevents *that* wrong match from corrupting a finished task,
+  /// but this still preferred one, non-terminal row can accidentally
+  /// mutate the wrong currently-open task — only genuinely simultaneous
+  /// same-title in-flight tasks (not fully eliminated by this) remain
+  /// unresolved without threading the assignment id itself through the
+  /// notification payload, a larger change.
+  /// Falls back to the most recent row of any state when nothing
+  /// non-terminal exists, matching every caller that legitimately wants a
+  /// completed task's own row (e.g. displaying its final outcome).
   Future<TaskAssignment?> loadLatestTaskAssignmentByTitle(String title) async {
     final db = await database;
+    final nonTerminalRows = await db.query(
+      _taskAssignmentsTable,
+      where:
+          'canonicalTitle = ? AND state NOT IN (${List.filled(TaskLifecycleState.terminal.length, '?').join(',')})',
+      whereArgs: [title, ...TaskLifecycleState.terminal],
+      orderBy: 'scheduledAt DESC',
+      limit: 1,
+    );
+    if (nonTerminalRows.isNotEmpty) {
+      return TaskAssignment.fromJson(nonTerminalRows.first);
+    }
+
     final rows = await db.query(
       _taskAssignmentsTable,
       where: 'canonicalTitle = ?',

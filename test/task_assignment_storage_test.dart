@@ -280,6 +280,97 @@ void main() {
     expect(resolved!.id, 'new');
   });
 
+  group('loadLatestTaskAssignmentByTitle prefers an in-flight task over a '
+      'later-scheduled but already-resolved one (regression coverage)', () {
+    // Regression coverage: with jitter, two rows can share a canonical
+    // title within the same day (or close together across days) — a
+    // plain "most recent by scheduledAt" could hand back an
+    // already-succeeded/failed row from later in the day instead of the
+    // still-open one a notification response is actually about.
+    // TaskAssignment.transitionTaskAssignment's own terminal-state guard
+    // stops that wrong match from corrupting the finished task, but the
+    // response itself would then silently go nowhere instead of landing
+    // on the task it was actually about.
+    test('an earlier-scheduled but still-open task wins over a '
+        'later-scheduled, already-terminal one', () async {
+      final storage = StorageService();
+      await storage.saveTaskAssignment(
+        _task(
+          id: 'still_open',
+          durationMinutes: 45,
+          scheduledAt: DateTime(2026, 7, 20, 9, 0),
+          state: TaskLifecycleState.accepted,
+        ),
+      );
+      await storage.saveTaskAssignment(
+        _task(
+          id: 'already_done',
+          durationMinutes: 45,
+          scheduledAt: DateTime(2026, 7, 20, 14, 0),
+          state: TaskLifecycleState.succeeded,
+        ),
+      );
+
+      final resolved = await storage.loadLatestTaskAssignmentByTitle(
+        'ADAPTIVE_NO_SMOKE:45',
+      );
+      expect(resolved!.id, 'still_open');
+    });
+
+    test('falls back to the most recent terminal row when nothing is '
+        'in flight — a caller legitimately looking up a finished task '
+        'still gets an answer', () async {
+      final storage = StorageService();
+      await storage.saveTaskAssignment(
+        _task(
+          id: 'older_done',
+          durationMinutes: 20,
+          scheduledAt: DateTime(2026, 7, 18, 9, 0),
+          state: TaskLifecycleState.succeeded,
+        ),
+      );
+      await storage.saveTaskAssignment(
+        _task(
+          id: 'newer_done',
+          durationMinutes: 20,
+          scheduledAt: DateTime(2026, 7, 20, 9, 0),
+          state: TaskLifecycleState.failedSmoked,
+        ),
+      );
+
+      final resolved = await storage.loadLatestTaskAssignmentByTitle(
+        'ADAPTIVE_NO_SMOKE:20',
+      );
+      expect(resolved!.id, 'newer_done');
+    });
+
+    test('among multiple in-flight rows, the most recently scheduled one '
+        'still wins', () async {
+      final storage = StorageService();
+      await storage.saveTaskAssignment(
+        _task(
+          id: 'in_flight_old',
+          durationMinutes: 30,
+          scheduledAt: DateTime(2026, 7, 20, 9, 0),
+          state: TaskLifecycleState.delivered,
+        ),
+      );
+      await storage.saveTaskAssignment(
+        _task(
+          id: 'in_flight_new',
+          durationMinutes: 30,
+          scheduledAt: DateTime(2026, 7, 20, 15, 0),
+          state: TaskLifecycleState.accepted,
+        ),
+      );
+
+      final resolved = await storage.loadLatestTaskAssignmentByTitle(
+        'ADAPTIVE_NO_SMOKE:30',
+      );
+      expect(resolved!.id, 'in_flight_new');
+    });
+  });
+
   group('a task nobody answered', () {
     test('is closed rather than left in flight', () async {
       final storage = StorageService();
