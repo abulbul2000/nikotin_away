@@ -58,9 +58,9 @@ class RiskResultPage extends StatelessWidget {
     return context.t('riskLow');
   }
 
-  String _formatDate(DateTime? date) {
+  String _formatDate(BuildContext context, DateTime? date) {
     if (date == null) {
-      return 'notSpecified';
+      return context.t('notSpecified');
     }
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
@@ -73,10 +73,10 @@ class RiskResultPage extends StatelessWidget {
     return 'free';
   }
 
-  String _getUsageDuration() {
+  String _getUsageDuration(BuildContext context) {
     final startDate = behaviorProfile?.subscriptionStartDate;
     if (startDate == null) {
-      return 'notSpecified';
+      return context.t('notSpecified');
     }
     final endDate = behaviorProfile?.subscriptionEndDate ?? DateTime.now();
     final days = endDate.difference(startDate).inDays;
@@ -113,10 +113,9 @@ class RiskResultPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final usageDuration = _getUsageDuration().replaceAll(
-      '{days}',
-      context.t('days'),
-    );
+    final usageDuration = _getUsageDuration(
+      context,
+    ).replaceAll('{days}', context.t('days'));
 
     return Scaffold(
       appBar: AppBar(title: Text(context.t('riskAnalysis'))),
@@ -176,11 +175,17 @@ class RiskResultPage extends StatelessWidget {
                     ),
                     _buildInfoRow(
                       context.t('subscriptionStart'),
-                      _formatDate(behaviorProfile?.subscriptionStartDate),
+                      _formatDate(
+                        context,
+                        behaviorProfile?.subscriptionStartDate,
+                      ),
                     ),
                     _buildInfoRow(
                       context.t('subscriptionEnd'),
-                      _formatDate(behaviorProfile?.subscriptionEndDate),
+                      _formatDate(
+                        context,
+                        behaviorProfile?.subscriptionEndDate,
+                      ),
                     ),
                     _buildInfoRow(context.t('totalUsage'), usageDuration),
                     _buildInfoRow(
