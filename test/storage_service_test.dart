@@ -93,6 +93,96 @@ void main() {
     expect(history.first.taskResult, 'Tamamlandı');
   });
 
+  group('loadTaskHistory / loadTaskOutcomeSummary (regression coverage)', () {
+    // Regression coverage for a bug where task acceptance sank completion
+    // rates toward 50%: every accepted task writes a 'started' row (see
+    // NotificationService's ACTION_TASK_DONE handler) in addition to
+    // whatever outcome eventually follows, and 'started' used to fall into
+    // loadTaskHistory's failure bucket by default (it matches none of the
+    // success substrings) even for a user who never actually failed a task.
+    test(
+      'a "started" row alone is excluded, not counted as a failure',
+      () async {
+        final storage = StorageService();
+        await storage.saveTaskResult(
+          taskTitle: 'ADAPTIVE_NO_SMOKE:15',
+          taskResult: 'started',
+          completedAt: DateTime(2024, 3, 1),
+        );
+
+        final history = await storage.loadTaskHistory();
+        expect(history, isEmpty);
+
+        final summary = await storage.loadTaskOutcomeSummary();
+        expect(summary['successCount'], 0);
+        expect(summary['failureCount'], 0);
+      },
+    );
+
+    test(
+      'a full started -> willpower_success pair counts as exactly one success',
+      () async {
+        final storage = StorageService();
+        await storage.saveTaskResult(
+          taskTitle: 'ADAPTIVE_NO_SMOKE:15',
+          taskResult: 'started',
+          completedAt: DateTime(2024, 3, 1, 9, 0),
+        );
+        await storage.saveTaskResult(
+          taskTitle: 'ADAPTIVE_NO_SMOKE:15',
+          taskResult: 'willpower_success',
+          completedAt: DateTime(2024, 3, 1, 9, 30),
+        );
+
+        final history = await storage.loadTaskHistory();
+        expect(history, hasLength(1));
+        expect(history.single.completed, isTrue);
+
+        final summary = await storage.loadTaskOutcomeSummary();
+        expect(summary['successCount'], 1);
+        expect(summary['failureCount'], 0);
+      },
+    );
+
+    test('a value containing "basarisiz" is a failure, not a success '
+        '("basarisiz" contains "basar" as a prefix)', () async {
+      final storage = StorageService();
+      await storage.saveTaskResult(
+        taskTitle: 'ADAPTIVE_NO_SMOKE:15',
+        taskResult: 'gorev_basarisiz',
+        completedAt: DateTime(2024, 3, 1),
+      );
+
+      final history = await storage.loadTaskHistory();
+      expect(history, hasLength(1));
+      expect(history.single.completed, isFalse);
+    });
+
+    test('a real failure outcome is still counted as a failure', () async {
+      final storage = StorageService();
+      await storage.saveTaskResult(
+        taskTitle: 'ADAPTIVE_NO_SMOKE:15',
+        taskResult: 'started',
+        completedAt: DateTime(2024, 3, 1, 9, 0),
+      );
+      await storage.saveTaskResult(
+        taskTitle: 'ADAPTIVE_NO_SMOKE:15',
+        taskResult: 'failed_missed',
+        completedAt: DateTime(2024, 3, 1, 9, 30),
+      );
+
+      final history = await storage.loadTaskHistory();
+      // 'started' is excluded, 'failed_missed' matches none of the success
+      // substrings so it's counted as a failure — exactly one outcome row.
+      expect(history, hasLength(1));
+      expect(history.single.completed, isFalse);
+
+      final summary = await storage.loadTaskOutcomeSummary();
+      expect(summary['successCount'], 0);
+      expect(summary['failureCount'], 1);
+    });
+  });
+
   test('calculates breath averages from history', () async {
     final storage = StorageService();
     final now = DateTime.now();
@@ -482,24 +572,27 @@ void main() {
   });
 
   group('snoring probe captureSucceeded (Faz 2 -- Android 11+ mic fix)', () {
-    test('saveManualSnoringProbe always records captureSucceeded true', () async {
-      final storage = StorageService();
-      final now = DateTime.now();
-      await storage.saveManualSnoringProbe(
-        SnoringProbeEvent(
-          id: 'manualsnoreprobe_2',
-          createdAt: now,
-          snoreLikely: false,
-        ),
-      );
+    test(
+      'saveManualSnoringProbe always records captureSucceeded true',
+      () async {
+        final storage = StorageService();
+        final now = DateTime.now();
+        await storage.saveManualSnoringProbe(
+          SnoringProbeEvent(
+            id: 'manualsnoreprobe_2',
+            createdAt: now,
+            snoreLikely: false,
+          ),
+        );
 
-      final events = await storage.loadSnoringProbeEventsBetween(
-        start: now.subtract(const Duration(minutes: 1)),
-        end: now.add(const Duration(minutes: 1)),
-      );
+        final events = await storage.loadSnoringProbeEventsBetween(
+          start: now.subtract(const Duration(minutes: 1)),
+          end: now.add(const Duration(minutes: 1)),
+        );
 
-      expect(events.single.captureSucceeded, isTrue);
-    });
+        expect(events.single.captureSucceeded, isTrue);
+      },
+    );
 
     test('a pre-migration row with no captureSucceeded column loads as null '
         'instead of crashing', () async {
@@ -607,80 +700,77 @@ void main() {
       },
     );
 
-    test(
-      'id-prefix backfill classifies pre-existing rows correctly: '
-      "'snoreprobe_' as overnight, 'manualsnoreprobe_' as manual",
-      () async {
-        // Simulates a device already on a schema version before the source
-        // column existed on snoring_probe_events: create the table by hand,
-        // without the column, then run it through the real onUpgrade path
-        // by opening it with StorageService -- same pattern as the
-        // breath_progress_records schemaVersion migration test above.
-        final dir = Directory.systemTemp.createTempSync(
-          'no_smoke_snoring_source_migration',
-        );
-        PathProviderPlatform.instance = _FixedPathProviderPlatform(dir.path);
-        final dbPath = '${dir.path}/no_smoke.db';
-        final now = DateTime.now();
+    test('id-prefix backfill classifies pre-existing rows correctly: '
+        "'snoreprobe_' as overnight, 'manualsnoreprobe_' as manual", () async {
+      // Simulates a device already on a schema version before the source
+      // column existed on snoring_probe_events: create the table by hand,
+      // without the column, then run it through the real onUpgrade path
+      // by opening it with StorageService -- same pattern as the
+      // breath_progress_records schemaVersion migration test above.
+      final dir = Directory.systemTemp.createTempSync(
+        'no_smoke_snoring_source_migration',
+      );
+      PathProviderPlatform.instance = _FixedPathProviderPlatform(dir.path);
+      final dbPath = '${dir.path}/no_smoke.db';
+      final now = DateTime.now();
 
-        final legacyDb = await databaseFactory.openDatabase(
-          dbPath,
-          options: OpenDatabaseOptions(
-            // Below the real code's current version (32) so that opening it
-            // with StorageService below actually goes through onUpgrade
-            // instead of finding a matching version and skipping every
-            // callback.
-            version: 31,
-            onCreate: (db, version) async {
-              await db.execute('''
+      final legacyDb = await databaseFactory.openDatabase(
+        dbPath,
+        options: OpenDatabaseOptions(
+          // Below the real code's current version (32) so that opening it
+          // with StorageService below actually goes through onUpgrade
+          // instead of finding a matching version and skipping every
+          // callback.
+          version: 31,
+          onCreate: (db, version) async {
+            await db.execute('''
                 CREATE TABLE snoring_probe_events (
                   id TEXT PRIMARY KEY,
                   createdAt TEXT NOT NULL,
                   snoreLikely INTEGER NOT NULL
                 )
               ''');
-              await db.insert('snoring_probe_events', {
-                'id': 'snoreprobe_legacy_overnight',
-                'createdAt': now.toUtc().toIso8601String(),
-                'snoreLikely': 1,
-              });
-              await db.insert('snoring_probe_events', {
-                'id': 'manualsnoreprobe_legacy_manual',
-                'createdAt': now.toUtc().toIso8601String(),
-                'snoreLikely': 1,
-              });
-            },
-          ),
-        );
-        await legacyDb.close();
+            await db.insert('snoring_probe_events', {
+              'id': 'snoreprobe_legacy_overnight',
+              'createdAt': now.toUtc().toIso8601String(),
+              'snoreLikely': 1,
+            });
+            await db.insert('snoring_probe_events', {
+              'id': 'manualsnoreprobe_legacy_manual',
+              'createdAt': now.toUtc().toIso8601String(),
+              'snoreLikely': 1,
+            });
+          },
+        ),
+      );
+      await legacyDb.close();
 
-        final storage = StorageService();
-        await storage.closeDatabaseConnection();
+      final storage = StorageService();
+      await storage.closeDatabaseConnection();
 
-        final overnightOnly = await storage.loadSnoringProbeEventsBetween(
-          start: now.subtract(const Duration(minutes: 1)),
-          end: now.add(const Duration(minutes: 1)),
-          source: SnoringProbeEvent.sourceOvernight,
-        );
-        final manualOnly = await storage.loadSnoringProbeEventsBetween(
-          start: now.subtract(const Duration(minutes: 1)),
-          end: now.add(const Duration(minutes: 1)),
-          source: SnoringProbeEvent.sourceManual,
-        );
+      final overnightOnly = await storage.loadSnoringProbeEventsBetween(
+        start: now.subtract(const Duration(minutes: 1)),
+        end: now.add(const Duration(minutes: 1)),
+        source: SnoringProbeEvent.sourceOvernight,
+      );
+      final manualOnly = await storage.loadSnoringProbeEventsBetween(
+        start: now.subtract(const Duration(minutes: 1)),
+        end: now.add(const Duration(minutes: 1)),
+        source: SnoringProbeEvent.sourceManual,
+      );
 
-        expect(
-          overnightOnly.map((e) => e.id),
-          contains('snoreprobe_legacy_overnight'),
-        );
-        expect(
-          manualOnly.map((e) => e.id),
-          contains('manualsnoreprobe_legacy_manual'),
-        );
+      expect(
+        overnightOnly.map((e) => e.id),
+        contains('snoreprobe_legacy_overnight'),
+      );
+      expect(
+        manualOnly.map((e) => e.id),
+        contains('manualsnoreprobe_legacy_manual'),
+      );
 
-        await storage.closeDatabaseConnection();
-        PathProviderPlatform.instance = _FakePathProviderPlatform();
-      },
-    );
+      await storage.closeDatabaseConnection();
+      PathProviderPlatform.instance = _FakePathProviderPlatform();
+    });
   });
 
   group('subscription state', () {
@@ -753,54 +843,51 @@ void main() {
   });
 
   group('duration barrier outcomes reach the learning engine', () {
-    test(
-      'ADAPTIVE_NO_SMOKE:<minutes> success/smoked rows make '
-      'barrierSuccessRate differ from the 0.5 no-data default',
-      () async {
-        final storage = StorageService();
+    test('ADAPTIVE_NO_SMOKE:<minutes> success/smoked rows make '
+        'barrierSuccessRate differ from the 0.5 no-data default', () async {
+      final storage = StorageService();
 
-        // Two successes, one smoked failure -- a 2/3 rate, nowhere near 0.5,
-        // so a bug that quietly falls back to the no-data default would be
-        // caught by this assertion instead of accidentally matching.
-        await storage.recordAdaptiveTaskOutcome(
-          taskTitle: 'ADAPTIVE_NO_SMOKE:45',
-          outcome: AdaptiveTaskOutcome.success,
-          plannedDurationMinutes: 45,
-          scheduledAt: DateTime.now().subtract(const Duration(hours: 3)),
-          respondedAt: DateTime.now().subtract(const Duration(hours: 2)),
-        );
-        await storage.recordAdaptiveTaskOutcome(
-          taskTitle: 'ADAPTIVE_NO_SMOKE:50',
-          outcome: AdaptiveTaskOutcome.success,
-          plannedDurationMinutes: 50,
-          scheduledAt: DateTime.now().subtract(const Duration(hours: 2)),
-          respondedAt: DateTime.now().subtract(const Duration(hours: 1)),
-        );
-        await storage.recordAdaptiveTaskOutcome(
-          taskTitle: 'ADAPTIVE_NO_SMOKE:40',
-          outcome: AdaptiveTaskOutcome.smoked,
-          plannedDurationMinutes: 40,
-          scheduledAt: DateTime.now().subtract(const Duration(hours: 1)),
-          respondedAt: DateTime.now(),
-        );
+      // Two successes, one smoked failure -- a 2/3 rate, nowhere near 0.5,
+      // so a bug that quietly falls back to the no-data default would be
+      // caught by this assertion instead of accidentally matching.
+      await storage.recordAdaptiveTaskOutcome(
+        taskTitle: 'ADAPTIVE_NO_SMOKE:45',
+        outcome: AdaptiveTaskOutcome.success,
+        plannedDurationMinutes: 45,
+        scheduledAt: DateTime.now().subtract(const Duration(hours: 3)),
+        respondedAt: DateTime.now().subtract(const Duration(hours: 2)),
+      );
+      await storage.recordAdaptiveTaskOutcome(
+        taskTitle: 'ADAPTIVE_NO_SMOKE:50',
+        outcome: AdaptiveTaskOutcome.success,
+        plannedDurationMinutes: 50,
+        scheduledAt: DateTime.now().subtract(const Duration(hours: 2)),
+        respondedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      );
+      await storage.recordAdaptiveTaskOutcome(
+        taskTitle: 'ADAPTIVE_NO_SMOKE:40',
+        outcome: AdaptiveTaskOutcome.smoked,
+        plannedDurationMinutes: 40,
+        scheduledAt: DateTime.now().subtract(const Duration(hours: 1)),
+        respondedAt: DateTime.now(),
+      );
 
-        final dashboard = await storage.loadBehaviorDashboard();
-        final barrierLine = dashboard.riskExplanation.firstWhere(
-          (line) => line.startsWith('Sure bariyeri uyumu'),
-          orElse: () => '',
-        );
+      final dashboard = await storage.loadBehaviorDashboard();
+      final barrierLine = dashboard.riskExplanation.firstWhere(
+        (line) => line.startsWith('Sure bariyeri uyumu'),
+        orElse: () => '',
+      );
 
-        expect(
-          barrierLine,
-          isNot(contains('%50')),
-          reason:
-              'barrierSuccessRate should reflect the 2/3 real outcomes '
-              'above, not the 0.5 fallback that fires when no rows match.',
-        );
-        expect(barrierLine, contains('%67'));
-        expect(barrierLine, contains('son: 2 basarili / 1 basarisiz'));
-      },
-    );
+      expect(
+        barrierLine,
+        isNot(contains('%50')),
+        reason:
+            'barrierSuccessRate should reflect the 2/3 real outcomes '
+            'above, not the 0.5 fallback that fires when no rows match.',
+      );
+      expect(barrierLine, contains('%67'));
+      expect(barrierLine, contains('son: 2 basarili / 1 basarisiz'));
+    });
 
     test(
       'a legacy SURE-BARIYERI-titled row still counts toward the rate',
@@ -826,40 +913,34 @@ void main() {
   });
 
   group('duration barrier consent switch (regression coverage)', () {
-    test(
-      'duration_barrier_enabled = 0 produces an empty plan',
-      () async {
-        final storage = StorageService();
-        await storage.saveSetting('duration_barrier_enabled', '0');
+    test('duration_barrier_enabled = 0 produces an empty plan', () async {
+      final storage = StorageService();
+      await storage.saveSetting('duration_barrier_enabled', '0');
 
-        final plan = await storage.buildAdaptiveNoSmokePlan(
-          now: DateTime(2026, 1, 1, 10),
-          sleepAt: DateTime(2026, 1, 1, 23),
-          riskyHours: const [],
-        );
+      final plan = await storage.buildAdaptiveNoSmokePlan(
+        now: DateTime(2026, 1, 1, 10),
+        sleepAt: DateTime(2026, 1, 1, 23),
+        riskyHours: const [],
+      );
 
-        expect(plan.targetTaskCount, 0);
-        expect(plan.items, isEmpty);
-      },
-    );
+      expect(plan.targetTaskCount, 0);
+      expect(plan.items, isEmpty);
+    });
 
-    test(
-      "duration_barrier_preference = 'off' produces an empty plan even "
-      "when duration_barrier_enabled is left unset",
-      () async {
-        final storage = StorageService();
-        await storage.saveSetting('duration_barrier_preference', 'off');
+    test("duration_barrier_preference = 'off' produces an empty plan even "
+        "when duration_barrier_enabled is left unset", () async {
+      final storage = StorageService();
+      await storage.saveSetting('duration_barrier_preference', 'off');
 
-        final plan = await storage.buildAdaptiveNoSmokePlan(
-          now: DateTime(2026, 1, 1, 10),
-          sleepAt: DateTime(2026, 1, 1, 23),
-          riskyHours: const [],
-        );
+      final plan = await storage.buildAdaptiveNoSmokePlan(
+        now: DateTime(2026, 1, 1, 10),
+        sleepAt: DateTime(2026, 1, 1, 23),
+        riskyHours: const [],
+      );
 
-        expect(plan.targetTaskCount, 0);
-        expect(plan.items, isEmpty);
-      },
-    );
+      expect(plan.targetTaskCount, 0);
+      expect(plan.items, isEmpty);
+    });
 
     test(
       'frequency az/cok change task COUNT but never the barrier DURATION',
@@ -973,54 +1054,51 @@ void main() {
       },
     );
 
-    test(
-      'every duration_barrier_* saveSetting call site has a matching '
-      'loadSetting reader somewhere in lib/',
-      () async {
-        final libDir = Directory('lib');
-        final dartFiles = libDir
-            .listSync(recursive: true)
-            .whereType<File>()
-            .where((f) => f.path.endsWith('.dart'));
+    test('every duration_barrier_* saveSetting call site has a matching '
+        'loadSetting reader somewhere in lib/', () async {
+      final libDir = Directory('lib');
+      final dartFiles = libDir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.dart'));
 
-        final saveKeyPattern = RegExp(
-          r"saveSetting\(\s*'(duration_barrier_[a-zA-Z_]+)'",
-        );
-        final loadKeyPattern = RegExp(
-          r"loadSetting\(\s*'(duration_barrier_[a-zA-Z_]+)'",
-        );
+      final saveKeyPattern = RegExp(
+        r"saveSetting\(\s*'(duration_barrier_[a-zA-Z_]+)'",
+      );
+      final loadKeyPattern = RegExp(
+        r"loadSetting\(\s*'(duration_barrier_[a-zA-Z_]+)'",
+      );
 
-        final savedKeys = <String>{};
-        final loadedKeys = <String>{};
-        for (final file in dartFiles) {
-          final content = file.readAsStringSync();
-          for (final match in saveKeyPattern.allMatches(content)) {
-            savedKeys.add(match.group(1)!);
-          }
-          for (final match in loadKeyPattern.allMatches(content)) {
-            loadedKeys.add(match.group(1)!);
-          }
+      final savedKeys = <String>{};
+      final loadedKeys = <String>{};
+      for (final file in dartFiles) {
+        final content = file.readAsStringSync();
+        for (final match in saveKeyPattern.allMatches(content)) {
+          savedKeys.add(match.group(1)!);
         }
+        for (final match in loadKeyPattern.allMatches(content)) {
+          loadedKeys.add(match.group(1)!);
+        }
+      }
 
+      expect(
+        savedKeys,
+        isNotEmpty,
+        reason:
+            'sanity check -- if this is empty the regex/scan itself is '
+            'broken, not that there are no duration_barrier_* settings',
+      );
+      for (final key in savedKeys) {
         expect(
-          savedKeys,
-          isNotEmpty,
+          loadedKeys,
+          contains(key),
           reason:
-              'sanity check -- if this is empty the regex/scan itself is '
-              'broken, not that there are no duration_barrier_* settings',
+              '$key is written via saveSetting somewhere but never read '
+              'back via loadSetting anywhere in lib/ -- a write with no '
+              'reader is exactly the class of bug this regression was.',
         );
-        for (final key in savedKeys) {
-          expect(
-            loadedKeys,
-            contains(key),
-            reason:
-                '$key is written via saveSetting somewhere but never read '
-                'back via loadSetting anywhere in lib/ -- a write with no '
-                'reader is exactly the class of bug this regression was.',
-          );
-        }
-      },
-    );
+      }
+    });
   });
 
   group('breath_progress_records schemaVersion migration', () {
@@ -1088,39 +1166,39 @@ void main() {
       },
     );
 
+    test('a newly saved record always carries currentSchemaVersion', () async {
+      final storage = StorageService();
+      await storage.saveBreathProgressRecord(
+        BreathProgressRecord(
+          id: 'fresh',
+          completedAt: DateTime(2026, 8, 1),
+          breathScore: 70,
+          blowDurationSeconds: 5,
+          blowStability: 0.7,
+          blowIntensity: 0.7,
+        ),
+      );
+
+      final loaded = await storage.loadBreathProgressRecords();
+      final record = loaded.firstWhere((r) => r.id == 'fresh');
+      expect(record.schemaVersion, BreathProgressRecord.currentSchemaVersion);
+    });
+
     test(
-      'a newly saved record always carries currentSchemaVersion',
+      'adaptive observation starts with a stable persisted timestamp',
       () async {
         final storage = StorageService();
-        await storage.saveBreathProgressRecord(
-          BreathProgressRecord(
-            id: 'fresh',
-            completedAt: DateTime(2026, 8, 1),
-            breathScore: 70,
-            blowDurationSeconds: 5,
-            blowStability: 0.7,
-            blowIntensity: 0.7,
-          ),
+        final first = await storage.ensureAdaptiveObservationStartedAt(
+          now: DateTime(2026, 8, 16, 10),
+        );
+        final second = await storage.ensureAdaptiveObservationStartedAt(
+          now: DateTime(2026, 8, 17, 10),
         );
 
-        final loaded = await storage.loadBreathProgressRecords();
-        final record = loaded.firstWhere((r) => r.id == 'fresh');
-        expect(record.schemaVersion, BreathProgressRecord.currentSchemaVersion);
+        expect(first, DateTime(2026, 8, 16, 10));
+        expect(second, first);
       },
     );
-
-    test('adaptive observation starts with a stable persisted timestamp', () async {
-      final storage = StorageService();
-      final first = await storage.ensureAdaptiveObservationStartedAt(
-        now: DateTime(2026, 8, 16, 10),
-      );
-      final second = await storage.ensureAdaptiveObservationStartedAt(
-        now: DateTime(2026, 8, 17, 10),
-      );
-
-      expect(first, DateTime(2026, 8, 16, 10));
-      expect(second, first);
-    });
 
     test('adaptive planning waits for a full day and the next wake time', () {
       final storage = StorageService();

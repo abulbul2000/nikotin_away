@@ -2435,20 +2435,40 @@ class StorageService {
         .toList();
   }
 
+  /// 'started' is written the moment a task is accepted (see
+  /// notification_service.dart's ACTION_TASK_DONE handler) — it is not an
+  /// outcome, just an acceptance event, and every accepted task writes one
+  /// regardless of how it later resolves. Counting it here used to sink
+  /// completion rates toward 50% even for a user who never failed a task,
+  /// since 'started' matched none of the success substrings and fell into
+  /// the failure bucket by default.
+  static const _taskResultNonOutcomeValues = {'started'};
+
   Future<List<TaskHistory>> loadTaskHistory() async {
     final records = await loadSurveyHistory();
     return records
         .where(
           (record) =>
               record.type == 'task_result' &&
-              (record.taskTitle?.isNotEmpty ?? false),
+              (record.taskTitle?.isNotEmpty ?? false) &&
+              !_taskResultNonOutcomeValues.contains(
+                (record.taskResult ?? '').toLowerCase(),
+              ),
         )
         .map((record) {
           final resultText = (record.taskResult ?? '').toLowerCase();
+          // Checked before the 'basar' substring below: 'basarisiz'
+          // ('unsuccessful') contains 'basar' ('success') as a prefix, so
+          // without this a failure written in that form would be counted as
+          // a success. Nothing currently writes 'basarisiz', but the
+          // substring match alone would silently invert the moment
+          // something did.
+          final failed = resultText.contains('basarisiz');
           final completed =
-              resultText.contains('success') ||
-              resultText.contains('basar') ||
-              resultText.contains('tamam');
+              !failed &&
+              (resultText.contains('success') ||
+                  resultText.contains('basar') ||
+                  resultText.contains('tamam'));
           return TaskHistory(
             taskId: record.id,
             taskTitle: record.taskTitle ?? 'Task',
