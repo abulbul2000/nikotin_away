@@ -1110,6 +1110,30 @@ class BehaviorEngine {
     }
   }
 
+  /// How many "coach command" push notifications to send today, out of a
+  /// base of 3 — engagement-based throttling so the burst doesn't keep
+  /// firing at a fixed rate regardless of whether the user has been
+  /// ignoring it. Returns 0 to suppress the burst entirely when the user
+  /// has been consistently missing tasks and risk isn't elevated enough to
+  /// justify pushing anyway.
+  int resolveCoachCommandNotificationLimit({
+    required int recentSuccessCount,
+    required int recentFailureCount,
+    required int riskScore,
+  }) {
+    if (recentFailureCount >= recentSuccessCount + 4 && riskScore < 70) {
+      return 0;
+    }
+
+    var limit = 3;
+    if (recentFailureCount > recentSuccessCount + 2) {
+      limit -= 1;
+    } else if (recentSuccessCount >= recentFailureCount + 3) {
+      limit -= 1;
+    }
+    return limit.clamp(1, 3);
+  }
+
   /// Bounded risk adjustment from how many snore-likely probes the
   /// (opt-in) overnight Snoring Test recorded recently — the first time
   /// this signal feeds into risk scoring rather than only surfacing as a

@@ -30,6 +30,7 @@ import '../pages/settings_page.dart';
 import '../pages/sleep_routine_page.dart';
 import '../pages/survey_history_page.dart';
 import '../pages/weekly_survey_page.dart';
+import '../services/behavior_engine.dart';
 import '../services/device_compatibility_service.dart';
 import '../services/device_permission_service.dart';
 import '../services/location_intelligence_service.dart';
@@ -74,6 +75,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final StorageService _storageService = StorageService();
+  final BehaviorEngine _behaviorEngine = BehaviorEngine();
   final StepTrackingService _stepTrackingService = StepTrackingService();
   final ProtocolViolationService _protocolViolationService =
       ProtocolViolationService();
@@ -1164,26 +1166,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // truly overdue, require) on a later app open."
   }
 
-  /// Mirrors [_resolveDurationBarrierNotificationLimit]'s engagement-based
-  /// throttling for the separate "coach command" notification stream, which
-  /// previously always sent a fixed 3 pushes regardless of whether the user
-  /// had been ignoring them. Returns 0 to suppress the burst entirely when
-  /// the user has been consistently missing tasks and risk isn't elevated
-  /// enough to justify pushing anyway.
-  int _resolveCoachCommandNotificationLimit() {
-    if (_recentFailureCount >= _recentSuccessCount + 4 &&
-        _adaptiveRiskScore < 70) {
-      return 0;
-    }
-
-    var limit = 3;
-    if (_recentFailureCount > _recentSuccessCount + 2) {
-      limit -= 1;
-    } else if (_recentSuccessCount >= _recentFailureCount + 3) {
-      limit -= 1;
-    }
-    return limit.clamp(1, 3);
-  }
+  int _resolveCoachCommandNotificationLimit() =>
+      _behaviorEngine.resolveCoachCommandNotificationLimit(
+        recentSuccessCount: _recentSuccessCount,
+        recentFailureCount: _recentFailureCount,
+        riskScore: _adaptiveRiskScore,
+      );
 
   Future<void> _scheduleCoachCommandNotificationsIfNeeded() async {
     if (!_registrationCompleted || _coachCommands.isEmpty) {

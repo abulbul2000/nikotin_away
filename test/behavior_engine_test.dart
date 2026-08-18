@@ -655,6 +655,85 @@ void main() {
       });
     });
 
+    group('resolveCoachCommandNotificationLimit', () {
+      final engine = BehaviorEngine();
+
+      test('a fresh user with no history gets the full burst', () {
+        expect(
+          engine.resolveCoachCommandNotificationLimit(
+            recentSuccessCount: 0,
+            recentFailureCount: 0,
+            riskScore: 50,
+          ),
+          3,
+        );
+      });
+
+      test(
+        'consistently missing tasks with risk not yet elevated suppresses the burst entirely',
+        () {
+          expect(
+            engine.resolveCoachCommandNotificationLimit(
+              recentSuccessCount: 0,
+              recentFailureCount: 4,
+              riskScore: 69,
+            ),
+            0,
+          );
+        },
+      );
+
+      test('the same failure gap does not suppress once risk crosses 70', () {
+        expect(
+          engine.resolveCoachCommandNotificationLimit(
+            recentSuccessCount: 0,
+            recentFailureCount: 4,
+            riskScore: 70,
+          ),
+          greaterThan(0),
+        );
+      });
+
+      test(
+        'failing more than succeeding by a smaller margin trims one push',
+        () {
+          expect(
+            engine.resolveCoachCommandNotificationLimit(
+              recentSuccessCount: 0,
+              recentFailureCount: 3,
+              riskScore: 50,
+            ),
+            2,
+          );
+        },
+      );
+
+      test('a strong success streak also trims one push, not zero', () {
+        expect(
+          engine.resolveCoachCommandNotificationLimit(
+            recentSuccessCount: 5,
+            recentFailureCount: 0,
+            riskScore: 50,
+          ),
+          2,
+        );
+      });
+
+      test(
+        'the limit never drops below 1 once the suppression gate is clear',
+        () {
+          expect(
+            engine.resolveCoachCommandNotificationLimit(
+              recentSuccessCount: 10,
+              recentFailureCount: 0,
+              riskScore: 50,
+            ),
+            greaterThanOrEqualTo(1),
+          );
+        },
+      );
+    });
+
     group('resolveCoughAdvisoryTier', () {
       final engine = BehaviorEngine();
 
