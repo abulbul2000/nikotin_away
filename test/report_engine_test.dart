@@ -131,6 +131,66 @@ void main() {
       expect(report.avgCigarettesPerDay, 2.0);
     });
 
+    test('reports no averted-cigarettes estimate when nothing was logged this '
+        'period, even with a real baseline survey', () {
+      // Regression coverage: a baseline survey before the period existed
+      // (packsPerDay defaults to '1 paket' = 20/day in the _survey
+      // helper) used to be enough on its own to produce an
+      // estimatedAvertedCigarettes figure — with smokingEventsInPeriod
+      // empty, avgCigarettesPerDay computed as 0, so the engine reported
+      // the user's *entire* baseline as cigarettes averted. Absence of
+      // quick-log data is not evidence of quitting; it's just absence.
+      final records = [
+        _survey(
+          completedAt: DateTime(2026, 6, 20),
+          type: 'initial',
+          riskScore: 70,
+        ),
+      ];
+
+      final report = engine.buildReport(
+        periodStart: periodStart,
+        periodEnd: periodEnd,
+        periodType: 'weekly',
+        allSurveyRecords: records,
+        allTaskHistory: const [],
+        smokingEventsInPeriod: const [],
+      );
+
+      expect(report.estimatedAvertedCigarettes, isNull);
+    });
+
+    test('does report an averted-cigarettes estimate once cigarettes are '
+        'actually logged in the period', () {
+      final records = [
+        _survey(
+          completedAt: DateTime(2026, 6, 20),
+          type: 'initial',
+          riskScore: 70,
+        ),
+      ];
+      final events = [
+        SmokingEvent(
+          id: 'e1',
+          timestamp: periodStart.add(const Duration(hours: 1)),
+          source: 'quick_log',
+          approximate: false,
+        ),
+      ];
+
+      final report = engine.buildReport(
+        periodStart: periodStart,
+        periodEnd: periodEnd,
+        periodType: 'weekly',
+        allSurveyRecords: records,
+        allTaskHistory: const [],
+        smokingEventsInPeriod: events,
+      );
+
+      expect(report.estimatedAvertedCigarettes, isNotNull);
+      expect(report.estimatedAvertedCigarettes, greaterThan(0));
+    });
+
     test('resolves the earliest quit date across all records for '
         'days-since-quit', () {
       final records = [

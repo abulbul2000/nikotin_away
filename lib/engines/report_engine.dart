@@ -92,7 +92,15 @@ class ReportEngine {
       allSurveyRecords,
       periodStart,
     );
-    final estimatedAvertedCigarettes = baselineAvgPerDay == null
+    // Absence of quick-log data this period is not evidence of quitting —
+    // it just as easily means the user never opened the quick-log button.
+    // Treating an empty smokingEventsInPeriod the same as "zero cigarettes"
+    // used to report the full baseline average as cigarettes averted (e.g.
+    // "140 cigarettes not smoked" for a baseline-20/day user who simply
+    // didn't log anything that week), the exact inversion this field's own
+    // "never invented" doc comment promises against.
+    final estimatedAvertedCigarettes =
+        (baselineAvgPerDay == null || smokingEventsInPeriod.isEmpty)
         ? null
         : _estimatedAverted(baselineAvgPerDay, avgCigarettesPerDay, periodDays);
 
