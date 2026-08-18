@@ -22,6 +22,15 @@ class BreathNoiseEngine {
   static const double warningMultiplier = 2.0;
   static const double loudMultiplier = 4.0;
 
+  /// A sudden mid-window spike (someone starts talking, a TV comes on) can
+  /// leave the *median* energy near the reference level — the burst is
+  /// brief relative to the whole window — while still being exactly the
+  /// kind of contamination this check exists to catch. Standard deviation
+  /// catches that where the median can't: calibrated so steady background
+  /// noise (a hum, HVAC) stays well under 1x reference even when somewhat
+  /// loud, while a real burst clears several times that.
+  static const double volatilityWarningMultiplier = 1.0;
+
   /// Son [referenceSampleCount] baseline ölçümünün medyanı — cihazın kendi
   /// kalibrasyonu. Ortalama değil medyan: tek bir kapı çarpması gibi bir
   /// aykırı değer ortalamayı bozar, medyanı bozmaz. [allBaselines] herhangi
@@ -64,7 +73,7 @@ class BreathNoiseEngine {
       measuredLevel: measuredLevel,
       volatility: volatility,
       referenceLevel: referenceLevel,
-      level: _resolveLevel(measuredLevel, referenceLevel),
+      level: _resolveLevel(measuredLevel, volatility, referenceLevel),
     );
   }
 
@@ -79,12 +88,21 @@ class BreathNoiseEngine {
     return evaluate(preExhaleSamples, referenceLevel: referenceLevel);
   }
 
-  NoiseLevel _resolveLevel(double measuredLevel, double referenceLevel) {
+  NoiseLevel _resolveLevel(
+    double measuredLevel,
+    double volatility,
+    double referenceLevel,
+  ) {
     final safeReference = max(referenceLevel, defaultReferenceLevel * 0.1);
     if (measuredLevel >= safeReference * loudMultiplier) {
       return NoiseLevel.loud;
     }
-    if (measuredLevel >= safeReference * warningMultiplier) {
+    // A brief mid-window burst (someone starts talking, a TV comes on)
+    // barely moves the median but stands out clearly in volatility — this
+    // catches it as at least a warning even when the level check alone
+    // would call the window quiet.
+    if (measuredLevel >= safeReference * warningMultiplier ||
+        volatility >= safeReference * volatilityWarningMultiplier) {
       return NoiseLevel.warning;
     }
     return NoiseLevel.quiet;

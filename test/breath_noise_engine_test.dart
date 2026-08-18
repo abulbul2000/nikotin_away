@@ -143,6 +143,38 @@ void main() {
     });
   });
 
+  group('BreathNoiseEngine.evaluate — volatility affects level (regression '
+      'coverage)', () {
+    final engine = BreathNoiseEngine();
+
+    // Regression coverage: volatility was computed and returned on every
+    // NoiseCheckResult but never actually influenced `level` — a burst
+    // brief enough to leave the median near the reference level (a TV
+    // turning on partway through the ambient window, someone saying one
+    // sentence) used to read as 'quiet' exactly like true silence,
+    // despite volatility clearly distinguishing the two (see the
+    // 'speech/TV-style sudden spikes' test above).
+    test('a brief mid-window spike is at least a warning even though the '
+        'median alone would call it quiet', () {
+      final result = engine.evaluate(
+        _samples([0.005, 0.08, 0.004, 0.09, 0.006]),
+        referenceLevel: 0.01,
+      );
+      // Median of this fixture is 0.006 — below the 2x-reference
+      // warning threshold on level alone.
+      expect(result.measuredLevel, lessThan(0.01 * 2));
+      expect(result.level, isNot(NoiseLevel.quiet));
+    });
+
+    test('a steady hum at a similar level stays quiet', () {
+      final result = engine.evaluate(
+        _samples([0.009, 0.011, 0.01, 0.009, 0.011]),
+        referenceLevel: 0.01,
+      );
+      expect(result.level, NoiseLevel.quiet);
+    });
+  });
+
   group('BreathNoiseEngine.evaluateDuringAttempt', () {
     final engine = BreathNoiseEngine();
 
