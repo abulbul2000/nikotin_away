@@ -856,8 +856,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     if (_wearableSnapshot.lastSleepSessionDuration != null)
                       Text(
                         '${context.t('wearableIntelligenceLastSleep')}: '
-                        '${_wearableSnapshot.lastSleepSessionDuration!.inHours}s '
-                        '${_wearableSnapshot.lastSleepSessionDuration!.inMinutes % 60}d',
+                        '${AppTexts.formatAdaptiveDurationPhrase(Localizations.localeOf(context).languageCode, _wearableSnapshot.lastSleepSessionDuration!.inMinutes)}',
                       ),
                   ],
                 ],
