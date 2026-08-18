@@ -264,9 +264,7 @@ class TaskAssignmentService {
     // followup pair rather than reused.
     if (actionId == TaskActionId.confirmSmokedYes) {
       await _transitionTask(canonicalTitle, TaskLifecycleState.failedSmoked);
-      await NotificationService.cancelBarrierResolutionReminder(
-        canonicalTitle,
-      );
+      await NotificationService.cancelBarrierResolutionReminder(canonicalTitle);
       // An admission is also a real cigarette, so it belongs in the same
       // table the quick-log button writes to — otherwise the risky-hour
       // ranking never learns about the ones admitted this way.
@@ -275,9 +273,7 @@ class TaskAssignmentService {
     }
     if (actionId == TaskActionId.confirmSmokedNo) {
       await _transitionTask(canonicalTitle, TaskLifecycleState.succeeded);
-      await NotificationService.cancelBarrierResolutionReminder(
-        canonicalTitle,
-      );
+      await NotificationService.cancelBarrierResolutionReminder(canonicalTitle);
       return TaskActionFollowUp.none;
     }
 
@@ -386,8 +382,21 @@ class TaskAssignmentService {
   static String _matchKey(String canonicalTitle, DateTime scheduledAt) =>
       '$canonicalTitle@${scheduledAt.toIso8601String()}';
 
+  /// Derived from scheduledAt *and* canonicalTitle — scheduledAt alone
+  /// used to be the whole id (`ta_<microsecondsSinceEpoch>`), so a re-plan
+  /// that happened to land a *different* task type on the exact same
+  /// scheduled minute as an already-running task (two DateTime values
+  /// built from identical y/m/d/h/min arguments are bit-for-bit identical
+  /// down to the microsecond, so this is a real, not just theoretical,
+  /// collision) generated the same id for what [_matchKey] correctly
+  /// treats as two distinct slots. saveTaskAssignment's
+  /// `ConflictAlgorithm.replace` would then silently overwrite the running
+  /// task's entire state (attemptCount, postponeCount, barrierStartedAt,
+  /// ...) back to freshly-planned. Including the title makes this id
+  /// collide under exactly the same condition [_matchKey] already
+  /// considers a duplicate, and no other.
   static String _generateId(AdaptiveTaskPlanItem item) =>
-      'ta_${item.scheduledAt.microsecondsSinceEpoch}';
+      'ta_${item.scheduledAt.microsecondsSinceEpoch}_${item.taskTitle.hashCode}';
 
   static String _planDateKey(DateTime day) {
     final month = day.month.toString().padLeft(2, '0');

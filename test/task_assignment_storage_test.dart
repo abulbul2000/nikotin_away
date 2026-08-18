@@ -515,6 +515,68 @@ void main() {
       final rows = await storage.loadTaskAssignmentsForDay(planDate);
       expect(rows, hasLength(2));
     });
+
+    test(
+      'a re-plan landing a different task type on an already-running '
+      "task's exact slot does not overwrite it (regression coverage)",
+      () async {
+        // Regression coverage: the row id used to be derived from
+        // scheduledAt alone ('ta_<microsecondsSinceEpoch>'). Two DateTime
+        // values built from identical y/m/d/h/min arguments are
+        // bit-for-bit identical down to the microsecond, so a re-plan
+        // that happens to land a *different* canonicalTitle on the same
+        // scheduled minute as an already-accepted task generated the same
+        // id for what planDailyTasks' own duplicate check (keyed by
+        // canonicalTitle+scheduledAt) correctly treats as a distinct new
+        // slot — saveTaskAssignment's INSERT OR REPLACE then silently
+        // overwrote the running task's entire state back to freshly
+        // planned.
+        final storage = StorageService();
+        final service = TaskAssignmentService(storage);
+        final planDate = DateTime(2026, 7, 23, 8, 0);
+        final slot = DateTime(2026, 7, 23, 15, 0);
+
+        final original = AdaptiveTaskPlanItem(
+          scheduledAt: slot,
+          durationMinutes: 30,
+          taskTitle: 'ADAPTIVE_NO_SMOKE:30',
+        );
+        final created = await service.planDailyTasks(
+          planDate: planDate,
+          items: [original],
+        );
+        final originalId = created.single.id;
+        await storage.transitionTaskAssignment(
+          id: originalId,
+          state: TaskLifecycleState.accepted,
+        );
+
+        // Re-plan: the risk profile changed mid-day and this exact minute
+        // is now assigned a different task type entirely.
+        final replan = AdaptiveTaskPlanItem(
+          scheduledAt: slot,
+          durationMinutes: 45,
+          taskTitle: 'ADAPTIVE_NO_SMOKE:45',
+        );
+        await service.planDailyTasks(planDate: planDate, items: [replan]);
+
+        final original30 = await storage.loadTaskAssignment(originalId);
+        expect(
+          original30!.state,
+          TaskLifecycleState.accepted,
+          reason:
+              'the already-running 30-minute task must survive the '
+              're-plan untouched',
+        );
+
+        final rows = await storage.loadTaskAssignmentsForDay(planDate);
+        expect(rows, hasLength(2));
+        expect(rows.map((r) => r.canonicalTitle).toSet(), {
+          'ADAPTIVE_NO_SMOKE:30',
+          'ADAPTIVE_NO_SMOKE:45',
+        });
+      },
+    );
   });
 
   group('TaskAssignmentService.handleTaskAction', () {
