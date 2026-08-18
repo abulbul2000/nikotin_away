@@ -98,6 +98,7 @@ class StorageService {
   final MentorEngine _mentorEngine = MentorEngine();
   final DisciplineProtocolService _disciplineProtocolService =
       DisciplineProtocolService();
+
   /// Injectable so tests can supply a seeded [Random] through
   /// [SmokingIntervalService]. `dailyTaskCount` applies a +/-1 jitter whose
   /// magnitude equals the frequency-preference adjustment itself, so without a
@@ -466,9 +467,16 @@ class StorageService {
         lastVerifiedAt TEXT,
         lastVerificationAttemptAt TEXT,
         autoRenewing INTEGER NOT NULL DEFAULT 0,
-        updatedAt TEXT NOT NULL
+        updatedAt TEXT NOT NULL,
+        maxObservedAt TEXT
       )
     ''');
+    await _ensureTableColumn(
+      db,
+      _subscriptionStateTable,
+      'maxObservedAt',
+      'TEXT',
+    );
   }
 
   /// Starts the 14-day trial clock the first time this is called — a no-op
@@ -1399,9 +1407,24 @@ class StorageService {
         acknowledgedAt TEXT
       )
     ''');
-    await _ensureTableColumn(db, _notificationsHistoryTable, 'availableAt', 'TEXT');
-    await _ensureTableColumn(db, _notificationsHistoryTable, 'dedupeKey', 'TEXT');
-    await _ensureTableColumn(db, _notificationsHistoryTable, 'acknowledgedAt', 'TEXT');
+    await _ensureTableColumn(
+      db,
+      _notificationsHistoryTable,
+      'availableAt',
+      'TEXT',
+    );
+    await _ensureTableColumn(
+      db,
+      _notificationsHistoryTable,
+      'dedupeKey',
+      'TEXT',
+    );
+    await _ensureTableColumn(
+      db,
+      _notificationsHistoryTable,
+      'acknowledgedAt',
+      'TEXT',
+    );
   }
 
   Future<void> _ensureFailureTriggersTable(Database db) async {

@@ -76,9 +76,10 @@ class SubscriptionService {
     if (_allowDebugAccess) return AccessDecision.allowed;
 
     final state = await _storage.loadSubscriptionState();
+    final trustedNow = await _trustedNow(state);
 
     if (state?.status == SubscriptionStatus.trial) {
-      return isTrialActive(state)
+      return isTrialActive(state, now: trustedNow)
           ? AccessDecision.allowed
           : AccessDecision.showGate;
     }
@@ -87,7 +88,7 @@ class SubscriptionService {
         state?.status == SubscriptionStatus.grace) {
       final lastVerifiedAt = state?.lastVerifiedAt;
       if (lastVerifiedAt != null &&
-          DateTime.now().isBefore(lastVerifiedAt.add(offlineGraceDuration))) {
+          trustedNow.isBefore(lastVerifiedAt.add(offlineGraceDuration))) {
         return AccessDecision.allowed;
       }
       return AccessDecision.needsConnectionCheck;
@@ -96,14 +97,44 @@ class SubscriptionService {
     return AccessDecision.showGate;
   }
 
-  /// Whether [state] is a trial that hasn't run past [trialDuration] yet.
-  /// Exposed separately from [resolveAccess] so [FeatureAccess] can tell a
-  /// trial-granted "allowed" apart from a paid one — the trial unlocks the
-  /// app but not the AI mentor, which spends the developer's own API budget.
-  static bool isTrialActive(SubscriptionState? state) {
+  /// Whether [state] is a trial that hasn't run past [trialDuration] yet, as
+  /// of [now] (defaults to [DateTime.now()] — callers evaluating access
+  /// should pass the [_trustedNow]-adjusted value instead so a rolled-back
+  /// device clock can't replay the trial window). Exposed separately from
+  /// [resolveAccess] so [FeatureAccess] can tell a trial-granted "allowed"
+  /// apart from a paid one — the trial unlocks the app but not the AI
+  /// mentor, which spends the developer's own API budget.
+  static bool isTrialActive(SubscriptionState? state, {DateTime? now}) {
     final startedAt = state?.trialStartedAt;
     if (startedAt == null) return false;
-    return DateTime.now().isBefore(startedAt.add(trialDuration));
+    return (now ?? DateTime.now()).isBefore(startedAt.add(trialDuration));
+  }
+
+  /// Returns a "now" that never moves backward relative to what this device
+  /// has already recorded, and persists the new high-water mark. A user can
+  /// set their system clock back to make an elapsed trial/grace window
+  /// (measured as `now - startedAt`) look unelapsed again — comparing
+  /// against `state.maxObservedAt` instead of a bare `DateTime.now()` means
+  /// a rolled-back clock simply freezes the window instead of extending it.
+  /// This is a client-side deterrent only; nothing here is trusted by the
+  /// server (aiChat enforces its own subscription check independently).
+  Future<DateTime> _trustedNow(SubscriptionState? state) async {
+    final now = DateTime.now();
+    final maxObserved = state?.maxObservedAt;
+    final trustedNow = (maxObserved != null && now.isBefore(maxObserved))
+        ? maxObserved
+        : now;
+
+    if (maxObserved == null || now.isAfter(maxObserved)) {
+      final existing =
+          state ??
+          SubscriptionState(status: SubscriptionStatus.none, updatedAt: now);
+      await _storage.saveSubscriptionState(
+        existing.copyWith(maxObservedAt: now),
+      );
+    }
+
+    return trustedNow;
   }
 
   Future<List<ProductDetails>> loadProducts() async {

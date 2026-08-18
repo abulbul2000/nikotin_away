@@ -23,6 +23,14 @@ class SubscriptionState {
   final bool autoRenewing;
   final DateTime updatedAt;
 
+  /// The latest wall-clock [DateTime.now()] this device has ever recorded
+  /// while evaluating subscription/trial access. Anything is free to move
+  /// this forward; nothing should ever move it backward. Used by
+  /// [SubscriptionService.resolveAccess] to detect a device clock that has
+  /// been set backward to replay an already-elapsed trial/grace window —
+  /// `now` observed earlier than this is treated as untrustworthy.
+  final DateTime? maxObservedAt;
+
   const SubscriptionState({
     this.trialStartedAt,
     required this.status,
@@ -34,6 +42,7 @@ class SubscriptionState {
     this.lastVerificationAttemptAt,
     this.autoRenewing = false,
     required this.updatedAt,
+    this.maxObservedAt,
   });
 
   SubscriptionState copyWith({
@@ -47,6 +56,7 @@ class SubscriptionState {
     DateTime? lastVerificationAttemptAt,
     bool? autoRenewing,
     DateTime? updatedAt,
+    DateTime? maxObservedAt,
   }) {
     return SubscriptionState(
       trialStartedAt: trialStartedAt ?? this.trialStartedAt,
@@ -60,6 +70,7 @@ class SubscriptionState {
           lastVerificationAttemptAt ?? this.lastVerificationAttemptAt,
       autoRenewing: autoRenewing ?? this.autoRenewing,
       updatedAt: updatedAt ?? this.updatedAt,
+      maxObservedAt: maxObservedAt ?? this.maxObservedAt,
     );
   }
 
@@ -75,6 +86,7 @@ class SubscriptionState {
     'lastVerificationAttemptAt': lastVerificationAttemptAt?.toIso8601String(),
     'autoRenewing': autoRenewing ? 1 : 0,
     'updatedAt': updatedAt.toIso8601String(),
+    'maxObservedAt': maxObservedAt?.toIso8601String(),
   };
 
   factory SubscriptionState.fromJson(Map<String, Object?> json) {
@@ -101,6 +113,9 @@ class SubscriptionState {
       updatedAt: json['updatedAt'] != null
           ? DateTime.parse(json['updatedAt'] as String)
           : DateTime.now(),
+      maxObservedAt: (json['maxObservedAt'] as String?) != null
+          ? DateTime.parse(json['maxObservedAt'] as String)
+          : null,
     );
   }
 }
