@@ -83,4 +83,40 @@ void main() {
       expect(allowed, isTrue);
     },
   );
+
+  test('only aiMentor requires a paid (non-trial) subscription', () {
+    expect(
+      featureAccess.requiresPaidSubscription(PremiumFeature.aiMentor),
+      isTrue,
+    );
+    for (final feature in PremiumFeature.values) {
+      if (feature == PremiumFeature.aiMentor) continue;
+      expect(featureAccess.requiresPaidSubscription(feature), isFalse);
+    }
+  });
+
+  group('during an active trial', () {
+    setUp(() async {
+      final now = DateTime.now();
+      await storage.saveSubscriptionState(
+        SubscriptionState(
+          status: SubscriptionStatus.trial,
+          trialStartedAt: now.subtract(const Duration(days: 5)),
+          updatedAt: now,
+        ),
+      );
+    });
+
+    test('non-AI features are unlocked', () async {
+      final allowed = await featureAccess.canAccess(
+        PremiumFeature.adaptiveTasks,
+      );
+      expect(allowed, isTrue);
+    });
+
+    test('the AI mentor stays gated', () async {
+      final allowed = await featureAccess.canAccess(PremiumFeature.aiMentor);
+      expect(allowed, isFalse);
+    });
+  });
 }

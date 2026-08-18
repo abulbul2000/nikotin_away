@@ -1,3 +1,4 @@
+import '../models/subscription_state.dart';
 import 'subscription_service.dart';
 
 /// Every screen/capability that can be gated behind a subscription. Kept as
@@ -37,6 +38,14 @@ class FeatureAccess {
   /// this is the one place to add per-feature logic.
   bool requiresSubscription(PremiumFeature feature) => true;
 
+  /// Whether [feature] is still gated during the 14-day trial. Only
+  /// [PremiumFeature.aiMentor] is — the AI chat spends the developer's own
+  /// shared LLM API budget per message, so trial users get the rest of the
+  /// app (adaptive tasks, breath/cough tests, location/sleep intelligence)
+  /// but not that.
+  bool requiresPaidSubscription(PremiumFeature feature) =>
+      feature == PremiumFeature.aiMentor;
+
   /// Whether the current user can use [feature] right now. Onboarding is
   /// assumed complete by the time any premium feature's page is reachable
   /// (the survey gate runs before HomePage), so this always passes
@@ -49,6 +58,13 @@ class FeatureAccess {
     final decision = await _subscriptionService.resolveAccess(
       hasCompletedInitialSurvey: true,
     );
-    return decision == AccessDecision.allowed;
+    if (decision != AccessDecision.allowed) {
+      return false;
+    }
+    if (!requiresPaidSubscription(feature)) {
+      return true;
+    }
+    final state = await _subscriptionService.loadState();
+    return state?.status != SubscriptionStatus.trial;
   }
 }

@@ -138,6 +138,55 @@ void main() {
     expect(decision, AccessDecision.showGate);
   });
 
+  group('trial', () {
+    test('allows access on day 13 of the 14-day trial', () async {
+      final now = DateTime.now();
+      await storage.saveSubscriptionState(
+        SubscriptionState(
+          status: SubscriptionStatus.trial,
+          trialStartedAt: now.subtract(const Duration(days: 13)),
+          updatedAt: now,
+        ),
+      );
+
+      final decision = await service.resolveAccess(
+        hasCompletedInitialSurvey: true,
+      );
+
+      expect(decision, AccessDecision.allowed);
+    });
+
+    test('shows the gate once the trial is past 14 days', () async {
+      final now = DateTime.now();
+      await storage.saveSubscriptionState(
+        SubscriptionState(
+          status: SubscriptionStatus.trial,
+          trialStartedAt: now.subtract(const Duration(days: 15)),
+          updatedAt: now,
+        ),
+      );
+
+      final decision = await service.resolveAccess(
+        hasCompletedInitialSurvey: true,
+      );
+
+      expect(decision, AccessDecision.showGate);
+    });
+
+    test('shows the gate for a trial status with no start date', () async {
+      final now = DateTime.now();
+      await storage.saveSubscriptionState(
+        SubscriptionState(status: SubscriptionStatus.trial, updatedAt: now),
+      );
+
+      final decision = await service.resolveAccess(
+        hasCompletedInitialSurvey: true,
+      );
+
+      expect(decision, AccessDecision.showGate);
+    });
+  });
+
   group('handlePurchase', () {
     // purchased/restored also call the verifySubscription Cloud Function,
     // which needs a real Firebase backend this suite doesn't set up — only

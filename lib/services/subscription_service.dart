@@ -17,16 +17,15 @@ enum AccessDecision {
 enum PurchaseOutcome { success, cancelled, pending, failed }
 
 class SubscriptionService {
-  SubscriptionService({
-    StorageService? storageService,
-    bool? allowDebugAccess,
-  }) : _storage = storageService ?? StorageService(),
-       _allowDebugAccess = allowDebugAccess ?? kDebugMode;
+  SubscriptionService({StorageService? storageService, bool? allowDebugAccess})
+    : _storage = storageService ?? StorageService(),
+      _allowDebugAccess = allowDebugAccess ?? kDebugMode;
 
   final StorageService _storage;
   final bool _allowDebugAccess;
 
   static const Duration offlineGraceDuration = Duration(days: 3);
+  static const Duration trialDuration = Duration(days: 14);
 
   static const String starterProductId = 'no_smoke_starter';
   static const String plusProductId = 'no_smoke_plus';
@@ -63,6 +62,8 @@ class SubscriptionService {
     }
   }
 
+  Future<SubscriptionState?> loadState() => _storage.loadSubscriptionState();
+
   Future<AccessDecision> resolveAccess({
     required bool hasCompletedInitialSurvey,
   }) async {
@@ -75,6 +76,13 @@ class SubscriptionService {
     if (_allowDebugAccess) return AccessDecision.allowed;
 
     final state = await _storage.loadSubscriptionState();
+
+    if (state?.status == SubscriptionStatus.trial) {
+      return isTrialActive(state)
+          ? AccessDecision.allowed
+          : AccessDecision.showGate;
+    }
+
     if (state?.status == SubscriptionStatus.active ||
         state?.status == SubscriptionStatus.grace) {
       final lastVerifiedAt = state?.lastVerifiedAt;
@@ -86,6 +94,16 @@ class SubscriptionService {
     }
 
     return AccessDecision.showGate;
+  }
+
+  /// Whether [state] is a trial that hasn't run past [trialDuration] yet.
+  /// Exposed separately from [resolveAccess] so [FeatureAccess] can tell a
+  /// trial-granted "allowed" apart from a paid one — the trial unlocks the
+  /// app but not the AI mentor, which spends the developer's own API budget.
+  static bool isTrialActive(SubscriptionState? state) {
+    final startedAt = state?.trialStartedAt;
+    if (startedAt == null) return false;
+    return DateTime.now().isBefore(startedAt.add(trialDuration));
   }
 
   Future<List<ProductDetails>> loadProducts() async {
