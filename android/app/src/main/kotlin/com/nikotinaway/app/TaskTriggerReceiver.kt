@@ -54,6 +54,9 @@ class TaskTriggerReceiver : BroadcastReceiver() {
             return
         }
         PendingDeliveryQueue.clearBlocked(context, watchdogId)
+        // This one-shot alarm has now done its job — nothing left to re-arm
+        // on a future reboot for this watchdogId.
+        TaskTriggerStore.remove(context, watchdogId)
 
         val watchdogWindowMillis =
             intent.getLongExtra(EXTRA_WATCHDOG_WINDOW_MILLIS, DEFAULT_WATCHDOG_WINDOW_MILLIS)
@@ -110,12 +113,17 @@ class TaskTriggerReceiver : BroadcastReceiver() {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        val newTriggerAtMillis = System.currentTimeMillis() + waitMs
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.setAndAllowWhileIdle(
             AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + waitMs,
+            newTriggerAtMillis,
             pending,
         )
+        // Keep the boot-recovery snapshot's triggerAtMillis current — a
+        // reboot mid-requeue should resume waiting for the new time, not
+        // fire immediately against the original (already-past) one.
+        TaskTriggerStore.updateTriggerAtMillis(context, watchdogId, newTriggerAtMillis)
     }
 
     companion object {
@@ -220,11 +228,81 @@ class TaskTriggerReceiver : BroadcastReceiver() {
                     pending,
                 )
             }
+
+            // Reboot wipes every AlarmManager entry (see
+            // TaskTriggerBootReceiver), so the full set of extras this alarm
+            // needs to re-arm itself is cached here too, keyed by watchdogId.
+            TaskTriggerStore.save(
+                context,
+                watchdogId,
+                TaskTriggerSnapshot(
+                    title = title,
+                    body = body,
+                    acceptLabel = acceptLabel,
+                    postponeLabel = postponeLabel,
+                    declineLabel = declineLabel,
+                    sosLabel = sosLabel,
+                    watchdogId = watchdogId,
+                    taskTitle = taskTitle,
+                    triggerAtMillis = triggerAtMillis,
+                    watchdogWindowMillis = watchdogWindowMillis,
+                    watchdogForegroundBody = watchdogForegroundBody,
+                    watchdogViolationTitle = watchdogViolationTitle,
+                    watchdogViolationBody = watchdogViolationBody,
+                    watchdogForegroundChannelName = watchdogForegroundChannelName,
+                    watchdogViolationChannelName = watchdogViolationChannelName,
+                ),
+            )
         }
 
         fun cancel(context: Context, watchdogId: String) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             alarmManager.cancel(pendingIntent(context, watchdogId))
+            TaskTriggerStore.remove(context, watchdogId)
+        }
+
+        /// Re-arms [snapshot]'s alarm without touching the persisted cache —
+        /// used by [TaskTriggerBootReceiver], which is re-arming from that
+        /// same cache and would otherwise just rewrite what it already read.
+        fun rearm(context: Context, snapshot: TaskTriggerSnapshot) {
+            val pending = pendingIntent(context, snapshot.watchdogId) {
+                putExtra(EXTRA_TITLE, snapshot.title)
+                putExtra(EXTRA_BODY, snapshot.body)
+                putExtra(EXTRA_DONE_LABEL, snapshot.acceptLabel)
+                putExtra(EXTRA_POSTPONE_LABEL, snapshot.postponeLabel)
+                putExtra(EXTRA_DECLINE_LABEL, snapshot.declineLabel)
+                putExtra(EXTRA_SOS_LABEL, snapshot.sosLabel)
+                putExtra(EXTRA_WATCHDOG_ID, snapshot.watchdogId)
+                putExtra(EXTRA_TASK_TITLE, snapshot.taskTitle)
+                putExtra(EXTRA_WATCHDOG_WINDOW_MILLIS, snapshot.watchdogWindowMillis)
+                putExtra(EXTRA_WATCHDOG_FOREGROUND_BODY, snapshot.watchdogForegroundBody)
+                putExtra(EXTRA_WATCHDOG_VIOLATION_TITLE, snapshot.watchdogViolationTitle)
+                putExtra(EXTRA_WATCHDOG_VIOLATION_BODY, snapshot.watchdogViolationBody)
+                putExtra(
+                    EXTRA_WATCHDOG_FOREGROUND_CHANNEL_NAME,
+                    snapshot.watchdogForegroundChannelName,
+                )
+                putExtra(
+                    EXTRA_WATCHDOG_VIOLATION_CHANNEL_NAME,
+                    snapshot.watchdogViolationChannelName,
+                )
+            }
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val canScheduleExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                alarmManager.canScheduleExactAlarms()
+            if (canScheduleExact) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    snapshot.triggerAtMillis,
+                    pending,
+                )
+            } else {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    snapshot.triggerAtMillis,
+                    pending,
+                )
+            }
         }
     }
 }
@@ -296,5 +374,156 @@ object PendingDeliveryQueue {
         val items = prefs.getStringSet(KEY_EXPIRED, emptySet())?.toList() ?: emptyList()
         prefs.edit().remove(KEY_EXPIRED).apply()
         return items
+    }
+}
+
+/// Everything [TaskTriggerReceiver.rearm] needs to re-arm one alarm —
+/// exactly the same fields [TaskTriggerReceiver.schedule] puts on the
+/// PendingIntent's extras, cached alongside it so a reboot (which wipes
+/// AlarmManager entirely) can rebuild the alarm without Dart's involvement.
+data class TaskTriggerSnapshot(
+    val title: String,
+    val body: String,
+    val acceptLabel: String,
+    val postponeLabel: String,
+    val declineLabel: String,
+    val sosLabel: String,
+    val watchdogId: String,
+    val taskTitle: String,
+    val triggerAtMillis: Long,
+    val watchdogWindowMillis: Long,
+    val watchdogForegroundBody: String,
+    val watchdogViolationTitle: String,
+    val watchdogViolationBody: String,
+    val watchdogForegroundChannelName: String,
+    val watchdogViolationChannelName: String,
+)
+
+/// Persists one [TaskTriggerSnapshot] per live watchdogId so
+/// [TaskTriggerBootReceiver] can re-arm every still-pending task alarm after
+/// a reboot or app update — see the class doc on [TaskTriggerReceiver] for
+/// why the alarm alone isn't enough. Entries are removed once their alarm
+/// either fires ([TaskTriggerReceiver.onReceive]) or is explicitly cancelled
+/// ([TaskTriggerReceiver.cancel]), so this only ever holds tasks still
+/// waiting to be delivered.
+object TaskTriggerStore {
+    private const val PREFS = "no_smoke_task_trigger_store"
+    private const val KEY_IDS = "watchdog_ids"
+    private const val F_TITLE = "title_"
+    private const val F_BODY = "body_"
+    private const val F_ACCEPT_LABEL = "accept_label_"
+    private const val F_POSTPONE_LABEL = "postpone_label_"
+    private const val F_DECLINE_LABEL = "decline_label_"
+    private const val F_SOS_LABEL = "sos_label_"
+    private const val F_TASK_TITLE = "task_title_"
+    private const val F_TRIGGER_AT = "trigger_at_"
+    private const val F_WATCHDOG_WINDOW = "watchdog_window_"
+    private const val F_WATCHDOG_FG_BODY = "watchdog_fg_body_"
+    private const val F_WATCHDOG_VIOLATION_TITLE = "watchdog_violation_title_"
+    private const val F_WATCHDOG_VIOLATION_BODY = "watchdog_violation_body_"
+    private const val F_WATCHDOG_FG_CHANNEL = "watchdog_fg_channel_"
+    private const val F_WATCHDOG_VIOLATION_CHANNEL = "watchdog_violation_channel_"
+
+    private fun prefs(context: Context) =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    fun save(context: Context, watchdogId: String, snapshot: TaskTriggerSnapshot) {
+        val store = prefs(context)
+        val ids = (store.getStringSet(KEY_IDS, emptySet()) ?: emptySet()).toMutableSet()
+        ids.add(watchdogId)
+        store.edit()
+            .putStringSet(KEY_IDS, ids)
+            .putString("$F_TITLE$watchdogId", snapshot.title)
+            .putString("$F_BODY$watchdogId", snapshot.body)
+            .putString("$F_ACCEPT_LABEL$watchdogId", snapshot.acceptLabel)
+            .putString("$F_POSTPONE_LABEL$watchdogId", snapshot.postponeLabel)
+            .putString("$F_DECLINE_LABEL$watchdogId", snapshot.declineLabel)
+            .putString("$F_SOS_LABEL$watchdogId", snapshot.sosLabel)
+            .putString("$F_TASK_TITLE$watchdogId", snapshot.taskTitle)
+            .putLong("$F_TRIGGER_AT$watchdogId", snapshot.triggerAtMillis)
+            .putLong("$F_WATCHDOG_WINDOW$watchdogId", snapshot.watchdogWindowMillis)
+            .putString("$F_WATCHDOG_FG_BODY$watchdogId", snapshot.watchdogForegroundBody)
+            .putString("$F_WATCHDOG_VIOLATION_TITLE$watchdogId", snapshot.watchdogViolationTitle)
+            .putString("$F_WATCHDOG_VIOLATION_BODY$watchdogId", snapshot.watchdogViolationBody)
+            .putString("$F_WATCHDOG_FG_CHANNEL$watchdogId", snapshot.watchdogForegroundChannelName)
+            .putString(
+                "$F_WATCHDOG_VIOLATION_CHANNEL$watchdogId",
+                snapshot.watchdogViolationChannelName,
+            )
+            .apply()
+    }
+
+    /// Rewrites just the cached firing time — used when [TaskTriggerReceiver]
+    /// requeues a delivery-gate-blocked task, so a reboot mid-wait resumes
+    /// waiting for the new time instead of firing immediately against the
+    /// stale original one. A no-op if [watchdogId] isn't cached (e.g. it was
+    /// already cancelled elsewhere in the same instant).
+    fun updateTriggerAtMillis(context: Context, watchdogId: String, triggerAtMillis: Long) {
+        val store = prefs(context)
+        val ids = store.getStringSet(KEY_IDS, emptySet()) ?: emptySet()
+        if (watchdogId !in ids) return
+        store.edit().putLong("$F_TRIGGER_AT$watchdogId", triggerAtMillis).apply()
+    }
+
+    fun remove(context: Context, watchdogId: String) {
+        val store = prefs(context)
+        val ids = (store.getStringSet(KEY_IDS, emptySet()) ?: emptySet()).toMutableSet()
+        if (!ids.remove(watchdogId)) return
+        store.edit()
+            .putStringSet(KEY_IDS, ids)
+            .remove("$F_TITLE$watchdogId")
+            .remove("$F_BODY$watchdogId")
+            .remove("$F_ACCEPT_LABEL$watchdogId")
+            .remove("$F_POSTPONE_LABEL$watchdogId")
+            .remove("$F_DECLINE_LABEL$watchdogId")
+            .remove("$F_SOS_LABEL$watchdogId")
+            .remove("$F_TASK_TITLE$watchdogId")
+            .remove("$F_TRIGGER_AT$watchdogId")
+            .remove("$F_WATCHDOG_WINDOW$watchdogId")
+            .remove("$F_WATCHDOG_FG_BODY$watchdogId")
+            .remove("$F_WATCHDOG_VIOLATION_TITLE$watchdogId")
+            .remove("$F_WATCHDOG_VIOLATION_BODY$watchdogId")
+            .remove("$F_WATCHDOG_FG_CHANNEL$watchdogId")
+            .remove("$F_WATCHDOG_VIOLATION_CHANNEL$watchdogId")
+            .apply()
+    }
+
+    /// All still-pending snapshots — [TaskTriggerBootReceiver] re-arms each.
+    fun loadAll(context: Context): List<TaskTriggerSnapshot> {
+        val store = prefs(context)
+        val ids = store.getStringSet(KEY_IDS, emptySet()) ?: emptySet()
+        return ids.mapNotNull { watchdogId ->
+            val title = store.getString("$F_TITLE$watchdogId", null) ?: return@mapNotNull null
+            val body = store.getString("$F_BODY$watchdogId", null) ?: return@mapNotNull null
+            val taskTitle =
+                store.getString("$F_TASK_TITLE$watchdogId", null) ?: return@mapNotNull null
+            val triggerAtMillis = store.getLong("$F_TRIGGER_AT$watchdogId", -1L)
+            if (triggerAtMillis < 0) return@mapNotNull null
+            TaskTriggerSnapshot(
+                title = title,
+                body = body,
+                acceptLabel = store.getString("$F_ACCEPT_LABEL$watchdogId", "").orEmpty(),
+                postponeLabel = store.getString("$F_POSTPONE_LABEL$watchdogId", "").orEmpty(),
+                declineLabel = store.getString("$F_DECLINE_LABEL$watchdogId", "").orEmpty(),
+                sosLabel = store.getString("$F_SOS_LABEL$watchdogId", "").orEmpty(),
+                watchdogId = watchdogId,
+                taskTitle = taskTitle,
+                triggerAtMillis = triggerAtMillis,
+                watchdogWindowMillis = store.getLong(
+                    "$F_WATCHDOG_WINDOW$watchdogId",
+                    TaskTriggerReceiver.DEFAULT_WATCHDOG_WINDOW_MILLIS,
+                ),
+                watchdogForegroundBody =
+                    store.getString("$F_WATCHDOG_FG_BODY$watchdogId", "").orEmpty(),
+                watchdogViolationTitle =
+                    store.getString("$F_WATCHDOG_VIOLATION_TITLE$watchdogId", "").orEmpty(),
+                watchdogViolationBody =
+                    store.getString("$F_WATCHDOG_VIOLATION_BODY$watchdogId", "").orEmpty(),
+                watchdogForegroundChannelName =
+                    store.getString("$F_WATCHDOG_FG_CHANNEL$watchdogId", "").orEmpty(),
+                watchdogViolationChannelName =
+                    store.getString("$F_WATCHDOG_VIOLATION_CHANNEL$watchdogId", "").orEmpty(),
+            )
+        }
     }
 }
