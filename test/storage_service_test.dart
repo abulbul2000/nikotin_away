@@ -76,6 +76,83 @@ void main() {
     expect(history.first.consecutiveSmokingCount, '4 adet');
   });
 
+  group('clearAllData (regression coverage)', () {
+    // A user resetting their data (Settings -> Reset Data), deleting their
+    // account, or switching Google accounts all funnel through this one
+    // function. subscription_state used to be wiped along with everything
+    // else, which meant any of those three flows could grant a fresh
+    // 14-day trial for free, indefinitely — startTrialIfNeeded only checks
+    // whether *a* trial row exists, not whether one was ever spent.
+    test('the subscription/trial row survives a data reset', () async {
+      final storage = StorageService();
+      final trialStart = DateTime(2024, 1, 1);
+      await storage.saveSubscriptionState(
+        SubscriptionState(
+          trialStartedAt: trialStart,
+          status: SubscriptionStatus.trial,
+          updatedAt: trialStart,
+        ),
+      );
+
+      await storage.clearAllData();
+
+      final state = await storage.loadSubscriptionState();
+      expect(state, isNotNull);
+      expect(state!.trialStartedAt, trialStart);
+      expect(state.status, SubscriptionStatus.trial);
+    });
+
+    test(
+      'startTrialIfNeeded does not restart an already-spent trial after a reset',
+      () async {
+        final storage = StorageService();
+        final trialStart = DateTime(2024, 1, 1);
+        await storage.saveSubscriptionState(
+          SubscriptionState(
+            trialStartedAt: trialStart,
+            status: SubscriptionStatus.expired,
+            updatedAt: trialStart,
+          ),
+        );
+
+        await storage.clearAllData();
+        await storage.startTrialIfNeeded();
+
+        final state = await storage.loadSubscriptionState();
+        // Still the original trial start, not today — clearAllData must not
+        // have erased it, so startTrialIfNeeded sees an existing
+        // trialStartedAt and declines to grant a new one.
+        expect(state!.trialStartedAt, trialStart);
+      },
+    );
+
+    test('everything else is still actually cleared', () async {
+      final storage = StorageService();
+      await storage.saveSurveyRecord(
+        SurveyRecord(
+          id: 'reset_check',
+          completedAt: DateTime(2024, 1, 1),
+          type: 'initial',
+          title: 'Başlangıç Anketi',
+          name: 'Ada',
+          packsPerDay: '1 paket',
+          exhaleTestSeconds: 6,
+          inhaleTestSeconds: 8,
+          riskScore: 40,
+          riskLevel: 'ORTA',
+          consecutiveSmokingHabit: 'Evet, bazen',
+          consecutiveSmokingCount: '4 adet',
+        ),
+      );
+      await storage.saveSetting('some_setting', 'some_value');
+
+      await storage.clearAllData();
+
+      expect(await storage.loadSurveyHistory(), isEmpty);
+      expect(await storage.loadSetting('some_setting'), isNull);
+    });
+  });
+
   test('saves task results in the local database', () async {
     final storage = StorageService();
 

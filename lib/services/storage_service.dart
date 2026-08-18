@@ -5817,6 +5817,14 @@ class StorageService {
     return (hour * 60) + minute;
   }
 
+  /// Deliberately never touches [_subscriptionStateTable] — same rule
+  /// cloudBackupTableNames already follows for backup/restore ("includes
+  /// user state but excludes entitlements"). Resetting your data (or
+  /// switching accounts, or deleting your account) is not a purchase
+  /// event; the 14-day trial only ever starts once
+  /// (StorageService.startTrialIfNeeded checks for an existing row before
+  /// granting one). Deleting this row here would have let a reset grant a
+  /// fresh trial indefinitely.
   Future<void> clearAllData() async {
     final db = await database;
     // Wrapped in a transaction so an interruption mid-reset can't leave
@@ -5828,10 +5836,7 @@ class StorageService {
           value TEXT NOT NULL
         )
       ''');
-      for (final table in <String>[
-        ...cloudBackupTableNames,
-        _subscriptionStateTable,
-      ]) {
+      for (final table in cloudBackupTableNames) {
         await txn.delete(table);
       }
     });
