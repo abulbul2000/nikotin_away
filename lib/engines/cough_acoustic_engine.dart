@@ -22,6 +22,17 @@ class CoughTestAnalysis {
   final double? earlyBurstRatio;
   final int? peakIntensityScore;
 
+  /// True when the recording itself looks unusable — every sample at or
+  /// near zero energy, consistent with a microphone that never actually
+  /// opened (backgrounded app, OS-denied permission mid-test, muted input)
+  /// rather than a genuinely quiet room. A real room, even silent, still
+  /// carries measurable electronic/ambient noise-floor energy; a recording
+  /// that never does is a signal-quality failure, not a clean result, and
+  /// should not be shown as "normal" — see [severityLevel]'s own
+  /// zero-coughs-reads-as-normal behavior, which this flag exists to catch
+  /// before the caller trusts it.
+  final bool insufficientSignal;
+
   const CoughTestAnalysis({
     required this.coughCount,
     required this.severityScore,
@@ -29,6 +40,7 @@ class CoughTestAnalysis {
     this.averageIntervalSeconds,
     this.earlyBurstRatio,
     this.peakIntensityScore,
+    this.insufficientSignal = false,
   });
 }
 
@@ -60,6 +72,11 @@ class CoughAcousticEngine {
   static const int minEventGapMs = 120;
 
   static const int defaultTestDurationSeconds = 30;
+
+  /// Same floor [analyze] already uses as `baseline`'s minimum — below
+  /// this, a sample's energy is indistinguishable from a microphone
+  /// capturing nothing at all rather than genuine (even very quiet) audio.
+  static const double minPlausibleEnergy = 0.002;
 
   double _median(List<double> values) {
     if (values.isEmpty) return 0;
@@ -148,6 +165,22 @@ class CoughAcousticEngine {
     List<BreathAcousticSample> samples, {
     int testDurationSeconds = defaultTestDurationSeconds,
   }) {
+    // Checked before anything else: a recording whose loudest moment never
+    // clears the noise floor didn't fail to capture a cough, it failed to
+    // capture anything — findCoughEvents would return zero events either
+    // way, which severityLevel alone reads as a clean "normal" result.
+    final insufficientSignal =
+        samples.isEmpty ||
+        samples.every((s) => s.rmsEnergy < minPlausibleEnergy);
+    if (insufficientSignal) {
+      return const CoughTestAnalysis(
+        coughCount: 0,
+        severityScore: 0,
+        severityLevel: 'normal',
+        insufficientSignal: true,
+      );
+    }
+
     final events = findCoughEvents(samples);
     final count = events.length;
     final score = severityScore(count, testDurationSeconds);
@@ -172,7 +205,7 @@ class CoughAcousticEngine {
       earlyBurstRatio = earlyCount / count;
 
       final medianEnergy = _median(samples.map((s) => s.rmsEnergy).toList());
-      final baseline = max(medianEnergy, 0.002);
+      final baseline = max(medianEnergy, minPlausibleEnergy);
       // Log-scaled: the raw energy ratio between a loud cough and a quiet
       // room can span two-plus orders of magnitude, which would saturate a
       // linear scale at 100 for almost any real cough. log2 keeps the

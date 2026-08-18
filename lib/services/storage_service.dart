@@ -1297,6 +1297,15 @@ class StorageService {
       'wheezeBandEnergyRatio',
       'REAL',
     );
+    // See CoughTestRecord.insufficientSignal — marks a kept-anyway attempt
+    // whose recording never cleared the noise floor, so callers can tell it
+    // apart from a real "no coughs detected" result.
+    await _ensureTableColumn(
+      db,
+      _coughTestRecordsTable,
+      'insufficientSignal',
+      'INTEGER',
+    );
   }
 
   /// User-facing breath test record (score/duration/stability/intensity +

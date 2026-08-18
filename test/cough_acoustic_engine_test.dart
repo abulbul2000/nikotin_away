@@ -183,4 +183,66 @@ void main() {
       expect(result.severityLevel, engine.severityLevel(result.severityScore));
     });
   });
+
+  group('insufficientSignal (regression coverage)', () {
+    // A dead microphone (app backgrounded mid-test, permission revoked,
+    // input muted) produces zero coughs the exact same way a genuinely
+    // clean, symptom-free test does — severityLevel alone reads both as
+    // "normal". insufficientSignal exists so a caller can tell them apart
+    // instead of showing a fabricated clean result.
+    test('no samples at all is insufficient signal', () {
+      final result = engine.analyze(const []);
+      expect(result.insufficientSignal, isTrue);
+      expect(result.coughCount, 0);
+      expect(result.severityLevel, 'normal');
+    });
+
+    test('every sample below the noise floor is insufficient signal', () {
+      final samples = List.generate(
+        100,
+        (i) => BreathAcousticSample(
+          millisecondsSinceStart: i * 20,
+          rmsEnergy: 0.0001,
+        ),
+      );
+      final result = engine.analyze(samples);
+      expect(result.insufficientSignal, isTrue);
+      expect(result.coughCount, 0);
+    });
+
+    test('a genuinely quiet room (no coughs, but real ambient energy) is not '
+        'insufficient signal', () {
+      // The existing 'an all-quiet recording has zero events' fixture
+      // uses quietEnergy 0.002, the same value as the engine's own
+      // minPlausibleEnergy floor — this is meant to represent a real,
+      // symptom-free room, not a dead microphone, and must not be
+      // flagged.
+      final result = engine.analyze(_streamWithBursts(const []));
+      expect(result.insufficientSignal, isFalse);
+      expect(result.coughCount, 0);
+      expect(result.severityLevel, 'normal');
+    });
+
+    test('a recording with a real cough is never insufficient signal', () {
+      final result = engine.analyze(_streamWithBursts([5000]));
+      expect(result.insufficientSignal, isFalse);
+      expect(result.coughCount, 1);
+    });
+
+    test('a single sample above the floor is enough to not be insufficient '
+        'signal', () {
+      final samples = [
+        const BreathAcousticSample(
+          millisecondsSinceStart: 0,
+          rmsEnergy: 0.0001,
+        ),
+        const BreathAcousticSample(
+          millisecondsSinceStart: 20,
+          rmsEnergy: 0.003,
+        ),
+      ];
+      final result = engine.analyze(samples);
+      expect(result.insufficientSignal, isFalse);
+    });
+  });
 }

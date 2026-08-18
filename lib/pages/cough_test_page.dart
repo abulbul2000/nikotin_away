@@ -250,12 +250,59 @@ class _CoughTestPageState extends State<CoughTestPage> {
     );
   }
 
+  /// Same recovery pattern as BreathTestPage's `_handleAttemptOutcomeUi`
+  /// weak-signal dialog: "keep anyway" pops false and the caller saves the
+  /// zero-signal result (marked insufficientSignal so it can be told apart
+  /// from a genuine clean test later); "retry" pops true and the caller
+  /// discards this attempt and restarts the listen.
+  Future<bool> _showInsufficientSignalDialog() async {
+    final retry = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(context.t('coughInsufficientSignalTitle')),
+        content: Text(context.t('coughInsufficientSignalMessage')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.t('keepResultAnywayButton')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(context.t('retryAttemptButton')),
+          ),
+        ],
+      ),
+    );
+    return retry ?? false;
+  }
+
   Future<void> _finishTest() async {
     await _audioService.stopListening();
     final analysis = _acousticEngine.analyze(
       _samples,
       testDurationSeconds: _testDurationSeconds,
     );
+
+    if (analysis.insufficientSignal) {
+      // The recording never cleared the noise floor at all — not merely a
+      // quiet room (that would still produce measurable low-level energy),
+      // but a microphone that captured essentially nothing (backgrounded
+      // app, OS-denied permission mid-test, muted input).
+      if (!mounted) return;
+      final retry = await _showInsufficientSignalDialog();
+      if (!mounted) return;
+      if (retry) {
+        setState(() {
+          _phase = _CoughTestPhase.notStarted;
+        });
+        unawaited(_startTest());
+        return;
+      }
+      // Falls through to the normal save path below — the record is
+      // persisted with insufficientSignal: true so it reads as "no signal
+      // captured" rather than a fabricated clean result wherever it's
+      // shown later.
+    }
 
     if (mounted) {
       await SuccessCheckOverlay.show(context);
@@ -279,6 +326,7 @@ class _CoughTestPageState extends State<CoughTestPage> {
       wheezeSeverityLevel: wheezeAnalysis.severityLevel,
       wheezeSeverityScore: wheezeAnalysis.severityScore,
       wheezeBandEnergyRatio: wheezeAnalysis.wheezeBandEnergyRatio,
+      insufficientSignal: analysis.insufficientSignal,
     );
     await _storageService.saveCoughTestRecord(record);
 

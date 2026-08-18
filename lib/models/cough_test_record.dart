@@ -28,6 +28,15 @@ class CoughTestRecord {
   final int? wheezeSeverityScore;
   final double? wheezeBandEnergyRatio;
 
+  /// True when the recording never cleared the microphone's noise floor at
+  /// all (see CoughAcousticEngine.analyze's insufficientSignal) — the user
+  /// chose to keep this attempt rather than retry, so coughCount/
+  /// severityLevel are the engine's zero-signal defaults, not a real
+  /// reading. False/null (including every row saved before this field
+  /// existed) means the recording captured real audio, whether or not any
+  /// coughs were found in it.
+  final bool? insufficientSignal;
+
   const CoughTestRecord({
     required this.id,
     required this.createdAt,
@@ -42,6 +51,7 @@ class CoughTestRecord {
     this.wheezeSeverityLevel,
     this.wheezeSeverityScore,
     this.wheezeBandEnergyRatio,
+    this.insufficientSignal,
   });
 
   Map<String, dynamic> toJson() {
@@ -61,6 +71,9 @@ class CoughTestRecord {
       'wheezeSeverityLevel': wheezeSeverityLevel,
       'wheezeSeverityScore': wheezeSeverityScore,
       'wheezeBandEnergyRatio': wheezeBandEnergyRatio,
+      'insufficientSignal': insufficientSignal == null
+          ? null
+          : (insufficientSignal! ? 1 : 0),
     };
   }
 
@@ -83,6 +96,9 @@ class CoughTestRecord {
       wheezeSeverityScore: (json['wheezeSeverityScore'] as num?)?.toInt(),
       wheezeBandEnergyRatio: (json['wheezeBandEnergyRatio'] as num?)
           ?.toDouble(),
+      insufficientSignal: (json['insufficientSignal'] as num?) == null
+          ? null
+          : (json['insufficientSignal'] as num).toInt() == 1,
     );
   }
 }

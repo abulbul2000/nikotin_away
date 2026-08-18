@@ -274,6 +274,9 @@ class AppTexts {
     'breathNoiseRetry': 'Tekrar Dene',
     'breathNoiseDuringAttemptWarning':
         'Test sırasında ortam sesi arttı — bu deneme gürültülü olarak işaretlendi.',
+    'coughInsufficientSignalTitle': 'Mikrofon ses algılamadı',
+    'coughInsufficientSignalMessage':
+        'Bu denemede mikrofon neredeyse hiç ses kaydetmedi — uygulama arka plana alınmış ya da mikrofon başka bir uygulama tarafından kullanılıyor olabilir. Sonuç kaydedilmedi, lütfen tekrar dene.',
     'breathFeedbackTooShort': 'Ciğerlerini tam boşaltmayı dene.',
     'breathFeedbackLowStability': 'Sabit bir güçle üflemeye çalış.',
     'breathFeedbackWeakSignal': 'Telefonu ağzına biraz daha yaklaştır.',
@@ -2306,6 +2309,9 @@ class AppTexts {
     'breathNoiseRetry': 'Try Again',
     'breathNoiseDuringAttemptWarning':
         'Background noise increased during the test — this attempt was marked as noisy.',
+    'coughInsufficientSignalTitle': "Microphone didn't pick up any sound",
+    'coughInsufficientSignalMessage':
+        'This attempt captured almost no audio — the app may have been backgrounded, or the microphone may be in use by another app. The result was not saved; please try again.',
     'breathFeedbackTooShort': 'Try to empty your lungs completely.',
     'breathFeedbackLowStability': 'Try blowing with a steady, even force.',
     'breathFeedbackWeakSignal': 'Bring the phone a bit closer to your mouth.',
