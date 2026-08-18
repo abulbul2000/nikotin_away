@@ -8,7 +8,6 @@ import 'package:no_smoke/core/mentor_command_codes.dart';
 import 'package:no_smoke/models/survey_record.dart';
 import 'package:no_smoke/pages/breath_spirometry_result_page.dart';
 import 'package:no_smoke/pages/cough_test_page.dart';
-import 'package:no_smoke/pages/health_recovery_page.dart';
 import 'package:no_smoke/pages/risk_result_page.dart';
 import 'package:no_smoke/pages/smoked_log_consent_page.dart';
 import 'package:no_smoke/pages/snoring_test_page.dart';
@@ -20,20 +19,24 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 /// Simulates virtual users across every language declared by
 /// LanguageService.supportedLanguages: widget-level
-/// smoke coverage for the app's user-facing screens (test results, health
-/// recovery milestones, survey review/trend, duration-barrier/task
-/// confirmation, smoked-log consent) plus a full sweep of every canonical
-/// mentor message/command code through AppTexts' pure resolver functions —
-/// covering the mentor coaching feature without needing to pump HomePage's
-/// mentor card (which lives inside the documented-hang widget tree).
+/// smoke coverage for the app's user-facing screens (test results, survey
+/// review/trend, duration-barrier/task confirmation, smoked-log consent)
+/// plus a full sweep of every canonical mentor message/command code
+/// through AppTexts' pure resolver functions — covering the mentor
+/// coaching feature without needing to pump HomePage's mentor card (which
+/// lives inside the documented-hang widget tree).
 ///
-/// Deliberately excludes HomePage, SleepRoutinePage, MedicationsPage, and
-/// HealthMetricsPage — all either share the documented unexplained
-/// widget-test hang (home_page_mentor_card_test.dart /
-/// sleep_routine_page_test.dart) or require a live, non-empty StorageService
-/// to render meaningfully. Duration-barrier and health-condition-advice
-/// features have no standalone widget of their own (barrier follow-ups
-/// reuse TaskSmokedConfirmPage; health-condition advice is
+/// Deliberately excludes HomePage, SleepRoutinePage, MedicationsPage,
+/// HealthMetricsPage, and HealthRecoveryPage — all either share the
+/// documented unexplained widget-test hang (home_page_mentor_card_test.
+/// dart / sleep_routine_page_test.dart) or require a live, non-empty
+/// StorageService to render meaningfully (HealthRecoveryPage loads its
+/// last-logged-cigarette timestamp itself as of the fix replacing its
+/// old quitDate-only abstinence assumption; see health_recovery_page_
+/// test.dart for its own dedicated coverage, same pattern as
+/// health_metrics_page_test.dart). Duration-barrier and health-condition-
+/// advice features have no standalone widget of their own (barrier
+/// follow-ups reuse TaskSmokedConfirmPage; health-condition advice is
 /// notification-text-only) — both are covered via the mechanisms below
 /// (TaskSmokedConfirmPage pumps, and the translation-key-existence sweep
 /// implicitly covers every advice string's translated form).
@@ -330,37 +333,6 @@ void main() {
         );
       });
 
-      testWidgets('HealthRecoveryPage renders for varied quit dates', (
-        tester,
-      ) async {
-        final quitDates = [
-          DateTime.now(), // just quit
-          DateTime.now().subtract(const Duration(days: 3)),
-          DateTime.now().subtract(const Duration(days: 30)),
-          DateTime.now().subtract(const Duration(days: 365)),
-          DateTime.now().subtract(const Duration(days: 3650)), // 10 years
-        ];
-        for (final quitDate in quitDates) {
-          scenarioCount++;
-          await tester.pumpWidget(
-            _wrapWithLocale(code, HealthRecoveryPage(quitDate: quitDate)),
-          );
-          await tester.pump();
-
-          final exception = tester.takeException();
-          if (exception != null) {
-            failures.add(
-              '[$code] HealthRecoveryPage quitDate=$quitDate -> $exception',
-            );
-          }
-        }
-        expect(
-          failures.where((f) => f.startsWith('[$code] HealthRecoveryPage')),
-          isEmpty,
-          reason: failures.join('\n'),
-        );
-      });
-
       testWidgets('SurveyReviewPage renders for varied trend directions', (
         tester,
       ) async {
@@ -550,9 +522,6 @@ void main() {
               riskLevel: 'YUKSEK',
               breathScore: 80,
               wheezeDetected: true,
-            ),
-            'HealthRecoveryPage': HealthRecoveryPage(
-              quitDate: DateTime.now().subtract(const Duration(days: 30)),
             ),
             'TaskSmokedConfirmPage': const TaskSmokedConfirmPage(
               taskTitle:

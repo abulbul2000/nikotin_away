@@ -4418,6 +4418,28 @@ class StorageService {
     return id;
   }
 
+  /// When the most recent cigarette was actually logged, or null if none
+  /// ever has been. This is the correct anchor for a physiological
+  /// recovery timeline (heart rate/CO/nicotine-clearance milestones are
+  /// measured from the last cigarette, not from when someone joined the
+  /// program) — unlike a fixed "quit date", which this app deliberately
+  /// has none of a real kind: the program is gradual reduction, the user
+  /// keeps smoking throughout it, so "time since quitDate" alone would
+  /// claim recovery milestones regardless of whether a cigarette happened
+  /// an hour ago.
+  Future<DateTime?> loadLastSmokingEventTimestamp() async {
+    final db = await database;
+    final rows = await db.query(
+      _smokingEventsTable,
+      orderBy: 'timestamp DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      return null;
+    }
+    return DateTime.tryParse(rows.first['timestamp'] as String? ?? '');
+  }
+
   Future<void> updateSmokingEventTrigger({
     required String id,
     required String trigger,

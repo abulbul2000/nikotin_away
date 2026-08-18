@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:no_smoke/models/adaptive_task_models.dart';
 import 'package:no_smoke/models/breath_progress_record.dart';
 import 'package:no_smoke/models/cough_test_record.dart';
+import 'package:no_smoke/models/smoking_event.dart';
 import 'package:no_smoke/models/snoring_probe_event.dart';
 import 'package:no_smoke/models/step_counter_sample.dart';
 import 'package:no_smoke/models/subscription_state.dart';
@@ -222,6 +223,49 @@ void main() {
       );
     },
   );
+
+  group('loadLastSmokingEventTimestamp (regression coverage)', () {
+    test('returns null when nothing has ever been logged', () async {
+      final storage = StorageService();
+      expect(await storage.loadLastSmokingEventTimestamp(), isNull);
+    });
+
+    test(
+      'returns the most recent event, not the first or an arbitrary one',
+      () async {
+        final storage = StorageService();
+        final now = DateTime.now();
+        await storage.saveSmokingEvent(
+          SmokingEvent(
+            id: 'older',
+            timestamp: now.subtract(const Duration(hours: 5)),
+            source: 'quick_log',
+            approximate: false,
+          ),
+        );
+        final newest = now.subtract(const Duration(minutes: 10));
+        await storage.saveSmokingEvent(
+          SmokingEvent(
+            id: 'newest',
+            timestamp: newest,
+            source: 'quick_log',
+            approximate: false,
+          ),
+        );
+        await storage.saveSmokingEvent(
+          SmokingEvent(
+            id: 'middle',
+            timestamp: now.subtract(const Duration(hours: 2)),
+            source: 'quick_log',
+            approximate: false,
+          ),
+        );
+
+        final result = await storage.loadLastSmokingEventTimestamp();
+        expect(result, newest);
+      },
+    );
+  });
 
   test('saves task results in the local database', () async {
     final storage = StorageService();

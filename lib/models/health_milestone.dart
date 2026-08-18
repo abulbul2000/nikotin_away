@@ -11,10 +11,6 @@ class HealthMilestone {
     required this.icon,
   });
 
-  bool isReached(DateTime quitDate) {
-    return DateTime.now().difference(quitDate) >= timeSinceQuit;
-  }
-
   /// Medically-referenced smoking cessation recovery timeline
   /// (based on commonly cited CDC / WHO cessation benefit timelines).
   static const List<HealthMilestone> timeline = [
