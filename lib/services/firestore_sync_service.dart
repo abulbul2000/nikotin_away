@@ -15,6 +15,28 @@ import 'storage_service.dart';
 class FirestoreSyncService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  // home_page.dart fires syncLocalDatabaseBackup with `unawaited` on app
+  // resume/registration, with no handle kept by the caller. If the user
+  // deletes their account or resets local data while that upload is still
+  // running, the sync can keep writing chunks to Firestore after
+  // deleteAllCloudData() has already run, resurrecting cloud data the user
+  // just asked to delete. Tracking the in-flight call here lets callers
+  // that are about to wipe cloud/local data wait for it to finish first.
+  static Future<bool>? _pendingSync;
+
+  /// Waits for any in-flight [syncLocalDatabaseBackup] call to finish.
+  /// Call this before deleting cloud or local data so a background upload
+  /// started earlier cannot write data back after the deletion.
+  static Future<void> waitForPendingSync() async {
+    final pending = _pendingSync;
+    if (pending == null) return;
+    try {
+      await pending;
+    } catch (_) {
+      // syncLocalDatabaseBackup already reports its own errors internally.
+    }
+  }
+
   static String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   static bool get _isCloudUser {
@@ -22,12 +44,11 @@ class FirestoreSyncService {
     return user != null && !user.isAnonymous;
   }
 
-  static DocumentReference<Map<String, dynamic>> get _backupRoot =>
-      _db
-          .collection('user_data')
-          .doc(_uid)
-          .collection('database_backup')
-          .doc('snapshot');
+  static DocumentReference<Map<String, dynamic>> get _backupRoot => _db
+      .collection('user_data')
+      .doc(_uid)
+      .collection('database_backup')
+      .doc('snapshot');
 
   /// Deletes every cloud document owned by the currently signed-in user.
   /// The UID is always taken from FirebaseAuth, never supplied by the caller.
@@ -74,6 +95,18 @@ class FirestoreSyncService {
   /// revalidated from Google Play/Firebase on the replacement device.
   static Future<bool> syncLocalDatabaseBackup(StorageService storage) async {
     if (!_isCloudUser || _uid.isEmpty) return false;
+    final future = _runLocalDatabaseBackupSync(storage);
+    _pendingSync = future;
+    try {
+      return await future;
+    } finally {
+      if (identical(_pendingSync, future)) _pendingSync = null;
+    }
+  }
+
+  static Future<bool> _runLocalDatabaseBackupSync(
+    StorageService storage,
+  ) async {
     try {
       final backup = await storage.exportCloudBackup();
       await _backupRoot.set({
@@ -92,6 +125,7 @@ class FirestoreSyncService {
           batch = _db.batch();
           operationCount = 0;
         }
+
         for (final old in oldChunks.docs) {
           batch.delete(old.reference);
           operationCount++;
@@ -106,15 +140,15 @@ class FirestoreSyncService {
           'rowCount': rows.length,
           'updatedAt': DateTime.now().toIso8601String(),
         });
-        for (var offset = 0, chunk = 0;
-            offset < rows.length;
-            offset += 50, chunk++) {
-          final end =
-              offset + 50 < rows.length ? offset + 50 : rows.length;
-          batch.set(
-            tableRef.collection('chunks').doc(chunk.toString()),
-            {'rowsJson': jsonEncode(rows.sublist(offset, end))},
-          );
+        for (
+          var offset = 0, chunk = 0;
+          offset < rows.length;
+          offset += 50, chunk++
+        ) {
+          final end = offset + 50 < rows.length ? offset + 50 : rows.length;
+          batch.set(tableRef.collection('chunks').doc(chunk.toString()), {
+            'rowsJson': jsonEncode(rows.sublist(offset, end)),
+          });
           operationCount++;
           await commitIfFull();
         }
@@ -236,7 +270,11 @@ class FirestoreSyncService {
         }
 
         surveyBatch.set(
-          _db.collection('user_data').doc(_uid).collection('meta').doc('context'),
+          _db
+              .collection('user_data')
+              .doc(_uid)
+              .collection('meta')
+              .doc('context'),
           {'records': contextMap},
         );
       }
@@ -254,10 +292,7 @@ class FirestoreSyncService {
   static Future<(List<SurveyRecord>, Map<String, Map<String, dynamic>>)>
   restoreFromCloud() async {
     if (!_isCloudUser || _uid.isEmpty) {
-      return (
-        <SurveyRecord>[],
-        <String, Map<String, dynamic>>{},
-      );
+      return (<SurveyRecord>[], <String, Map<String, dynamic>>{});
     }
 
     try {
@@ -309,10 +344,7 @@ class FirestoreSyncService {
     } catch (error, stackTrace) {
       debugPrint('[FirestoreSync] Restore failed: $error');
       debugPrintStack(stackTrace: stackTrace);
-      return (
-        <SurveyRecord>[],
-        <String, Map<String, dynamic>>{},
-      );
+      return (<SurveyRecord>[], <String, Map<String, dynamic>>{});
     }
   }
 

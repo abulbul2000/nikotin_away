@@ -291,11 +291,9 @@ class _SettingsPageState extends State<SettingsPage> {
     unawaited(_refreshWearableSnapshot());
   }
 
-
   Future<void> _shareApp() async {
     await showShareAppSheet(context);
   }
-
 
   Future<void> _openNotifications() async {
     await Navigator.push(
@@ -393,25 +391,31 @@ class _SettingsPageState extends State<SettingsPage> {
     if (confirmed != true) return;
 
     try {
+      // A background syncLocalDatabaseBackup fired earlier (e.g. on app
+      // resume) may still be uploading. Wait for it to finish first so it
+      // cannot write cloud data back after deleteAllCloudData() below.
+      await FirestoreSyncService.waitForPendingSync();
       await FirestoreSyncService.deleteAllCloudData();
       await deleteAllBackupsForCurrentUser();
       await _storageService.clearAllData();
       await GoogleAuthService.deleteCurrentAccount();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('accountDeleteDone'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('accountDeleteDone'))));
     } on FirebaseAuthException catch (error) {
       if (!mounted) return;
       final message = error.code == 'requires-recent-login'
           ? context.t('accountDeleteRecentLogin')
           : context.t('accountDeleteFailed');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('accountDeleteFailed'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('accountDeleteFailed'))));
     }
   }
 
@@ -435,6 +439,10 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
     if (confirmed != true) return;
+    // See _confirmDeleteAccount: a background syncLocalDatabaseBackup may
+    // still be reading from storage. Let it finish before wiping so it
+    // does not race clearAllData() and re-upload a half-cleared snapshot.
+    await FirestoreSyncService.waitForPendingSync();
     await _storageService.clearAllData();
     if (!mounted) return;
     ScaffoldMessenger.of(
@@ -652,9 +660,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ListTile(
                 leading: const Icon(Icons.timer_outlined),
                 title: Text(context.t('durationBarrierEnabledTitle')),
-                subtitle: Text(
-                  context.t('durationBarrierEnabledDescription'),
-                ),
+                subtitle: Text(context.t('durationBarrierEnabledDescription')),
                 trailing: Switch(
                   value: _durationBarrierEnabled,
                   onChanged: _toggleDurationBarrier,
@@ -923,7 +929,10 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.person_remove_outlined, color: Colors.redAccent),
+                leading: const Icon(
+                  Icons.person_remove_outlined,
+                  color: Colors.redAccent,
+                ),
                 title: Text(context.t('accountDeleteRow')),
                 subtitle: Text(context.t('accountDeleteSubtitle')),
                 onTap: _deleteAccountAndCloudData,
