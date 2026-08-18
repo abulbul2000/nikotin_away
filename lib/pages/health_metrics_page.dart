@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
 import '../models/survey_record.dart';
+import '../services/behavior_engine.dart';
 import '../services/storage_service.dart';
 import '../widgets/load_error_view.dart';
 
@@ -16,6 +17,7 @@ class HealthMetricsPage extends StatefulWidget {
 
 class _HealthMetricsPageState extends State<HealthMetricsPage> {
   final StorageService _storageService = StorageService();
+  final BehaviorEngine _behaviorEngine = BehaviorEngine();
   List<SurveyRecord> _breathTests = [];
   bool _isLoading = true;
   bool _hasError = false;
@@ -50,22 +52,8 @@ class _HealthMetricsPageState extends State<HealthMetricsPage> {
     }
   }
 
-  String _calculateTrend(List<int> values) {
-    if (values.length < 2) return 'N/A';
-    final firstHalf = values.take((values.length / 2).ceil()).toList();
-    final secondHalf = values.skip((values.length / 2).ceil()).toList();
-
-    final avgFirst = firstHalf.isEmpty
-        ? 0
-        : firstHalf.reduce((a, b) => a + b) / firstHalf.length;
-    final avgSecond = secondHalf.isEmpty
-        ? 0
-        : secondHalf.reduce((a, b) => a + b) / secondHalf.length;
-
-    final improvement = ((avgSecond - avgFirst) / avgFirst * 100)
-        .toStringAsFixed(1);
-    return improvement;
-  }
+  String _calculateTrend(List<int> values) =>
+      _behaviorEngine.calculatePercentTrend(values);
 
   Widget _buildMetricCard(String title, String value, String subtitle) {
     return Card(

@@ -734,6 +734,44 @@ void main() {
       );
     });
 
+    group('calculatePercentTrend', () {
+      final engine = BehaviorEngine();
+
+      test('fewer than 2 values reports N/A', () {
+        expect(engine.calculatePercentTrend(const []), 'N/A');
+        expect(engine.calculatePercentTrend(const [5]), 'N/A');
+      });
+
+      test('an even split reports the percent change between halves', () {
+        // firstHalf = [10, 10] avg 10, secondHalf = [15, 15] avg 15 ->
+        // (15-10)/10*100 = 50.0
+        expect(engine.calculatePercentTrend(const [10, 10, 15, 15]), '50.0');
+      });
+
+      test('an odd count gives the extra value to the first half', () {
+        // values.length=5, ceil(5/2)=3 -> firstHalf=[a,b,c], secondHalf=[d,e]
+        // firstHalf = [10,10,10] avg 10, secondHalf = [20,20] avg 20 ->
+        // (20-10)/10*100 = 100.0
+        expect(
+          engine.calculatePercentTrend(const [10, 10, 10, 20, 20]),
+          '100.0',
+        );
+      });
+
+      test('a decline reports a negative percentage', () {
+        expect(engine.calculatePercentTrend(const [20, 20, 10, 10]), '-50.0');
+      });
+
+      test('a first-half average of zero would previously divide by zero and '
+          'show Infinity/NaN — now reports N/A when the second half moved', () {
+        expect(engine.calculatePercentTrend(const [0, 0, 10, 10]), 'N/A');
+      });
+
+      test('both halves at zero reports 0.0 rather than NaN', () {
+        expect(engine.calculatePercentTrend(const [0, 0, 0, 0]), '0.0');
+      });
+    });
+
     group('resolveCoughAdvisoryTier', () {
       final engine = BehaviorEngine();
 

@@ -366,6 +366,38 @@ class BehaviorEngine {
     return 'Stable';
   }
 
+  /// Percent change between the average of the first half of [values] and
+  /// the average of the second half, as a string like `'12.5'` (positive
+  /// means the second half is higher). Returns `'N/A'` for fewer than two
+  /// values.
+  ///
+  /// Unlike [calculateBreathTrend]/[calculateBreathTrendFromRecords] — which
+  /// only compare the very first and very last record into a coarse
+  /// Improving/Declining/Stable label — this averages across each half and
+  /// reports a number, which is what a metrics detail screen needs instead
+  /// of a category.
+  String calculatePercentTrend(List<int> values) {
+    if (values.length < 2) return 'N/A';
+    final firstHalf = values.take((values.length / 2).ceil()).toList();
+    final secondHalf = values.skip((values.length / 2).ceil()).toList();
+
+    final avgFirst = firstHalf.isEmpty
+        ? 0
+        : firstHalf.reduce((a, b) => a + b) / firstHalf.length;
+    final avgSecond = secondHalf.isEmpty
+        ? 0
+        : secondHalf.reduce((a, b) => a + b) / secondHalf.length;
+
+    // A first-half average of 0 (e.g. an early record with no reading yet)
+    // previously divided by zero and displayed "Infinity"/"NaN" to the
+    // user instead of a percentage.
+    if (avgFirst == 0) {
+      return avgSecond == 0 ? '0.0' : 'N/A';
+    }
+
+    return ((avgSecond - avgFirst) / avgFirst * 100).toStringAsFixed(1);
+  }
+
   String calculateSmokingTrend(List<SurveyHistory> surveys) {
     final ordered = [...surveys]
       ..sort((a, b) => a.surveyDate.compareTo(b.surveyDate));
