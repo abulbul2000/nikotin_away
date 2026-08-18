@@ -61,31 +61,28 @@ void main() {
       expect(at30, closeTo(50, 0.001));
     });
 
-    test(
-      'different plausible blow durations produce different scores '
-      '(regression: with real exhale-only durations, the old 15s ceiling '
-      'combined with the old inflated-duration bug meant every attempt '
-      'saturated the duration signal to 1.0)',
-      () {
-        final short = engine.computeScore(
-          blowDurationSeconds: 3,
-          blowStability: 0.7,
-          blowIntensity: 0.7,
-        );
-        final medium = engine.computeScore(
-          blowDurationSeconds: 6,
-          blowStability: 0.7,
-          blowIntensity: 0.7,
-        );
-        final long = engine.computeScore(
-          blowDurationSeconds: 9,
-          blowStability: 0.7,
-          blowIntensity: 0.7,
-        );
-        expect(short, lessThan(medium));
-        expect(medium, lessThan(long));
-      },
-    );
+    test('different plausible blow durations produce different scores '
+        '(regression: with real exhale-only durations, the old 15s ceiling '
+        'combined with the old inflated-duration bug meant every attempt '
+        'saturated the duration signal to 1.0)', () {
+      final short = engine.computeScore(
+        blowDurationSeconds: 3,
+        blowStability: 0.7,
+        blowIntensity: 0.7,
+      );
+      final medium = engine.computeScore(
+        blowDurationSeconds: 6,
+        blowStability: 0.7,
+        blowIntensity: 0.7,
+      );
+      final long = engine.computeScore(
+        blowDurationSeconds: 9,
+        blowStability: 0.7,
+        blowIntensity: 0.7,
+      );
+      expect(short, lessThan(medium));
+      expect(medium, lessThan(long));
+    });
   });
 
   group('BreathTrendEngine.medianOfAttemptScores', () {
@@ -230,7 +227,10 @@ void main() {
     final engine = BreathTrendEngine();
 
     test('noisy records are excluded from window averages and best score', () {
-      final base = DateTime(2026, 1, 1);
+      // Within the real last7Days window (see the window-anchoring group
+      // below), not a fixed historical date — last7Days is now anchored to
+      // DateTime.now(), not the record set's own last timestamp.
+      final base = DateTime.now().subtract(const Duration(hours: 2));
       final records = [
         _record(completedAt: base, breathScore: 10, isNoisyEnvironment: true),
         _record(
@@ -269,27 +269,118 @@ void main() {
   group('BreathTrendEngine.summarize — legacy schemaVersion excluded', () {
     final engine = BreathTrendEngine();
 
-    test(
-      'schemaVersion 1 (pre exhale-duration-fix) records are excluded from '
-      'window averages and best score, same as noisy records '
-      '(regression: old inflated blowDurationSeconds must not pollute the '
-      'trend once the measurement bug is fixed)',
-      () {
-        final base = DateTime(2026, 1, 1);
-        final records = [
-          _record(completedAt: base, breathScore: 10, schemaVersion: 1),
-          _record(
-            completedAt: base.add(const Duration(hours: 1)),
-            breathScore: 90,
+    test('schemaVersion 1 (pre exhale-duration-fix) records are excluded from '
+        'window averages and best score, same as noisy records '
+        '(regression: old inflated blowDurationSeconds must not pollute the '
+        'trend once the measurement bug is fixed)', () {
+      final base = DateTime.now().subtract(const Duration(hours: 2));
+      final records = [
+        _record(completedAt: base, breathScore: 10, schemaVersion: 1),
+        _record(
+          completedAt: base.add(const Duration(hours: 1)),
+          breathScore: 90,
+        ),
+      ];
+
+      final summary = engine.summarize(records, languageCode: 'tr');
+      expect(summary.bestScore, 90);
+      expect(summary.last7Days.testCount, 1);
+      expect(summary.last7Days.averageScore, 90);
+    });
+  });
+
+  group(
+    'BreathTrendEngine.summarize — window anchoring (regression coverage)',
+    () {
+      final engine = BreathTrendEngine();
+
+      // Regression coverage: last7Days/last30Days/last90Days used to anchor
+      // "now" to the *last record's* timestamp (sorted.last.completedAt),
+      // not the actual current wall-clock time. A user who stopped testing
+      // 5 months ago and reopens the analysis page would see "last 30 days:
+      // 12 tests, 72% consistency" computed against their final active
+      // month — a stale month made to look like the present.
+      test('a user inactive for 5 months does not see a recent-activity window '
+          'built from that stale burst', () {
+        final fiveMonthsAgo = DateTime.now().subtract(
+          const Duration(days: 150),
+        );
+        final records = List.generate(
+          12,
+          (i) => _record(
+            completedAt: fiveMonthsAgo.add(Duration(days: i)),
+            breathScore: 70,
           ),
+        );
+
+        final summary = engine.summarize(records, languageCode: 'tr');
+
+        // None of these 12 tests happened in the real last 7/30 days —
+        // every window must read as empty, not as "12 tests this month".
+        expect(summary.last7Days.testCount, 0);
+        expect(summary.last30Days.testCount, 0);
+        expect(summary.last90Days.testCount, 0);
+      });
+
+      test('a test taken today is correctly counted in every window, '
+          'regardless of when earlier tests happened', () {
+        final longAgo = DateTime.now().subtract(const Duration(days: 200));
+        final records = [
+          _record(completedAt: longAgo, breathScore: 50),
+          _record(completedAt: DateTime.now(), breathScore: 80),
         ];
 
         final summary = engine.summarize(records, languageCode: 'tr');
-        expect(summary.bestScore, 90);
+
         expect(summary.last7Days.testCount, 1);
-        expect(summary.last7Days.averageScore, 90);
-      },
-    );
+        expect(summary.last7Days.averageScore, 80);
+      });
+    },
+  );
+
+  group('BreathTrendEngine.summarize — chart day stepping', () {
+    final engine = BreathTrendEngine();
+
+    // Regression coverage: _buildChartPoints used to step through days with
+    // cursor.add(const Duration(days: 1)) — a fixed 24h jump. On a DST
+    // transition day in local time, that lands on 23:00 or 01:00 instead of
+    // the next midnight, which then never matches any _dateOnly() key and
+    // silently drops that day (and, since the drift compounds, every day
+    // after it) from the chart. DateTime(y, m, d+1) is used instead, which
+    // Dart normalizes as a calendar construction regardless of any
+    // wall-clock DST jump — this test proves that normalization directly
+    // (month-end rollover is the simplest reliable case a unit test can
+    // exercise without depending on the host machine's own timezone/DST
+    // rules) rather than simulating a specific real-world transition date.
+    test('every day in the record span produces exactly one chart point, '
+        'including a month boundary', () {
+      final base = DateTime(2026, 1, 30);
+      final records = [
+        _record(completedAt: base, breathScore: 50),
+        _record(
+          completedAt: base.add(const Duration(days: 1)),
+          breathScore: 50,
+        ),
+        _record(
+          completedAt: base.add(const Duration(days: 2)),
+          breathScore: 50,
+        ),
+        _record(
+          completedAt: base.add(const Duration(days: 3)),
+          breathScore: 50,
+        ),
+      ];
+
+      final summary = engine.summarize(records, languageCode: 'tr');
+
+      expect(summary.chartPoints.length, 4);
+      expect(summary.chartPoints.map((p) => p.date).toList(), [
+        DateTime(2026, 1, 30),
+        DateTime(2026, 1, 31),
+        DateTime(2026, 2, 1),
+        DateTime(2026, 2, 2),
+      ]);
+    });
   });
 
   group('BreathTrendEngine.summarize — chart moving average', () {

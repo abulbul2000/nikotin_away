@@ -93,7 +93,12 @@ class BreathTrendEngine {
         )
         .toList();
 
-    final now = sorted.last.completedAt;
+    // "Last N days" means the real last N days, not the N days ending on
+    // whenever this user happened to last test — anchoring to the last
+    // record's own timestamp let a burst of tests from months ago still
+    // read as "12 tests in the last 30 days" the next time this summary
+    // was computed, however long the user had been away since.
+    final now = DateTime.now();
     final last7 = _window(clean, days: 7, now: now);
     final last30 = _window(clean, days: 30, now: now);
     final last90 = _window(clean, days: 90, now: now);
@@ -293,7 +298,12 @@ class BreathTrendEngine {
     final orderedDays = <DateTime>[];
     while (!cursor.isAfter(endDay)) {
       orderedDays.add(cursor);
-      cursor = cursor.add(const Duration(days: 1));
+      // Calendar-day increment, not a fixed 24h Duration — on a DST
+      // transition day, adding Duration(days: 1) to a local-time midnight
+      // lands on 23:00 or 01:00 instead of the next midnight, which then
+      // never matches any _dateOnly() key and drops that day (and every
+      // day after it, since the drift compounds) from the chart.
+      cursor = DateTime(cursor.year, cursor.month, cursor.day + 1);
     }
 
     for (var i = 0; i < orderedDays.length; i++) {
