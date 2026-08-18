@@ -5,6 +5,7 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { chatWithAI } from "./ai.js";
 import { verifyPlaySubscription } from "./subscription.js";
 import { requireAuth, sanitizeHistory } from "./auth.js";
+import { DEBUG_PLAN, planForProduct, hashPurchaseToken, isProductMismatch } from "./plan.js";
 
 initializeApp();
 const db = getFirestore();
@@ -16,31 +17,24 @@ const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 // Production must keep it false. The Flutter debug client also sends debugClient=true.
 const DEBUG_AI_BYPASS = process.env.AI_DEBUG_BYPASS === "true";
 
-const PLAN_CONFIG = Object.freeze({
-  no_smoke_starter: Object.freeze({
-    planId: "starter",
-    dailyLimit: 10,
-    monthlyLimit: 300,
-  }),
-  no_smoke_plus: Object.freeze({
-    planId: "plus",
-    dailyLimit: 30,
-    monthlyLimit: 900,
-  }),
-  no_smoke_pro: Object.freeze({
-    planId: "pro",
-    dailyLimit: 60,
-    monthlyLimit: 1800,
-  }),
-  debug: Object.freeze({
-    planId: "debug",
-    dailyLimit: 100,
-    monthlyLimit: 3000,
-  }),
-});
-
-function planForProduct(productId) {
-  return typeof productId === "string" ? PLAN_CONFIG[productId] ?? null : null;
+// Claims purchaseToken for uid, atomically. A Play purchase token identifies
+// one specific purchase — legitimately it should only ever belong to the
+// account that bought it. Without this check, one real purchase token could
+// be shared (posted in a forum, sold, etc.) and replayed by an unlimited
+// number of other UIDs, each getting full access off a single payment.
+// Throws if the token is already claimed by a different uid.
+async function claimPurchaseTokenOrThrow(uid, purchaseToken) {
+  const tokenRef = db.collection("purchase_tokens").doc(hashPurchaseToken(purchaseToken));
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(tokenRef);
+    if (snap.exists && snap.data().uid !== uid) {
+      throw new HttpsError(
+        "already-exists",
+        "this purchase is already linked to a different account",
+      );
+    }
+    tx.set(tokenRef, { uid, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  });
 }
 
 async function getOrCreateUserDoc(uid) {
@@ -55,7 +49,7 @@ async function getOrCreateUserDoc(uid) {
 
 async function resolveAiEntitlement(request, userData) {
   if (DEBUG_AI_BYPASS && request.data?.debugClient === true) {
-    return PLAN_CONFIG.debug;
+    return DEBUG_PLAN;
   }
 
   const subscription = userData.subscription;
@@ -66,11 +60,10 @@ async function resolveAiEntitlement(request, userData) {
   }
 
   try {
-    const result = await verifyPlaySubscription({
-      productId: subscription.productId,
-      purchaseToken,
-    });
-    if (!result.isActive) return null;
+    const result = await verifyPlaySubscription({ purchaseToken });
+    if (!result.isActive || isProductMismatch(result, subscription.productId)) {
+      return null;
+    }
     return plan;
   } catch (err) {
     console.error("aiChat subscription check failed", err);
@@ -186,7 +179,21 @@ export const verifySubscription = onCall(
     }
 
     try {
-      const result = await verifyPlaySubscription({ productId, purchaseToken });
+      const result = await verifyPlaySubscription({ purchaseToken });
+      if (isProductMismatch(result, productId)) {
+        // The token is real, but for a different product than the client
+        // claimed — e.g. paying for Starter and claiming Pro. Trust what
+        // Play reports the token is actually for, not what the client sent.
+        throw new HttpsError(
+          "invalid-argument",
+          "purchase token does not match the requested product",
+        );
+      }
+
+      if (result.isActive) {
+        await claimPurchaseTokenOrThrow(uid, purchaseToken);
+      }
+
       const userRef = db.collection("users").doc(uid);
       await userRef.set(
         {
@@ -205,6 +212,7 @@ export const verifySubscription = onCall(
       );
       return { ...result, planId: plan.planId };
     } catch (err) {
+      if (err instanceof HttpsError) throw err;
       console.error("verifySubscription failed", err);
       throw new HttpsError("internal", "verification failed");
     }

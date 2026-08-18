@@ -16,8 +16,12 @@ async function getAndroidPublisherClient() {
 
 // This helper only talks to Google Play and returns the current entitlement.
 // The caller stores the verified product/token server-side so aiChat can
-// enforce access and quotas without trusting the Flutter client.
-export async function verifyPlaySubscription({ productId, purchaseToken }) {
+// enforce access and quotas without trusting the Flutter client. Note this
+// ignores the caller-supplied productId entirely when talking to Play — the
+// token alone determines what Play reports back. It is the caller's job
+// (see verifySubscription in index.js) to check the returned productId
+// against what the client claimed before trusting it for anything.
+export async function verifyPlaySubscription({ purchaseToken }) {
   const publisher = await getAndroidPublisherClient();
   const res = await publisher.purchases.subscriptionsv2.get({
     packageName: PACKAGE_NAME,
@@ -29,6 +33,7 @@ export async function verifyPlaySubscription({ productId, purchaseToken }) {
 
   return {
     isActive: ACTIVE_STATES.has(state),
+    productId: lineItem?.productId ?? null,
     expiryTimeMillis: lineItem?.expiryTime
       ? Date.parse(lineItem.expiryTime)
       : null,
