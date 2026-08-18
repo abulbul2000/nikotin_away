@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -48,7 +49,6 @@ class NotificationService {
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
   }
 
-
   /// Records a notification in the history for the Notifications page.
   /// Called after every notification is shown.
   static void _recordNotificationHistory({
@@ -59,14 +59,16 @@ class NotificationService {
     DateTime? receivedAt,
     DateTime? availableAt,
   }) {
-    unawaited(NotificationHistoryService.record(
-      title: title,
-      body: body,
-      type: type,
-      dedupeKey: dedupeKey,
-      receivedAt: receivedAt,
-      availableAt: availableAt,
-    ));
+    unawaited(
+      NotificationHistoryService.record(
+        title: title,
+        body: body,
+        type: type,
+        dedupeKey: dedupeKey,
+        receivedAt: receivedAt,
+        availableAt: availableAt,
+      ),
+    );
   }
 
   static Future<void> _show(
@@ -81,7 +83,11 @@ class NotificationService {
       title: title ?? '',
       body: body ?? '',
       type: _historyTypeFromPayload(payload),
-      dedupeKey: _historyDedupeKey(title: title ?? '', body: body ?? '', payload: payload),
+      dedupeKey: _historyDedupeKey(
+        title: title ?? '',
+        body: body ?? '',
+        payload: payload,
+      ),
     );
   }
 
@@ -93,7 +99,8 @@ class NotificationService {
     NotificationDetails details, {
     required AndroidScheduleMode androidScheduleMode,
     String? payload,
-    required UILocalNotificationDateInterpretation uiLocalNotificationDateInterpretation,
+    required UILocalNotificationDateInterpretation
+    uiLocalNotificationDateInterpretation,
     DateTimeComponents? matchDateTimeComponents,
   }) async {
     await _plugin.zonedSchedule(
@@ -112,7 +119,11 @@ class NotificationService {
       title: title ?? '',
       body: body ?? '',
       type: _historyTypeFromPayload(payload),
-      dedupeKey: _historyDedupeKey(title: title ?? '', body: body ?? '', payload: payload),
+      dedupeKey: _historyDedupeKey(
+        title: title ?? '',
+        body: body ?? '',
+        payload: payload,
+      ),
       receivedAt: scheduledDate,
       availableAt: scheduledDate,
     );
@@ -559,6 +570,7 @@ class NotificationService {
     _navigatorKey = navigatorKey;
     final code = await LanguageService.loadSelectedLanguageCode();
     tz.initializeTimeZones();
+    await _ensureLocalTimeZoneSet();
     final initSettings = InitializationSettings(
       android: const AndroidInitializationSettings('@mipmap/ic_launcher'),
       iOS: DarwinInitializationSettings(
@@ -1249,7 +1261,10 @@ class NotificationService {
         final medicationName = payload['medicationName'] ?? '';
         await AndroidWatchdogService.showInfoOverlayFromNotification(
           title: _text(code, 'medicationReminderTitle'),
-          body: _text(code, 'medicationReminderBody').replaceAll('{name}', medicationName),
+          body: _text(
+            code,
+            'medicationReminderBody',
+          ).replaceAll('{name}', medicationName),
           dismissLabel: _text(code, 'doneShort'),
         );
         return;
@@ -1318,7 +1333,8 @@ class NotificationService {
         final code = await LanguageService.loadSelectedLanguageCode();
         await AndroidWatchdogService.showTaskOverlayFromNotification(
           title: _text(code, 'disciplineCommand'),
-          body: '${_text(code, 'disciplineCommandBody')}\n${payload['taskTitle'] ?? ''}',
+          body:
+              '${_text(code, 'disciplineCommandBody')}\n${payload['taskTitle'] ?? ''}',
           doneLabel: _text(code, 'taskActionDoneLabel'),
           postponeLabel: _text(code, 'taskActionNotNowLabel'),
           declineLabel: _text(code, 'taskActionDeclineLabel'),
@@ -1358,8 +1374,36 @@ class NotificationService {
   /// Everything below schedules follow-up notifications through
   /// `tz.TZDateTime`, which throws unless the timezone database was loaded in
   /// this isolate first. Cheap and idempotent, so it just runs every time.
-  static void _ensureIsolateReady() {
+  static Future<void> _ensureIsolateReady() async {
     tz.initializeTimeZones();
+    await _ensureLocalTimeZoneSet();
+  }
+
+  /// Points `tz.local` at the device's actual IANA zone instead of leaving
+  /// it at the `timezone` package's own UTC default. Without this,
+  /// `matchDateTimeComponents: DateTimeComponents.time` (every repeating
+  /// notification — daily breath/medication/health-tip reminders) tells the
+  /// plugin to repeat at the same wall-clock time *in tz.local*, which is
+  /// UTC, not the device's zone: a user in a DST-observing zone gets every
+  /// repeating reminder shifted by exactly the DST offset (usually 1 hour)
+  /// twice a year, at each transition. One-shot scheduling
+  /// (`_atDeviceTimeOfDay`) sidesteps this by converting a plain local
+  /// `DateTime` straight to an absolute instant, which doesn't need a zone
+  /// name — but a *repeating* schedule has to recompute its next occurrence
+  /// across zone transitions, which needs the real zone. Best-effort and
+  /// idempotent: `setLocalLocation` after the first successful call is a
+  /// cheap no-op, and if the platform lookup fails, `tz.local` simply stays
+  /// at its UTC default — the same behavior as before this fix, not worse.
+  static Future<void> _ensureLocalTimeZoneSet() async {
+    try {
+      final name = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(name));
+    } catch (error, stackTrace) {
+      debugPrint(
+        '[NotificationService] Could not resolve device timezone: $error',
+      );
+      debugPrintStack(stackTrace: stackTrace);
+    }
   }
 
   /// Moves the task a notification belongs to into [state].
@@ -1447,7 +1491,7 @@ class NotificationService {
     final canonicalTitle = (event['canonicalTitle']?.trim().isNotEmpty ?? false)
         ? event['canonicalTitle']!.trim()
         : taskTitle;
-    _ensureIsolateReady();
+    await _ensureIsolateReady();
 
     final storage = StorageService();
     final now = DateTime.now();
@@ -1474,7 +1518,10 @@ class NotificationService {
       // The end-of-window question, asked as "did you smoke?". Replaces the
       // old follow-up, which asked whether the task was completed — the same
       // moment, the opposite polarity.
-      await scheduleTaskConfirmationPrompt(taskTitle: canonicalTitle, delay: delay);
+      await scheduleTaskConfirmationPrompt(
+        taskTitle: canonicalTitle,
+        delay: delay,
+      );
       return;
     }
 
@@ -1540,7 +1587,9 @@ class NotificationService {
       await storage.recordAdaptiveTaskOutcome(
         taskTitle: canonicalTitle,
         outcome: AdaptiveTaskOutcome.success,
-        plannedDurationMinutes: _resolveInitialTaskDelay(canonicalTitle).inMinutes,
+        plannedDurationMinutes: _resolveInitialTaskDelay(
+          canonicalTitle,
+        ).inMinutes,
         respondedAt: now,
       );
       await storage.saveTaskResult(
@@ -1576,7 +1625,7 @@ class NotificationService {
     if (medicationId.isEmpty) {
       return;
     }
-    _ensureIsolateReady();
+    await _ensureIsolateReady();
     final storage = StorageService();
 
     if (actionId == _actionMedicationTaken) {
@@ -2254,7 +2303,6 @@ class NotificationService {
     final resolvedWakeTime = effectiveWindow.wakeTime ?? wakeTime;
     final resolvedSleepTime = effectiveWindow.sleepTime ?? sleepTime;
 
-
     // This mode intentionally delivers the full daily health-tip quota.
     // The ten slots are distributed across the resolved waking window below;
     // sleep hours are never used as candidates.
@@ -2360,8 +2408,8 @@ class NotificationService {
       );
     }
   }
-  static Future<void> scheduleMedicationReminders(
 
+  static Future<void> scheduleMedicationReminders(
     List<Medication> medications,
   ) async {
     for (var i = 0; i < _medicationReminderMaxSlots; i++) {
