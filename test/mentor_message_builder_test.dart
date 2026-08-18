@@ -117,14 +117,80 @@ void main() {
     },
   );
 
-  test(
-    'buildHistoricalNote recognizes improvement in the flagged day part',
+  test('buildHistoricalNote recognizes improvement in the flagged day part '
+      'once that part has had a chance to occur this week', () {
+    // Wednesday — 'evening' has already happened at least once this week
+    // (Monday and Tuesday evenings), so a zero count here is real signal.
+    final startOfThisWeek = DateTime(2026, 7, 20); // Monday
+    final now = DateTime(2026, 7, 22, 9, 0); // Wednesday morning
+
+    final note = builder.buildHistoricalNote(
+      lastWeekDayPartCounts: const {'evening': 5},
+      thisWeekDayPartCounts: const {'evening': 0},
+      startOfThisWeek: startOfThisWeek,
+      now: now,
+    );
+    expect(note, '${MentorMessageCodes.histImprovedPrefix}:evening');
+  });
+
+  test('buildHistoricalNote without week-boundary args keeps trusting a zero '
+      'count as-is (existing behavior for callers that pass neither)', () {
+    final note = builder.buildHistoricalNote(
+      lastWeekDayPartCounts: const {'evening': 5},
+      thisWeekDayPartCounts: const {'evening': 0},
+    );
+    expect(note, '${MentorMessageCodes.histImprovedPrefix}:evening');
+  });
+
+  group(
+    'buildHistoricalNote day-part-not-occurred-yet (regression coverage)',
     () {
-      final note = builder.buildHistoricalNote(
-        lastWeekDayPartCounts: const {'evening': 5},
-        thisWeekDayPartCounts: const {'evening': 0},
-      );
-      expect(note, '${MentorMessageCodes.histImprovedPrefix}:evening');
+      // Regression coverage: comparing a complete last week against a
+      // partial this week used to report "you improved!" for a day part
+      // that simply hasn't happened yet this week — e.g. a Monday 9am
+      // mentor message congratulating the user on quieter evenings, when
+      // no evening has occurred since the week started at all.
+      test('Monday morning does not claim improvement in "evening", which '
+          "hasn't happened yet this week", () {
+        final startOfThisWeek = DateTime(2026, 7, 20); // Monday
+        final now = DateTime(2026, 7, 20, 9, 0); // Monday 9am, same day
+
+        final note = builder.buildHistoricalNote(
+          lastWeekDayPartCounts: const {'evening': 5},
+          thisWeekDayPartCounts: const {'evening': 0},
+          startOfThisWeek: startOfThisWeek,
+          now: now,
+        );
+        expect(note, isNull);
+      });
+
+      test('Monday evening does claim improvement once evening has actually '
+          'occurred today', () {
+        final startOfThisWeek = DateTime(2026, 7, 20); // Monday
+        final now = DateTime(2026, 7, 20, 20, 0); // Monday 8pm — evening
+
+        final note = builder.buildHistoricalNote(
+          lastWeekDayPartCounts: const {'evening': 5},
+          thisWeekDayPartCounts: const {'evening': 0},
+          startOfThisWeek: startOfThisWeek,
+          now: now,
+        );
+        expect(note, '${MentorMessageCodes.histImprovedPrefix}:evening');
+      });
+
+      test('a non-zero this-week count is never suppressed by the '
+          'not-occurred-yet check, even early in the week', () {
+        final startOfThisWeek = DateTime(2026, 7, 20); // Monday
+        final now = DateTime(2026, 7, 20, 9, 0); // Monday 9am
+
+        final note = builder.buildHistoricalNote(
+          lastWeekDayPartCounts: const {'evening': 5},
+          thisWeekDayPartCounts: const {'evening': 2},
+          startOfThisWeek: startOfThisWeek,
+          now: now,
+        );
+        expect(note, isNotNull);
+      });
     },
   );
 

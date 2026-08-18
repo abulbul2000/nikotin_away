@@ -4458,9 +4458,19 @@ class StorageService {
   /// Buckets recent [SmokingEvent]s into this-week / last-week day-part
   /// counts (morning/afternoon/evening/night), for [MentorMessageBuilder]'s
   /// week-over-week callback.
-  Future<Map<String, Map<String, int>>> _loadSmokingDayPartComparison({
-    DateTime? now,
-  }) async {
+  /// [startOfThisWeek] on the result is the boundary
+  /// [MentorMessageBuilder.buildHistoricalNote] needs (via its own
+  /// `startOfThisWeek`/`now` parameters) to tell "zero events this week
+  /// because the user improved" apart from "zero events because this day
+  /// part hasn't happened yet this week" — see that method's doc comment.
+  Future<
+    ({
+      Map<String, int> lastWeek,
+      Map<String, int> thisWeek,
+      DateTime startOfThisWeek,
+    })
+  >
+  _loadSmokingDayPartComparison({DateTime? now}) async {
     final today = now ?? DateTime.now();
     final startOfThisWeek = DateTime(
       today.year,
@@ -4482,7 +4492,11 @@ class StorageService {
       }
     }
 
-    return {'lastWeek': lastWeekCounts, 'thisWeek': thisWeekCounts};
+    return (
+      lastWeek: lastWeekCounts,
+      thisWeek: thisWeekCounts,
+      startOfThisWeek: startOfThisWeek,
+    );
   }
 
   /// Generates and persists today's mentor message from the app's existing
@@ -4502,8 +4516,10 @@ class StorageService {
 
     final dayPartComparison = await _loadSmokingDayPartComparison(now: now);
     final historicalNote = _mentorMessageBuilder.buildHistoricalNote(
-      lastWeekDayPartCounts: dayPartComparison['lastWeek']!,
-      thisWeekDayPartCounts: dayPartComparison['thisWeek']!,
+      lastWeekDayPartCounts: dayPartComparison.lastWeek,
+      thisWeekDayPartCounts: dayPartComparison.thisWeek,
+      startOfThisWeek: dayPartComparison.startOfThisWeek,
+      now: now ?? DateTime.now(),
     );
 
     final message = _mentorMessageBuilder.buildDailyMessage(
@@ -4530,8 +4546,10 @@ class StorageService {
 
     final dayPartComparison = await _loadSmokingDayPartComparison(now: now);
     final historicalNote = _mentorMessageBuilder.buildHistoricalNote(
-      lastWeekDayPartCounts: dayPartComparison['lastWeek']!,
-      thisWeekDayPartCounts: dayPartComparison['thisWeek']!,
+      lastWeekDayPartCounts: dayPartComparison.lastWeek,
+      thisWeekDayPartCounts: dayPartComparison.thisWeek,
+      startOfThisWeek: dayPartComparison.startOfThisWeek,
+      now: now ?? DateTime.now(),
     );
 
     final message = _mentorMessageBuilder.buildWeeklyMessage(

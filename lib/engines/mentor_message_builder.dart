@@ -139,10 +139,22 @@ class MentorMessageBuilder {
   /// in last week versus this week. Returns null when there isn't enough
   /// data yet to say anything meaningful — a quiet mentor beats a wrong one.
   ///
+  /// [startOfThisWeek] and [now] (both optional) let this tell "zero events
+  /// because the user improved" apart from "zero events because, say, it's
+  /// Monday 9am and 'evening' simply hasn't happened yet this week" — a
+  /// bare zero count can't distinguish those on its own. Every day cycles
+  /// through all four day parts, so this only matters on the current
+  /// week's first calendar day; from day 2 onward every part has occurred
+  /// at least once. Omitted (either or both null): the caller doesn't have
+  /// week-boundary info to give, so this check is skipped and a zero count
+  /// is trusted as-is — existing behavior, not a new restriction.
+  ///
   /// Returns a canonical `MENTOR_HIST_*:dayPart` code, not literal text.
   String? buildHistoricalNote({
     required Map<String, int> lastWeekDayPartCounts,
     required Map<String, int> thisWeekDayPartCounts,
+    DateTime? startOfThisWeek,
+    DateTime? now,
   }) {
     final lastWeekTotal = lastWeekDayPartCounts.values.fold(0, (a, b) => a + b);
     if (lastWeekTotal < 3) {
@@ -166,12 +178,38 @@ class MentorMessageBuilder {
     final thisWeekCount = thisWeekDayPartCounts[dominantPart] ?? 0;
 
     if (thisWeekCount == 0) {
+      if (startOfThisWeek != null &&
+          now != null &&
+          !_dayPartHasOccurredSince(dominantPart, startOfThisWeek, now)) {
+        // Nothing to compare yet — a zero count here says nothing about
+        // whether the user actually improved.
+        return null;
+      }
       return '${MentorMessageCodes.histImprovedPrefix}:$dominantPart';
     }
     if (thisWeekCount >= dominantCount) {
       return '${MentorMessageCodes.histWorseningPrefix}:$dominantPart';
     }
     return '${MentorMessageCodes.histSimilarPrefix}:$dominantPart';
+  }
+
+  /// Whether [part] has occurred at least once in the half-open range
+  /// `[since, until)` — checked hour by hour rather than derived
+  /// arithmetically, since [_dayParts] boundaries are irregular (6/6/5/7
+  /// hours) and this only ever runs over at most ~24 hourly steps (the
+  /// gap between a week starting and "now" being still within day 1).
+  bool _dayPartHasOccurredSince(String part, DateTime since, DateTime until) {
+    if (!until.isAfter(since)) {
+      return false;
+    }
+    var cursor = since;
+    while (cursor.isBefore(until)) {
+      if (dayPartForHour(cursor.hour) == part) {
+        return true;
+      }
+      cursor = cursor.add(const Duration(hours: 1));
+    }
+    return false;
   }
 
   /// Reframes a protocol-violation event (logged by
