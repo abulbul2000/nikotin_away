@@ -492,6 +492,67 @@ void main() {
       expect(report.latestCoughTest?.coughCount, 5);
     });
 
+    group('hasCoughTestSince (regression coverage)', () {
+      // Regression coverage: CoughTestRecord.toJson() writes createdAt as a
+      // plain local-time ISO8601 string (no .toUtc()), but hasCoughTestSince
+      // used to compare that string in SQL directly against
+      // since.toUtc().toIso8601String() — two ISO8601 strings in different
+      // zones aren't comparable as if they were the same clock, so the
+      // effective threshold silently drifted by the device's own UTC
+      // offset (e.g. UTC+3 shifted the boundary 3 hours later than asked).
+      test('a test taken 2 hours ago counts as "since 3 hours ago" '
+          "regardless of the device's UTC offset", () async {
+        final storage = StorageService();
+        final now = DateTime.now();
+        await storage.saveCoughTestRecord(
+          CoughTestRecord(
+            id: 'cough_since_1',
+            createdAt: now.subtract(const Duration(hours: 2)),
+            coughCount: 3,
+            testDurationSeconds: 30,
+            severityScore: 30,
+            severityLevel: 'mild',
+          ),
+        );
+
+        final hasRecent = await storage.hasCoughTestSince(
+          now.subtract(const Duration(hours: 3)),
+        );
+        expect(hasRecent, isTrue);
+      });
+
+      test(
+        'a test taken 5 hours ago does not count as "since 3 hours ago"',
+        () async {
+          final storage = StorageService();
+          final now = DateTime.now();
+          await storage.saveCoughTestRecord(
+            CoughTestRecord(
+              id: 'cough_since_2',
+              createdAt: now.subtract(const Duration(hours: 5)),
+              coughCount: 3,
+              testDurationSeconds: 30,
+              severityScore: 30,
+              severityLevel: 'mild',
+            ),
+          );
+
+          final hasRecent = await storage.hasCoughTestSince(
+            now.subtract(const Duration(hours: 3)),
+          );
+          expect(hasRecent, isFalse);
+        },
+      );
+
+      test('false when no cough test has ever been recorded', () async {
+        final storage = StorageService();
+        final hasAny = await storage.hasCoughTestSince(
+          DateTime.now().subtract(const Duration(days: 7)),
+        );
+        expect(hasAny, isFalse);
+      });
+    });
+
     test('task success rate covers the last 7 days, not all time', () async {
       final storage = StorageService();
       final now = DateTime.now();

@@ -1976,15 +1976,30 @@ class StorageService {
   /// Whether at least one cough test was completed since [since] — used to
   /// gate the weekly survey's save action rather than a standalone
   /// scheduled reminder (see WeeklySurveyPage).
+  ///
+  /// Compares in Dart after parsing, not as a raw SQL string comparison —
+  /// createdAt rows are written with CoughTestRecord.toJson()'s plain
+  /// `createdAt.toIso8601String()` (no `.toUtc()`, so the string is in the
+  /// device's local time with no zone suffix), but the previous version
+  /// compared that string directly against `since.toUtc().toIso8601String()`.
+  /// Two ISO8601 strings in different zones aren't lexicographically
+  /// comparable as if they were the same clock, so the effective threshold
+  /// silently drifted by the device's UTC offset. loadSleepProbeEventsBetween
+  /// already gets this right the same way this now does: parse each row's
+  /// timestamp back into a real DateTime, then compare in UTC numerically.
   Future<bool> hasCoughTestSince(DateTime since) async {
     final db = await database;
     final rows = await db.query(
       _coughTestRecordsTable,
-      where: 'createdAt >= ?',
-      whereArgs: [since.toUtc().toIso8601String()],
+      columns: ['createdAt'],
+      orderBy: 'createdAt DESC',
       limit: 1,
     );
-    return rows.isNotEmpty;
+    if (rows.isEmpty) {
+      return false;
+    }
+    final latestCreatedAt = DateTime.parse(rows.first['createdAt'] as String);
+    return !latestCreatedAt.toUtc().isBefore(since.toUtc());
   }
 
   Future<void> saveBreathProgressRecord(BreathProgressRecord record) async {
