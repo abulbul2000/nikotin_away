@@ -47,10 +47,7 @@ List<WheezeAcousticSample> _pushAllWindows(
   var elapsedMs = 0;
   while (offset + bytesPerWindow <= chunk.length) {
     final window = chunk.sublist(offset, offset + bytesPerWindow);
-    final sample = engine.pushChunk(Uint8List.fromList(window), elapsedMs);
-    if (sample != null) {
-      samples.add(sample);
-    }
+    samples.addAll(engine.pushChunk(Uint8List.fromList(window), elapsedMs));
     offset += bytesPerWindow;
     elapsedMs += WheezeDetectionEngine.windowDurationMs.round();
   }
@@ -59,13 +56,13 @@ List<WheezeAcousticSample> _pushAllWindows(
 
 void main() {
   group('WheezeDetectionEngine.pushChunk windowing', () {
-    test('returns null until a full window has accumulated', () {
+    test('returns empty until a full window has accumulated', () {
       final engine = WheezeDetectionEngine();
       final halfWindow = _sineChunk(
         400,
         WheezeDetectionEngine.windowSizeSamples ~/ 2,
       );
-      expect(engine.pushChunk(halfWindow, 0), isNull);
+      expect(engine.pushChunk(halfWindow, 0), isEmpty);
     });
 
     test('handles chunk sizes misaligned with the window boundary', () {
@@ -82,13 +79,49 @@ void main() {
       while (offset < fullSignal.length) {
         final end = (offset + oddChunkSamples * 2).clamp(0, fullSignal.length);
         final chunk = fullSignal.sublist(offset, end);
-        final sample = engine.pushChunk(Uint8List.fromList(chunk), offset);
-        if (sample != null) {
-          produced++;
-        }
+        produced += engine.pushChunk(Uint8List.fromList(chunk), offset).length;
         offset = end;
       }
       expect(produced, 3);
+    });
+
+    test('a single call delivering more than one window worth of bytes '
+        'returns every completed window, not just the first', () {
+      // Regression coverage: pushChunk used to extract and return only
+      // one window per call, leaving any extra complete windows sitting
+      // in the pending buffer until some later call happened to trigger
+      // them — silently delaying (or, if no later call ever arrived,
+      // permanently losing) real captured audio relative to when it was
+      // actually recorded.
+      final engine = WheezeDetectionEngine();
+      final threeWindows = _sineChunk(
+        400,
+        WheezeDetectionEngine.windowSizeSamples * 3,
+      );
+      final samples = engine.pushChunk(threeWindows, 0);
+      expect(samples.length, 3);
+    });
+
+    test('reset() clears carried-over bytes between attempts', () {
+      // Regression coverage: _pendingBytes was never cleared between
+      // attempts sharing one engine instance (BreathTestPage reuses the
+      // same WheezeDetectionEngine across its 3 attempts) — a tail of
+      // leftover bytes too short to complete a window on their own would
+      // silently prepend themselves onto the next attempt's first window,
+      // mixing audio across attempts.
+      final engine = WheezeDetectionEngine();
+      final halfWindow = _sineChunk(
+        400,
+        WheezeDetectionEngine.windowSizeSamples ~/ 2,
+      );
+      expect(engine.pushChunk(halfWindow, 0), isEmpty);
+
+      engine.reset();
+
+      // Only half a window's worth of new bytes after reset() — if the
+      // stale half-window were still buffered, this would complete a full
+      // window and return a sample; it must not.
+      expect(engine.pushChunk(halfWindow, 0), isEmpty);
     });
   });
 
@@ -181,6 +214,60 @@ void main() {
       expect(analysis.wheezeDetected, isFalse);
       expect(analysis.severityLevel, 'none');
       expect(analysis.severityScore, 0);
+    });
+
+    test('in-band broadband windows with no discernible tone do not count '
+        'toward a wheeze streak, and do not extend one', () {
+      // Regression coverage: sameTone treated a null dominantFrequencyHz
+      // (this window's in-band energy didn't concentrate around any
+      // single peak — broadband noise, not a tone) as automatically
+      // matching whatever tone the streak was already tracking. A run of
+      // in-band-but-non-tonal windows could clear
+      // minConsecutiveWindowsForWheeze on its own, or splice itself into
+      // an otherwise-broken streak and bridge it across a real gap.
+      final engine = WheezeDetectionEngine();
+      final samples = [
+        for (var i = 0; i < 8; i++)
+          WheezeAcousticSample(
+            millisecondsSinceStart: i * 64,
+            wheezeBandEnergyRatio: 0.5, // clears wheezeRatioThreshold
+            dominantFrequencyHz: null, // but no tonal peak
+            totalEnergy: 0.1,
+          ),
+      ];
+      final analysis = engine.analyze(samples);
+
+      expect(analysis.wheezeDetected, isFalse);
+    });
+
+    test('a broadband gap does not bridge two genuinely separate tonal '
+        'streaks into one long one', () {
+      final engine = WheezeDetectionEngine();
+      List<WheezeAcousticSample> tonal(int startMs, int count) => List.generate(
+        count,
+        (i) => WheezeAcousticSample(
+          millisecondsSinceStart: startMs + i * 64,
+          wheezeBandEnergyRatio: 0.6,
+          dominantFrequencyHz: 400,
+          totalEnergy: 0.1,
+        ),
+      );
+      final broadbandGap = List.generate(
+        3,
+        (i) => WheezeAcousticSample(
+          millisecondsSinceStart: 300 + i * 64,
+          wheezeBandEnergyRatio: 0.5,
+          dominantFrequencyHz: null,
+          totalEnergy: 0.1,
+        ),
+      );
+      // 3 tonal windows, a 3-window broadband gap, 3 more tonal windows —
+      // neither side alone clears minConsecutiveWindowsForWheeze (5), and
+      // the broadband gap must not bridge them into one 9-window streak.
+      final samples = [...tonal(0, 3), ...broadbandGap, ...tonal(500, 3)];
+      final analysis = engine.analyze(samples);
+
+      expect(analysis.wheezeDetected, isFalse);
     });
   });
 

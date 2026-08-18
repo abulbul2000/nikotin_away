@@ -144,6 +144,7 @@ class _CoughTestPageState extends State<CoughTestPage> {
     }
     _samples.clear();
     _wheezeSamples.clear();
+    _wheezeDetectionEngine.reset();
     setState(() {
       _phase = _CoughTestPhase.listening;
       _secondsRemaining = _testDurationSeconds;
@@ -156,10 +157,9 @@ class _CoughTestPageState extends State<CoughTestPage> {
         _samples.add(sample);
       },
       onRawChunk: (chunk, elapsedMs) {
-        final sample = _wheezeDetectionEngine.pushChunk(chunk, elapsedMs);
-        if (sample != null) {
-          _wheezeSamples.add(sample);
-        }
+        _wheezeSamples.addAll(
+          _wheezeDetectionEngine.pushChunk(chunk, elapsedMs),
+        );
       },
     );
 

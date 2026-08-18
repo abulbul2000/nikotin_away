@@ -634,6 +634,10 @@ class _BreathTestPageState extends State<BreathTestPage>
   Future<void> _startAcousticListeningForAttempt() async {
     _currentAttemptSamples.clear();
     _currentAttemptWheezeSamples.clear();
+    // Without this, a few leftover bytes too short to complete a window at
+    // the end of one attempt would silently prepend themselves onto the
+    // next attempt's first window, mixing audio across attempts 1/2/3.
+    _wheezeDetectionEngine.reset();
     // Guards against back-to-back calls (finishing one attempt's listening
     // session and starting the next one's, e.g. into the rest countdown)
     // racing the recorder plugin's own stop/start handling.
@@ -680,10 +684,9 @@ class _BreathTestPageState extends State<BreathTestPage>
   /// actually begun — otherwise a stray noise during an earlier step could
   /// end the attempt before the user was even told to exhale.
   void _handleRawChunk(Uint8List chunk, int elapsedMs) {
-    final sample = _wheezeDetectionEngine.pushChunk(chunk, elapsedMs);
-    if (sample != null) {
-      _currentAttemptWheezeSamples.add(sample);
-    }
+    _currentAttemptWheezeSamples.addAll(
+      _wheezeDetectionEngine.pushChunk(chunk, elapsedMs),
+    );
   }
 
   void _handleAcousticSample(BreathAcousticSample sample) {

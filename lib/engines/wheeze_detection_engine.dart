@@ -121,32 +121,52 @@ class WheezeDetectionEngine {
   final FFT _fft = FFT(windowSizeSamples);
   final List<int> _pendingBytes = [];
 
-  /// Accumulates [rawChunk] into a rolling buffer and returns a
-  /// [WheezeAcousticSample] each time a full [windowSizeSamples] window
-  /// completes, carrying any remainder over to the next call. Returns null
-  /// when no window has completed yet — `record`-package chunks don't
-  /// arrive aligned to window boundaries, so most calls return null.
+  /// Clears any bytes carried over from a previous recording. Callers reuse
+  /// one engine instance across multiple attempts in the same page session
+  /// (BreathTestPage's multi-attempt flow); without this, leftover bytes
+  /// from attempt N's tail — too few to complete a window on their own —
+  /// would silently prepend themselves onto attempt N+1's first window,
+  /// mixing audio across attempts.
+  void reset() {
+    _pendingBytes.clear();
+  }
+
+  /// Accumulates [rawChunk] into a rolling buffer and returns one
+  /// [WheezeAcousticSample] per full [windowSizeSamples] window that
+  /// completes, carrying any remainder under a window's worth over to the
+  /// next call. Returns an empty list when no window has completed yet —
+  /// `record`-package chunks don't arrive aligned to window boundaries, so
+  /// most calls return empty.
+  ///
+  /// Returns a list rather than a single sample because [rawChunk] can
+  /// complete more than one window in a single call (e.g. after a delivery
+  /// delay, or if the audio plugin batches unevenly) — returning only the
+  /// first and leaving the rest sitting in [_pendingBytes] until some later
+  /// call happened to complete another window would silently drop or delay
+  /// real audio data relative to when it was actually captured.
   ///
   /// The full FFT magnitude spectrum is discarded the instant the summary
   /// scalars are computed from it — see the class doc comment and
   /// [WheezeAcousticSample]'s doc comment for the privacy rationale this
   /// preserves.
-  WheezeAcousticSample? pushChunk(
+  List<WheezeAcousticSample> pushChunk(
     Uint8List rawChunk,
     int millisecondsSinceStart,
   ) {
     _pendingBytes.addAll(rawChunk);
     const bytesPerWindow = windowSizeSamples * 2; // PCM16 = 2 bytes/sample.
-    if (_pendingBytes.length < bytesPerWindow) {
-      return null;
+
+    final samples = <WheezeAcousticSample>[];
+    var windowTimestampMs = millisecondsSinceStart;
+    while (_pendingBytes.length >= bytesPerWindow) {
+      final windowBytes = Uint8List.fromList(
+        _pendingBytes.sublist(0, bytesPerWindow),
+      );
+      _pendingBytes.removeRange(0, bytesPerWindow);
+      samples.add(_analyzeWindow(windowBytes, windowTimestampMs));
+      windowTimestampMs += windowDurationMs.round();
     }
-
-    final windowBytes = Uint8List.fromList(
-      _pendingBytes.sublist(0, bytesPerWindow),
-    );
-    _pendingBytes.removeRange(0, bytesPerWindow);
-
-    return _analyzeWindow(windowBytes, millisecondsSinceStart);
+    return samples;
   }
 
   WheezeAcousticSample _analyzeWindow(
@@ -233,13 +253,22 @@ class WheezeDetectionEngine {
 
     for (final sample in samples) {
       final inBand = sample.wheezeBandEnergyRatio > wheezeRatioThreshold;
+      // A null dominantFrequencyHz means this window's in-band energy
+      // didn't concentrate around any single peak (see _analyzeWindow's
+      // _dominancePeakFraction check) — i.e. broadband noise that happens
+      // to clear the ratio threshold, not a tonal wheeze. It must never
+      // count as "the same tone" as a running streak, and on its own it
+      // can't start one either: wheeze is a tonal sound by definition, so a
+      // window with no discernible tone at all is evidence against a
+      // wheeze, not for one, however in-band its raw energy ratio is.
+      final hasTone = sample.dominantFrequencyHz != null;
       final sameTone =
-          streakDominantFrequency == null ||
-          sample.dominantFrequencyHz == null ||
-          (sample.dominantFrequencyHz! - streakDominantFrequency!).abs() <=
-              dominantFrequencyToleranceHz;
+          hasTone &&
+          (streakDominantFrequency == null ||
+              (sample.dominantFrequencyHz! - streakDominantFrequency!).abs() <=
+                  dominantFrequencyToleranceHz);
 
-      if (inBand && sameTone) {
+      if (inBand && hasTone && sameTone) {
         if (streakWindows == 0) {
           streakStartMs = sample.millisecondsSinceStart;
         }
@@ -248,10 +277,10 @@ class WheezeDetectionEngine {
         streakDominantFrequency ??= sample.dominantFrequencyHz;
       } else {
         closeStreak(sample.millisecondsSinceStart);
-        if (inBand) {
+        if (inBand && hasTone) {
           // This window didn't match the previous streak's tone, but it's
-          // still in-band on its own — start a fresh streak from it rather
-          // than discarding it.
+          // still in-band and tonal on its own — start a fresh streak from
+          // it rather than discarding it.
           streakWindows = 1;
           streakRatioSum = sample.wheezeBandEnergyRatio;
           streakStartMs = sample.millisecondsSinceStart;
