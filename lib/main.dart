@@ -7,6 +7,7 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
 
 import 'core/app_texts.dart';
 import 'core/app_theme.dart';
@@ -59,8 +60,7 @@ Future<void> main() async {
     // `flutter run --dart-define=APP_CHECK_DEBUG_SECRET=<secret>` so the
     // Firebase Console "Manage debug tokens" entry lets this build pass
     // App Check (needed by the enforceAppCheck Cloud Functions).
-    const String debugSecret =
-        String.fromEnvironment('APP_CHECK_DEBUG_SECRET');
+    const String debugSecret = String.fromEnvironment('APP_CHECK_DEBUG_SECRET');
     if (kDebugMode) {
       // Development Functions do not enforce App Check. Do not generate an
       // unregistered debug token by default; that token is rejected as
@@ -122,17 +122,39 @@ class _NoSmokeAppState extends State<NoSmokeApp> with WidgetsBindingObserver {
   late Locale _locale;
   DateTime? _lastAccessCheckAt;
   static const _accessCheckDebounce = Duration(minutes: 5);
+  StreamSubscription<List<PurchaseDetails>>? _purchaseSubscription;
 
   @override
   void initState() {
     super.initState();
     _locale = widget.initialLocale;
     WidgetsBinding.instance.addObserver(this);
+    // App-lifetime purchase listener. SubscriptionGatePage has its own
+    // listener too (for its own UI state — pending spinner, closing on
+    // success), but that one only exists while the gate page is mounted.
+    // Without this one, a purchase that settles to PURCHASED while the app
+    // is backgrounded (or the user simply isn't on the gate page — e.g. a
+    // deferred/pending payment method that confirms hours later) never
+    // reaches handlePurchase, so completePurchase is never called and Play
+    // auto-refunds the purchase after 3 days despite the user having paid.
+    // purchaseStream is a broadcast stream (see
+    // in_app_purchase_android_platform.dart), so having two listeners is
+    // safe — both receive every event, and handlePurchase itself is safe
+    // to run twice for the same purchase (it just re-verifies and
+    // completePurchase is a no-op for an already-completed transaction).
+    _purchaseSubscription = SubscriptionService().purchaseStream.listen((
+      purchases,
+    ) async {
+      for (final purchase in purchases) {
+        await SubscriptionService().handlePurchase(purchase);
+      }
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _purchaseSubscription?.cancel();
     super.dispose();
   }
 

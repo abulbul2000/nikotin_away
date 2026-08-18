@@ -236,7 +236,7 @@ class _SubscriptionGatePageState extends State<SubscriptionGatePage> {
                       onPressed: _purchaseInFlight ? null : _restore,
                       child: Text(context.t('subscriptionRestoreButton')),
                     ),
-                  ] else
+                  ] else ...[
                     FilledButton(
                       onPressed: _checking ? null : _retryConnection,
                       style: FilledButton.styleFrom(
@@ -246,6 +246,19 @@ class _SubscriptionGatePageState extends State<SubscriptionGatePage> {
                           ? Text(context.t('subscriptionPurchasePending'))
                           : Text(context.t('subscriptionRetryButton')),
                     ),
+                    const SizedBox(height: 8),
+                    // A real subscriber who has been offline past the grace
+                    // period (see SubscriptionService.offlineGraceDuration)
+                    // gets stuck on this screen forever if _retryConnection
+                    // is the only option — it just re-reads the locally
+                    // cached (stale) state. Restore re-asks Play directly,
+                    // which re-verifies and updates that cache regardless
+                    // of how long it's been.
+                    TextButton(
+                      onPressed: _purchaseInFlight ? null : _restore,
+                      child: Text(context.t('subscriptionRestoreButton')),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   TextButton(
                     key: const ValueKey('subscription_gate_continue_free'),

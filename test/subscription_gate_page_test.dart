@@ -84,6 +84,10 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(_tr('subscriptionRetryButton')), findsOneWidget);
+      // A real subscriber stuck offline past the grace period needs a way
+      // off this screen that doesn't just re-read stale local state —
+      // restore re-asks Play directly.
+      expect(find.text(_tr('subscriptionRestoreButton')), findsOneWidget);
       expect(find.text('Aylik'), findsNothing);
     },
   );
