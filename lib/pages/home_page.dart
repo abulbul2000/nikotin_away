@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/app_texts.dart';
@@ -49,6 +48,7 @@ import '../widgets/background_reliability_prompt.dart';
 import '../widgets/no_smoke_logo.dart';
 import '../widgets/premium_upsell_dialog.dart';
 import '../widgets/quick_action_menu.dart';
+import '../widgets/share_app_sheet.dart';
 import '../widgets/draggable_butterfly_button.dart';
 
 class HomePage extends StatefulWidget {
@@ -526,7 +526,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       await HomeWidget.saveWidgetData<String>('breathScoreLabel', riskLabel);
       await HomeWidget.updateWidget(
         androidName: 'NoSmokeWidgetProvider',
-        qualifiedAndroidName: 'com.example.no_smoke.NoSmokeWidgetProvider',
+        qualifiedAndroidName: 'com.nikotinaway.app.NoSmokeWidgetProvider',
       );
     } catch (_) {
       // Best-effort only — the widget is a convenience surface, never a
@@ -1965,13 +1965,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _shareApp() async {
-    await SharePlus.instance.share(
-      ShareParams(
-        text:
-            'Nikotin Away ile sigarayı bırakma sürecini takip et, tetikleyicilerini tanı ve daha sağlıklı adımlar at.',
-        subject: 'Nikotin Away',
-      ),
-    );
+    // Routes through the same sheet as Settings, Reports and the weekly
+    // survey. This used to share a hardcoded Turkish sentence, so a German or
+    // Tamil user shared Turkish text — and the store link was missing entirely.
+    await showShareAppSheet(context);
   }
 
   AppBar _buildAppBar(BuildContext context) {
@@ -1987,7 +1984,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       actions: [
         IconButton(
           key: const ValueKey('share_app_button'),
-          tooltip: 'Bizi Paylaş',
+          tooltip: context.t('shareAppTitle'),
           icon: const Icon(Icons.share_rounded),
           onPressed: _shareApp,
         ),
@@ -2529,8 +2526,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   /// and (natively, via MainActivity's shortcut-intent handling) the
   /// launcher icon's long-press menu — all three route through here so the
   /// same 4 actions are reachable no matter which one the user tapped.
+  bool _quickActionMenuOpen = false;
+
   Future<void> _openQuickActionMenu() async {
+    // Without this guard two taps on the butterfly opened two stacked bottom
+    // sheets. Dismissing the top one left the second one visible, the user
+    // read that as "my tap did not register" and logged a second cigarette —
+    // corrupting the interval and averted-count metrics the whole product
+    // rests on.
+    if (_quickActionMenuOpen) return;
+    _quickActionMenuOpen = true;
     final action = await showQuickActionMenu(context);
+    _quickActionMenuOpen = false;
     if (!mounted || action == null) return;
     switch (action) {
       case QuickAction.smokedNow:

@@ -127,9 +127,19 @@ class _CoughTestPageState extends State<CoughTestPage> {
     }
   }
 
+  bool _startingTest = false;
+
   Future<void> _startTest() async {
+    // The start button stays tappable during the permission round-trip. A
+    // second tap used to start a second countdown timer over the same
+    // `_secondsRemaining`, draining it twice as fast, so the test ended in ~5s
+    // while the analysis was still told `testDurationSeconds: 10` — under-
+    // reporting the cough count.
+    if (_startingTest || _phase == _CoughTestPhase.listening) return;
+    _startingTest = true;
     await _ensureMicrophonePermissionWithRationale();
     if (!mounted) {
+      _startingTest = false;
       return;
     }
     _samples.clear();
@@ -138,6 +148,8 @@ class _CoughTestPageState extends State<CoughTestPage> {
       _phase = _CoughTestPhase.listening;
       _secondsRemaining = _testDurationSeconds;
     });
+    // `_phase` guards from here on.
+    _startingTest = false;
 
     await _audioService.startListening(
       (sample) {

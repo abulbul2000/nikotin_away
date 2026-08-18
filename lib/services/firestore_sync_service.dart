@@ -44,6 +44,17 @@ class FirestoreSyncService {
       }
     }
 
+    // The backup body lives at
+    // `database_backup/snapshot/tables/{table}/chunks/{i}`. Deleting a
+    // document does not delete its subcollections, and the `tables` documents
+    // may not exist as documents at all, so listing cannot reach them. Walk
+    // the known table names explicitly instead.
+    for (final table in StorageService.cloudBackupTableNames) {
+      final tableRef = _backupRoot.collection('tables').doc(table);
+      await deleteCollection(tableRef.collection('chunks'));
+      await tableRef.delete();
+    }
+
     final root = _db.collection('user_data').doc(_uid);
     for (final name in <String>[
       'database_backup',
@@ -87,6 +98,14 @@ class FirestoreSyncService {
           await commitIfFull();
         }
         final rows = backup[table] ?? const <Map<String, dynamic>>[];
+        // The `tables/{table}` document must exist in its own right. Firestore
+        // treats a document that only has subcollections as absent, so without
+        // this write `collection('tables').get()` returns an empty list on
+        // restore and the whole backup reads as missing.
+        await tableRef.set({
+          'rowCount': rows.length,
+          'updatedAt': DateTime.now().toIso8601String(),
+        });
         for (var offset = 0, chunk = 0;
             offset < rows.length;
             offset += 50, chunk++) {
@@ -122,10 +141,15 @@ class FirestoreSyncService {
     try {
       final root = await _backupRoot.get();
       if (!root.exists || root.data()?['state'] != 'ready') return false;
-      final tables = await _backupRoot.collection('tables').get();
+      // Iterate the known table names rather than listing `tables`. Backups
+      // written before the `tableRef.set(...)` fix have no `tables/{table}`
+      // document at all, so a listing returns nothing even though the chunks
+      // are present — walking the names recovers those backups too.
       final backup = <String, List<Map<String, dynamic>>>{};
-      for (final tableDoc in tables.docs) {
-        final chunks = await tableDoc.reference.collection('chunks').get();
+      for (final table in StorageService.cloudBackupTableNames) {
+        final tableRef = _backupRoot.collection('tables').doc(table);
+        final chunks = await tableRef.collection('chunks').get();
+        if (chunks.docs.isEmpty) continue;
         final orderedChunks = [...chunks.docs]
           ..sort((a, b) {
             final aIndex = int.tryParse(a.id);
@@ -148,7 +172,15 @@ class FirestoreSyncService {
             );
           }
         }
-        backup[tableDoc.id] = rows;
+        backup[table] = rows;
+      }
+      // Never report success on an empty read. The caller treats `true` as
+      // "cloud data recovered" and skips the legacy survey-only migration, so
+      // an empty restore would silently discard the user's only remaining
+      // recovery path.
+      if (backup.values.every((rows) => rows.isEmpty)) {
+        debugPrint('[FirestoreSync] Full backup present but empty — skipping');
+        return false;
       }
       await storage.importCloudBackup(backup);
       debugPrint('[FirestoreSync] Full local database backup restored');

@@ -182,7 +182,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _status = 'Google ile giriş yapılamadı. Tekrar deneyin veya geçin.';
+        _status = context.t('loginGoogleFailed');
       });
       return;
     }
@@ -507,16 +507,24 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _onSkip() async {
+    // The button is only disabled while `_busy` is set, and this handler never
+    // set it — so two quick taps opened two non-dismissible dialogs and pushed
+    // two TrialInfoPage routes onto the stack.
+    if (_busy) return;
+    setState(() => _busy = true);
     // A local-only user is allowed, but the cloud-account choice is explicit
     // before the survey so no one misses the data-loss implication.
     await _askForLocalCloudAccount();
     if (!mounted) return;
     // Keep the user on this screen after a failed account creation attempt.
     // An empty status means the user explicitly chose local-only use.
-    if (_status.isNotEmpty) return;
+    if (_status.isNotEmpty) {
+      setState(() => _busy = false);
+      return;
+    }
     await LoginPage.markLoginAsked();
-    setState(() => _busy = false);
     if (!mounted) return;
+    setState(() => _busy = false);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const TrialInfoPage()),

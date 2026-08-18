@@ -4,8 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:no_smoke/core/app_texts.dart';
 import 'package:no_smoke/pages/subscription_gate_page.dart';
 import 'package:no_smoke/services/subscription_service.dart';
+
+/// Resolves the Turkish copy from the string table instead of repeating it as
+/// a literal. These assertions used to hardcode the text, so a spelling fix in
+/// `app_texts.dart` broke the test even though the page was behaving correctly.
+String _tr(String key) => AppTexts.textForCode('tr', key);
 
 /// Stands in for the real `in_app_purchase`-backed [SubscriptionService] —
 /// there's no Play Store to talk to in a test environment, and without this
@@ -50,16 +56,11 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Deneme Suresi Doldu'), findsOneWidget);
-    expect(find.text('Satin Alimi Geri Yukle'), findsOneWidget);
+    expect(find.text(_tr('subscriptionGateTitle')), findsOneWidget);
+    expect(find.text(_tr('subscriptionRestoreButton')), findsOneWidget);
     // No products came back (empty store response), so the gate falls back
     // to its "store unavailable" message instead of listing plans.
-    expect(
-      find.text(
-        'Magaza su anda ulasilamaz durumda. Lutfen daha sonra tekrar dene.',
-      ),
-      findsOneWidget,
-    );
+    expect(find.text(_tr('subscriptionStoreUnavailable')), findsOneWidget);
     expect(find.text('Aylik'), findsNothing);
     expect(find.text('Yillik'), findsNothing);
   });
@@ -77,12 +78,12 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Deneme Suresi Doldu'), findsOneWidget);
+      expect(find.text(_tr('subscriptionGateTitle')), findsOneWidget);
       expect(
-        find.textContaining('internet baglantisi gerekiyor'),
+        find.textContaining('internet bağlantısı gerekiyor'),
         findsOneWidget,
       );
-      expect(find.text('Tekrar Dene'), findsOneWidget);
+      expect(find.text(_tr('subscriptionRetryButton')), findsOneWidget);
       expect(find.text('Aylik'), findsNothing);
     },
   );
@@ -102,6 +103,6 @@ void main() {
       find.byKey(const ValueKey('subscription_gate_continue_free')),
       findsOneWidget,
     );
-    expect(find.text('Ucretsiz Devam Et'), findsOneWidget);
+    expect(find.text(_tr('subscriptionContinueFreeButton')), findsOneWidget);
   });
 }

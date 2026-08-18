@@ -98,6 +98,12 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
   int _catSleepQualityResp = 1;
   int _catEnergyLevelResp = 1;
   int _warningNightBreathlessnessDays = 0;
+  /// Guards the save button. Without it two quick taps ran the whole submit
+  /// chain twice and wrote two weekly survey records, skewing the weekly
+  /// averages and streaks. `SurveyWizard` already had this lock; the weekly
+  /// form never got it.
+  bool _submitting = false;
+
   bool _profileContextChanged = false;
   String? _updatedWorkStart;
   String? _updatedWorkEnd;
@@ -1329,7 +1335,14 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () async {
+                  onPressed: _submitting
+                      ? null
+                      : () async {
+                    if (_submitting) return;
+                    setState(() => _submitting = true);
+                    // Body left at its original indentation so the diff stays
+                    // reviewable; only the guard and the finally are new.
+                    try {
                     final hasCoughTest = await _storageService
                         .hasCoughTestSince(
                           DateTime.now().subtract(const Duration(days: 7)),
@@ -1429,6 +1442,9 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                         ),
                       ),
                     );
+                    } finally {
+                      if (mounted) setState(() => _submitting = false);
+                    }
                   },
                   child: Text(context.t('save')),
                 ),

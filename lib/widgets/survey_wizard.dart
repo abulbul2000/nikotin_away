@@ -48,9 +48,13 @@ class SurveyWizard extends StatefulWidget {
     super.key,
     required this.steps,
     required this.onFinish,
-    this.finishLabel = 'Tamamla',
-    this.nextLabel = 'İleri',
-    this.backLabel = 'Geri',
+    // Required on purpose. These used to default to Turkish literals, so any
+    // new caller that forgot to pass them would ship Turkish buttons to all
+    // 40 languages without a single analyzer warning. Making them required
+    // turns that into a compile error.
+    required this.finishLabel,
+    required this.nextLabel,
+    required this.backLabel,
     this.onStepChanged,
   });
 

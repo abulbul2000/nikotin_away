@@ -98,8 +98,15 @@ class StorageService {
   final MentorEngine _mentorEngine = MentorEngine();
   final DisciplineProtocolService _disciplineProtocolService =
       DisciplineProtocolService();
-  final SmokingIntervalService _smokingIntervalService =
-      SmokingIntervalService();
+  /// Injectable so tests can supply a seeded [Random] through
+  /// [SmokingIntervalService]. `dailyTaskCount` applies a +/-1 jitter whose
+  /// magnitude equals the frequency-preference adjustment itself, so without a
+  /// fixed seed any assertion about frequency is a coin flip.
+  final SmokingIntervalService _smokingIntervalService;
+
+  StorageService({SmokingIntervalService? smokingIntervalService})
+    : _smokingIntervalService =
+          smokingIntervalService ?? SmokingIntervalService();
   final SmokingCountDiscrepancyEngine _smokingCountDiscrepancyEngine =
       const SmokingCountDiscrepancyEngine();
   Database? _database;

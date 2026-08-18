@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,7 @@ import 'package:no_smoke/models/snoring_probe_event.dart';
 import 'package:no_smoke/models/step_counter_sample.dart';
 import 'package:no_smoke/models/subscription_state.dart';
 import 'package:no_smoke/models/survey_record.dart';
+import 'package:no_smoke/services/smoking_interval_service.dart';
 import 'package:no_smoke/services/storage_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -875,8 +877,22 @@ void main() {
         // one plan per calendar day) and asserts the *direction* never
         // reverses, rather than asserting one exact count difference that
         // the jitter could occasionally erase.
-        Future<AdaptiveTaskPlan> planWithFrequency(String frequency) async {
-          final storage = StorageService();
+        // Each frequency gets its OWN Random seeded identically, so the
+        // +/-1 jitter sequence is the same for az/orta/cok on every attempt.
+        // That isolates the frequency effect exactly instead of hoping the
+        // noise averages out -- it used to rely on 10 unseeded samples, and
+        // because dailyTaskCount clamps at maxDailyTasks (8) the real gap
+        // between 'orta' and 'cok' is ~0.67 rather than 1, small enough for
+        // the two means to tie and fail the run at random.
+        Future<AdaptiveTaskPlan> planWithFrequency(
+          String frequency,
+          int seed,
+        ) async {
+          final storage = StorageService(
+            smokingIntervalService: SmokingIntervalService(
+              random: Random(seed),
+            ),
+          );
           await storage.clearAllData();
           await storage.saveSetting(
             'duration_barrier_frequency_preference',
@@ -894,16 +910,17 @@ void main() {
         // have the jitter cancel or reverse the frequency effect purely by
         // chance. Comparing means over many samples is what actually
         // isolates the frequency effect from that noise.
-        const sampleSize = 10;
+        const sampleSize = 25;
         final allBaseDurations = <int>{};
         var azTotal = 0;
         var ortaTotal = 0;
         var cokTotal = 0;
 
         for (var attempt = 0; attempt < sampleSize; attempt++) {
-          final az = await planWithFrequency('az');
-          final orta = await planWithFrequency('orta');
-          final cok = await planWithFrequency('cok');
+          final seed = 1000 + attempt;
+          final az = await planWithFrequency('az', seed);
+          final orta = await planWithFrequency('orta', seed);
+          final cok = await planWithFrequency('cok', seed);
 
           azTotal += az.targetTaskCount;
           ortaTotal += orta.targetTaskCount;

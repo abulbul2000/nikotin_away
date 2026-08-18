@@ -582,6 +582,11 @@ class _AIChatPageState extends State<AIChatPage> {
   Future<void> _send() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
+    // Claim the lock before the first await. It used to be set after
+    // `_ensureAuth()`, so a second tap during the anonymous sign-in round-trip
+    // slipped through and produced a duplicate user turn plus a second billed
+    // AI call.
+    _sending = true;
 
     if (_activeConversationId == null) {
       final conversation = _ChatConversation(
@@ -596,6 +601,7 @@ class _AIChatPageState extends State<AIChatPage> {
     // Make sure anonymous auth is in place before touching the network.
     final authed = await _ensureAuth();
     if (!authed) {
+      _sending = false;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
