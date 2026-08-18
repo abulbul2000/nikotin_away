@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
+import '../engines/respiratory_burden_engine.dart';
 import '../models/behavior_dashboard.dart';
 import '../models/survey_record.dart';
 import '../services/storage_service.dart';
@@ -568,68 +569,8 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
     return payload;
   }
 
-  Map<String, dynamic> _respiratorySnapshot(Map<String, dynamic> payload) {
-    final respiratory =
-        payload['respiratory'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final catLike =
-        respiratory['catLike'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final warningSigns =
-        respiratory['warningSigns'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-
-    final mmrc = _toInt(respiratory['mmrcGrade']).clamp(1, 5);
-    final catTotal =
-        _toInt(catLike['cough']) +
-        _toInt(catLike['phlegm']) +
-        _toInt(catLike['chestTightness']) +
-        _toInt(catLike['breathlessnessStairs']) +
-        _toInt(catLike['activityLimitation']) +
-        _toInt(catLike['confidenceLeavingHome']) +
-        _toInt(catLike['sleepQualityResp']) +
-        _toInt(catLike['energyLevelResp']);
-
-    final warningNight = _toInt(
-      warningSigns['increasedNightBreathlessnessDays'],
-    ).clamp(0, 7);
-    final warningSputumInc = _toInt(
-      warningSigns['sputumIncreaseDays'],
-    ).clamp(0, 7);
-    final warningSputumColor = _toInt(
-      warningSigns['sputumColorChangeDays'],
-    ).clamp(0, 7);
-    final warningWheeze = _toInt(warningSigns['wheezeDays']).clamp(0, 7);
-    final warningTotal =
-        warningNight + warningSputumInc + warningSputumColor + warningWheeze;
-
-    final mmrcComponent = ((mmrc - 1) / 4) * 100;
-    final catComponent = (catTotal / 40) * 100;
-    final warningComponent = ((warningTotal / 28) * 100).clamp(0, 100);
-    final burden =
-        ((0.35 * mmrcComponent) +
-                (0.45 * catComponent) +
-                (0.20 * warningComponent))
-            .clamp(0, 100)
-            .toDouble();
-
-    final severeCombo =
-        (mmrc >= 4 && warningNight >= 4) ||
-        (warningNight >= 4 && warningSputumColor >= 3);
-    final state = burden >= 65 || severeCombo
-        ? 'clinical_review_recommended'
-        : burden >= 35 || warningNight >= 3 || warningSputumColor >= 2
-        ? 'monitor_closer'
-        : 'stable';
-
-    return {
-      'burden': burden,
-      'state': state,
-      'mmrc': mmrc,
-      'catTotal': catTotal,
-      'warningTotal': warningTotal,
-    };
-  }
+  Map<String, dynamic> _respiratorySnapshot(Map<String, dynamic> payload) =>
+      RespiratoryBurdenEngine.snapshot(payload);
 
   int _toInt(dynamic value) {
     if (value is int) {

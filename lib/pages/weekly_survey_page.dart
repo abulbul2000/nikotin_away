@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
+import '../engines/respiratory_burden_engine.dart';
 import '../models/survey_record.dart';
 import '../models/user_profile_snapshot.dart';
 import 'breath_test_page.dart';
@@ -98,6 +99,7 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
   int _catSleepQualityResp = 1;
   int _catEnergyLevelResp = 1;
   int _warningNightBreathlessnessDays = 0;
+
   /// Guards the save button. Without it two quick taps ran the whole submit
   /// chain twice and wrote two weekly survey records, skewing the weekly
   /// averages and streaks. `SurveyWizard` already had this lock; the weekly
@@ -434,82 +436,17 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
     return SurveyRecord.packsToLegacyCigarettes(packOption);
   }
 
-  double _calculateRespiratoryBurdenFromPayload(Map<String, dynamic> payload) {
-    final respiratory =
-        payload['respiratory'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final catLike =
-        respiratory['catLike'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final warningSigns =
-        respiratory['warningSigns'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
+  double _calculateRespiratoryBurdenFromPayload(Map<String, dynamic> payload) =>
+      RespiratoryBurdenEngine.calculateBurden(payload);
 
-    final mmrcGrade = (respiratory['mmrcGrade'] as int? ?? 2).clamp(1, 5);
-    final mmrcComponent = ((mmrcGrade - 1) / 4) * 100;
+  String _resolveRespiratoryState(Map<String, dynamic> payload) =>
+      RespiratoryBurdenEngine.resolveState(payload);
 
-    final catSum =
-        (catLike['cough'] as int? ?? 0) +
-        (catLike['phlegm'] as int? ?? 0) +
-        (catLike['chestTightness'] as int? ?? 0) +
-        (catLike['breathlessnessStairs'] as int? ?? 0) +
-        (catLike['activityLimitation'] as int? ?? 0) +
-        (catLike['confidenceLeavingHome'] as int? ?? 0) +
-        (catLike['sleepQualityResp'] as int? ?? 0) +
-        (catLike['energyLevelResp'] as int? ?? 0);
-    final catComponent = (catSum / 40) * 100;
-
-    final warningTotal =
-        (warningSigns['increasedNightBreathlessnessDays'] as int? ?? 0) +
-        (warningSigns['sputumIncreaseDays'] as int? ?? 0) +
-        (warningSigns['sputumColorChangeDays'] as int? ?? 0) +
-        (warningSigns['wheezeDays'] as int? ?? 0);
-    final warningComponent = ((warningTotal / 28) * 100).clamp(0, 100);
-
-    return ((0.35 * mmrcComponent) +
-            (0.45 * catComponent) +
-            (0.20 * warningComponent))
-        .clamp(0, 100)
-        .toDouble();
-  }
-
-  String _resolveRespiratoryState(Map<String, dynamic> payload) {
-    final respiratory =
-        payload['respiratory'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final warningSigns =
-        respiratory['warningSigns'] as Map<String, dynamic>? ??
-        const <String, dynamic>{};
-    final mmrcGrade = (respiratory['mmrcGrade'] as int? ?? 2).clamp(1, 5);
-    final warningNight =
-        (warningSigns['increasedNightBreathlessnessDays'] as int? ?? 0).clamp(
-          0,
-          7,
-        );
-    final warningSputumColor =
-        (warningSigns['sputumColorChangeDays'] as int? ?? 0).clamp(0, 7);
-    final burden = _calculateRespiratoryBurdenFromPayload(payload);
-
-    final severeCombo =
-        (mmrcGrade >= 4 && warningNight >= 4) ||
-        (warningNight >= 4 && warningSputumColor >= 3);
-    if (burden >= 65 || severeCombo) {
-      return 'clinical_review_recommended';
-    }
-    if (burden >= 35 || warningNight >= 3 || warningSputumColor >= 2) {
-      return 'monitor_closer';
-    }
-    return 'stable';
-  }
-
-  int _resolveEffectiveDailyBreathTarget(Map<String, dynamic> payload) {
-    final burden = _calculateRespiratoryBurdenFromPayload(payload);
-    var target = _dailyBreathTestTarget;
-    if (burden >= 65) {
-      target = (target + 1).clamp(1, 4);
-    }
-    return target;
-  }
+  int _resolveEffectiveDailyBreathTarget(Map<String, dynamic> payload) =>
+      RespiratoryBurdenEngine.resolveEffectiveDailyBreathTarget(
+        payload,
+        _dailyBreathTestTarget,
+      );
 
   Widget _intSlider({
     required String label,
@@ -1338,114 +1275,121 @@ class _WeeklySurveyPageState extends State<WeeklySurveyPage> {
                   onPressed: _submitting
                       ? null
                       : () async {
-                    if (_submitting) return;
-                    setState(() => _submitting = true);
-                    // Body left at its original indentation so the diff stays
-                    // reviewable; only the guard and the finally are new.
-                    try {
-                    final hasCoughTest = await _storageService
-                        .hasCoughTestSince(
-                          DateTime.now().subtract(const Duration(days: 7)),
-                        );
-                    if (!hasCoughTest) {
-                      if (!mounted || !context.mounted) return;
-                      final wantsToTest = await showDialog<bool>(
-                        context: context,
-                        builder: (dialogContext) => AlertDialog(
-                          title: Text(
-                            context.t('coughTestRequiredDialogTitle'),
-                          ),
-                          content: Text(
-                            context.t('coughTestRequiredDialogMessage'),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () =>
-                                  Navigator.of(dialogContext).pop(false),
-                              child: Text(context.t('coughTestSkip')),
-                            ),
-                            FilledButton(
-                              onPressed: () =>
-                                  Navigator.of(dialogContext).pop(true),
-                              child: Text(
-                                context.t('coughTestRequiredForWeeklySurvey'),
+                          if (_submitting) return;
+                          setState(() => _submitting = true);
+                          // Body left at its original indentation so the diff stays
+                          // reviewable; only the guard and the finally are new.
+                          try {
+                            final hasCoughTest = await _storageService
+                                .hasCoughTestSince(
+                                  DateTime.now().subtract(
+                                    const Duration(days: 7),
+                                  ),
+                                );
+                            if (!hasCoughTest) {
+                              if (!mounted || !context.mounted) return;
+                              final wantsToTest = await showDialog<bool>(
+                                context: context,
+                                builder: (dialogContext) => AlertDialog(
+                                  title: Text(
+                                    context.t('coughTestRequiredDialogTitle'),
+                                  ),
+                                  content: Text(
+                                    context.t('coughTestRequiredDialogMessage'),
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(
+                                        dialogContext,
+                                      ).pop(false),
+                                      child: Text(context.t('coughTestSkip')),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () =>
+                                          Navigator.of(dialogContext).pop(true),
+                                      child: Text(
+                                        context.t(
+                                          'coughTestRequiredForWeeklySurvey',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (wantsToTest != true) {
+                                return;
+                              }
+                              if (!mounted || !context.mounted) return;
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const CoughTestPage(),
+                                ),
+                              );
+                              if (!mounted || !context.mounted) return;
+                              final nowHasTest = await _storageService
+                                  .hasCoughTestSince(
+                                    DateTime.now().subtract(
+                                      const Duration(days: 7),
+                                    ),
+                                  );
+                              if (!nowHasTest) {
+                                // User backed out of the test without completing
+                                // it — don't save the survey out from under them.
+                                return;
+                              }
+                            }
+                            if (!mounted || !context.mounted) return;
+                            final unnamedUserLabel = context.t('unnamedUser');
+                            final savedRecord = await _saveWeeklySurvey();
+                            final score = savedRecord.riskScore;
+                            final level = savedRecord.riskLevel;
+                            final latestUserName = await _resolveLatestUserName(
+                              unnamedUserLabel,
+                            );
+                            if (!mounted) return;
+                            if (!context.mounted) return;
+
+                            // Before the share offer: the user should see what their
+                            // answers did before being asked to broadcast it.
+                            await _showWhatChanged(
+                              score: score,
+                              evaluation: _lastEvaluation,
+                            );
+                            if (!mounted) return;
+                            if (!context.mounted) return;
+
+                            await _offerShareProgress();
+                            if (!mounted) return;
+                            if (!context.mounted) return;
+
+                            if (widget.navigateToHomeAfterSave) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => HomePage(
+                                    name: widget.nameSeed ?? latestUserName,
+                                    riskScore: score,
+                                    riskLevel: level,
+                                  ),
+                                ),
+                              );
+                              return;
+                            }
+
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BreathTestPage(
+                                  name: latestUserName,
+                                  packsPerDay: _resolvedPacksPerDay,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (wantsToTest != true) {
-                        return;
-                      }
-                      if (!mounted || !context.mounted) return;
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CoughTestPage(),
-                        ),
-                      );
-                      if (!mounted || !context.mounted) return;
-                      final nowHasTest = await _storageService
-                          .hasCoughTestSince(
-                            DateTime.now().subtract(const Duration(days: 7)),
-                          );
-                      if (!nowHasTest) {
-                        // User backed out of the test without completing
-                        // it — don't save the survey out from under them.
-                        return;
-                      }
-                    }
-                    if (!mounted || !context.mounted) return;
-                    final unnamedUserLabel = context.t('unnamedUser');
-                    final savedRecord = await _saveWeeklySurvey();
-                    final score = savedRecord.riskScore;
-                    final level = savedRecord.riskLevel;
-                    final latestUserName = await _resolveLatestUserName(
-                      unnamedUserLabel,
-                    );
-                    if (!mounted) return;
-                    if (!context.mounted) return;
-
-                    // Before the share offer: the user should see what their
-                    // answers did before being asked to broadcast it.
-                    await _showWhatChanged(
-                      score: score,
-                      evaluation: _lastEvaluation,
-                    );
-                    if (!mounted) return;
-                    if (!context.mounted) return;
-
-                    await _offerShareProgress();
-                    if (!mounted) return;
-                    if (!context.mounted) return;
-
-                    if (widget.navigateToHomeAfterSave) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => HomePage(
-                            name: widget.nameSeed ?? latestUserName,
-                            riskScore: score,
-                            riskLevel: level,
-                          ),
-                        ),
-                      );
-                      return;
-                    }
-
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => BreathTestPage(
-                          name: latestUserName,
-                          packsPerDay: _resolvedPacksPerDay,
-                        ),
-                      ),
-                    );
-                    } finally {
-                      if (mounted) setState(() => _submitting = false);
-                    }
-                  },
+                            );
+                          } finally {
+                            if (mounted) setState(() => _submitting = false);
+                          }
+                        },
                   child: Text(context.t('save')),
                 ),
               ),
