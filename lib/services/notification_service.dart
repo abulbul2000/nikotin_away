@@ -360,6 +360,9 @@ class NotificationService {
     final code = await LanguageService.loadSelectedLanguageCode();
     final scheduleMode = await _resolveAndroidScheduleMode();
     final fireAt = tz.TZDateTime.now(tz.local).add(delay);
+    // Owed, so always allowed — recorded so offered notifications' spacing
+    // check knows this moment is taken.
+    await _budgetAllows(NotificationKind.taskConfirmation, at: fireAt);
 
     await _zonedSchedule(
       _confirmIdFor(taskTitle),
@@ -1658,6 +1661,9 @@ class NotificationService {
       code,
       'medicationReminderBody',
     ).replaceAll('{name}', medicationName);
+    // Owed, so always allowed — recorded so offered notifications' spacing
+    // check knows this moment is taken.
+    await _budgetAllows(NotificationKind.medication, at: fireAt);
 
     await _zonedSchedule(
       // Outside the recurring-slot id range so it can't collide with, or
@@ -1802,6 +1808,9 @@ class NotificationService {
     final nextTriggerAt = hasNextAttempt
         ? triggerAt.add(_unansweredReminderDelay)
         : null;
+    // Owed, so always allowed — recorded so offered notifications' spacing
+    // check knows this moment is taken.
+    await _budgetAllows(NotificationKind.taskRetry, at: triggerAt);
 
     await _zonedSchedule(
       reminderId,
@@ -1985,6 +1994,11 @@ class NotificationService {
     // from landing on a health-tip slot (or vice versa) and keeps at least the
     // global 25-minute spacing between notification moments.
     fireAt = await _reserveNonConflictingTime(fireAt);
+    // taskAlert is owed, so this always allows — but it still records the
+    // send time. Without it, an offered notification's minimumGap check has
+    // no idea a task alert just went out, the highest-frequency notification
+    // kind in the app.
+    await _budgetAllows(NotificationKind.taskAlert, at: fireAt);
     final allowance = await _taskAllowanceFor(taskDescription);
     final adjustedDescription = contextLabel == 'eating'
         ? _text(code, 'postMealShieldCommand')
@@ -2454,6 +2468,9 @@ class NotificationService {
         final body = tip == null
             ? reminder
             : '$reminder\n\n💡 $tip\n${_text(code, 'medicationAdviceDisclaimer')}';
+        // Owed, so always allowed — recorded so offered notifications'
+        // spacing check knows this moment is taken.
+        await _budgetAllows(NotificationKind.medication, at: fireAt);
 
         await _zonedSchedule(
           _medicationReminderBaseId + slot,
@@ -2538,6 +2555,9 @@ class NotificationService {
       2147483647,
     );
     final reminderId = _deriveReminderId(notificationId);
+    // Owed, so always allowed — recorded so offered notifications' spacing
+    // check knows this moment is taken.
+    await _budgetAllows(NotificationKind.taskRetry, at: fireAt);
 
     await _zonedSchedule(
       notificationId,

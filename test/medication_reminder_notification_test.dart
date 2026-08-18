@@ -4,18 +4,24 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/models/medication.dart';
 import 'package:no_smoke/services/notification_service.dart';
+import 'package:no_smoke/services/storage_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 
+/// Returns the same directory on every call — required for the ledger test,
+/// which reads back through a second, independently constructed
+/// StorageService and would otherwise land in an unrelated temp database
+/// (StorageService.databaseFilePath resolves a fresh directory on every
+/// first access if this returned a new path each time).
 class _FakePathProviderPlatform extends PathProviderPlatform {
+  final String _path = Directory.systemTemp
+      .createTempSync('no_smoke_medication_reminder')
+      .path;
+
   @override
-  Future<String?> getApplicationDocumentsPath() async {
-    return Directory.systemTemp
-        .createTempSync('no_smoke_medication_reminder')
-        .path;
-  }
+  Future<String?> getApplicationDocumentsPath() async => _path;
 }
 
 void main() {
@@ -33,8 +39,12 @@ void main() {
     tz.initializeTimeZones();
   });
 
-  setUp(() {
+  setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    // The fake path provider now returns a stable directory (needed for the
+    // ledger test below), so the sqlite file persists across tests in this
+    // file unless cleared here.
+    await StorageService().clearAllData();
   });
 
   tearDown(() {
@@ -76,6 +86,56 @@ void main() {
       expect(body, isNot(contains('💡')));
     }
   });
+
+  test(
+    'a scheduled medication reminder is recorded on the shared budget ledger',
+    () async {
+      // scheduleMedicationReminders used to call _zonedSchedule directly,
+      // never touching the budget's spacing bookkeeping — an offered
+      // notification's minimumGap check had no way to know a medication
+      // reminder had just been scheduled for that moment, since medication
+      // is owed and skips the enabled/budget checks but must still record
+      // lastSentAt.
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(notificationsChannel, (call) async => null);
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(watchdogChannel, (call) async => null);
+
+      final storage = StorageService();
+
+      // Mirrors _atDeviceTimeOfDay + scheduleMedicationReminders' own
+      // "roll to tomorrow if already past" logic: the ledger is keyed by
+      // the day the reminder actually fires on, not the day it was
+      // scheduled from, so a dose time already passed for today (very
+      // plausible depending on wall-clock time when this suite runs) must
+      // be looked up under tomorrow's key instead of today's.
+      final now = DateTime.now();
+      var expectedFireAt = DateTime(now.year, now.month, now.day, 9, 0);
+      if (!expectedFireAt.isAfter(now)) {
+        expectedFireAt = expectedFireAt.add(const Duration(days: 1));
+      }
+
+      final (beforeCount, beforeLastSent) = await storage
+          .loadNotificationBudgetState(now: expectedFireAt);
+      expect(beforeLastSent, isNull);
+
+      await NotificationService.scheduleMedicationReminders([
+        Medication(
+          id: 'med_ledger',
+          name: 'Test İlacı',
+          times: const ['09:00'],
+          createdAt: DateTime(2026, 7, 20),
+        ),
+      ]);
+
+      final (afterCount, afterLastSent) = await storage
+          .loadNotificationBudgetState(now: expectedFireAt);
+      expect(afterLastSent, isNotNull);
+      // Owed kinds move the spacing clock but never spend the offered
+      // allowance.
+      expect(afterCount, beforeCount);
+    },
+  );
 
   test(
     'health condition advice no longer skips a user who takes medication',
