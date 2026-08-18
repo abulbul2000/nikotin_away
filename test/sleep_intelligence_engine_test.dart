@@ -89,5 +89,72 @@ void main() {
       expect(result.wakeTime, '07:45');
       expect(result.coverage, greaterThanOrEqualTo(0.6));
     });
+
+    test('a tightly-clustered probe burst does not pass the trust gate '
+        'even when the raw count clears 60%', () {
+      // Regression coverage: the trust gate only ever checked
+      // probes.length / expectedCount, never whether those probes were
+      // actually spread across the configured window. 9 probes packed
+      // into the first 90 minutes of a 10-hour window (e.g. the app got
+      // killed and restarted a few times right after the user fell
+      // asleep, each restart firing a burst of catch-up probes, then
+      // nothing for the rest of the night) clears 9/14 ≈ 64% coverage on
+      // count alone, but says nothing trustworthy about the other ~8.5
+      // hours — this must not be treated the same as genuine full-night
+      // coverage.
+      final base = DateTime(2026, 7, 22, 22, 0);
+      final probes = [
+        for (var i = 0; i < 9; i++)
+          _probe(
+            base.add(Duration(minutes: 10 * i)),
+            screenOff: true,
+          ), // all within the first 90 minutes
+      ];
+
+      final result = engine.estimateSleepWindow(
+        probes: probes,
+        windowStartMinute: windowStart,
+        windowEndMinute: windowEnd,
+        intervalMinutes: interval,
+        fallbackSleepTime: '23:00',
+        fallbackWakeTime: '07:00',
+      );
+
+      expect(result.estimated, isFalse);
+      expect(result.sleepTime, '23:00');
+      expect(result.wakeTime, '07:00');
+    });
+
+    test('a long mid-window gap in probe delivery is not silently treated as '
+        'a real wake-up', () {
+      // Similar spirit: 10 probes overall clears 10/14 ≈ 71% coverage,
+      // but 8 of them sit in a dense pre-gap cluster and the rest arrive
+      // only once probing resumes hours later — the multi-hour stretch
+      // in between has zero data, not "awake" data, and should not be
+      // read as a confidently short sleep window.
+      final base = DateTime(2026, 7, 22, 22, 0);
+      final probes = [
+        for (var i = 0; i < 8; i++)
+          _probe(base.add(Duration(minutes: 10 * i)), screenOff: true),
+        // Probing resumes 6 hours later — a genuine multi-hour gap, not
+        // a handful of missed 45-minute slots.
+        _probe(base.add(const Duration(hours: 7)), screenOff: true),
+        _probe(
+          base.add(const Duration(hours: 7, minutes: 45)),
+          screenOff: true,
+        ),
+      ];
+
+      final result = engine.estimateSleepWindow(
+        probes: probes,
+        windowStartMinute: windowStart,
+        windowEndMinute: windowEnd,
+        intervalMinutes: interval,
+        fallbackSleepTime: '23:00',
+        fallbackWakeTime: '07:00',
+      );
+
+      expect(result.estimated, isFalse);
+    });
   });
 }

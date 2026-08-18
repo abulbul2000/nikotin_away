@@ -25,6 +25,26 @@ class SleepEstimate {
 class SleepIntelligenceEngine {
   static const double minCoverageForTrust = 0.6;
 
+  /// A gap between two consecutive probes wider than this multiple of the
+  /// configured interval is treated as a real outage (app killed, device
+  /// off, probing not yet re-armed after boot) rather than an ordinary
+  /// missed beat.
+  static const double maxGapMultiplierForTrust = 3.0;
+
+  /// The probes actually received must span at least this fraction of the
+  /// configured window's total duration. Probes.length / expectedCount
+  /// alone can't tell a night with even spacing apart from a tight burst
+  /// followed by a multi-hour silent stretch — a handful of probes fired
+  /// close together (e.g. a few app restarts right after falling asleep,
+  /// each firing a catch-up burst) can clear [minCoverageForTrust] on raw
+  /// count alone while covering only a small slice of real time, which
+  /// would let the "longest screen-off run" below confidently report that
+  /// slice as the whole night's sleep. Combined with [maxGapMultiplierForTrust]
+  /// (no single gap too wide) this also catches the case count-and-gap
+  /// checks alone would miss: many small, evenly-spaced gaps that together
+  /// still leave large stretches of the window unaccounted for.
+  static const double minTemporalSpanFractionForTrust = 0.6;
+
   SleepEstimate estimateSleepWindow({
     required List<SleepProbeEvent> probes,
     required int windowStartMinute,
@@ -42,7 +62,23 @@ class SleepIntelligenceEngine {
         ? 0.0
         : (probes.length / expectedCount).clamp(0.0, 1.0);
 
-    if (coverage < minCoverageForTrust) {
+    final sorted = [...probes]
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    final expectedSpanMinutes = _expectedSpanMinutes(
+      windowStartMinute,
+      windowEndMinute,
+    );
+    final hasReliableSpan = _hasReliableTemporalSpan(
+      sorted,
+      expectedSpanMinutes: expectedSpanMinutes,
+    );
+    final hasNoLargeGaps = _hasNoLargeGaps(
+      sorted,
+      intervalMinutes: intervalMinutes,
+    );
+
+    if (coverage < minCoverageForTrust || !hasReliableSpan || !hasNoLargeGaps) {
       return SleepEstimate(
         sleepTime: fallbackSleepTime,
         wakeTime: fallbackWakeTime,
@@ -50,9 +86,6 @@ class SleepIntelligenceEngine {
         coverage: coverage,
       );
     }
-
-    final sorted = [...probes]
-      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
     var bestStart = -1;
     var bestLength = 0;
@@ -96,6 +129,56 @@ class SleepIntelligenceEngine {
     );
   }
 
+  /// True when no gap between consecutive [sortedProbes] exceeds
+  /// [maxGapMultiplierForTrust] times [intervalMinutes] — i.e. probing was
+  /// never silent for an outage-length stretch. Trivially true for 0 or 1
+  /// probes (nothing to have a gap between); that case is still correctly
+  /// rejected separately by the coverage check.
+  bool _hasNoLargeGaps(
+    List<SleepProbeEvent> sortedProbes, {
+    required int intervalMinutes,
+  }) {
+    if (intervalMinutes <= 0 || sortedProbes.length < 2) {
+      return true;
+    }
+    final maxAllowedGap = Duration(
+      minutes: (intervalMinutes * maxGapMultiplierForTrust).round(),
+    );
+    for (var i = 1; i < sortedProbes.length; i++) {
+      final gap = sortedProbes[i].createdAt.difference(
+        sortedProbes[i - 1].createdAt,
+      );
+      if (gap > maxAllowedGap) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /// True when the actual first-to-last probe span covers at least
+  /// [minTemporalSpanFractionForTrust] of [expectedSpanMinutes]. Trivially
+  /// true for 0 or 1 probes; that case is still correctly rejected
+  /// separately by the coverage check.
+  bool _hasReliableTemporalSpan(
+    List<SleepProbeEvent> sortedProbes, {
+    required int expectedSpanMinutes,
+  }) {
+    if (expectedSpanMinutes <= 0 || sortedProbes.length < 2) {
+      return true;
+    }
+    final actualSpanMinutes = sortedProbes.last.createdAt
+        .difference(sortedProbes.first.createdAt)
+        .inMinutes;
+    return actualSpanMinutes >=
+        expectedSpanMinutes * minTemporalSpanFractionForTrust;
+  }
+
+  int _expectedSpanMinutes(int windowStartMinute, int windowEndMinute) {
+    return windowEndMinute >= windowStartMinute
+        ? windowEndMinute - windowStartMinute
+        : (24 * 60 - windowStartMinute) + windowEndMinute;
+  }
+
   int _expectedProbeCount(
     int windowStartMinute,
     int windowEndMinute,
@@ -104,9 +187,7 @@ class SleepIntelligenceEngine {
     if (intervalMinutes <= 0) {
       return 0;
     }
-    final span = windowEndMinute >= windowStartMinute
-        ? windowEndMinute - windowStartMinute
-        : (24 * 60 - windowStartMinute) + windowEndMinute;
+    final span = _expectedSpanMinutes(windowStartMinute, windowEndMinute);
     return (span / intervalMinutes).floor() + 1;
   }
 
