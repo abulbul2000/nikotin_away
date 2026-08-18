@@ -738,7 +738,8 @@ class StorageService {
         watchdogId TEXT,
         notificationId INTEGER,
         isCheckIn INTEGER NOT NULL DEFAULT 0,
-        taskKind TEXT NOT NULL DEFAULT '${TaskKind.noSmokeWindow}'
+        taskKind TEXT NOT NULL DEFAULT '${TaskKind.noSmokeWindow}',
+        sosStartedAt TEXT
       )
     ''');
     // 28: isCheckIn — marks a shorter "are you still holding on?" prompt
@@ -760,6 +761,10 @@ class StorageService {
       'taskKind',
       "TEXT NOT NULL DEFAULT '${TaskKind.noSmokeWindow}'",
     );
+    // sosStartedAt — when the task most recently entered sosActive, so
+    // closeStaleAbandonedSosSessions can find one the user never came back
+    // to resume. Same ALTER-for-existing-installs reasoning as above.
+    await _ensureTableColumn(db, _taskAssignmentsTable, 'sosStartedAt', 'TEXT');
   }
 
   Future<void> _ensureMentorMessagesTable(Database db) async {
@@ -4160,6 +4165,47 @@ class StorageService {
     return stale;
   }
 
+  /// Closes out any `sosActive` task the user never came back to resume.
+  ///
+  /// `sosActive`'s only exits are the two manual resume choices
+  /// `CravingSosPage` offers ("resume in N minutes" / "resume the running
+  /// barrier") — there is no automatic one, so a session abandoned by
+  /// closing the app, backgrounding it and never returning, or the page
+  /// itself crashing, previously sat in `sosActive` forever: never
+  /// resolved, never counted against the daily plan as finished, silently
+  /// occupying a slot in the daily quota indefinitely. Closed as
+  /// [TaskLifecycleState.sosAbandoned], kept out of the learning signal
+  /// the same way `expired`/`barrierUnknown` are.
+  ///
+  /// Called on every app open, alongside [closeStaleAcceptedBarriers]; a
+  /// no-op most of the time since it only ever matches a session the user
+  /// genuinely never returned to.
+  Future<List<TaskAssignment>> closeStaleAbandonedSosSessions({
+    required Duration deadline,
+    DateTime? now,
+  }) async {
+    final cutoff = (now ?? DateTime.now()).subtract(deadline);
+    final db = await database;
+    final rows = await db.query(
+      _taskAssignmentsTable,
+      where: 'state = ?',
+      whereArgs: [TaskLifecycleState.sosActive],
+    );
+    final stale = rows
+        .map(TaskAssignment.fromJson)
+        .where(
+          (task) => (task.sosStartedAt ?? task.scheduledAt).isBefore(cutoff),
+        )
+        .toList();
+    for (final task in stale) {
+      await transitionTaskAssignment(
+        id: task.id,
+        state: TaskLifecycleState.sosAbandoned,
+      );
+    }
+    return stale;
+  }
+
   static String _planDateKey(DateTime day) {
     final month = day.month.toString().padLeft(2, '0');
     final dayOfMonth = day.day.toString().padLeft(2, '0');
@@ -4228,7 +4274,10 @@ class StorageService {
         );
       }
       if (state == TaskLifecycleState.sosActive) {
-        updated = updated.copyWith(sosCount: existing.sosCount + 1);
+        updated = updated.copyWith(
+          sosCount: existing.sosCount + 1,
+          sosStartedAt: now,
+        );
       }
       if (sosMinutes != null) {
         updated = updated.copyWith(

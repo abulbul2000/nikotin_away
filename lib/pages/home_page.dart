@@ -549,6 +549,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       );
     }
 
+    // Same idea for an SOS breathing session the user opened and never
+    // came back to resume — it has no reminder notification to cancel,
+    // just a state that would otherwise sit open forever.
+    await _storageService.closeStaleAbandonedSosSessions(
+      deadline: NotificationService.barrierResolutionDeadline,
+    );
+
     // Was `now - quitDate`, which counted days the user had smoked on. The
     // reduction figures are derived from logged cigarettes and answered
     // tasks instead, so a day only counts when something actually happened.

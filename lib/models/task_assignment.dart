@@ -52,6 +52,15 @@ class TaskLifecycleState {
   /// signal on purpose.
   static const String barrierUnknown = 'barrier_unknown';
 
+  /// The user opened the SOS breathing exercise but never came back to
+  /// choose when to resume (closed the app, backgrounded it and never
+  /// returned, the SOS page itself crashed) — [sosActive] otherwise has no
+  /// exit but the two manual resume paths (`CravingSosPage`'s "resume in
+  /// N minutes"/"resume the running barrier" buttons), so nothing ever
+  /// closed it out on its own. Closed like [expired]/[barrierUnknown]: no
+  /// real answer was given, so it's kept out of the learning signal.
+  static const String sosAbandoned = 'sos_abandoned';
+
   static const Set<String> terminal = {
     succeeded,
     failedDeclined,
@@ -59,6 +68,7 @@ class TaskLifecycleState {
     failedMissed,
     expired,
     barrierUnknown,
+    sosAbandoned,
   };
 
   /// Which states a transition may legally land on, keyed by the state it
@@ -133,8 +143,10 @@ class TaskLifecycleState {
     // suspends resumes back into `accepted` instead — the barrier keeps
     // counting down rather than being reset into a fresh postpone/reminder
     // cycle. The caller (CravingSosPage) knows which case it's in and picks
-    // the right target; both are legal from here.
-    sosActive: {postponed, accepted},
+    // the right target; both are legal from here. `sosAbandoned` is the
+    // timeout sweep's exit (see StorageService.closeStaleAcceptedBarriers),
+    // not something CravingSosPage itself ever requests.
+    sosActive: {postponed, accepted, sosAbandoned},
     accepted: {
       awaitingConfirmation,
       barrierUnknown,
@@ -235,6 +247,14 @@ class TaskAssignment {
   final int sosCount;
   final int sosTotalMinutes;
 
+  /// When the task most recently entered [TaskLifecycleState.sosActive] —
+  /// mirrors [barrierStartedAt]'s role for [TaskLifecycleState.accepted].
+  /// Lets a timeout sweep (see
+  /// `StorageService.closeStaleAbandonedSosSessions`) find a task the user
+  /// opened the SOS breathing exercise for and then never came back to
+  /// resume, since [sosActive] otherwise has no automatic exit.
+  final DateTime? sosStartedAt;
+
   /// Correlates with the native watchdog that catches silence.
   final String? watchdogId;
   final int? notificationId;
@@ -270,6 +290,7 @@ class TaskAssignment {
     this.gateReason,
     this.sosCount = 0,
     this.sosTotalMinutes = 0,
+    this.sosStartedAt,
     this.watchdogId,
     this.notificationId,
     this.isCheckIn = false,
@@ -294,6 +315,7 @@ class TaskAssignment {
     String? gateReason,
     int? sosCount,
     int? sosTotalMinutes,
+    DateTime? sosStartedAt,
     String? watchdogId,
     int? notificationId,
     DateTime? scheduledAt,
@@ -317,6 +339,7 @@ class TaskAssignment {
       gateReason: gateReason ?? this.gateReason,
       sosCount: sosCount ?? this.sosCount,
       sosTotalMinutes: sosTotalMinutes ?? this.sosTotalMinutes,
+      sosStartedAt: sosStartedAt ?? this.sosStartedAt,
       watchdogId: watchdogId ?? this.watchdogId,
       notificationId: notificationId ?? this.notificationId,
       isCheckIn: isCheckIn,
@@ -343,6 +366,7 @@ class TaskAssignment {
       'gateReason': gateReason,
       'sosCount': sosCount,
       'sosTotalMinutes': sosTotalMinutes,
+      'sosStartedAt': sosStartedAt?.toIso8601String(),
       'watchdogId': watchdogId,
       'notificationId': notificationId,
       'isCheckIn': isCheckIn ? 1 : 0,
@@ -376,6 +400,7 @@ class TaskAssignment {
       gateReason: json['gateReason'] as String?,
       sosCount: (json['sosCount'] as num?)?.toInt() ?? 0,
       sosTotalMinutes: (json['sosTotalMinutes'] as num?)?.toInt() ?? 0,
+      sosStartedAt: parse(json['sosStartedAt']),
       watchdogId: json['watchdogId'] as String?,
       notificationId: (json['notificationId'] as num?)?.toInt(),
       isCheckIn: (json['isCheckIn'] as num?)?.toInt() == 1,

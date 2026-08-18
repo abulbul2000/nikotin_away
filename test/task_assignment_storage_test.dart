@@ -277,6 +277,61 @@ void main() {
     expect(resumed.scheduledAt, resumedAt.add(const Duration(minutes: 60)));
   });
 
+  test(
+    'an sosActive session stuck past the deadline is closed as abandoned',
+    () async {
+      final storage = StorageService();
+      await storage.saveTaskAssignment(
+        _task(id: 'sos_stale', state: TaskLifecycleState.delivered),
+      );
+      await storage.transitionTaskAssignment(
+        id: 'sos_stale',
+        state: TaskLifecycleState.sosActive,
+        at: DateTime(2026, 7, 20, 14, 0),
+      );
+
+      // Before this fix, sosActive had no automatic exit at all — a
+      // session the user opened and never resumed sat open forever,
+      // occupying a slot in the daily quota indefinitely.
+      final closed = await storage.closeStaleAbandonedSosSessions(
+        deadline: const Duration(hours: 2),
+        now: DateTime(2026, 7, 20, 16, 1),
+      );
+
+      expect(closed.map((t) => t.id), contains('sos_stale'));
+      final reloaded = await storage.loadTaskAssignment('sos_stale');
+      expect(reloaded!.state, TaskLifecycleState.sosAbandoned);
+      expect(reloaded.isTerminal, isTrue);
+      // Same as expired/barrierUnknown — an abandoned session must never
+      // feed the learning engine as if it were a real answer.
+      expect(reloaded.outcome, isNull);
+    },
+  );
+
+  test(
+    'an sosActive session still inside the deadline is left alone',
+    () async {
+      final storage = StorageService();
+      await storage.saveTaskAssignment(
+        _task(id: 'sos_fresh', state: TaskLifecycleState.delivered),
+      );
+      await storage.transitionTaskAssignment(
+        id: 'sos_fresh',
+        state: TaskLifecycleState.sosActive,
+        at: DateTime(2026, 7, 20, 14, 0),
+      );
+
+      final closed = await storage.closeStaleAbandonedSosSessions(
+        deadline: const Duration(hours: 2),
+        now: DateTime(2026, 7, 20, 15, 0),
+      );
+
+      expect(closed, isEmpty);
+      final reloaded = await storage.loadTaskAssignment('sos_fresh');
+      expect(reloaded!.state, TaskLifecycleState.sosActive);
+    },
+  );
+
   test('an illegal edge is rejected rather than silently applied', () async {
     final storage = StorageService();
     await storage.saveTaskAssignment(
