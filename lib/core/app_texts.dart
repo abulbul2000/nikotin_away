@@ -439,6 +439,8 @@ class AppTexts {
     'validationFirstCigaretteRequired':
         'Lütfen ilk sigarayı ne zaman içtiğinizi seçin.',
     'validationFixHighlightedFields': 'Lütfen işaretli alanları düzeltin.',
+    'validationCigarettesPerPackRange':
+        'Paketteki sigara sayısı 1 ile 60 arasında olmalıdır.',
     'validationSleepTimeRequired': 'Lütfen uyku saatini seçin.',
     'validationSmokeYearsRange':
         'Sigara süresi 0 ile 90 yıl arasında olmalıdır.',
@@ -3790,6 +3792,8 @@ class AppTexts {
     'validationFirstCigaretteRequired':
         'Please select how soon after waking you smoke your first cigarette.',
     'validationFixHighlightedFields': 'Please fix the highlighted fields.',
+    'validationCigarettesPerPackRange':
+        'Cigarettes per pack must be between 1 and 60.',
     'validationSleepTimeRequired': 'Please select sleep time.',
     'validationSmokeYearsRange':
         'Smoking duration must be between 0 and 90 years.',

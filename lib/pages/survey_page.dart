@@ -1114,6 +1114,20 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
               cigarettesPerPack = value;
             });
           },
+          // Optional like smokingYears below — empty is fine. If entered,
+          // range-checked so an unrealistic value (e.g. a typo like "9999")
+          // can't silently multiply into a nonsensical dailyCigarettes count
+          // in smoking_time_prediction_engine.dart.
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return null;
+            }
+            final intValue = int.tryParse(value);
+            if (intValue == null || intValue < 1 || intValue > 60) {
+              return context.t('validationCigarettesPerPackRange');
+            }
+            return null;
+          },
         ),
         const SizedBox(height: 10),
         DropdownButtonFormField<String>(
@@ -1618,6 +1632,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
                         decoration: InputDecoration(
                           hintText: context.t('medicationNameHint'),
                         ),
+                        maxLength: 80,
                       ),
                     ),
                     IconButton(

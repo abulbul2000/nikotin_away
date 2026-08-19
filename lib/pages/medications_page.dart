@@ -283,6 +283,7 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
               labelText: context.t('medicationNameHint'),
             ),
             autofocus: true,
+            maxLength: 80,
           ),
           const SizedBox(height: 16),
           // Asked before the times, because how often someone takes something

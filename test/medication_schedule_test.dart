@@ -182,4 +182,22 @@ void main() {
 
     expect(() => controller.addListener(() {}), throwsFlutterError);
   });
+
+  testWidgets('the medication name field rejects pathologically long input', (
+    tester,
+  ) async {
+    // Regression coverage: the name TextField had no maxLength, so a
+    // pasted/autofilled wall of text could be saved verbatim and later
+    // get spliced into a scheduled notification body
+    // (NotificationService's medicationReminderBody replaceAll('{name}',
+    // medication.name)), risking a garbled/unreadable notification.
+    await tester.pumpWidget(wrap(const MedicationsPage()));
+    await settle(tester);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await settle(tester);
+
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.maxLength, 80);
+  });
 }
