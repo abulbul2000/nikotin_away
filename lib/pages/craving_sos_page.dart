@@ -71,6 +71,21 @@ class _CravingSosPageState extends State<CravingSosPage>
   String? _resolvedTaskTitle;
   bool _wasBarrierRunning = false;
 
+  /// [_resolveActiveTask]'s own in-flight run. Dismiss and the two resume
+  /// actions can all be reached from the very first frame — the breathing
+  /// UI is deliberately not gated on this lookup finishing — but each of
+  /// them does its own read-modify-write against the same task row this
+  /// lookup is also writing to (suspending it into `sosActive`). Without
+  /// waiting on this, a fast dismiss-then-resume before the lookup's own
+  /// write lands could have that write land *after* the resume's, silently
+  /// reverting the task from `postponed`/`accepted` back to `sosActive` —
+  /// a state only these two resume buttons (now already popped) or the
+  /// abandoned-session timeout sweep can exit. Awaiting this first also
+  /// settles [_wasBarrierRunning] before Dismiss reads it, so a dismiss
+  /// that races the lookup can't send an actually-running barrier down the
+  /// wrong (postpone-choice, not resume-accepted) branch.
+  late final Future<void> _activeTaskResolved;
+
   @override
   void initState() {
     super.initState();
@@ -81,7 +96,7 @@ class _CravingSosPageState extends State<CravingSosPage>
     )..forward();
     _startTimer();
     _resolvedTaskTitle = widget.taskCanonicalTitle;
-    unawaited(_resolveActiveTask());
+    _activeTaskResolved = _resolveActiveTask();
   }
 
   /// Whether the resolved task was already mid-barrier (`accepted`) when SOS
@@ -345,15 +360,19 @@ class _CravingSosPageState extends State<CravingSosPage>
   /// "I'm through it" still has to settle the task — leaving it mid-flight
   /// would mean the retry chain kept prompting someone who just told us they
   /// were past the craving.
-  void _handleDismiss() {
+  ///
+  /// Waits on [_activeTaskResolved] first — see its own doc comment — so a
+  /// fast dismiss can't read [_wasBarrierRunning] before the lookup that
+  /// sets it has actually finished.
+  Future<void> _handleDismiss() async {
     if (_resolvedTaskTitle == null) {
       Navigator.of(context).pop();
       return;
     }
+    await _activeTaskResolved;
+    if (!mounted) return;
     setState(
-      () => _stage = _wasBarrierRunning
-          ? _SosStage.resumed
-          : _SosStage.resume,
+      () => _stage = _wasBarrierRunning ? _SosStage.resumed : _SosStage.resume,
     );
   }
 
@@ -432,7 +451,11 @@ class _CravingSosPageState extends State<CravingSosPage>
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(Icons.emoji_events_outlined, size: 56, color: AppTheme.brandPrimary),
+        Icon(
+          Icons.emoji_events_outlined,
+          size: 56,
+          color: AppTheme.brandPrimary,
+        ),
         const SizedBox(height: 20),
         Text(
           context.t('sosBarrierResumedTitle'),
