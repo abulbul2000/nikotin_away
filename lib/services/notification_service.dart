@@ -501,6 +501,17 @@ class NotificationService {
     await _plugin.cancel(_barrierResolutionReminderIdFor(taskTitle));
   }
 
+  /// Cancels every scheduled/shown notification of any kind, regardless of
+  /// id. Used by Settings' Reset Data and Delete Account flows — those wipe
+  /// the sqlite database wholesale, and a still-armed OS alarm (e.g. a
+  /// daily-recurring medication reminder) firing afterward would write a
+  /// fresh row (dose log, protocol violation) referencing an id that no
+  /// longer exists in the just-cleared tables, undermining the "blank
+  /// slate" the user asked for. Every other cancel* function in this file
+  /// is deliberately narrow (one task, one medication); this is the one
+  /// place a blanket cancel is actually correct.
+  static Future<void> cancelAll() => _plugin.cancelAll();
+
   static const String _categoryTaskStart = 'task_start_category';
   static const String _categoryTaskFollowUp = 'task_followup_category';
   static const String _categoryPostpone = 'task_postpone_category';

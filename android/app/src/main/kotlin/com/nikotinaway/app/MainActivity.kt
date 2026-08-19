@@ -376,6 +376,11 @@ class MainActivity : FlutterActivity() {
 						result.success(ShortcutStore.drain(this))
 					}
 
+					"cancelAllWatchdogs" -> {
+						WatchdogStore.cancelAllActiveAndDiscardViolations(this)
+						result.success(true)
+					}
+
 					"consumeWatchdogViolations" -> {
 						val rows = WatchdogStore.drainViolations(this)
 						val mapped = rows.mapNotNull { row ->

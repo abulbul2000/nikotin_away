@@ -6,6 +6,7 @@ import 'notifications_page.dart';
 
 import '../core/app_texts.dart';
 import '../main.dart';
+import '../services/android_watchdog_service.dart';
 import '../services/cloud_backup_service.dart';
 import '../services/firestore_sync_service.dart';
 import '../services/google_auth_service.dart';
@@ -397,7 +398,9 @@ class _SettingsPageState extends State<SettingsPage> {
       await FirestoreSyncService.waitForPendingSync();
       await FirestoreSyncService.deleteAllCloudData();
       await deleteAllBackupsForCurrentUser();
-      await _storageService.clearAllData();
+      await CloudBackupService.clearAllLocalData(_storageService);
+      await NotificationService.cancelAll();
+      await AndroidWatchdogService.cancelAllWatchdogs();
       await GoogleAuthService.deleteCurrentAccount();
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -443,7 +446,9 @@ class _SettingsPageState extends State<SettingsPage> {
     // still be reading from storage. Let it finish before wiping so it
     // does not race clearAllData() and re-upload a half-cleared snapshot.
     await FirestoreSyncService.waitForPendingSync();
-    await _storageService.clearAllData();
+    await CloudBackupService.clearAllLocalData(_storageService);
+    await NotificationService.cancelAll();
+    await AndroidWatchdogService.cancelAllWatchdogs();
     if (!mounted) return;
     ScaffoldMessenger.of(
       context,
@@ -596,6 +601,12 @@ class _SettingsPageState extends State<SettingsPage> {
       context,
     ).showSnackBar(SnackBar(content: Text(context.t('cloudBackupInProgress'))));
     try {
+      // Same reasoning as _confirmResetData/_deleteAccountAndCloudData: a
+      // background syncLocalDatabaseBackup fired on an earlier app resume
+      // may still be reading pre-restore data. Let it finish first so it
+      // can't finish uploading that stale snapshot to the separate
+      // Firestore full-backup slot after this restore has already landed.
+      await FirestoreSyncService.waitForPendingSync();
       final found = await CloudBackupService(
         storageService: _storageService,
       ).restore(passphrase: passphrase);

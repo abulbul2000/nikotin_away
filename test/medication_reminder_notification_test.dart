@@ -260,4 +260,28 @@ void main() {
       expect(firstBatchIds, everyElement(inInclusiveRange(460100, 460105)));
     },
   );
+
+  test('cancelAll calls the platform cancelAll method', () async {
+    // Regression coverage: Settings' Reset Data / Delete Account wipe the
+    // sqlite database wholesale but used to leave every already-scheduled
+    // OS alarm armed -- a daily-recurring medication reminder firing after
+    // a reset would write a fresh dose-log row referencing a medication id
+    // that no longer exists in the just-cleared table. NotificationService
+    // had no blanket cancel function at all before this; every cancel*
+    // function was scoped to one specific id.
+    var cancelAllCalls = 0;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(notificationsChannel, (call) async {
+          if (call.method == 'cancelAll') {
+            cancelAllCalls++;
+          }
+          return null;
+        });
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(watchdogChannel, (call) async => null);
+
+    await NotificationService.cancelAll();
+
+    expect(cancelAllCalls, 1);
+  });
 }

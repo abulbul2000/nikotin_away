@@ -517,6 +517,27 @@ object WatchdogStore {
         prefs.edit().remove(KEY_VIOLATIONS).apply()
         return items
     }
+
+    /// Cancels every currently-active watchdog's backup alarm, clears its
+    /// stored state, and discards (not drains-to-Dart) any already-queued
+    /// violations. Used when the Dart side wipes its own database wholesale
+    /// (Settings' Reset Data / Delete Account) — without this, a watchdog
+    /// armed just before the reset would still fire afterward and either
+    /// enqueue a violation that consumeWatchdogViolations later writes into
+    /// the just-cleared protocol_violations table, or (if this weren't
+    /// called first) find no matching task_assignments row and silently
+    /// vanish either way. A user who just reset their data should see
+    /// neither: the reset should mean nothing more arrives from before it.
+    fun cancelAllActiveAndDiscardViolations(context: Context) {
+        for (state in loadAllActive(context)) {
+            WatchdogAlarms.cancel(context, state.watchdogId)
+            clearActive(context, state.watchdogId)
+        }
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .remove(KEY_VIOLATIONS)
+            .apply()
+    }
 }
 
 object WatchdogViolationNotifier {

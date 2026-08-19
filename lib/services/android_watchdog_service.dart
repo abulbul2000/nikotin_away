@@ -67,6 +67,24 @@ class AndroidWatchdogService {
     await _channel.invokeMethod('ackWatchdog', {'watchdogId': watchdogId});
   }
 
+  /// Cancels every currently-active watchdog's native alarm and discards
+  /// any already-queued violations, without ever draining them to Dart.
+  /// Called from Settings' Reset Data / Delete Account flows so a watchdog
+  /// armed before the reset can't fire afterward and write a violation row
+  /// referencing a task from before the reset into the just-cleared
+  /// database (see WatchdogStore.cancelAllActiveAndDiscardViolations's doc
+  /// comment on the native side).
+  static Future<void> cancelAllWatchdogs() async {
+    if (!_isAndroid) {
+      return;
+    }
+    try {
+      await _channel.invokeMethod('cancelAllWatchdogs');
+    } catch (_) {
+      // Best-effort: a failure here must not block the rest of the reset.
+    }
+  }
+
   /// Opens the native task overlay for a notification body tap. This works
   /// while another app is visible and avoids routing to whichever Flutter
   /// page happened to be open.

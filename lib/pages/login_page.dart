@@ -69,7 +69,9 @@ class _LoginPageState extends State<LoginPage> {
     final decoded = _decodeJson(value);
     if (decoded is! List) return const [];
     return decoded.whereType<Map>().map((row) {
-      return row.map((key, value) => MapEntry(key.toString(), value.toString()));
+      return row.map(
+        (key, value) => MapEntry(key.toString(), value.toString()),
+      );
     }).toList();
   }
 
@@ -157,15 +159,12 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<bool> _clearLocalDataWhenAccountChanged(String? previousUid) async {
     final currentUid = FirebaseAuth.instance.currentUser?.uid;
-    if (previousUid == null || currentUid == null || previousUid == currentUid) {
+    if (previousUid == null ||
+        currentUid == null ||
+        previousUid == currentUid) {
       return false;
     }
-    await StorageService().clearAllData();
-    final prefs = await SharedPreferences.getInstance();
-    for (final key in CloudBackupService.backedUpPrefsKeys) {
-      await prefs.remove(key);
-    }
-    await prefs.remove('initial_cloud_backup_prompt_shown');
+    await CloudBackupService.clearAllLocalData(StorageService());
     return true;
   }
 
@@ -204,17 +203,16 @@ class _LoginPageState extends State<LoginPage> {
       await storage.saveInitialRegistrationCompleted(true);
       if (!mounted) return;
       setState(() => _restoring = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('loginRestoreSuccess'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.t('loginRestoreSuccess'))));
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const TrialInfoPage()),
       );
       return;
     }
-    final restoredResult =
-        await FirestoreSyncService.restoreFromCloud();
+    final restoredResult = await FirestoreSyncService.restoreFromCloud();
     final restoredRecords = restoredResult.$1;
     final restoredContext = restoredResult.$2;
 
@@ -229,10 +227,9 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
       setState(() => _restoring = false);
 
-      final msg = context.t('loginRestoreSuccess').replaceAll(
-        '{count}',
-        '${restoredRecords.length}',
-      );
+      final msg = context
+          .t('loginRestoreSuccess')
+          .replaceAll('{count}', '${restoredRecords.length}');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(msg), duration: const Duration(seconds: 3)),

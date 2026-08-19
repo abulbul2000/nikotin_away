@@ -207,6 +207,25 @@ class CloudBackupService {
     'smoked_log_button_consent_seen',
   ];
 
+  /// The single source of truth for "wipe every trace of local user data,"
+  /// used by every reset-style flow (account switch in login_page.dart,
+  /// Settings' Reset Data and Delete Account). Clearing the sqlite database
+  /// alone leaves [backedUpPrefsKeys] behind in SharedPreferences — this was
+  /// the exact bug commit 659b628 fixed for the account-switch path only;
+  /// Settings' own reset/delete flows called StorageService.clearAllData()
+  /// directly and reintroduced the same gap (e.g. achievement/badge unlock
+  /// state, which is "earned once, kept forever" with no self-correcting
+  /// mechanism, so a stale unlock persists for the life of the install once
+  /// left behind by a reset the user believed was total).
+  static Future<void> clearAllLocalData(StorageService storageService) async {
+    await storageService.clearAllData();
+    final prefs = await SharedPreferences.getInstance();
+    for (final key in backedUpPrefsKeys) {
+      await prefs.remove(key);
+    }
+    await prefs.remove('initial_cloud_backup_prompt_shown');
+  }
+
   static const Set<String> _booleanPrefs = {
     'login_asked_once',
     'how_it_works_guide_seen',
