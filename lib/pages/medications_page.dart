@@ -110,6 +110,7 @@ class _MedicationsPageState extends State<MedicationsPage> {
                     onTap: () => _addOrEditMedication(existing: medication),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete_outline),
+                      tooltip: context.t('medicationDeleteConfirmTitle'),
                       onPressed: () => _deleteMedication(medication),
                     ),
                   ),

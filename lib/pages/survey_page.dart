@@ -409,10 +409,12 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
           'usesMedication': usesMedication,
           'medicationsJson': jsonEncode(
             _collectValidMedications()
-                .map((medication) => {
-                  'name': medication.name,
-                  'times': medication.times,
-                })
+                .map(
+                  (medication) => {
+                    'name': medication.name,
+                    'times': medication.times,
+                  },
+                )
                 .toList(),
           ),
         },
@@ -1620,6 +1622,7 @@ class _SurveyPageState extends State<SurveyPage> with WidgetsBindingObserver {
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete_outline),
+                      tooltip: context.t('medicationDraftRemoveTooltip'),
                       onPressed: medicationDrafts.length > 1
                           ? () => setState(() {
                               medicationDrafts.removeAt(index).dispose();

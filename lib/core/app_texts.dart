@@ -66,6 +66,7 @@ class AppTexts {
     'medicationDeleteConfirmTitle': 'İlacı sil',
     'medicationDeleteConfirmMessage':
         'Bu ilacı ve hatırlatmalarını silmek istediğinize emin misiniz?',
+    'medicationDraftRemoveTooltip': 'Bu ilacı kaldır',
     'medicationSavedConfirmation': 'İlaç kaydedildi',
     'medicationReminderTitle': 'İlaç hatırlatması',
     'medicationReminderBody': '{name} ilacınızı alma vakti geldi.',
@@ -2107,6 +2108,7 @@ class AppTexts {
     'medicationDeleteConfirmTitle': 'Delete medication',
     'medicationDeleteConfirmMessage':
         'Are you sure you want to delete this medication and its reminders?',
+    'medicationDraftRemoveTooltip': 'Remove this medication',
     'medicationSavedConfirmation': 'Medication saved',
     'medicationReminderTitle': 'Medication reminder',
     'medicationReminderBody': 'It\'s time to take your {name}.',
