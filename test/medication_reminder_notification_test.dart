@@ -162,4 +162,102 @@ void main() {
       expect(scheduleCalls, greaterThan(0));
     },
   );
+
+  test(
+    'deleting a medication cancels its outstanding postpone-reminder notification',
+    () async {
+      // Regression coverage: scheduleMedicationReminders (the recurring
+      // reschedule medications_page.dart runs after every add/edit/delete)
+      // only ever cancels its own fixed slot id range
+      // (_medicationReminderBaseId + [0.._medicationReminderMaxSlots)) — a
+      // "postponed" reminder for one specific medication lives outside that
+      // range on purpose, so it used to survive that medication being
+      // deleted (or edited, since editing reuses the same id) and would
+      // still fire later for a medication that no longer exists.
+      final cancelledIds = <int>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(notificationsChannel, (call) async {
+            if (call.method == 'cancel') {
+              final args = call.arguments as Map;
+              cancelledIds.add(args['id'] as int);
+            }
+            return null;
+          });
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(watchdogChannel, (call) async => null);
+
+      await NotificationService.cancelMedicationPostponeReminder('med_42');
+
+      // 440100 (base) + 30 (max recurring slots) + ('med_42'.hashCode.abs()
+      // % 10000) — mirrors _scheduleMedicationPostponeReminder's own id
+      // formula exactly, so this fails if either side's formula ever
+      // drifts from the other.
+      final expectedId = 440100 + 30 + ('med_42'.hashCode.abs() % 10000);
+      expect(cancelledIds, contains(expectedId));
+    },
+  );
+
+  test(
+    'rescheduling coach command notifications cancels the previous batch first',
+    () async {
+      // Regression coverage: scheduleCoachCommandNotifications used to id
+      // each notification from DateTime.now().millisecondsSinceEpoch, a
+      // different value every call with nothing ever cancelled -- calling
+      // it twice with different commands (e.g. the coaching signature
+      // legitimately changing partway through the same day) stacked a
+      // second batch on top of the first still-pending one instead of
+      // replacing it.
+      final cancelledIds = <int>[];
+      final scheduledIds = <int>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(notificationsChannel, (call) async {
+            if (call.method == 'cancel') {
+              final args = call.arguments as Map;
+              cancelledIds.add(args['id'] as int);
+            } else if (call.method == 'zonedSchedule') {
+              final args = call.arguments as Map;
+              scheduledIds.add(args['id'] as int);
+            }
+            return null;
+          });
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(watchdogChannel, (call) async => null);
+
+      await NotificationService.scheduleCoachCommandNotifications(
+        commands: const ['coachCommandBreathingExercise'],
+        maxNotifications: 1,
+      );
+      expect(scheduledIds, isNotEmpty);
+      final firstBatchIds = List<int>.from(scheduledIds);
+
+      cancelledIds.clear();
+      scheduledIds.clear();
+
+      await NotificationService.scheduleCoachCommandNotifications(
+        commands: const ['coachCommandDrinkWater'],
+        maxNotifications: 1,
+      );
+
+      // The second call must cancel every id the first call could have
+      // used before scheduling its own — proven here via the fixed
+      // 6-slot range (460100..460105) rather than by re-deriving the
+      // first call's exact id, since the fix's whole point is that the
+      // range is fixed/bounded instead of freshly computed per call.
+      for (var i = 0; i < 6; i++) {
+        expect(cancelledIds, contains(460100 + i));
+      }
+      expect(scheduledIds, isNotEmpty);
+      // The new batch reuses the same fixed range the cancel loop just
+      // cleared, rather than minting yet another id nothing will ever
+      // clean up -- this is deliberately the SAME range firstBatchIds
+      // used too, since that's the whole point of the fix: a fixed,
+      // reusable range that each call can fully cancel before rescheduling,
+      // replacing the old millisecondsSinceEpoch-derived id that was
+      // different (and never cleaned up) on every call.
+      for (final id in scheduledIds) {
+        expect(id, inInclusiveRange(460100, 460105));
+      }
+      expect(firstBatchIds, everyElement(inInclusiveRange(460100, 460105)));
+    },
+  );
 }

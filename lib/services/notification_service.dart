@@ -409,14 +409,26 @@ class NotificationService {
 
   /// Stable per-task ids so a re-issued prompt replaces its predecessor
   /// instead of stacking a second copy of the same question.
+  ///
+  /// Each function's output range is a full, non-overlapping 100000-wide
+  /// block (base offsets exactly 100000 apart, matching the `% 100000`
+  /// modulus) so two different task titles can never collide *across*
+  /// functions — with the old 810000/820000/850000 offsets (only
+  /// 10000-40000 apart, inside the same 100000-wide modulus space), it was
+  /// arithmetically possible for e.g. _postponeChoiceIdFor(titleA) to equal
+  /// _confirmIdFor(titleB) for some titleA != titleB, which would let
+  /// resolving one task's barrier (cancelBarrierResolutionReminder cancels
+  /// by these ids) silently cancel a different, unrelated task's still
+  /// -pending confirmation prompt. Placed at 1100000+ to stay clear of the
+  /// fixed single ids in the 920000s/930000s used elsewhere in this file.
   static int _postponeChoiceIdFor(String taskTitle) =>
-      (taskTitle.hashCode.abs() % 100000) + 810000;
+      (taskTitle.hashCode.abs() % 100000) + 1100000;
 
   static int _confirmIdFor(String taskTitle) =>
-      (taskTitle.hashCode.abs() % 100000) + 820000;
+      (taskTitle.hashCode.abs() % 100000) + 1200000;
 
   static int _barrierResolutionReminderIdFor(String taskTitle) =>
-      (taskTitle.hashCode.abs() % 100000) + 850000;
+      (taskTitle.hashCode.abs() % 100000) + 1300000;
 
   /// A quieter repeat of [scheduleTaskConfirmationPrompt], fired
   /// [barrierResolutionDeadline] after the first prompt in case it never
@@ -540,6 +552,16 @@ class NotificationService {
       'medication_reminder_channel_v2';
   static const int _medicationReminderBaseId = 440100;
   static const int _medicationReminderMaxSlots = 30;
+
+  // scheduleCoachCommandNotifications schedules at most 6 per call
+  // (configuredMax is clamped to 1-6) — a fixed slot range lets each call
+  // cancel exactly its own previous batch before scheduling a new one,
+  // instead of the old millisecondsSinceEpoch-derived id, which was
+  // different every call and left the prior batch's still-pending
+  // notifications stacking up alongside the new one whenever the coach
+  // command signature legitimately changed partway through the same day.
+  static const int _coachCommandBaseId = 460100;
+  static const int _coachCommandMaxSlots = 6;
 
   /// Tip key prefixes per condition, numbered from 1 up to
   /// [_healthTipsPerCondition].
@@ -1727,6 +1749,23 @@ class NotificationService {
     }
   }
 
+  /// Cancels a pending postpone-reminder for one medication, if any is
+  /// outstanding. [scheduleMedicationReminders] only ever cancels its own
+  /// fixed recurring-slot id range (see the comment on
+  /// _scheduleMedicationPostponeReminder's id) so it can never reach this
+  /// one — deleting a medication, or saving an edit to it (which reuses the
+  /// same id), must call this separately or a "postponed" reminder for it
+  /// keeps firing after the medication is gone or renamed.
+  static Future<void> cancelMedicationPostponeReminder(
+    String medicationId,
+  ) async {
+    await _plugin.cancel(
+      _medicationReminderBaseId +
+          _medicationReminderMaxSlots +
+          (medicationId.hashCode.abs() % 10000),
+    );
+  }
+
   static Future<void> _scheduleMedicationPostponeReminder({
     required String medicationId,
     required String medicationName,
@@ -2415,7 +2454,12 @@ class NotificationService {
     var wakeAt = _atDeviceTimeOfDay(wakeHour, wakeMinute);
     var sleepAt = _atDeviceTimeOfDay(sleepHour, sleepMinute);
     if (!sleepAt.isAfter(wakeAt)) {
-      sleepAt = sleepAt.add(const Duration(days: 1));
+      // Rebuilt at the target wall-clock time rather than sleepAt.add(const
+      // Duration(days: 1)): TZDateTime.add() shifts the absolute instant by
+      // exactly 24h, which drifts the wall-clock time by the DST offset on
+      // a day where one applies. _atDeviceTimeOfDay(addDays: 1) recomputes
+      // the correct UTC offset for tomorrow's date instead.
+      sleepAt = _atDeviceTimeOfDay(sleepHour, sleepMinute, addDays: 1);
     }
 
     final windowMinutes = sleepAt.difference(wakeAt).inMinutes;
@@ -2429,7 +2473,10 @@ class NotificationService {
     for (var i = 0; i < dailyCount; i++) {
       var fireAt = wakeAt.add(Duration(minutes: intervalMinutes * (i + 1)));
       if (!fireAt.isAfter(now)) {
-        fireAt = fireAt.add(const Duration(days: 1));
+        // Same DST-safety reasoning as the sleepAt bump above: rebuild at
+        // fireAt's own wall-clock hour/minute for tomorrow's date instead
+        // of shifting the absolute instant by a raw 24h Duration.
+        fireAt = _atDeviceTimeOfDay(fireAt.hour, fireAt.minute, addDays: 1);
       }
       fireAt = await _reserveNonConflictingTime(fireAt);
       if (!await _budgetAllows(
@@ -2524,7 +2571,10 @@ class NotificationService {
         final minute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
         var fireAt = _atDeviceTimeOfDay(hour, minute);
         if (!fireAt.isAfter(now)) {
-          fireAt = fireAt.add(const Duration(days: 1));
+          // Rebuilt at the same wall-clock hour/minute for tomorrow rather
+          // than fireAt.add(const Duration(days: 1)): see the DST note on
+          // scheduleHealthConditionAdviceNotifications's equivalent bump.
+          fireAt = _atDeviceTimeOfDay(hour, minute, addDays: 1);
         }
         // Medication times are intentional, including when they fall inside
         // the user's sleep window. Do not move them to avoid another kind of
@@ -2897,6 +2947,9 @@ class NotificationService {
     int? maxNotifications,
     int spacingMinutes = 20,
   }) async {
+    for (var i = 0; i < _coachCommandMaxSlots; i++) {
+      await _plugin.cancel(_coachCommandBaseId + i);
+    }
     if (commands.isEmpty) {
       return;
     }
@@ -2906,12 +2959,14 @@ class NotificationService {
     final now = tz.TZDateTime.now(tz.local);
     final windowStart = _parseWindowStart(predictedRiskWindow);
 
-    var base = _atDeviceTimeOfDay(
-      windowStart?.hour ?? now.hour,
-      windowStart?.minute ?? now.minute,
-    );
+    final baseHour = windowStart?.hour ?? now.hour;
+    final baseMinute = windowStart?.minute ?? now.minute;
+    var base = _atDeviceTimeOfDay(baseHour, baseMinute);
     if (!base.isAfter(now)) {
-      base = base.add(const Duration(days: 1));
+      // Rebuilt at the same wall-clock hour/minute for tomorrow rather than
+      // base.add(const Duration(days: 1)) — see the DST note on
+      // scheduleHealthConditionAdviceNotifications's equivalent bump.
+      base = _atDeviceTimeOfDay(baseHour, baseMinute, addDays: 1);
     }
 
     final firstAt = base.subtract(const Duration(minutes: 30));
@@ -2954,12 +3009,8 @@ class NotificationService {
       )) {
         continue;
       }
-      final id = (DateTime.now().millisecondsSinceEpoch + 700000 + i).remainder(
-        2147483647,
-      );
-
       await _zonedSchedule(
-        id,
+        _coachCommandBaseId + i,
         _text(code, 'coachCommandTitle'),
         AppTexts.localizeCanonicalTextForCode(code, commands[i]),
         fireAt,

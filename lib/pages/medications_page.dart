@@ -70,6 +70,12 @@ class _MedicationsPageState extends State<MedicationsPage> {
     if (result == null) return;
 
     await _storageService.saveMedication(result);
+    // Editing reuses the existing medication's id, so any postpone-reminder
+    // still outstanding for it (see NotificationService
+    // .cancelMedicationPostponeReminder's doc comment) is now stale — the
+    // recurring reschedule below can't reach it, since it lives outside
+    // that fixed slot range on purpose.
+    await NotificationService.cancelMedicationPostponeReminder(result.id);
     await _load();
     await _rescheduleReminders();
     if (!mounted) return;
@@ -99,6 +105,11 @@ class _MedicationsPageState extends State<MedicationsPage> {
     if (confirmed != true) return;
 
     await _storageService.deleteMedication(medication.id);
+    // Same reasoning as the edit path above: a postponed reminder for this
+    // medication would otherwise keep firing for a row that no longer
+    // exists, since the recurring reschedule below only manages its own
+    // fixed slot range.
+    await NotificationService.cancelMedicationPostponeReminder(medication.id);
     await _load();
     await _rescheduleReminders();
   }
