@@ -2797,6 +2797,11 @@ class StorageService {
     );
   }
 
+  /// Guards [loadCurrentBarrierMinutes]'s read-evolve-write against two
+  /// overlapping calls on the same [StorageService] instance — see that
+  /// method's doc comment for why this exists.
+  Future<int>? _loadCurrentBarrierMinutesInFlight;
+
   /// The barrier in force today, evolving it first if a week has passed.
   ///
   /// The first call seeds it from the survey — a quarter above the gap the
@@ -2805,7 +2810,36 @@ class StorageService {
   /// review. Deliberately not re-judged daily: a single bad day is noise, and
   /// moving the target underneath someone mid-week means they never find out
   /// whether they could have met it.
-  Future<int> loadCurrentBarrierMinutes({DateTime? now}) async {
+  ///
+  /// Not wrapped in a single db.transaction (the read chain fans out through
+  /// loadSmokingWindowInput/countSmokingEventsSince/taskSuccessRateSince,
+  /// none of which are transaction-executor-aware) — instead an in-flight
+  /// future is shared across overlapping calls on this instance, the same
+  /// shape home_page.dart's own _notifyNewTasks already uses for its
+  /// equivalent race. Without this, two calls landing on the exact week-
+  /// boundary day (e.g. HomePage's initState load and its didChangeAppLifecycleState
+  /// resume handler both firing close together) could interleave so the
+  /// second call reads the just-reset weekStart before it reads the
+  /// not-yet-evolved stored minutes, takes the "less than 7 days" early
+  /// return, and hands back a stale pre-evolution value on that one call —
+  /// the database itself stays correct, but that caller briefly renders the
+  /// old barrier number. Self-healing on the next call either way; this
+  /// closes the window rather than leaving it to chance.
+  Future<int> loadCurrentBarrierMinutes({DateTime? now}) {
+    final inFlight = _loadCurrentBarrierMinutesInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+    final future = _loadCurrentBarrierMinutesInternal(now: now);
+    _loadCurrentBarrierMinutesInFlight = future;
+    return future.whenComplete(() {
+      if (identical(_loadCurrentBarrierMinutesInFlight, future)) {
+        _loadCurrentBarrierMinutesInFlight = null;
+      }
+    });
+  }
+
+  Future<int> _loadCurrentBarrierMinutesInternal({DateTime? now}) async {
     final today = now ?? DateTime.now();
     final input = await loadSmokingWindowInput();
     final stored = int.tryParse(await loadSetting(_barrierMinutesKey) ?? '');

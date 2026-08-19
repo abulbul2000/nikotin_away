@@ -1513,4 +1513,91 @@ void main() {
       );
     });
   });
+
+  group('loadCurrentBarrierMinutes (regression coverage)', () {
+    test(
+      'a call issued while another is still running reuses that call\'s in-flight future, even when given a different `now`',
+      () async {
+        // Regression coverage: the read-evolve-write inside this method
+        // used to run fully unguarded on every call. On the exact day the
+        // barrier is due to evolve, two overlapping calls could interleave
+        // so the second one reads the just-reset weekStart (written by the
+        // first call's completed write) before reading the not-yet-
+        // -evolved stored minutes, takes the "less than 7 days" early
+        // return, and hands back its own stale pre-evolution local value —
+        // the database itself stays correct, but that one caller briefly
+        // sees the old number.
+        //
+        // evolveWeeklyBarrierMinutes is fully deterministic (no jitter),
+        // so two genuinely independent read-evolve-writes fed the same
+        // stored data would coincidentally land on the same number anyway
+        // -- comparing output values alone can't tell a shared future
+        // apart from two separate correct runs. What CAN prove it: give
+        // the two overlapping calls different `now` values that would
+        // legitimately produce different behavior on their own (one is
+        // safely inside the 7-day window as of the seeded weekStart, the
+        // other is 30 days past it). If the second call actually shares
+        // the first call's in-flight future (the fix), its own `now` is
+        // never even looked at, and it must return whatever the first
+        // call's `now` produced -- the seeded pre-evolution value.
+        final storage = StorageService();
+        final weekStart = DateTime(2026, 1, 1);
+        await storage.saveSetting('current_barrier_minutes', '30');
+        await storage.saveSetting(
+          'current_barrier_week_start',
+          weekStart.toIso8601String(),
+        );
+
+        // Issued synchronously, before the event loop gets a chance to run
+        // either one's async body -- this is what makes `second` genuinely
+        // overlap `first` rather than running strictly after it.
+        final first = storage.loadCurrentBarrierMinutes(
+          now: weekStart.add(const Duration(days: 2)), // inside the window
+        );
+        final second = storage.loadCurrentBarrierMinutes(
+          now: weekStart.add(const Duration(days: 30)), // well past it
+        );
+
+        final results = await Future.wait([first, second]);
+
+        expect(
+          results[0],
+          30,
+          reason: 'still inside the 7-day window, so the seeded value holds',
+        );
+        expect(
+          results[1],
+          results[0],
+          reason:
+              'a call overlapping an already-running one must resolve to '
+              "the first call's result -- its own `now` (30 days past the "
+              'window, which on its own would trigger evolution) must be '
+              'ignored, not used to run an independent read-evolve-write',
+        );
+      },
+    );
+
+    test(
+      'a call issued after the previous one already completed starts a fresh read, not a stale cached future',
+      () async {
+        final storage = StorageService();
+        await storage.saveSetting('current_barrier_minutes', '30');
+        await storage.saveSetting(
+          'current_barrier_week_start',
+          DateTime.now().toIso8601String(),
+        );
+
+        final first = await storage.loadCurrentBarrierMinutes();
+        expect(first, 30);
+
+        // Evolve it "manually" the way a background isolate or a second
+        // StorageService instance would, then confirm a later call on this
+        // same instance picks up the new value rather than replaying a
+        // cached in-flight future from the first, already-finished call.
+        await storage.saveSetting('current_barrier_minutes', '45');
+        final second = await storage.loadCurrentBarrierMinutes();
+        expect(second, 45);
+      },
+    );
+  });
 }
