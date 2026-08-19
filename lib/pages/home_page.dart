@@ -30,6 +30,7 @@ import '../pages/settings_page.dart';
 import '../pages/sleep_routine_page.dart';
 import '../pages/survey_history_page.dart';
 import '../pages/weekly_survey_page.dart';
+import '../services/android_watchdog_service.dart';
 import '../services/behavior_engine.dart';
 import '../services/device_compatibility_service.dart';
 import '../services/device_permission_service.dart';
@@ -183,6 +184,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     unawaited(_stepTrackingService.ensureDailyProbeScheduled());
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_handlePendingQuickLogRoute());
+      unawaited(_handlePendingShortcutAction());
       unawaited(_offerQuickLogButtonOnce());
     });
   }
@@ -214,6 +216,42 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
+  /// Opens whatever the launcher icon's long-press shortcut menu asked for
+  /// while the app was closed (see shortcuts.xml / MainActivity
+  /// .ShortcutStore) — the same native-overlay-with-no-Flutter-engine shape
+  /// as [_handlePendingQuickLogRoute], and the same three actions
+  /// [_openQuickActionMenu]'s switch already handles for the in-app menu.
+  /// 'open_app' needs no branch: Android already did the only thing that
+  /// shortcut promises (open the app) before this ever runs.
+  Future<void> _handlePendingShortcutAction() async {
+    final action = await AndroidWatchdogService.consumePendingShortcutAction();
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case 'smoked_now':
+        final eventId = await _storageService.logSmokingNow();
+        if (!mounted) return;
+        await _offerSmokingTriggerPrompt(eventId);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.t('quickActionSmokedNowConfirmed'))),
+        );
+        if (mounted) await _loadHomeMetrics();
+      case 'craving':
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const CravingSosPage()));
+      case 'self_challenge':
+        final minutes = await showSelfChallengeDurationMenu(context);
+        if (!mounted || minutes == null) return;
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => SelfChallengePage(durationMinutes: minutes),
+          ),
+        );
+    }
+  }
+
   /// Offers the floating "I smoked" button to someone who was already set up
   /// before it existed.
   ///
@@ -241,6 +279,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Future<void> _syncPendingQuickLogOnResume() async {
     await NotificationService.syncSmokedLogEventsFromNative();
     await _handlePendingQuickLogRoute();
+    await _handlePendingShortcutAction();
     if (mounted) await _loadHomeMetrics();
     // A resume can follow a native quick-log action or an offline period.
     // Upload the complete local snapshot so the latest progress is not left
