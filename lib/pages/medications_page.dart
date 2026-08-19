@@ -173,6 +173,12 @@ class _MedicationEditorSheetState extends State<_MedicationEditorSheet> {
     }
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadWakingWindow() async {
     final storage = StorageService();
     final sleep = _parseClock(await storage.loadSleepTime());

@@ -8,7 +8,9 @@ import 'package:no_smoke/models/medication.dart';
 import 'package:no_smoke/pages/medications_page.dart';
 import 'package:no_smoke/services/storage_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
 
 /// Returns the same directory on every call — this test seeds a medication
 /// through one StorageService instance and reads it back through
@@ -40,11 +42,13 @@ void main() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
     PathProviderPlatform.instance = _FakePathProviderPlatform();
+    tz.initializeTimeZones();
   });
 
   setUp(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (call) async => null);
+    SharedPreferences.setMockInitialValues({});
     await StorageService().clearAllData();
   });
 
@@ -149,4 +153,33 @@ void main() {
       expect(deleteButton.tooltip, isNotEmpty);
     },
   );
+
+  testWidgets('closing the add/edit sheet disposes its TextEditingController', (
+    tester,
+  ) async {
+    // Regression coverage: _MedicationEditorSheetState created
+    // _nameController in initState but had no dispose() override at all,
+    // so every add/edit cycle left a TextEditingController (and its
+    // listeners) behind instead of releasing it when the sheet closed.
+    // A disposed ChangeNotifier asserts on addListener/removeListener
+    // (unlike plain field reads like .text, which stay readable even
+    // after dispose), which is what proves dispose() actually ran here.
+    await tester.pumpWidget(wrap(const MedicationsPage()));
+    await settle(tester);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await settle(tester);
+
+    final controller = tester
+        .widget<TextField>(find.byType(TextField))
+        .controller!;
+    expect(controller.text, isEmpty);
+
+    await tester.enterText(find.byType(TextField), 'Test İlacı');
+    await settle(tester);
+    await tester.tap(find.byType(FilledButton));
+    await settle(tester);
+
+    expect(() => controller.addListener(() {}), throwsFlutterError);
+  });
 }

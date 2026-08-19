@@ -121,7 +121,7 @@ class _SplashPageState extends State<SplashPage> {
     if (!hasInitialSetup) {
       // Eğer henüz login sorulmadıysa LoginPage'e yönlendir
       final loginAsked = await LoginPage.hasLoginBeenAsked();
-      if (!loginAsked && !mounted) return;
+      if (!mounted) return;
       if (!loginAsked) {
         Navigator.pushReplacement(
           context,
