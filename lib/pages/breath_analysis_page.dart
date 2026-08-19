@@ -65,7 +65,9 @@ class _BreathAnalysisPageState extends State<BreathAnalysisPage> {
           }
           if (snapshot.hasError || !snapshot.hasData) {
             return LoadErrorView(
-              onRetry: () => setState(() => _dataFuture = _loadData()),
+              onRetry: () => setState(() {
+                _dataFuture = _loadData();
+              }),
             );
           }
 

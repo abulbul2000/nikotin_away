@@ -5,6 +5,7 @@ import '../core/app_theme.dart';
 import '../models/health_milestone.dart';
 import '../services/health_recovery_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/load_error_view.dart';
 
 class HealthRecoveryPage extends StatefulWidget {
   const HealthRecoveryPage({super.key});
@@ -35,6 +36,13 @@ class _HealthRecoveryPageState extends State<HealthRecoveryPage> {
       body: FutureBuilder<HealthRecoveryProgress>(
         future: _future,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return LoadErrorView(
+              onRetry: () => setState(() {
+                _future = _load();
+              }),
+            );
+          }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }

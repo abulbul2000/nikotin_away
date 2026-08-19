@@ -5,6 +5,7 @@ import '../engines/report_engine.dart';
 import '../models/period_report.dart';
 import '../services/pdf_report_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/load_error_view.dart';
 import '../widgets/share_app_sheet.dart';
 
 class ReportsPage extends StatefulWidget {
@@ -22,6 +23,7 @@ class _ReportsPageState extends State<ReportsPage> {
   String _periodType = 'weekly';
   bool _loading = true;
   bool _busy = false;
+  bool _hasError = false;
   PeriodReport? _report;
 
   @override
@@ -39,33 +41,42 @@ class _ReportsPageState extends State<ReportsPage> {
   Future<void> _load() async {
     setState(() {
       _loading = true;
+      _hasError = false;
     });
 
-    final (periodStart, periodEnd) = _resolvePeriod();
-    final surveyRecords = await _storageService.loadSurveyHistory();
-    final taskHistory = await _storageService.loadTaskHistory();
-    final smokingEvents = await _storageService.loadSmokingEvents(
-      since: periodStart,
-    );
-    final stepSamples = await _storageService.loadStepCounterSamples(
-      since: periodStart.subtract(const Duration(days: 1)),
-    );
+    try {
+      final (periodStart, periodEnd) = _resolvePeriod();
+      final surveyRecords = await _storageService.loadSurveyHistory();
+      final taskHistory = await _storageService.loadTaskHistory();
+      final smokingEvents = await _storageService.loadSmokingEvents(
+        since: periodStart,
+      );
+      final stepSamples = await _storageService.loadStepCounterSamples(
+        since: periodStart.subtract(const Duration(days: 1)),
+      );
 
-    final report = _reportEngine.buildReport(
-      periodStart: periodStart,
-      periodEnd: periodEnd,
-      periodType: _periodType,
-      allSurveyRecords: surveyRecords,
-      allTaskHistory: taskHistory,
-      smokingEventsInPeriod: smokingEvents,
-      stepSamples: stepSamples,
-    );
+      final report = _reportEngine.buildReport(
+        periodStart: periodStart,
+        periodEnd: periodEnd,
+        periodType: _periodType,
+        allSurveyRecords: surveyRecords,
+        allTaskHistory: taskHistory,
+        smokingEventsInPeriod: smokingEvents,
+        stepSamples: stepSamples,
+      );
 
-    if (!mounted) return;
-    setState(() {
-      _report = report;
-      _loading = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        _report = report;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _hasError = true;
+      });
+    }
   }
 
   Map<String, String> _labels(BuildContext context) {
@@ -170,7 +181,11 @@ class _ReportsPageState extends State<ReportsPage> {
               },
             ),
           ),
-          if (_loading || report == null)
+          if (_loading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else if (_hasError)
+            Expanded(child: LoadErrorView(onRetry: _load))
+          else if (report == null)
             const Expanded(child: Center(child: CircularProgressIndicator()))
           else
             Expanded(

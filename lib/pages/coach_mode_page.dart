@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
 import '../services/storage_service.dart';
+import '../widgets/load_error_view.dart';
 
 /// The single UI surface that writes duration_barrier_enabled/
 /// duration_barrier_frequency_preference — every other screen that used to
@@ -31,6 +32,7 @@ class _CoachModePageState extends State<CoachModePage> {
   bool _enabled = true;
   String _frequency = 'orta';
   bool _loading = true;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -39,19 +41,31 @@ class _CoachModePageState extends State<CoachModePage> {
   }
 
   Future<void> _load() async {
-    final enabledRaw =
-        await _storageService.loadSetting('duration_barrier_enabled') ?? '1';
-    final frequency =
-        await _storageService.loadSetting(
-          'duration_barrier_frequency_preference',
-        ) ??
-        'orta';
-    if (!mounted) return;
     setState(() {
-      _enabled = enabledRaw != '0';
-      _frequency = frequency;
-      _loading = false;
+      _loading = true;
+      _hasError = false;
     });
+    try {
+      final enabledRaw =
+          await _storageService.loadSetting('duration_barrier_enabled') ?? '1';
+      final frequency =
+          await _storageService.loadSetting(
+            'duration_barrier_frequency_preference',
+          ) ??
+          'orta';
+      if (!mounted) return;
+      setState(() {
+        _enabled = enabledRaw != '0';
+        _frequency = frequency;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _hasError = true;
+      });
+    }
   }
 
   Future<void> _applyEnabled(bool enabled) async {
@@ -84,6 +98,8 @@ class _CoachModePageState extends State<CoachModePage> {
       appBar: AppBar(title: Text(context.t('coachModeTitle'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : _hasError
+          ? LoadErrorView(onRetry: _load)
           : ListView(
               padding: const EdgeInsets.all(16),
               children: [

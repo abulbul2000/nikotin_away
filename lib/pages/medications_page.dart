@@ -4,6 +4,7 @@ import '../core/app_texts.dart';
 import '../models/medication.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../widgets/load_error_view.dart';
 
 class MedicationsPage extends StatefulWidget {
   const MedicationsPage({super.key});
@@ -16,6 +17,7 @@ class _MedicationsPageState extends State<MedicationsPage> {
   final StorageService _storageService = StorageService();
   List<Medication> _medications = [];
   bool _loading = true;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -24,12 +26,24 @@ class _MedicationsPageState extends State<MedicationsPage> {
   }
 
   Future<void> _load() async {
-    final medications = await _storageService.loadMedications();
-    if (!mounted) return;
     setState(() {
-      _medications = medications;
-      _loading = false;
+      _loading = true;
+      _hasError = false;
     });
+    try {
+      final medications = await _storageService.loadMedications();
+      if (!mounted) return;
+      setState(() {
+        _medications = medications;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _hasError = true;
+      });
+    }
   }
 
   Future<void> _rescheduleReminders() async {
@@ -95,6 +109,8 @@ class _MedicationsPageState extends State<MedicationsPage> {
       appBar: AppBar(title: Text(context.t('medicationsPageTitle'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : _hasError
+          ? LoadErrorView(onRetry: _load)
           : _medications.isEmpty
           ? Center(child: Text(context.t('medicationsEmptyState')))
           : ListView.separated(

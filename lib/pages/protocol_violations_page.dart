@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_texts.dart';
 import '../models/protocol_violation.dart';
 import '../services/storage_service.dart';
+import '../widgets/load_error_view.dart';
 
 class ProtocolViolationsPage extends StatefulWidget {
   const ProtocolViolationsPage({super.key});
@@ -14,6 +15,7 @@ class ProtocolViolationsPage extends StatefulWidget {
 class _ProtocolViolationsPageState extends State<ProtocolViolationsPage> {
   final StorageService _storageService = StorageService();
   bool _loading = true;
+  bool _hasError = false;
   List<ProtocolViolation> _rows = const [];
 
   @override
@@ -23,14 +25,26 @@ class _ProtocolViolationsPageState extends State<ProtocolViolationsPage> {
   }
 
   Future<void> _load() async {
-    final rows = await _storageService.loadProtocolViolations();
-    if (!mounted) {
-      return;
-    }
     setState(() {
-      _rows = rows;
-      _loading = false;
+      _loading = true;
+      _hasError = false;
     });
+    try {
+      final rows = await _storageService.loadProtocolViolations();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _rows = rows;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _hasError = true;
+      });
+    }
   }
 
   String _formatDate(DateTime value) {
@@ -99,6 +113,8 @@ class _ProtocolViolationsPageState extends State<ProtocolViolationsPage> {
       appBar: AppBar(title: Text(context.t('violationReportTitle'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : _hasError
+          ? LoadErrorView(onRetry: _load)
           : Column(
               children: [
                 Padding(

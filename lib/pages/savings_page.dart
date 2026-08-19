@@ -57,7 +57,9 @@ class _SavingsPageState extends State<SavingsPage> {
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return LoadErrorView(
-              onRetry: () => setState(() => _future = _load()),
+              onRetry: () => setState(() {
+                _future = _load();
+              }),
             );
           }
           if (!snapshot.hasData) {

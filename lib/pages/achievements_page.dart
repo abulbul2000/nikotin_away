@@ -43,7 +43,9 @@ class _AchievementsPageState extends State<AchievementsPage> {
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return LoadErrorView(
-              onRetry: () => setState(() => _future = _load()),
+              onRetry: () => setState(() {
+                _future = _load();
+              }),
             );
           }
           if (!snapshot.hasData) {
