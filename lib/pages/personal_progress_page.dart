@@ -156,7 +156,8 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                       context.t('firstToLastAverageDiff'),
                       breathTests.isEmpty
                           ? '-'
-                          : '${breathDelta >= 0 ? '+' : ''}${breathDelta.toStringAsFixed(1)} sn',
+                          : '${breathDelta >= 0 ? '+' : ''}${breathDelta.toStringAsFixed(1)} '
+                                '${context.t('secondsUnit')}',
                     ),
                     _row(
                       context.t('latestVsPrevious'),
@@ -231,7 +232,7 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                         values: weeklyRiskTrend,
                         height: 130,
                         color: Colors.redAccent,
-                        lineLabel: 'Risk',
+                        lineLabel: context.t('risk'),
                       ),
                     const SizedBox(height: 12),
                     Text(
@@ -246,7 +247,7 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                         values: breathTrend,
                         height: 130,
                         color: Colors.blueAccent,
-                        lineLabel: 'sn',
+                        lineLabel: context.t('secondsUnit'),
                       ),
                     const SizedBox(height: 12),
                     Text(
@@ -261,7 +262,7 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                         values: respiratoryTrend,
                         height: 130,
                         color: Colors.deepOrange,
-                        lineLabel: 'yuk',
+                        lineLabel: context.t('respBurdenLabel'),
                       ),
                   ],
                 ),
@@ -339,7 +340,8 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
                               (r) => Padding(
                                 padding: const EdgeInsets.only(bottom: 6),
                                 child: Text(
-                                  '${_dateLabel(r.completedAt)}  |  ${context.t('risk')}: ${r.riskScore} (${AppTexts.localizeCanonicalText(context, r.riskLevel)})  |  Paket: ${AppTexts.localizeCanonicalText(context, r.packsPerDay)}',
+                                  '${_dateLabel(r.completedAt)}  |  ${context.t('risk')}: ${r.riskScore} (${AppTexts.localizeCanonicalText(context, r.riskLevel)})  |  '
+                                  '${context.t('packLabel')}: ${AppTexts.localizeCanonicalText(context, r.packsPerDay)}',
                                 ),
                               ),
                             )
@@ -549,7 +551,10 @@ class _PersonalProgressPageState extends State<PersonalProgressPage> {
       }
       final date = _dateLabel(record.completedAt);
       final burden = (snapshot['burden'] as num).toDouble().toStringAsFixed(1);
-      alerts.add('$date  |  ${_respiratoryStateLabel(state)}  |  Yuk: $burden');
+      alerts.add(
+        '$date  |  ${_respiratoryStateLabel(state)}  |  '
+        '${context.t('respBurdenLabel')}: $burden',
+      );
     }
     return alerts;
   }
@@ -657,7 +662,9 @@ class _MiniLineChart extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         Text(
-          'Min: ${min.toStringAsFixed(1)} $lineLabel  |  Max: ${max.toStringAsFixed(1)} $lineLabel  |  Son: ${values.last.toStringAsFixed(1)} $lineLabel',
+          '${context.t('chartMinLabel')}: ${min.toStringAsFixed(1)} $lineLabel  |  '
+          '${context.t('chartMaxLabel')}: ${max.toStringAsFixed(1)} $lineLabel  |  '
+          '${context.t('chartLatestLabel')}: ${values.last.toStringAsFixed(1)} $lineLabel',
           style: const TextStyle(fontSize: 12),
         ),
       ],
