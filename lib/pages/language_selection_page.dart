@@ -174,6 +174,13 @@ class LanguageSelectionModal extends StatefulWidget {
 class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
   String _searchQuery = '';
   bool _showOtherLanguages = false;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   List<String> _getFilteredLanguages() {
     final query = _searchQuery.toLowerCase();
@@ -240,6 +247,7 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: TextField(
+                  controller: _searchController,
                   onChanged: (value) {
                     setState(() {
                       _searchQuery = value;
@@ -256,13 +264,15 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                     ),
                     prefixIcon: Icon(Icons.search, color: Colors.white54),
                     suffixIcon: _searchQuery.isNotEmpty
-                        ? GestureDetector(
-                            onTap: () {
+                        ? IconButton(
+                            tooltip: context.t('clearSearchTooltip'),
+                            icon: Icon(Icons.clear, color: Colors.white54),
+                            onPressed: () {
+                              _searchController.clear();
                               setState(() {
                                 _searchQuery = '';
                               });
                             },
-                            child: Icon(Icons.clear, color: Colors.white54),
                           )
                         : null,
                   ),
@@ -346,6 +356,7 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                     width: double.infinity,
                     child: FilledButton.tonal(
                       onPressed: () {
+                        _searchController.clear();
                         setState(() {
                           _showOtherLanguages = true;
                           _searchQuery = '';
@@ -381,6 +392,7 @@ class _LanguageSelectionModalState extends State<LanguageSelectionModal> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () {
+                        _searchController.clear();
                         setState(() {
                           _showOtherLanguages = false;
                           _searchQuery = '';

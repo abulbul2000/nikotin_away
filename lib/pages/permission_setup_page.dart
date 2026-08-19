@@ -364,18 +364,21 @@ class _PermissionSetupPageState extends State<PermissionSetupPage>
                       // the row: the full explanation is a paragraph, and a
                       // paragraph under every row is what made this screen
                       // feel crowded before it even had anything to grant.
-                      InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => _showWhyDialog(
-                          title: title,
-                          description: description,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(4),
-                          child: Icon(
-                            Icons.info_outline,
-                            size: 18,
-                            color: theme.colorScheme.onSurfaceVariant,
+                      Tooltip(
+                        message: context.t('permissionWhyThisTooltip'),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _showWhyDialog(
+                            title: title,
+                            description: description,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.info_outline,
+                              size: 18,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                           ),
                         ),
                       ),
