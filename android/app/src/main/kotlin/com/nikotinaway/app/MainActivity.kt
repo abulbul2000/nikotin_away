@@ -592,7 +592,19 @@ class MainActivity : FlutterActivity() {
 					}
 
 					"consumeDeliveryDeferrals" -> {
-						result.success(DeliveryGateStore.drain(this))
+						val rows = DeliveryGateStore.drain(this)
+						val mapped = rows.mapNotNull { row ->
+							val parts = row.split("|")
+							if (parts.size < 3) {
+								return@mapNotNull null
+							}
+							mapOf(
+								"watchdogId" to parts[0],
+								"reason" to parts[1],
+								"createdAtMillis" to (parts[2].toLongOrNull() ?: System.currentTimeMillis()),
+							)
+						}
+						result.success(mapped)
 					}
 
 					"setTaskOverlayChannelInfo" -> {

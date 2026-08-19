@@ -1395,6 +1395,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Future<void> _notifyNewTasksInternal() async {
     final taskAssignmentService = TaskAssignmentService(_storageService);
+    // Picks up whatever the native gate deferred while the app was closed
+    // (TaskTriggerReceiver.kt's DeliveryGateStore) before the queue-limit
+    // backstop below runs, so a task deferred and then re-blocked past the
+    // limit is counted correctly rather than still sitting in `planned`.
+    await taskAssignmentService.syncDeliveryDeferralsFromNative();
     // Backstop for the native delivery-gate queue limit while the app is
     // open — a task stuck in pendingDelivery beyond the queue limit is
     // closed out here even on a day with nothing new to notify.

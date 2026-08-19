@@ -973,6 +973,79 @@ void main() {
     });
   });
 
+  group('TaskAssignmentService.applyDeliveryDeferrals', () {
+    // Regression coverage: TaskTriggerReceiver.kt's DeliveryGateStore
+    // correctly queued "held this task back, and why" natively, and
+    // AndroidWatchdogService.consumeDeliveryDeferrals() correctly drained
+    // it — but nothing in lib/ ever called the drain function, so a task
+    // deferred for DND/a call/a game while the app was closed never moved
+    // to pendingDelivery and gateDeferCount/gateReason stayed at their
+    // defaults forever, even though the deferral genuinely happened.
+    test(
+      'moves a planned row to pendingDelivery and records the gate reason',
+      () async {
+        final storage = StorageService();
+        final service = TaskAssignmentService(storage);
+        await storage.saveTaskAssignment(
+          _task(id: 'native_deferred', state: TaskLifecycleState.planned),
+        );
+
+        await service.applyDeliveryDeferrals([
+          {
+            'watchdogId': 'native_deferred',
+            'reason': 'dnd',
+            'createdAtMillis': 1234567890,
+          },
+        ]);
+
+        final loaded = await storage.loadTaskAssignment('native_deferred');
+        expect(loaded!.state, TaskLifecycleState.pendingDelivery);
+        expect(loaded.gateReason, 'dnd');
+        expect(loaded.gateDeferCount, 1);
+      },
+    );
+
+    test(
+      'a second deferral for the same task accumulates gateDeferCount and updates the reason',
+      () async {
+        final storage = StorageService();
+        final service = TaskAssignmentService(storage);
+        await storage.saveTaskAssignment(
+          _task(id: 'twice_deferred', state: TaskLifecycleState.planned),
+        );
+
+        await service.applyDeliveryDeferrals([
+          {'watchdogId': 'twice_deferred', 'reason': 'call'},
+        ]);
+        // pendingDelivery -> pendingDelivery is an explicit no-op-transition
+        // exception in TaskLifecycleState.canTransition ("re-saving the
+        // same state... is a no-op, not an illegal edge"), so a repeat
+        // deferral while still blocked is applied rather than rejected —
+        // each real deferral should count, and the latest reason is the
+        // one worth keeping.
+        await service.applyDeliveryDeferrals([
+          {'watchdogId': 'twice_deferred', 'reason': 'game'},
+        ]);
+
+        final loaded = await storage.loadTaskAssignment('twice_deferred');
+        expect(loaded!.state, TaskLifecycleState.pendingDelivery);
+        expect(loaded.gateReason, 'game');
+        expect(loaded.gateDeferCount, 2);
+      },
+    );
+
+    test('ignores rows with a blank or missing watchdogId', () async {
+      final storage = StorageService();
+      final service = TaskAssignmentService(storage);
+
+      // Should not throw even though nothing matches.
+      await service.applyDeliveryDeferrals([
+        {'reason': 'dnd', 'createdAtMillis': 1234567890},
+        {'watchdogId': '', 'reason': 'dnd', 'createdAtMillis': 1234567890},
+      ]);
+    });
+  });
+
   group('taskKind round-trip', () {
     test('defaults to noSmokeWindow when not specified', () async {
       final storage = StorageService();

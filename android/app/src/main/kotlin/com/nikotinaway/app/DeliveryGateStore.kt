@@ -13,13 +13,13 @@ object DeliveryGateStore {
     private const val PREFS = "no_smoke_delivery_gate"
     private const val KEY_DEFERRALS = "pending_deferrals"
 
-    fun noteDeferral(context: Context, reason: String) {
+    fun noteDeferral(context: Context, watchdogId: String, reason: String) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val current = prefs.getStringSet(KEY_DEFERRALS, emptySet())?.toMutableSet()
             ?: mutableSetOf()
         // Timestamped so two deferrals for the same reason can't collapse
         // into one set entry.
-        current.add("$reason|${System.currentTimeMillis()}")
+        current.add("$watchdogId|$reason|${System.currentTimeMillis()}")
         prefs.edit().putStringSet(KEY_DEFERRALS, current).apply()
     }
 

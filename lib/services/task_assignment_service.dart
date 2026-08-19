@@ -158,6 +158,42 @@ class TaskAssignmentService {
     }
   }
 
+  /// Drains the delivery gate's own record of "held this task back, and
+  /// why" (TaskTriggerReceiver.kt's DeliveryGateStore — DND/game/call
+  /// blocking a task's alarm while the app was closed) and applies it to
+  /// the matching `task_assignments` row. Matched by watchdogId for the
+  /// same reason [syncPendingDeliveryExpirationsFromNative] is: the native
+  /// side only ever learns a task's watchdogId, and
+  /// `scheduleFirstTaskTriggerNotification` threads the row id through as
+  /// that watchdogId precisely so this lookup works.
+  ///
+  /// The task itself is never lost by a deferral — TaskTriggerReceiver
+  /// re-arms its own alarm and still delivers it once the block clears or
+  /// the 90-minute cap is hit — this only records that the deferral
+  /// happened, which is what makes gateDeferCount/gateReason on the row
+  /// mean anything.
+  Future<void> syncDeliveryDeferralsFromNative() async {
+    final rows = await AndroidWatchdogService.consumeDeliveryDeferrals();
+    await applyDeliveryDeferrals(rows);
+  }
+
+  /// The applying half of [syncDeliveryDeferralsFromNative], split out for
+  /// the same testability reason [applyPendingDeliveryExpirations] is.
+  Future<void> applyDeliveryDeferrals(List<Map<String, dynamic>> rows) async {
+    for (final row in rows) {
+      final watchdogId = row['watchdogId']?.toString();
+      final reason = row['reason']?.toString();
+      if (watchdogId == null || watchdogId.isEmpty) {
+        continue;
+      }
+      await _storage.transitionTaskAssignment(
+        id: watchdogId,
+        state: TaskLifecycleState.pendingDelivery,
+        gateReason: reason,
+      );
+    }
+  }
+
   /// The single place a task-notification action (Kabul Et / Ertele /
   /// Reddet / SOS / the "did you smoke?" answer) is decided.
   ///

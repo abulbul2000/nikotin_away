@@ -96,8 +96,9 @@ class TaskTriggerReceiver : BroadcastReceiver() {
         // user could set their watch by.
         val jitterMs = ((Math.random() * 2 - 1) * RETRY_JITTER_MS).toLong()
         val waitMs = (RETRY_INTERVAL_MS + jitterMs).coerceAtLeast(60_000L)
+        val watchdogId = original.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty()
 
-        DeliveryGateStore.noteDeferral(context, reason)
+        DeliveryGateStore.noteDeferral(context, watchdogId, reason)
 
         val extras = Bundle(original.extras ?: Bundle()).apply {
             putLong(EXTRA_DEFERRED_FOR_MILLIS, alreadyDeferredMs + waitMs)
@@ -106,7 +107,6 @@ class TaskTriggerReceiver : BroadcastReceiver() {
             action = ACTION_TRIGGER
             putExtras(extras)
         }
-        val watchdogId = original.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty()
         val pending = PendingIntent.getBroadcast(
             context,
             watchdogId.hashCode(),
