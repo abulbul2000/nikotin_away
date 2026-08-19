@@ -566,7 +566,42 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadHomeMetrics() async {
+  Future<void>? _loadHomeMetricsInFlight;
+
+  /// Shares one in-flight load across overlapping callers instead of
+  /// starting a second, independent one — same shape and same reason as
+  /// [_notifyNewTasks]'s own [_notifyNewTasksInFlight] guard.
+  ///
+  /// [_loadHomeMetricsInternal] calls StorageService.buildAdaptiveNoSmokePlan
+  /// partway through, whose own read-evolve-cache-write is not itself
+  /// guarded against concurrent runs (its dependency chain isn't
+  /// transaction-executor-aware, so it can't reuse
+  /// loadCurrentBarrierMinutes's own in-flight-future fix directly) and
+  /// whose plan generation genuinely jitters via Random — two concurrent
+  /// runs produce two different plans, not just two agreeing ones. Two
+  /// real call sites can overlap on cold start: initState fires this
+  /// unawaited, and the very next addPostFrameCallback can fire
+  /// _handlePendingQuickLogRoute/_handlePendingShortcutAction, either of
+  /// which calls this again once its own drain resolves to a real pending
+  /// action — well before the first, much longer call has finished. Without
+  /// this guard, whichever call's plan write lands last silently wins,
+  /// while the other caller's _adaptivePlanItems/_todaysTasks in memory
+  /// reflect the plan that lost the race.
+  Future<void> _loadHomeMetrics() {
+    final inFlight = _loadHomeMetricsInFlight;
+    if (inFlight != null) {
+      return inFlight;
+    }
+    final future = _loadHomeMetricsInternal();
+    _loadHomeMetricsInFlight = future;
+    return future.whenComplete(() {
+      if (identical(_loadHomeMetricsInFlight, future)) {
+        _loadHomeMetricsInFlight = null;
+      }
+    });
+  }
+
+  Future<void> _loadHomeMetricsInternal() async {
     // A barrier the user never answered either confirmation prompt for —
     // closed out neutrally rather than left open forever or scored as a
     // failure. Runs before everything else so undeliveredTaskCount and the
