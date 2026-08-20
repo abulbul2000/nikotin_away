@@ -1530,10 +1530,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           delay = const Duration(minutes: 1);
         }
 
-        await NotificationService.scheduleFirstTaskTriggerNotification(
-          taskDescription: task,
-          delay: delay,
-        );
+        try {
+          await NotificationService.scheduleFirstTaskTriggerNotification(
+            taskDescription: task,
+            delay: delay,
+          );
+        } catch (_) {
+          // One task's native-side scheduling failure (e.g. a platform
+          // exception starting the watchdog's foreground service) must not
+          // silently take every task after it in this loop down with it —
+          // that previously left the rest of today's plan without a single
+          // notification, with no error ever surfacing anywhere. Skipping
+          // _notifiedTaskTitles/markTaskTitleNotifiedToday below means this
+          // task is retried on the next call instead of being marked done.
+          continue;
+        }
 
         _notifiedTaskTitles.add(task);
         await _storageService.markTaskTitleNotifiedToday(task);

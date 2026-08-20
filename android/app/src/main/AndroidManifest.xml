@@ -35,6 +35,9 @@
 
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <!-- Required by android_alarm_manager_plus (DailyPlanRefreshService's
+         midnight background-plan-refresh alarm). -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
 <application
    android:label="Nikotin Away"
@@ -233,6 +236,24 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/no_smoke_widget_info" />
+        </receiver>
+
+        <!-- android_alarm_manager_plus's own native components — backs
+             DailyPlanRefreshService's midnight background-plan-refresh alarm. -->
+        <service
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+        <receiver
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.AlarmBroadcastReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="dev.fluttercommunity.plus.androidalarmmanager.RebootBroadcastReceiver"
+            android:enabled="false"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
         </receiver>
     </application>
     <!-- Required to query activities that can process text, see:

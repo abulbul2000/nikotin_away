@@ -815,7 +815,7 @@ class AppTexts {
         'Neden: Aktivite ve adım verilerin cihazından dışarı çıkmaz.',
     'permissionPhoneTitle': 'Telefon Durumu',
     'permissionPhoneDescription':
-        'Sahte destek aramasının gerçek bir arama ile çakışmaması için kullanılır.',
+        'Sen telefon görüşmesindeyken görevlendirme ekranının araya girmemesi için kullanılır.',
     'permissionPhonePurpose':
         'Neden: Arama numaralarını veya içeriğini asla okumayız.',
     'permissionExactAlarmTitle': 'Kesin Zamanlama',
@@ -2782,7 +2782,7 @@ class AppTexts {
         'Why: your activity and step data never leave your device.',
     'permissionPhoneTitle': 'Phone State',
     'permissionPhoneDescription':
-        'Used to keep the fake support call from colliding with a real call.',
+        "Used to keep the task screen from interrupting you during a real phone call.",
     'permissionPhonePurpose': 'Why: we never read call numbers or content.',
     'permissionExactAlarmTitle': 'Exact Timing',
     'permissionExactAlarmDescription':

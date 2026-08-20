@@ -27,6 +27,21 @@ class _ReminderablePermission {
   final Future<void> Function() request;
 }
 
+/// Requests [permission] normally, unless the OS has already locked it out
+/// (denied enough times that permission_handler reports
+/// isPermanentlyDenied) — Android's requestPermission() then silently
+/// no-ops forever: no system dialog, no exception, status stays denied.
+/// The only way back to that permission's toggle from here on is the app's
+/// own settings screen.
+Future<void> _requestOrOpenSettingsIfLockedOut(Permission permission) async {
+  final status = await permission.status;
+  if (status.isPermanentlyDenied) {
+    await openAppSettings();
+    return;
+  }
+  await permission.request();
+}
+
 List<_ReminderablePermission> _candidates() => [
   _ReminderablePermission(
     id: 'notifications',
@@ -42,9 +57,7 @@ List<_ReminderablePermission> _candidates() => [
     descriptionKey: 'permissionMicrophoneDescription',
     purposeKey: 'permissionMicrophonePurpose',
     status: () async => Permission.microphone.status.then((s) => s.isGranted),
-    request: () async {
-      await Permission.microphone.request();
-    },
+    request: () => _requestOrOpenSettingsIfLockedOut(Permission.microphone),
   ),
   _ReminderablePermission(
     id: 'activityRecognition',
@@ -53,9 +66,8 @@ List<_ReminderablePermission> _candidates() => [
     purposeKey: 'permissionActivityPurpose',
     status: () async =>
         Permission.activityRecognition.status.then((s) => s.isGranted),
-    request: () async {
-      await Permission.activityRecognition.request();
-    },
+    request: () =>
+        _requestOrOpenSettingsIfLockedOut(Permission.activityRecognition),
   ),
   _ReminderablePermission(
     id: 'phone',
@@ -63,9 +75,7 @@ List<_ReminderablePermission> _candidates() => [
     descriptionKey: 'permissionPhoneDescription',
     purposeKey: 'permissionPhonePurpose',
     status: () async => Permission.phone.status.then((s) => s.isGranted),
-    request: () async {
-      await Permission.phone.request();
-    },
+    request: () => _requestOrOpenSettingsIfLockedOut(Permission.phone),
   ),
   _ReminderablePermission(
     id: 'batteryOptimization',
@@ -212,11 +222,20 @@ Future<void> _showReminderDialog({
           ),
           FilledButton(
             onPressed: () async {
-              Navigator.of(dialogContext).pop();
+              // Requesting the OS permission BEFORE popping this dialog,
+              // unlike the other two buttons — closing this dialog first let
+              // the system permission dialog fire while the Activity was
+              // still mid-transition, which some Android versions/OEMs
+              // silently swallow (the request resolves denied with no
+              // system dialog ever shown, no exception, nothing in logcat).
               await permission.request();
-              // Accepted: no snooze/never-ask-again bookkeeping needed —
-              // once granted, nextPermissionDue skips it via grantedIds on
-              // the very next call.
+              if (dialogContext.mounted) {
+                Navigator.of(dialogContext).pop();
+              }
+              // No snooze/never-ask-again bookkeeping needed either way —
+              // if granted, nextPermissionDue skips it via grantedIds on the
+              // very next call; if the user denied the system dialog, it's
+              // simply due again tomorrow same as if they'd postponed.
             },
             child: Text(dialogContext.t('permissionReminderActionAccept')),
           ),

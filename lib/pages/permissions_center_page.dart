@@ -20,8 +20,11 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
     with WidgetsBindingObserver {
   bool _notificationsGranted = false;
   bool _microphoneGranted = false;
+  bool _microphonePermanentlyDenied = false;
   bool _activityGranted = false;
+  bool _activityPermanentlyDenied = false;
   bool _phoneGranted = false;
+  bool _phonePermanentlyDenied = false;
   bool _locationGranted = false;
   bool _isMiuiDevice = false;
   bool _batteryExemptionGranted = false;
@@ -61,8 +64,11 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
     setState(() {
       _notificationsGranted = notifications;
       _microphoneGranted = microphone.isGranted;
+      _microphonePermanentlyDenied = microphone.isPermanentlyDenied;
       _activityGranted = activity.isGranted;
+      _activityPermanentlyDenied = activity.isPermanentlyDenied;
       _phoneGranted = phone.isGranted;
+      _phonePermanentlyDenied = phone.isPermanentlyDenied;
       _locationGranted = location.isGranted;
       _isMiuiDevice = isMiui;
       _batteryExemptionGranted = batteryExemption.isGranted;
@@ -146,6 +152,7 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
                   description: context.t('permissionMicrophoneDescription'),
                   purpose: context.t('permissionMicrophonePurpose'),
                   granted: _microphoneGranted,
+                  permanentlyDenied: _microphonePermanentlyDenied,
                   onRequest: _requestMicrophone,
                 ),
                 _PermissionCard(
@@ -154,6 +161,7 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
                   description: context.t('permissionActivityDescription'),
                   purpose: context.t('permissionActivityPurpose'),
                   granted: _activityGranted,
+                  permanentlyDenied: _activityPermanentlyDenied,
                   onRequest: _requestActivity,
                 ),
                 _PermissionCard(
@@ -162,6 +170,7 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
                   description: context.t('permissionPhoneDescription'),
                   purpose: context.t('permissionPhonePurpose'),
                   granted: _phoneGranted,
+                  permanentlyDenied: _phonePermanentlyDenied,
                   onRequest: _requestPhone,
                 ),
                 _PermissionCard(
@@ -194,10 +203,21 @@ class _PermissionsCenterPageState extends State<PermissionsCenterPage>
                     // canScheduleExactAlarms() == true and completes without
                     // ever opening a settings screen — nothing to grant. The
                     // button otherwise looks broken (tap, nothing visibly
-                    // happens) instead of "already on".
-                    await NotificationService.openExactAlarmSettingsOptional();
+                    // happens) instead of "already on", so tell the user
+                    // explicitly rather than leaving that tap unexplained.
+                    final alreadyGranted =
+                        await NotificationService.openExactAlarmSettingsOptional();
                     if (!context.mounted) {
                       return;
+                    }
+                    if (alreadyGranted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            context.t('permissionExactAlarmAlreadyGranted'),
+                          ),
+                        ),
+                      );
                     }
                   },
                 ),
@@ -321,6 +341,13 @@ class _PermissionCard extends StatelessWidget {
   final String description;
   final String purpose;
   final bool? granted;
+  // Android's requestPermissions() silently no-ops (no system dialog, no
+  // exception, status stays denied forever) once the user has denied a
+  // permission enough times that the OS locks it — permission_handler
+  // reports that as isPermanentlyDenied. Re-showing "Grant" for that case
+  // was a dead loop: tapping it visibly does nothing, over and over. Only
+  // openAppSettings() can reach that permission's toggle from here on.
+  final bool permanentlyDenied;
   final VoidCallback onRequest;
 
   Future<void> _confirmAndRequest(BuildContext context) async {
@@ -365,6 +392,7 @@ class _PermissionCard extends StatelessWidget {
     required this.description,
     required this.purpose,
     required this.granted,
+    this.permanentlyDenied = false,
     required this.onRequest,
   });
 
@@ -438,12 +466,18 @@ class _PermissionCard extends StatelessWidget {
                 // per-app settings screen, so once granted this button's
                 // job switches from "request" to "take me there to manage
                 // it" instead of disappearing with nothing left to tap.
-                onPressed: granted == true
+                // permanentlyDenied routes there too: requestPermission()
+                // on a permission the OS has locked out (denied enough
+                // times) silently no-ops forever, so "Grant" would be a
+                // dead button with no visible effect when tapped.
+                onPressed: granted == true || permanentlyDenied
                     ? openAppSettings
                     : () => _confirmAndRequest(context),
                 child: Text(
                   granted == true
                       ? context.t('permissionActionManage')
+                      : permanentlyDenied
+                      ? context.t('permissionActionOpenSettings')
                       : granted == false
                       ? context.t('permissionActionRequest')
                       : context.t('permissionActionOpenSettings'),

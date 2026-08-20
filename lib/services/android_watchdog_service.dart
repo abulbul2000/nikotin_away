@@ -26,16 +26,25 @@ class AndroidWatchdogService {
     if (!_isAndroid) {
       return;
     }
-    await _channel.invokeMethod('startWatchdog', {
-      'taskTitle': taskTitle,
-      'watchdogId': watchdogId,
-      'dueAtMillis': dueAt.millisecondsSinceEpoch,
-      'foregroundBody': foregroundBody,
-      'violationTitle': violationTitle,
-      'violationBody': violationBody,
-      'foregroundChannelName': foregroundChannelName,
-      'violationChannelName': violationChannelName,
-    });
+    try {
+      await _channel.invokeMethod('startWatchdog', {
+        'taskTitle': taskTitle,
+        'watchdogId': watchdogId,
+        'dueAtMillis': dueAt.millisecondsSinceEpoch,
+        'foregroundBody': foregroundBody,
+        'violationTitle': violationTitle,
+        'violationBody': violationBody,
+        'foregroundChannelName': foregroundChannelName,
+        'violationChannelName': violationChannelName,
+      });
+    } catch (_) {
+      // Best-effort: a platform exception here (e.g. the OS refusing a
+      // foreground-service start) must not take down whichever caller
+      // triggered this — the task-trigger notification this normally backs
+      // up has typically already been shown by the time this runs, so the
+      // user just loses the unanswered-task follow-up/violation tracking
+      // for this one task rather than the notification itself.
+    }
   }
 
   /// The mandatory-task overlay's foreground-service notification is a

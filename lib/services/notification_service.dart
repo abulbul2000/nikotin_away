@@ -1256,15 +1256,30 @@ class NotificationService {
     return enabled && fullScreenGranted;
   }
 
-  static Future<void> openExactAlarmSettingsOptional() async {
+  /// Returns true when the permission was already granted before this call
+  /// — in that case requestExactAlarmsPermission() completes without ever
+  /// opening a settings screen, which the caller needs to know so it can
+  /// tell the user "already on" instead of leaving a tap that visibly does
+  /// nothing.
+  static Future<bool> openExactAlarmSettingsOptional() async {
     try {
       final dynamic androidPlugin = _plugin
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-      await androidPlugin?.requestExactAlarmsPermission();
+      if (androidPlugin == null) {
+        return false;
+      }
+      final dynamic alreadyGranted = await androidPlugin
+          .canScheduleExactNotifications();
+      if (alreadyGranted == true) {
+        return true;
+      }
+      await androidPlugin.requestExactAlarmsPermission();
+      return false;
     } catch (_) {
       // Optional action: ignore on unsupported devices/APIs.
+      return false;
     }
   }
 

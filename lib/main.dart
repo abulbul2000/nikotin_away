@@ -13,6 +13,7 @@ import 'core/app_texts.dart';
 import 'core/app_theme.dart';
 import 'pages/splash_page.dart';
 import 'pages/subscription_gate_page.dart';
+import 'services/daily_plan_refresh_service.dart';
 import 'services/google_auth_service.dart';
 import 'services/language_service.dart';
 import 'services/notification_service.dart';
@@ -96,6 +97,11 @@ Future<void> main() async {
   // Re-arm Sleep Intelligence from the user's configured window or, once
   // enough trusted data exists, from the behavior engine's learned window.
   unawaited(SleepIntelligenceService().refreshScheduleIfEnabled());
+  // Arms the once-a-day background alarm that builds tomorrow's task plan
+  // and schedules its notifications — without this, a day the user never
+  // opens the app at all gets no plan and no notifications, since that was
+  // previously only ever triggered from HomePage's own lifecycle.
+  unawaited(DailyPlanRefreshService.ensureScheduled());
 
   // Cold start: if the app was opened by tapping a notification while
   // fully terminated (not background), route to the correct page now.

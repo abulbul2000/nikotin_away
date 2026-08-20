@@ -439,4 +439,119 @@ class TaskAssignmentService {
     final dayOfMonth = day.day.toString().padLeft(2, '0');
     return '${day.year}-$month-$dayOfMonth';
   }
+
+  /// How late a planned task may be and still be worth firing — past this
+  /// the real-world window it was aimed at is gone, so it's closed out as
+  /// missed instead of delivered late. Duplicated from home_page.dart's own
+  /// `_overdueTaskGrace` (same value, same reasoning) rather than shared,
+  /// since the background isolate this also runs from cannot depend on
+  /// anything that imports Flutter widgets.
+  static const Duration _overdueTaskGrace = Duration(minutes: 15);
+
+  /// Builds today's adaptive plan and arms a native alarm for every item not
+  /// yet notified — the same work `home_page.dart`'s `_notifyNewTasksInternal`
+  /// does on every app open/resume, pulled out here so the midnight
+  /// background alarm (`DailyPlanRefreshService`) can do the identical thing
+  /// without a Flutter engine or BuildContext.
+  ///
+  /// Returns the canonicalTitle of any task this call closed out as missed
+  /// (there is at most one meaningfully "current" one — home_page.dart only
+  /// ever surfaces the last), so a foreground caller can still update its
+  /// own UI state; callers that don't need that (the background isolate)
+  /// simply ignore the return value.
+  Future<String?> scheduleTodaysTaskNotifications() async {
+    await syncDeliveryDeferralsFromNative();
+    await enforceDeliveryQueueLimit();
+    await syncPendingDeliveryExpirationsFromNative();
+
+    final registrationCompleted = await _storage
+        .loadInitialRegistrationCompleted();
+    if (!registrationCompleted) {
+      return null;
+    }
+
+    final observationStartedAt = await _storage
+        .ensureAdaptiveObservationStartedAt();
+    final wakeRaw = await _storage.loadSetting('wake_time') ?? '07:00';
+    final sleepRaw = await _storage.loadSleepTime() ?? '21:00';
+    final parts = sleepRaw.split(':');
+    final sleepHour = int.tryParse(parts.first) ?? 21;
+    final sleepMinute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
+    final now = DateTime.now();
+    var sleepAt = DateTime(now.year, now.month, now.day, sleepHour, sleepMinute);
+    if (!sleepAt.isAfter(now)) {
+      sleepAt = sleepAt.add(const Duration(days: 1));
+    }
+
+    AdaptiveTaskPlan? adaptivePlan;
+    final planningEligible = _storage.isAdaptivePlanningEligible(
+      now: now,
+      observationStartedAt: observationStartedAt,
+      wakeTime: wakeRaw,
+    );
+    if (planningEligible) {
+      final behavior = await _storage.loadBehaviorDashboard();
+      adaptivePlan = await _storage.buildAdaptiveNoSmokePlan(
+        now: now,
+        sleepAt: sleepAt,
+        riskyHours: behavior.riskyHours,
+      );
+    }
+    final sleepRoutinePlanItem = buildSleepRoutinePlanItem(sleepAt: sleepAt);
+    final planItems = [...?adaptivePlan?.items, sleepRoutinePlanItem];
+    if (planItems.isEmpty) {
+      return null;
+    }
+
+    final planDate = DateTime.now();
+    await planDailyTasks(planDate: planDate, items: planItems);
+
+    final notifiedToday = await _storage.loadNotifiedTaskTitlesToday();
+    final taskStates = await _storage.loadTaskAssignmentsForDay(planDate);
+    final stateByTitle = <String, String>{
+      for (final task in taskStates) task.canonicalTitle: task.state,
+    };
+
+    String? missedTaskTitle;
+    for (final item in planItems) {
+      final task = item.taskTitle;
+      if (notifiedToday.contains(task)) {
+        continue;
+      }
+      if ((stateByTitle[task] ?? 'new') != 'new') {
+        continue;
+      }
+
+      var delay = item.scheduledAt.difference(DateTime.now());
+      if (delay <= -_overdueTaskGrace) {
+        await _storage.recordAdaptiveTaskOutcome(
+          taskTitle: task,
+          outcome: AdaptiveTaskOutcome.missed,
+          plannedDurationMinutes: item.durationMinutes,
+          scheduledAt: item.scheduledAt,
+        );
+        await _storage.saveMissedTaskTitle(task);
+        missedTaskTitle = task;
+        await _storage.markTaskTitleNotifiedToday(task);
+        continue;
+      }
+      if (delay.inSeconds <= 0) {
+        delay = const Duration(minutes: 1);
+      }
+
+      try {
+        await NotificationService.scheduleFirstTaskTriggerNotification(
+          taskDescription: task,
+          delay: delay,
+        );
+      } catch (_) {
+        // One task's native-side scheduling failure must not take every
+        // task after it in this loop down with it — see the matching catch
+        // in home_page.dart's own copy of this loop for the full reasoning.
+        continue;
+      }
+      await _storage.markTaskTitleNotifiedToday(task);
+    }
+    return missedTaskTitle;
+  }
 }
