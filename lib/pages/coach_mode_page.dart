@@ -31,6 +31,7 @@ class _CoachModePageState extends State<CoachModePage> {
 
   bool _enabled = true;
   String _frequency = 'orta';
+  String _intensity = 'balanced';
   bool _loading = true;
   bool _hasError = false;
 
@@ -53,10 +54,12 @@ class _CoachModePageState extends State<CoachModePage> {
             'duration_barrier_frequency_preference',
           ) ??
           'orta';
+      final intensity = await _storageService.loadInterventionIntensity();
       if (!mounted) return;
       setState(() {
         _enabled = enabledRaw != '0';
         _frequency = frequency;
+        _intensity = intensity;
         _loading = false;
       });
     } catch (e) {
@@ -87,6 +90,20 @@ class _CoachModePageState extends State<CoachModePage> {
     );
     if (!mounted) return;
     setState(() => _frequency = frequency);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(context.t('coachModeSavedConfirmation'))),
+    );
+  }
+
+  /// Was previously askable only once, during registration (survey_page.dart)
+  /// — a user who wanted quieter or more frequent health tips/coaching lines
+  /// afterwards had no way back to that question. Feeds the same
+  /// NotificationBudget.dailyBudgetFor the registration answer already did,
+  /// so changing it here takes effect on the very next scheduling pass.
+  Future<void> _applyIntensity(String intensity) async {
+    await _storageService.saveInterventionIntensity(intensity);
+    if (!mounted) return;
+    setState(() => _intensity = intensity);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.t('coachModeSavedConfirmation'))),
     );
@@ -149,6 +166,47 @@ class _CoachModePageState extends State<CoachModePage> {
                       _applyFrequency(value);
                     },
                   ),
+
+                const SizedBox(height: 20),
+                Text(
+                  context.t('interventionIntensityTitle'),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  context.t('interventionIntensityHint'),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+                ),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  isExpanded: true,
+                  initialValue: _intensity,
+                  decoration: InputDecoration(
+                    labelText: context.t('interventionIntensityTitle'),
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: [
+                    DropdownMenuItem(
+                      value: 'gentle',
+                      child: Text(context.t('interventionIntensityGentle')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'balanced',
+                      child: Text(context.t('interventionIntensityBalanced')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'strict',
+                      child: Text(context.t('interventionIntensityStrict')),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    _applyIntensity(value);
+                  },
+                ),
               ],
             ),
     );
