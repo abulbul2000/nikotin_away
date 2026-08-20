@@ -109,6 +109,34 @@ class AndroidWatchdogService {
     }
   }
 
+  /// Opens the native "did you smoke?" overlay for a task-confirm
+  /// notification body tap, with real Evet/Hayır buttons — the same answer
+  /// its action buttons offer, rather than a dismiss-only acknowledgment
+  /// that leaves the question unanswered.
+  static Future<void> showConfirmOverlayFromNotification({
+    required String title,
+    required String body,
+    required String yesLabel,
+    required String noLabel,
+    required String taskTitle,
+  }) async {
+    if (!_isAndroid) {
+      return;
+    }
+    try {
+      await _channel.invokeMethod('showConfirmOverlayFromNotification', {
+        'title': title,
+        'body': body,
+        'yesLabel': yesLabel,
+        'noLabel': noLabel,
+        'taskTitle': taskTitle,
+      });
+    } catch (_) {
+      // The regular notification remains available if the overlay is not
+      // available on this device.
+    }
+  }
+
   static Future<void> showTaskOverlayFromNotification({
     required String title,
     required String body,

@@ -163,11 +163,27 @@ class SmokedLogOverlayService : Service() {
             // NOT_FOCUSABLE so typing, scrolling and every other interaction
             // underneath carries on untouched — the button takes only the
             // touches that land on itself.
+            //
+            // The window itself is deliberately kept fully on-screen (no
+            // LAYOUT_NO_LIMITS): that flag does let x go negative or past
+            // screenWidth, but Android can then only deliver touches to
+            // whatever sliver of the view actually overlaps the screen — a
+            // button parked half off-screen that way becomes nearly
+            // untouchable. The half-off-screen *look* is produced instead in
+            // SmokedLogButtonView's onDraw, which draws only the on-screen
+            // half of the mark — the window stays put and fully touchable,
+            // only the paint is clipped.
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = prefs().getInt(KEY_X, (density * DEFAULT_X_DP).toInt())
+            // The saved value predates half-off-screen parking (it may be a
+            // flush-with-the-edge x from an older build), so it is only
+            // trusted to say which side the button was on — snappedXFor
+            // recomputes the actual half-off-screen x from that side every
+            // time, rather than replaying whatever was persisted.
+            val savedX = prefs().getInt(KEY_X, (density * DEFAULT_X_DP).toInt())
+            x = snappedXFor(wasOnLeft = savedX + size / 2 < resources.displayMetrics.widthPixels / 2, buttonWidth = size)
             y = prefs().getInt(KEY_Y, (density * DEFAULT_Y_DP).toInt())
         }
 
@@ -175,7 +191,29 @@ class SmokedLogOverlayService : Service() {
             wm.addView(view, layout)
             buttonView = view
             params = layout
+            view.facingRight = isOnLeftEdge(layout.x, size)
         }
+    }
+
+    /// True once the button's center has crossed to the left half of the
+    /// screen — the same rule [persistPosition] snaps by, so the mark's
+    /// facing always matches the edge it is actually resting against, both
+    /// right after [attachButton] restores a saved position and after every
+    /// drag-and-release.
+    private fun isOnLeftEdge(x: Int, buttonWidth: Int): Boolean {
+        val screenWidth = resources.displayMetrics.widthPixels
+        val centerX = x + buttonWidth / 2
+        return centerX < screenWidth / 2
+    }
+
+    /// The window's x for whichever side the button belongs on. The window
+    /// itself stays flush with the edge (fully on-screen, so it stays fully
+    /// touchable) — the half-off-screen look comes from what
+    /// SmokedLogButtonView chooses to paint, not from moving the window
+    /// past the screen bounds.
+    private fun snappedXFor(wasOnLeft: Boolean, buttonWidth: Int): Int {
+        val screenWidth = resources.displayMetrics.widthPixels
+        return if (wasOnLeft) 0 else screenWidth - buttonWidth
     }
 
     private fun detachButton() {
@@ -193,8 +231,23 @@ class SmokedLogOverlayService : Service() {
         runCatching { windowManager?.updateViewLayout(view, layout) }
     }
 
+    /// Snaps to whichever edge the button was released closer to, same side
+    /// DraggableButterflyButton (the in-app equivalent) picks by: the drop
+    /// point's distance from screen-center decides left vs. right. Unlike
+    /// that in-app control, though, this one is parked half off-screen —
+    /// like Android's own accessibility button — so it reads as tucked out
+    /// of the way rather than a control floating a few dp inside the edge.
+    /// The window's own bounds do the clipping; only the inward half of the
+    /// view is ever actually on screen.
     private fun persistPosition() {
         val layout = params ?: return
+        val view = buttonView ?: return
+        val screenWidth = resources.displayMetrics.widthPixels
+        val buttonWidth = if (view.width > 0) view.width else layout.width
+        val centerX = layout.x + buttonWidth / 2
+        layout.x = snappedXFor(wasOnLeft = centerX < screenWidth / 2, buttonWidth = buttonWidth)
+        runCatching { windowManager?.updateViewLayout(view, layout) }
+        view.facingRight = isOnLeftEdge(layout.x, buttonWidth)
         prefs().edit().putInt(KEY_X, layout.x).putInt(KEY_Y, layout.y).apply()
     }
 
@@ -465,10 +518,9 @@ class SmokedLogOverlayService : Service() {
         /// open the app.
         const val KEY_ENABLED = "button_enabled"
 
-        // 64dp was under the size of a standard FAB with none of its
-        // contrast, so the logo inside it was too small to read. 84dp was
-        // still easy to lose against a busy wallpaper.
-        private const val SIZE_DP = 112f
+        // Comfortably above the 48dp minimum touch target while staying
+        // small enough at rest not to cover much of whatever is underneath.
+        private const val SIZE_DP = 80f
         private const val DEFAULT_X_DP = 16f
         private const val DEFAULT_Y_DP = 220f
 

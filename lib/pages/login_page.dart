@@ -307,8 +307,12 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-    emailController.dispose();
-    passwordController.dispose();
+    // Deferred to the next frame — see _askForLocalCloudAccount's identical
+    // comment below for why a synchronous dispose here can crash.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      emailController.dispose();
+      passwordController.dispose();
+    });
     if (!mounted || request == null) return;
 
     setState(() {
@@ -390,7 +394,9 @@ class _LoginPageState extends State<LoginPage> {
         ],
       ),
     );
-    controller.dispose();
+    // Deferred to the next frame — see _askForLocalCloudAccount's identical
+    // comment below for why a synchronous dispose here can crash.
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
     if (!mounted || passphrase == null || passphrase.trim().isEmpty) return;
 
     setState(() {
@@ -479,8 +485,16 @@ class _LoginPageState extends State<LoginPage> {
         ],
       ),
     );
-    emailController.dispose();
-    passwordController.dispose();
+    // The showDialog future can resolve before the pop transition (and thus
+    // the TextFields holding these controllers) has actually finished
+    // unmounting, so disposing synchronously here can hit the framework's
+    // "_dependents.isEmpty" assertion — same root cause and fix as
+    // settings_page.dart's _promptPassphrase. Deferring to the next frame
+    // lets the route finish tearing down first.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      emailController.dispose();
+      passwordController.dispose();
+    });
     if (!mounted || request == null || request.isEmpty) return false;
 
     setState(() {

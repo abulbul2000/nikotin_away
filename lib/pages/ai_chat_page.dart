@@ -859,7 +859,12 @@ class _AIChatPageState extends State<AIChatPage> {
         ],
       ),
     );
-    controller.dispose();
+    // The showDialog future can resolve before the pop transition (and thus
+    // the TextField holding this controller) has actually finished
+    // unmounting, so disposing synchronously here can hit the framework's
+    // "_dependents.isEmpty" assertion — same fix as settings_page.dart's
+    // _promptPassphrase and login_page.dart's dialog helpers.
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
     if (name == null || name.isEmpty) return;
     setState(() => conversation.title = name);
     await _persistConversations();
@@ -949,7 +954,8 @@ class _AIChatPageState extends State<AIChatPage> {
         ],
       ),
     );
-    controller.dispose();
+    // Deferred — see _renameConversation's identical comment above.
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
     if (project == null || project.isEmpty) return;
     setState(() => conversation.project = project);
     await _persistConversations();
@@ -979,7 +985,8 @@ class _AIChatPageState extends State<AIChatPage> {
         ],
       ),
     );
-    controller.dispose();
+    // Deferred — see _renameConversation's identical comment above.
+    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
     if (!mounted || reason == null || reason.isEmpty) return;
     await _storage.saveSetting(
       'ai_chat_report_${conversation.id}',

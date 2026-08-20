@@ -51,7 +51,6 @@ import '../widgets/no_smoke_logo.dart';
 import '../widgets/premium_upsell_dialog.dart';
 import '../widgets/quick_action_menu.dart';
 import '../widgets/share_app_sheet.dart';
-import '../widgets/draggable_butterfly_button.dart';
 
 class HomePage extends StatefulWidget {
   final String name;
@@ -219,10 +218,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   /// Opens whatever the launcher icon's long-press shortcut menu asked for
   /// while the app was closed (see shortcuts.xml / MainActivity
   /// .ShortcutStore) — the same native-overlay-with-no-Flutter-engine shape
-  /// as [_handlePendingQuickLogRoute], and the same three actions
-  /// [_openQuickActionMenu]'s switch already handles for the in-app menu.
-  /// 'open_app' needs no branch: Android already did the only thing that
-  /// shortcut promises (open the app) before this ever runs.
+  /// as [_handlePendingQuickLogRoute]. 'open_app' needs no branch: Android
+  /// already did the only thing that shortcut promises (open the app)
+  /// before this ever runs.
   Future<void> _handlePendingShortcutAction() async {
     final action = await AndroidWatchdogService.consumePendingShortcutAction();
     if (!mounted || action == null) return;
@@ -1988,13 +1986,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     _buildSettingsTab(context),
                   ],
           ),
-          Positioned.fill(
-            child: DraggableButterflyButton(
-              key: const ValueKey('quick_action_butterfly'),
-              semanticLabel: context.t('quickMenuTitle'),
-              onPressed: () => unawaited(_openQuickActionMenu()),
-            ),
-          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -2599,52 +2590,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         child: Text(context.t('completeRegistration')),
       ),
     );
-  }
-
-  /// Single entry point for the floating button, the AppBar's SOS button,
-  /// and (natively, via MainActivity's shortcut-intent handling) the
-  /// launcher icon's long-press menu — all three route through here so the
-  /// same 4 actions are reachable no matter which one the user tapped.
-  bool _quickActionMenuOpen = false;
-
-  Future<void> _openQuickActionMenu() async {
-    // Without this guard two taps on the butterfly opened two stacked bottom
-    // sheets. Dismissing the top one left the second one visible, the user
-    // read that as "my tap did not register" and logged a second cigarette —
-    // corrupting the interval and averted-count metrics the whole product
-    // rests on.
-    if (_quickActionMenuOpen) return;
-    _quickActionMenuOpen = true;
-    final action = await showQuickActionMenu(context);
-    _quickActionMenuOpen = false;
-    if (!mounted || action == null) return;
-    switch (action) {
-      case QuickAction.smokedNow:
-        final eventId = await _storageService.logSmokingNow();
-        if (!mounted) return;
-        await _offerSmokingTriggerPrompt(eventId);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.t('quickActionSmokedNowConfirmed'))),
-        );
-        await _loadHomeMetrics();
-      case QuickAction.craving:
-        await Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (_) => const CravingSosPage()));
-      case QuickAction.selfChallenge:
-        final minutes = await showSelfChallengeDurationMenu(context);
-        if (!mounted || minutes == null) return;
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => SelfChallengePage(durationMinutes: minutes),
-          ),
-        );
-      case QuickAction.openApp:
-        // Already open — nothing to do. This case only does real work when
-        // reached from the launcher shortcut while the app isn't running.
-        break;
-    }
   }
 
   Widget _buildAdaptiveInsightsCard() {

@@ -1,12 +1,12 @@
 # Nikotin Away — Gizlilik Politikası
 
-**Son güncelleme:** 17 Ağustos 2026
+**Son güncelleme:** 20 Ağustos 2026
 
-> Yayınlamadan önce `[GELİŞTİRİCİ/ŞİRKET ADI]`, `[İLETİŞİM E-POSTASI]` ve bu belgenin herkese açık URL'si gerçek bilgilerle doldurulmalıdır. Bu metin hukuki danışmanlık değildir; yayın öncesi geliştirici tarafından doğrulanmalıdır.
+> Bu metin hukuki danışmanlık değildir; yayın öncesi geliştirici tarafından doğrulanmalıdır. Play Console'a eklenmeden önce bu belgenin herkese açık bir URL'de yayınlanmış olması gerekir.
 
 ## 1. Kapsam
 
-Bu Gizlilik Politikası, **Nikotin Away** mobil uygulamasının kişisel verileri nasıl işlediğini açıklar. Uygulama `[GELİŞTİRİCİ/ŞİRKET ADI]` tarafından geliştirilmiştir. Sorular için `[İLETİŞİM E-POSTASI]` adresi kullanılabilir.
+Bu Gizlilik Politikası, **Nikotin Away** mobil uygulamasının kişisel verileri nasıl işlediğini açıklar. Uygulama Nikotin Away geliştiricisi tarafından geliştirilmiştir. Sorular için `abulbul2000@gmail.com` adresi kullanılabilir.
 
 ## 2. Verilerin saklandığı yer
 
@@ -66,4 +66,4 @@ Uygulama genel kitleye yöneliktir ve bilerek 13 yaş altı çocuklardan veri to
 
 ## 9. Değişiklikler ve iletişim
 
-Veri işleme biçimi değişirse bu politika güncellenir. Sorular için `[İLETİŞİM E-POSTASI]` adresine başvurulabilir.
+Veri işleme biçimi değişirse bu politika güncellenir. Sorular için `abulbul2000@gmail.com` adresine başvurulabilir.

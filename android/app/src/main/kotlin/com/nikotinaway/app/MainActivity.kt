@@ -351,6 +351,18 @@ class MainActivity : FlutterActivity() {
 						result.success(true)
 					}
 
+					"showConfirmOverlayFromNotification" -> {
+						TaskOverlayService.showConfirm(
+							context = this,
+							title = call.argument<String>("title").orEmpty(),
+							body = call.argument<String>("body").orEmpty(),
+							yesLabel = call.argument<String>("yesLabel").orEmpty(),
+							noLabel = call.argument<String>("noLabel").orEmpty(),
+							taskTitle = call.argument<String>("taskTitle").orEmpty(),
+						)
+						result.success(true)
+					}
+
 					"showTaskOverlayFromNotification" -> {
 						TaskOverlayService.show(
 							context = this,

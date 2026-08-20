@@ -51,6 +51,16 @@ class TaskOverlayService : Service() {
                     dismissLabel = intent.getStringExtra(EXTRA_DONE_LABEL).orEmpty(),
                 )
             }
+            ACTION_SHOW_CONFIRM -> {
+                ensureForeground()
+                showConfirmOverlay(
+                    title = intent.getStringExtra(EXTRA_TITLE).orEmpty(),
+                    body = intent.getStringExtra(EXTRA_BODY).orEmpty(),
+                    yesLabel = intent.getStringExtra(EXTRA_YES_LABEL).orEmpty(),
+                    noLabel = intent.getStringExtra(EXTRA_NO_LABEL).orEmpty(),
+                    taskTitle = intent.getStringExtra(EXTRA_TASK_TITLE).orEmpty(),
+                )
+            }
             ACTION_SHOW_REMINDER -> {
                 ensureForeground()
                 showReminderOverlay(
@@ -272,6 +282,100 @@ class TaskOverlayService : Service() {
         }
     }
 
+    // Two-button variant for the end-of-window "did you smoke?" question, so
+    // a tap on the notification body offers the same Evet/Hayır answer the
+    // notification's own action buttons do, instead of a dismiss-only "Kapat"
+    // that leaves the question unanswered. Outcome strings are their own
+    // vocabulary (not OUTCOME_ACCEPTED/DECLINED) so this can never be
+    // misread as a task-start answer by the shared outcome queue.
+    private fun showConfirmOverlay(
+        title: String,
+        body: String,
+        yesLabel: String,
+        noLabel: String,
+        taskTitle: String,
+    ) {
+        if (!Settings.canDrawOverlays(this)) {
+            stopSelf()
+            return
+        }
+        removeOverlay()
+
+        val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        windowManager = wm
+
+        val density = resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).toInt()
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#F20B1F2B"))
+            setPadding(dp(32), dp(64), dp(32), dp(48))
+            gravity = Gravity.CENTER
+        }
+
+        val titleView = TextView(this).apply {
+            text = title
+            setTextColor(Color.WHITE)
+            textSize = 22f
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(16))
+        }
+        val bodyView = TextView(this).apply {
+            text = body
+            setTextColor(Color.parseColor("#E0E0E0"))
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(40))
+        }
+
+        fun finish(outcome: String) {
+            TaskOverlayOutcomeStore.enqueue(this@TaskOverlayService, "", taskTitle, outcome)
+            removeOverlay()
+            stopSelf()
+        }
+
+        val yesButton = Button(this).apply {
+            text = yesLabel
+            minHeight = dp(56)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setOnClickListener { finish(OUTCOME_SMOKED_YES) }
+        }
+        val noButton = Button(this).apply {
+            text = noLabel
+            minHeight = dp(56)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setOnClickListener { finish(OUTCOME_SMOKED_NO) }
+        }
+
+        container.addView(titleView)
+        container.addView(bodyView)
+        container.addView(yesButton)
+        container.addView(noButton)
+
+        val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            overlayType,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT,
+        )
+
+        try {
+            wm.addView(container, params)
+            overlayView = container
+        } catch (e: Exception) {
+            stopSelf()
+        }
+    }
+
     // Two-button variant for a reminder the user should act on (breath test,
     // weekly survey) rather than just read. "Open" launches MainActivity and
     // leaves a route for Dart to pick up on resume (see ReminderOverlayStore
@@ -389,6 +493,7 @@ class TaskOverlayService : Service() {
     companion object {
         const val ACTION_SHOW = "com.nikotinaway.app.overlay.SHOW"
         const val ACTION_SHOW_INFO = "com.nikotinaway.app.overlay.SHOW_INFO"
+        const val ACTION_SHOW_CONFIRM = "com.nikotinaway.app.overlay.SHOW_CONFIRM"
         const val ACTION_SHOW_REMINDER = "com.nikotinaway.app.overlay.SHOW_REMINDER"
         const val ACTION_DISMISS = "com.nikotinaway.app.overlay.DISMISS"
         const val EXTRA_TITLE = "extra_title"
@@ -397,6 +502,8 @@ class TaskOverlayService : Service() {
         const val EXTRA_DECLINE_LABEL = "extra_decline_label"
         const val EXTRA_DECLINE_ONLY_LABEL = "extra_decline_only_label"
         const val EXTRA_SOS_LABEL = "extra_sos_label"
+        const val EXTRA_YES_LABEL = "extra_yes_label"
+        const val EXTRA_NO_LABEL = "extra_no_label"
         const val EXTRA_ROUTE = "extra_route"
         const val EXTRA_REMINDER_ID = "extra_reminder_id"
 
@@ -407,6 +514,12 @@ class TaskOverlayService : Service() {
         const val OUTCOME_POSTPONED = "postponed"
         const val OUTCOME_DECLINED = "declined"
         const val OUTCOME_SOS = "sos"
+
+        /// Own vocabulary, deliberately distinct from the task-start outcomes
+        /// above — this answers "did you smoke?", not "what do you want to do
+        /// about this task?", and the two must never be interchangeable.
+        const val OUTCOME_SMOKED_YES = "smoked_yes"
+        const val OUTCOME_SMOKED_NO = "smoked_no"
         const val EXTRA_WATCHDOG_ID = "extra_watchdog_id"
         const val EXTRA_TASK_TITLE = "extra_task_title"
         const val CHANNEL_ID = "task_overlay_foreground_channel"
@@ -458,6 +571,32 @@ class TaskOverlayService : Service() {
                 putExtra(EXTRA_TITLE, title)
                 putExtra(EXTRA_BODY, body)
                 putExtra(EXTRA_DONE_LABEL, dismissLabel)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        /// Two-button "did you smoke?" overlay for a task-confirm notification
+        /// body tap — the same question its Evet/Hayır action buttons answer,
+        /// just reachable when the user taps the body instead of an action.
+        fun showConfirm(
+            context: Context,
+            title: String,
+            body: String,
+            yesLabel: String,
+            noLabel: String,
+            taskTitle: String,
+        ) {
+            val intent = Intent(context, TaskOverlayService::class.java).apply {
+                action = ACTION_SHOW_CONFIRM
+                putExtra(EXTRA_TITLE, title)
+                putExtra(EXTRA_BODY, body)
+                putExtra(EXTRA_YES_LABEL, yesLabel)
+                putExtra(EXTRA_NO_LABEL, noLabel)
+                putExtra(EXTRA_TASK_TITLE, taskTitle)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)

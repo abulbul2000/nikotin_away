@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
 import android.view.MotionEvent
 import android.view.View
@@ -14,8 +15,9 @@ import android.view.View
 ///
 /// Uses a short hold rather than a tap: this thing sits on top of whatever
 /// the user is doing all day, and a stray brush against it should not write
-/// "I smoked" into their history. The visual itself stays transparent and
-/// does not draw a progress ring or border.
+/// "I smoked" into their history. Background stays fully transparent — only
+/// the butterfly/chain mark itself is drawn, so it reads as a mark floating
+/// on the screen rather than a disc sitting on top of other apps.
 class SmokedLogButtonView(
     context: Context,
     private val onHoldCompleted: () -> Unit,
@@ -24,10 +26,11 @@ class SmokedLogButtonView(
 ) : View(context) {
 
     init {
-        // This is a transparent overlay asset, not a Material button. Explicitly
-        // clear every platform-provided background/state layer so no faint
-        // circle, pressed halo, elevation shadow, or default surface appears
-        // behind the logo on different Android/OEM versions.
+        // This is a custom-drawn overlay asset, not a Material button.
+        // Explicitly clear every platform-provided background/state layer so
+        // no faint circle, pressed halo, elevation shadow, or default surface
+        // appears behind the disc this view draws itself, on different
+        // Android/OEM versions.
         background = null
         setBackgroundColor(Color.TRANSPARENT)
         elevation = 0f
@@ -36,6 +39,15 @@ class SmokedLogButtonView(
     }
 
     private val mark = BitmapFactory.decodeResource(resources, R.drawable.smoked_log_mark)
+
+    /// The source asset is a single 1920x1920 bitmap with the butterfly in
+    /// its upper-right region and the broken chain trailing off to the
+    /// lower-left. There is no transparent gap between them to crop on, so
+    /// this rect was picked by eye against the asset's actual pixels: wide
+    /// enough to keep the butterfly's full wingspan, tight enough on the
+    /// left edge (x=1050 of 1920) to exclude the chain and every stray
+    /// fracture particle scattered ahead of it.
+    private val butterflyOnlySrc = Rect(1050, 0, mark.width, mark.height)
 
     private val markPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         alpha = RESTING_ALPHA
@@ -51,8 +63,33 @@ class SmokedLogButtonView(
     private var holding = false
     private var confirming = false
     private var dragging = false
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
     private var downX = 0f
     private var downY = 0f
+
+    /// The mark art faces right by default. When the button is snapped to
+    /// the right edge it needs to face left instead, so the butterfly reads
+    /// as looking back toward the screen — same intent as the in-app
+    /// DraggableButterflyButton, which only ever sits with its artwork
+    /// implicitly facing inward because it never mirrors. The overlay button
+    /// can sit on either edge, so it has to flip explicitly.
+    ///
+    /// This also decides which physical half of the view onDraw treats as
+    /// "the screen edge" side: facingRight true means the button sits on the
+    /// left of the screen (nothing to its left), so it's the view's own
+    /// *left* half that gets skipped at rest, matching the window snapped
+    /// flush against the left edge. facingRight false is the mirror of that
+    /// on the right edge.
+    var facingRight: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
 
     private val bounds = RectF()
 
@@ -156,13 +193,26 @@ class SmokedLogButtonView(
         bounds.set(inset, inset, width - inset, height - inset)
 
         val markInset = dp(14f)
-        canvas.drawBitmap(
-            mark,
-            null,
-            RectF(markInset, markInset, width - markInset, height - markInset),
-            markPaint,
-        )
+        val markRect = RectF(markInset, markInset, width - markInset, height - markInset)
 
+        // The window is parked flush against whichever edge it's snapped to
+        // (x=0 or x=screenWidth-buttonWidth, no margin), so the mark is
+        // drawn across the view's full area either way — nothing needs to
+        // be pushed toward one side or clipped to fake an off-screen half.
+        // At rest (not dragging) only the butterfly quadrant of the source
+        // asset is sampled — the chain reads as clutter sitting on top of
+        // whatever app is underneath. Dragging shows the full asset (chain
+        // included), since that's the moment the user is deliberately
+        // looking at the control rather than glancing past it.
+        val markSrc = if (dragging) null else butterflyOnlySrc
+        if (facingRight) {
+            canvas.drawBitmap(mark, markSrc, markRect, markPaint)
+        } else {
+            canvas.save()
+            canvas.scale(-1f, 1f, width / 2f, height / 2f)
+            canvas.drawBitmap(mark, markSrc, markRect, markPaint)
+            canvas.restore()
+        }
     }
 
 

@@ -181,11 +181,83 @@ function normalizeCompletion(completion, normalizedLanguage, providerName) {
   };
 }
 
-export async function chatWithAI({ geminiApiKey, openaiApiKey }, history, language = "en") {
+const MAX_CONTEXT_LIST_ITEMS = 8;
+const MAX_CONTEXT_STRING_LENGTH = 60;
+
+// Only ever built from BehaviorEngine's own output (trigger names, hour
+// labels, a risk level enum) — never free text a user typed — but still
+// bounded here in case a future field changes shape server-side expects
+// nothing to reject the whole request over a malformed context.
+function sanitizeContextString(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().slice(0, MAX_CONTEXT_STRING_LENGTH);
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function sanitizeContextList(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(sanitizeContextString)
+    .filter((item) => item !== null)
+    .slice(0, MAX_CONTEXT_LIST_ITEMS);
+}
+
+// Turns BehaviorEngine's dashboard fields into a short briefing the coach
+// can ground advice in — the same risky-trigger/risky-hour/predicted-window
+// signals that already drive task selection and geofencing elsewhere in the
+// app, previously never reaching this conversation at all.
+function buildBehaviorContextInstruction(behaviorContext) {
+  if (!behaviorContext || typeof behaviorContext !== "object") return null;
+
+  const riskyTriggers = sanitizeContextList(behaviorContext.riskyTriggers);
+  const riskyHours = sanitizeContextList(behaviorContext.riskyHours);
+  const weeklySurveyRiskLevel = sanitizeContextString(
+    behaviorContext.weeklySurveyRiskLevel,
+  );
+  const predictedRiskWindow = sanitizeContextString(
+    behaviorContext.predictedRiskWindow,
+  );
+  const predictedTrigger = sanitizeContextString(behaviorContext.predictedTrigger);
+
+  const lines = [];
+  if (riskyTriggers.length > 0) {
+    lines.push(`Öğrenilmiş riskli tetikleyiciler: ${riskyTriggers.join(", ")}`);
+  }
+  if (riskyHours.length > 0) {
+    lines.push(`Öğrenilmiş riskli saatler: ${riskyHours.join(", ")}`);
+  }
+  if (predictedRiskWindow) {
+    lines.push(`Tahmin edilen bir sonraki risk penceresi: ${predictedRiskWindow}`);
+  }
+  if (predictedTrigger) {
+    lines.push(`Tahmin edilen olası tetikleyici: ${predictedTrigger}`);
+  }
+  if (weeklySurveyRiskLevel) {
+    lines.push(`Bu haftaki risk seviyesi: ${weeklySurveyRiskLevel}`);
+  }
+  if (lines.length === 0) return null;
+
+  return (
+    "KULLANICI BAĞLAMI (uygulamanın davranış motorundan, salt bilgi amaçlı):\n" +
+    lines.join("\n") +
+    "\nBu bilgiyi kullanıcıya rapor okur gibi tekrar etme; sadece önerini bu paternlere göre daha isabetli hale getirmek için kullan."
+  );
+}
+
+export async function chatWithAI(
+  { geminiApiKey, openaiApiKey },
+  history,
+  language = "en",
+  behaviorContext = null,
+) {
   const normalizedLanguage = SUPPORTED_AI_LANGUAGES.has(language) ? language : "en";
   const languageInstruction = `Kullanıcının uygulama dili ${normalizedLanguage} kodudur. Yanıtının görünen tüm doğal dil bölümlerini bu dilde yaz. Teknik araç adlarını, enum değerlerini ve saat biçimlerini değiştirme.`;
+  const behaviorInstruction = buildBehaviorContextInstruction(behaviorContext);
+  const systemContent = [SYSTEM_PROMPT, languageInstruction, behaviorInstruction]
+    .filter(Boolean)
+    .join("\n\n");
   const messages = [
-    { role: "system", content: `${SYSTEM_PROMPT}\n\n${languageInstruction}` },
+    { role: "system", content: systemContent },
     ...history,
   ];
   const errors = [];

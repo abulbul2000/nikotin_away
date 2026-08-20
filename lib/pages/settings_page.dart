@@ -176,6 +176,17 @@ class _SettingsPageState extends State<SettingsPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.t('smokedLogButtonEnabled'))),
     );
+    // Same reasoning as _toggleSleepIntelligence below: this button is a
+    // standing background service (SmokedLogOverlayService), and on an
+    // aggressive OEM (MIUI etc.) it gets silently killed — without a force
+    // -stop — unless the user grants the battery-optimization exemption
+    // and/or autostart permission. Sleep Intelligence already asked for
+    // this; the quick-log button, an equally background-reliant feature,
+    // never did.
+    await maybePromptBackgroundReliability(
+      context: context,
+      deviceCompatibilityService: _deviceCompatibilityService,
+    );
   }
 
   Future<void> _toggleSleepIntelligence(bool value) async {

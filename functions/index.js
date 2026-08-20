@@ -124,6 +124,16 @@ export const aiChat = onCall(
     if (!history) {
       throw new HttpsError("invalid-argument", "valid history is required");
     }
+    // Behavior-engine output only (trigger names, hour labels, a risk
+    // level) — never user-typed text — but still passed through as a plain
+    // object rather than trusted field-by-field; ai.js's own sanitizer is
+    // what actually bounds what reaches the prompt.
+    const behaviorContext =
+      request.data?.behaviorContext &&
+      typeof request.data.behaviorContext === "object" &&
+      !Array.isArray(request.data.behaviorContext)
+        ? request.data.behaviorContext
+        : null;
 
     const { data: userData } = await getOrCreateUserDoc(uid);
     const plan = await resolveAiEntitlement(request, userData);
@@ -150,6 +160,7 @@ export const aiChat = onCall(
         },
         history,
         language,
+        behaviorContext,
       );
       return {
         ...result,

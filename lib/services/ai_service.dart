@@ -231,6 +231,7 @@ Future<AiChatResult> sendMessageToAI(List<AiChatTurn> history) async {
           .map((turn) => {'role': turn.role, 'content': turn.content.trim()})
           .toList(),
       'language': await _resolveAppLanguage(),
+      'behaviorContext': await _resolveBehaviorContext(),
       // Only the separate development Firebase project accepts this flag.
       // Release builds always send false and require a verified Play purchase.
       'debugClient': kDebugMode,
@@ -289,5 +290,28 @@ Future<String> _resolveAppLanguage() async {
     return await LanguageService.loadSelectedLanguageCode();
   } catch (_) {
     return 'en';
+  }
+}
+
+/// A compact summary of what BehaviorEngine has already learned about this
+/// user — risky triggers/hours, the predicted next risk window, weekly risk
+/// level — so the AI coach's advice can be grounded in the same behavioral
+/// signals the rest of the app (tasks, notifications, geofencing) already
+/// acts on, instead of only ever seeing the current chat turn. Never
+/// throws: a coaching context this is missing is strictly worse than a
+/// server error blocking the whole conversation, so any failure here just
+/// falls back to an empty context and the chat proceeds without it.
+Future<Map<String, dynamic>> _resolveBehaviorContext() async {
+  try {
+    final dashboard = await StorageService().loadBehaviorDashboard();
+    return {
+      'riskyTriggers': dashboard.riskyTriggers,
+      'riskyHours': dashboard.riskyHours,
+      'weeklySurveyRiskLevel': dashboard.weeklySurveyRiskLevel,
+      'predictedRiskWindow': dashboard.predictedRiskWindow,
+      'predictedTrigger': dashboard.predictedTrigger,
+    };
+  } catch (_) {
+    return const {};
   }
 }

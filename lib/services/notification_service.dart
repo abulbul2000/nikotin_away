@@ -1135,6 +1135,21 @@ class NotificationService {
         if (taskTitle.isEmpty || outcome.isEmpty) {
           continue;
         }
+        // "Did you smoke?" answers are a separate vocabulary and route to
+        // _typeTaskConfirm — mixing them into the task-start switch below
+        // would mis-map a smoked/not-smoked answer onto accept/decline and
+        // invert what the learning engine records.
+        if (outcome == 'smoked_yes' || outcome == 'smoked_no') {
+          _dispatchTaskAction({
+            'type': _typeTaskConfirm,
+            'taskTitle': taskTitle,
+            'canonicalTitle': taskTitle,
+            'actionId': outcome == 'smoked_yes'
+                ? _actionConfirmSmokedYes
+                : _actionConfirmSmokedNo,
+          });
+          continue;
+        }
         // The overlay now offers the same four answers the notification
         // does. Previously anything that wasn't "done" collapsed into
         // "postpone", so a decline recorded through the overlay was scored
@@ -1399,10 +1414,15 @@ class NotificationService {
           : (payload['taskTitle'] ?? '');
       if (actionId.isEmpty) {
         await _openHistoryBeforeOverlay(allowNavigation);
-        await AndroidWatchdogService.showInfoOverlayFromNotification(
+        // Must offer the real Evet/Hayır answer, not just an acknowledgment
+        // — this notification asks a question the user still has to answer,
+        // same as tapping one of its own action buttons would.
+        await AndroidWatchdogService.showConfirmOverlayFromNotification(
           title: _text(code, 'taskConfirmQuestionTitle'),
           body: _text(code, 'taskConfirmQuestion'),
-          dismissLabel: _text(code, 'doneShort'),
+          yesLabel: _text(code, 'taskConfirmYesLabel'),
+          noLabel: _text(code, 'taskConfirmNoLabel'),
+          taskTitle: canonicalTitle,
         );
         return;
       }
