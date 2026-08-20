@@ -884,7 +884,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  static const int _undeliveredTaskReliabilityThreshold = 3;
+  // Was 3 — dropped to 1 because the registration-time prompt (see
+  // _completeRegistration) is easy to dismiss without reading on a first
+  // run, and by the time 3 tasks had silently gone undelivered the user had
+  // typically already concluded the app doesn't work. A single undelivered
+  // task is itself the signal worth acting on immediately, not a threshold
+  // to wait past.
+  static const int _undeliveredTaskReliabilityThreshold = 1;
   static const String _lastReliabilityPromptDateKey =
       'last_reliability_prompt_date';
 
@@ -1947,6 +1953,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       await _loadHomeMetrics();
       await _offerInitialCloudBackup();
 
+      if (!mounted) {
+        return;
+      }
+
+      // The single moment the user has just committed to being tracked even
+      // when they forget to open the app — the whole premise of the coach
+      // program. On a known-aggressive OEM, that promise silently breaks
+      // the first time the background service gets killed, and until now
+      // this prompt only ever surfaced reactively (3 missed tasks in, or by
+      // opening a feature that happens to need it) — often long after the
+      // user had already concluded the app "doesn't work". Asking once,
+      // right here, is the earliest point that context makes sense.
+      await maybePromptBackgroundReliability(
+        context: context,
+        deviceCompatibilityService: DeviceCompatibilityService(),
+      );
       if (!mounted) {
         return;
       }
