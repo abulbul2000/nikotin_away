@@ -47,6 +47,7 @@ import '../services/google_auth_service.dart';
 import '../services/feature_access.dart';
 import '../services/task_assignment_service.dart';
 import '../widgets/background_reliability_prompt.dart';
+import '../widgets/missing_permission_reminder_prompt.dart';
 import '../widgets/no_smoke_logo.dart';
 import '../widgets/premium_upsell_dialog.dart';
 import '../widgets/quick_action_menu.dart';
@@ -851,7 +852,36 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       await _ensureMentorMessageCadence();
       await _loadSnoringSummary();
       unawaited(_promptBackgroundReliabilityIfTasksUndelivered());
+      unawaited(_promptMissingPermissionIfDue());
     }
+  }
+
+  static const String _lastPermissionReminderDateKey =
+      'last_permission_reminder_date';
+
+  /// At most one Accept/Postpone/Decline permission dialog per day, and
+  /// only ever one permission at a time — [maybePromptMissingPermission]
+  /// itself already skips granted/dismissed/snoozed permissions, this just
+  /// adds the same once-a-day cap [_promptBackgroundReliabilityIfTasksUndelivered]
+  /// uses so returning users aren't asked again every single launch.
+  Future<void> _promptMissingPermissionIfDue() async {
+    final today = DateTime.now();
+    final todayKey =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final lastShownKey = await _storageService.loadSetting(
+      _lastPermissionReminderDateKey,
+    );
+    if (lastShownKey == todayKey) {
+      return;
+    }
+    await _storageService.saveSetting(_lastPermissionReminderDateKey, todayKey);
+    if (!mounted) {
+      return;
+    }
+    await maybePromptMissingPermission(
+      context: context,
+      storageService: _storageService,
+    );
   }
 
   static const int _undeliveredTaskReliabilityThreshold = 3;

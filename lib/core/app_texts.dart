@@ -840,6 +840,10 @@ class AppTexts {
     'permissionBackgroundPurpose':
         'Neden: Uygulamanın pil optimizasyonundan muaf tutulması, arka plan özelliklerinin güvenilir çalışmasını sağlar.',
     'permissionBackgroundOpenSettingsAction': 'Arka Plan Ayarlarını Ac',
+    'permissionReminderActionAccept': 'Kabul Et',
+    'permissionReminderActionPostpone': 'Ertele',
+    'permissionReminderActionDecline': 'Reddet',
+    'permissionReminderDontShowAgain': 'Bir daha gösterme',
     'settingsCoachModeRow': 'Koçluk Modu',
     'settingsCoachModeRowSubtitle':
         'Sana ne kadar sık ve ne kadar zorlayıcı destek olsun',
@@ -2802,6 +2806,10 @@ class AppTexts {
     'permissionBackgroundPurpose':
         'Why: exempting the app from battery optimization keeps background features working reliably.',
     'permissionBackgroundOpenSettingsAction': 'Open Background Settings',
+    'permissionReminderActionAccept': 'Accept',
+    'permissionReminderActionPostpone': 'Postpone',
+    'permissionReminderActionDecline': 'Decline',
+    'permissionReminderDontShowAgain': "Don't show again",
     'settingsCoachModeRow': 'Coach Mode',
     'settingsCoachModeRowSubtitle':
         'How often and how firmly the app should push you',
