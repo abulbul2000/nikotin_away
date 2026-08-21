@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vector_math/vector_math_64.dart';
 
 /// Floating quick-action control. It remains a compact butterfly when idle,
 /// shows the chained logo while moving, and remembers its snapped edge/height.
@@ -174,8 +175,10 @@ class _ButterflyArtwork extends StatelessWidget {
           child: Transform(
             alignment: Alignment.center,
             transform: Matrix4.identity()
-              ..translate(isRight ? -96.0 : -20.0)
-              ..scale(isRight ? 1.0 : -1.0, 1.0),
+              ..translateByVector3(
+                Vector3(isRight ? -96.0 : -20.0, 0.0, 0.0),
+              )
+              ..scaleByVector3(Vector3(isRight ? 1.0 : -1.0, 1.0, 1.0)),
             child: SizedBox(
               width: 180,
               height: 180,
