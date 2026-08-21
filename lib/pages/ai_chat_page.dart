@@ -479,43 +479,51 @@ class _AIChatPageState extends State<AIChatPage> {
     }
 
     final locale = await _resolveListeningLocale();
-    if (locale == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.t('aiChatMicUnavailable'))),
-      );
-      return;
-    }
     if (!mounted) return;
     _textBeforeListening = _controller.text;
     setState(() => _listening = true);
-    await _speech.listen(
-      onResult: (result) {
-        // Only use final results or non-empty partial results to avoid
-        // flickering the input with empty strings.
-        if (!result.finalResult && result.recognizedWords.trim().isEmpty) {
-          return;
-        }
-        final separator = _textBeforeListening.isEmpty ? '' : ' ';
-        final combined =
-            '$_textBeforeListening$separator${result.recognizedWords}';
-        _controller.text = combined;
-        _controller.selection = TextSelection.collapsed(
-          offset: combined.length,
-        );
-      },
-      listenOptions: SpeechListenOptions(
-        // A short pause ended recognition while users were still speaking.
-        listenFor: const Duration(seconds: 120),
-        pauseFor: const Duration(seconds: 8),
-        partialResults: true,
-        cancelOnError: true,
-        listenMode: ListenMode.confirmation,
-        localeId: locale,
-      ),
-    );
+    try {
+      await _speech.listen(
+        onResult: (result) {
+          // Only use final results or non-empty partial results to avoid
+          // flickering the input with empty strings.
+          if (!result.finalResult && result.recognizedWords.trim().isEmpty) {
+            return;
+          }
+          final separator = _textBeforeListening.isEmpty ? '' : ' ';
+          final combined =
+              '$_textBeforeListening$separator${result.recognizedWords}';
+          _controller.text = combined;
+          _controller.selection = TextSelection.collapsed(
+            offset: combined.length,
+          );
+        },
+        listenOptions: SpeechListenOptions(
+          // A short pause ended recognition while users were still speaking.
+          listenFor: const Duration(seconds: 120),
+          pauseFor: const Duration(seconds: 8),
+          partialResults: true,
+          cancelOnError: true,
+          listenMode: ListenMode.confirmation,
+          localeId: locale,
+        ),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('[AIChat] Speech listen failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      if (!mounted) return;
+      setState(() => _listening = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.t('aiChatMicUnavailable')),
+          action: SnackBarAction(
+            label: context.t('openSettings'),
+            onPressed: () => ph.openAppSettings(),
+          ),
+        ),
+      );
+    }
   }
-
   /// Picks a listening locale the device speech engine actually supports.
   /// Returns null instead of selecting a different language.
   Future<String?> _resolveListeningLocale() async {
