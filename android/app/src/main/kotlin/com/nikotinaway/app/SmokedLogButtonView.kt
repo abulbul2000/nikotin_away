@@ -199,12 +199,12 @@ class SmokedLogButtonView(
         // (x=0 or x=screenWidth-buttonWidth, no margin), so the mark is
         // drawn across the view's full area either way — nothing needs to
         // be pushed toward one side or clipped to fake an off-screen half.
-        // At rest (not dragging) only the butterfly quadrant of the source
-        // asset is sampled — the chain reads as clutter sitting on top of
-        // whatever app is underneath. Dragging shows the full asset (chain
-        // included), since that's the moment the user is deliberately
-        // looking at the control rather than glancing past it.
-        val markSrc = if (dragging) null else butterflyOnlySrc
+        // The chain is intentionally never drawn in the overlay. It was
+        // useful in the original artwork, but it makes the edge-snapped
+        // control much more intrusive and contradicts the compact-button
+        // behavior. The full chain is therefore excluded while resting and
+        // while dragging; dragging changes only the position, not the art.
+        val markSrc = butterflyOnlySrc
         if (facingRight) {
             canvas.drawBitmap(mark, markSrc, markRect, markPaint)
         } else {
