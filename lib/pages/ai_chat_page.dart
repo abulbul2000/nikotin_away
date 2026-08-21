@@ -668,23 +668,31 @@ class _AIChatPageState extends State<AIChatPage> {
       });
       await _persistHistory();
       await _speakAssistantReply(result.reply);
-    } on AiSubscriptionRequiredException {
+    } on AiSubscriptionRequiredException catch (error, stackTrace) {
+      debugPrint('[AIChat] Subscription required: $error');
+      debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const SubscriptionGatePage()),
       );
       return;
-    } on AiDailyLimitReachedException {
+    } on AiDailyLimitReachedException catch (error, stackTrace) {
+      debugPrint('[AIChat] Daily limit reached: $error');
+      debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(context.t('aiChatDailyLimitReached'))),
       );
-    } on AiAuthRequiredException {
+    } on AiAuthRequiredException catch (error, stackTrace) {
+      debugPrint('[AIChat] Auth required: $error');
+      debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.t('aiChatAuthNotReady'))));
-    } on AiServiceException catch (e) {
+    } on AiServiceException catch (e, stackTrace) {
+      debugPrint('[AIChat] Service failure: ${e.message}');
+      debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
       // Show the actual error reason instead of a generic failure message —
       // this makes network / region / server issues visible to the user.
@@ -695,7 +703,9 @@ class _AIChatPageState extends State<AIChatPage> {
           duration: const Duration(seconds: 5),
         ),
       );
-    } on TimeoutException {
+    } on TimeoutException catch (error, stackTrace) {
+      debugPrint('[AIChat] Request timed out: $error');
+      debugPrintStack(stackTrace: stackTrace);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
