@@ -369,7 +369,9 @@ class DisciplineProtocolService {
     // feel achievable for a struggling user and progressively stronger for a
     // user who is ready to extend the smoke-free interval.
     final difficulty = state.difficultyLevel.clamp(1, 10).toDouble();
-    final difficultyFactor = 0.94 + ((difficulty - 1) / 9 * 0.12);
+    // The initial state must preserve the survey-derived barrier exactly;
+    // only learned progress moves it above that baseline.
+    final difficultyFactor = 1.0 + ((difficulty - 1) / 9 * 0.12);
     final learnedBaseMinutes = max(
       SmokingIntervalService.minBarrierMinutes,
       (barrierMinutes * difficultyFactor).round() + progressionBonus,
