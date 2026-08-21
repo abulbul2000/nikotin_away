@@ -196,28 +196,31 @@ class SmokedLogButtonView(
         bounds.set(inset, inset, width - inset, height - inset)
 
         val markInset = dp(14f)
-        val markRect = RectF(markInset, markInset, width - markInset, height - markInset)
         val activeMark = if (dragging) chainMark else compactMark
         val activeSrc = if (dragging) chainSrc else compactSrc
         val sourceAspect = activeSrc.width().toFloat() /
             activeSrc.height().toFloat()
-        val fittedWidth = minOf(markRect.width(), markRect.height() * sourceAspect)
-        val fittedHeight = minOf(markRect.height(), markRect.width() / sourceAspect)
+        val availableWidth = width - markInset * 2f
+        val availableHeight = height - markInset * 2f
+        val fittedWidth = minOf(availableWidth, availableHeight * sourceAspect)
+        val fittedHeight = minOf(availableHeight, availableWidth / sourceAspect)
+        // The right-edge case is mirrored below. Its source destination must
+        // therefore start at the left side too; the canvas flip moves it to
+        // the physical right edge without introducing an inset.
+        val centerX = if (dragging) width / 2f else fittedWidth / 2f
         val markDest = RectF(
-            markRect.centerX() - fittedWidth / 2f,
-            markRect.centerY() - fittedHeight / 2f,
-            markRect.centerX() + fittedWidth / 2f,
-            markRect.centerY() + fittedHeight / 2f,
+            centerX - fittedWidth / 2f,
+            height / 2f - fittedHeight / 2f,
+            centerX + fittedWidth / 2f,
+            height / 2f + fittedHeight / 2f,
         )
 
-        // The window is parked flush against whichever edge it's snapped to
-        // (x=0 or x=screenWidth-buttonWidth, no margin), so the mark is
-        // drawn across the view's full area either way — nothing needs to
-        // be pushed toward one side or clipped to fake an off-screen half.
-        // At rest the compact asset keeps the edge-snapped control small.
-        // While dragging, show the original chain so the movement still
-        // carries the complete logo identity. Each source uses its own
-        // aspect ratio, so neither state stretches the artwork.
+        // The window is parked flush against the screen edge. At rest, align
+        // the compact butterfly to that same physical edge so hiding the
+        // chain does not leave the old chain area as an empty gap. During a
+        // drag, center the complete chain logo inside the touchable window.
+        // Each source uses its own aspect ratio, so neither state stretches
+        // the artwork.
         if (facingRight) {
             canvas.drawBitmap(activeMark, activeSrc, markDest, markPaint)
         } else {
