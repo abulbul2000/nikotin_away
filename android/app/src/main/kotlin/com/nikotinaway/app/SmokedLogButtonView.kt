@@ -38,20 +38,14 @@ class SmokedLogButtonView(
         clipToOutline = false
     }
 
-    private val mark = BitmapFactory.decodeResource(resources, R.drawable.smoked_log_mark)
-
-    /// The source asset is a single square bitmap with the butterfly in its
-    /// upper-right region and the broken chain trailing off to the lower-left.
-    /// BitmapFactory may scale a drawable according to the device density, so
-    /// a fixed source-pixel boundary is unsafe: on some phones it includes
-    /// part of the chain again. Keep the crop proportional to the decoded
-    /// bitmap width so every density uses the same visual boundary.
-    private val butterflyOnlySrc = Rect(
-        (mark.width * 0.55f).toInt(),
-        0,
-        mark.width,
-        mark.height,
+    // This asset is pre-cropped from the original artwork. Keeping the
+    // chain out of the bitmap itself is safer than asking Canvas to stretch
+    // a source sub-rectangle at runtime, which distorted the butterfly.
+    private val mark = BitmapFactory.decodeResource(
+        resources,
+        R.drawable.smoked_log_butterfly,
     )
+    private val butterflyOnlySrc = Rect(0, 0, mark.width, mark.height)
 
     private val markPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         alpha = RESTING_ALPHA
@@ -198,6 +192,16 @@ class SmokedLogButtonView(
 
         val markInset = dp(14f)
         val markRect = RectF(markInset, markInset, width - markInset, height - markInset)
+        val sourceAspect = butterflyOnlySrc.width().toFloat() /
+            butterflyOnlySrc.height().toFloat()
+        val fittedWidth = minOf(markRect.width(), markRect.height() * sourceAspect)
+        val fittedHeight = minOf(markRect.height(), markRect.width() / sourceAspect)
+        val markDest = RectF(
+            markRect.centerX() - fittedWidth / 2f,
+            markRect.centerY() - fittedHeight / 2f,
+            markRect.centerX() + fittedWidth / 2f,
+            markRect.centerY() + fittedHeight / 2f,
+        )
 
         // The window is parked flush against whichever edge it's snapped to
         // (x=0 or x=screenWidth-buttonWidth, no margin), so the mark is
@@ -210,11 +214,11 @@ class SmokedLogButtonView(
         // while dragging; dragging changes only the position, not the art.
         val markSrc = butterflyOnlySrc
         if (facingRight) {
-            canvas.drawBitmap(mark, markSrc, markRect, markPaint)
+            canvas.drawBitmap(mark, markSrc, markDest, markPaint)
         } else {
             canvas.save()
             canvas.scale(-1f, 1f, width / 2f, height / 2f)
-            canvas.drawBitmap(mark, markSrc, markRect, markPaint)
+            canvas.drawBitmap(mark, markSrc, markDest, markPaint)
             canvas.restore()
         }
     }
