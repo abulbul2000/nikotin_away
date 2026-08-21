@@ -1363,7 +1363,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       return;
     }
 
-    if (!isRetry) {
+    final pendingMandatoryTask =
+        await _storageService.loadPendingMandatoryTask();
+
+    if (!isRetry && pendingMandatoryTask == null) {
       final lastShownAt = await _storageService.loadLastMandatoryGateShownAt();
       if (lastShownAt != null &&
           DateTime.now().difference(lastShownAt) < _mandatoryGateCooldown) {
@@ -1395,6 +1398,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     // fake-call-style screen for a task that was never meant to fire yet.
     final now = DateTime.now();
     String? taskTitle;
+    final pendingCanonicalTitle =
+        pendingMandatoryTask?['canonicalTitle']?.trim();
+    if (pendingCanonicalTitle != null &&
+        pendingCanonicalTitle.isNotEmpty &&
+        _todaysTasks.contains(pendingCanonicalTitle)) {
+      taskTitle = pendingCanonicalTitle;
+    }
     if ((taskTitle ?? '').isEmpty) {
       for (final task in _todaysTasks) {
         if ((_taskStates[task] ?? 'new') != 'new') {
@@ -1416,6 +1426,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
 
     _mandatoryTaskShown = true;
+    // Consume the durable tap only after the task was found and the app is
+    // ready to present it. The in-memory guard prevents a second presentation
+    // from the resume signal in the same session.
+    if (pendingMandatoryTask != null) {
+      await _storageService.clearPendingMandatoryTask();
+    }
     // Guarded non-null by the empty-check above.
     await _protocolViolationService.logMandatoryGateShown(
       taskTitle: taskTitle!,

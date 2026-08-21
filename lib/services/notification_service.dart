@@ -1483,6 +1483,15 @@ class NotificationService {
 
       final actionId = response.actionId ?? '';
       if (actionId.isEmpty) {
+        // Persist before trying to notify HomePage. The broadcast stream below
+        // is only an acceleration path; during a cold start SplashPage may
+        // still be routing and there may be no listener yet.
+        await StorageService().savePendingMandatoryTask(
+          taskTitle: payload['taskTitle'] ?? '',
+          canonicalTitle: payload['canonicalTitle'] ?? payload['taskTitle'] ?? '',
+          watchdogId: watchdogId,
+          notificationId: payload['notificationId'],
+        );
         // A body tap brings the app to the foreground (cold start shows the
         // regular home screen first) and shows MandatoryTaskPage on top of
         // it, in-app, rather than the old cross-app WindowManager overlay.

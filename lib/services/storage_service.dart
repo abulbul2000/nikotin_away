@@ -2095,8 +2095,50 @@ class StorageService {
   }
 
   static const String _missedTaskTitleKey = 'missed_task_title';
+  static const String _pendingMandatoryTaskKey = 'pending_mandatory_task';
   static const String _adaptiveObservationStartedAtKey =
       'adaptive_observation_started_at';
+
+  /// Persists a task-start notification tap until HomePage and its task plan
+  /// are ready. A broadcast stream alone can lose this event during a cold
+  /// start while SplashPage is still routing.
+  Future<void> savePendingMandatoryTask({
+    required String taskTitle,
+    String? canonicalTitle,
+    String? watchdogId,
+    String? notificationId,
+  }) async {
+    await saveSetting(
+      _pendingMandatoryTaskKey,
+      jsonEncode({
+        'taskTitle': taskTitle,
+        'canonicalTitle': canonicalTitle ?? taskTitle,
+        'watchdogId': watchdogId ?? '',
+        'notificationId': notificationId ?? '',
+        'queuedAt': DateTime.now().toIso8601String(),
+      }),
+    );
+  }
+
+  Future<Map<String, String>?> loadPendingMandatoryTask() async {
+    final raw = await loadSetting(_pendingMandatoryTaskKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return null;
+      final taskTitle = decoded['taskTitle']?.toString().trim() ?? '';
+      if (taskTitle.isEmpty) return null;
+      return decoded.map(
+        (key, value) => MapEntry(key.toString(), value?.toString() ?? ''),
+      ).cast<String, String>();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> clearPendingMandatoryTask() async {
+    await saveSetting(_pendingMandatoryTaskKey, '');
+  }
 
   /// Returns the moment the app first became eligible to collect adaptive
   /// planning data. Existing installs are initialized on their next HomePage
