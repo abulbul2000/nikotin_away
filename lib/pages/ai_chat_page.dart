@@ -1050,57 +1050,60 @@ class _AIChatPageState extends State<AIChatPage> {
     await _persistConversations();
   }
 
-  Future<void> _showConversationMenu(
-    _ChatConversation conversation,
-    BuildContext rowContext,
-  ) async {
-    final rowBox = rowContext.findRenderObject() as RenderBox?;
-    final overlayBox = Overlay.of(context).context.findRenderObject() as RenderBox?;
-    if (rowBox == null || overlayBox == null) return;
-    final topLeft = rowBox.localToGlobal(Offset.zero, ancestor: overlayBox);
-    final position = RelativeRect.fromLTRB(
-      topLeft.dx,
-      topLeft.dy,
-      overlayBox.size.width - topLeft.dx - rowBox.size.width,
-      overlayBox.size.height - topLeft.dy - rowBox.size.height,
-    );
-    final action = await showMenu<String>(
+  Future<void> _showConversationMenu(_ChatConversation conversation) async {
+    final action = await showModalBottomSheet<String>(
       context: context,
-      position: position,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      items: [
-        PopupMenuItem(
-          value: 'pin',
-          child: _menuItem(
-            Icons.push_pin_outlined,
-            context.t(conversation.pinned ? 'aiChatMenuUnpin' : 'aiChatMenuPin'),
-          ),
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.push_pin_outlined),
+              title: Text(
+                context.t(
+                  conversation.pinned ? 'aiChatMenuUnpin' : 'aiChatMenuPin',
+                ),
+              ),
+              onTap: () => Navigator.pop(sheetContext, 'pin'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: Text(context.t('aiChatMenuRename')),
+              onTap: () => Navigator.pop(sheetContext, 'rename'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy_outlined),
+              title: Text(context.t('aiChatMenuCopy')),
+              onTap: () => Navigator.pop(sheetContext, 'copy'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.summarize_outlined),
+              title: Text(context.t('aiChatMenuSummary')),
+              onTap: () => Navigator.pop(sheetContext, 'summary'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.ios_share_outlined),
+              title: Text(context.t('aiChatMenuShare')),
+              onTap: () => Navigator.pop(sheetContext, 'share'),
+            ),
+            ListTile(
+              leading: Icon(
+                Icons.delete_outline,
+                color: Theme.of(sheetContext).colorScheme.error,
+              ),
+              title: Text(
+                context.t('aiChatMenuDelete'),
+                style: TextStyle(color: Theme.of(sheetContext).colorScheme.error),
+              ),
+              onTap: () => Navigator.pop(sheetContext, 'delete'),
+            ),
+          ],
         ),
-        PopupMenuItem(
-          value: 'rename',
-          child: _menuItem(Icons.edit_outlined, context.t('aiChatMenuRename')),
-        ),
-        PopupMenuItem(
-          value: 'copy',
-          child: _menuItem(Icons.copy_outlined, context.t('aiChatMenuCopy')),
-        ),
-        PopupMenuItem(
-          value: 'summary',
-          child: _menuItem(Icons.summarize_outlined, context.t('aiChatMenuSummary')),
-        ),
-        PopupMenuItem(
-          value: 'share',
-          child: _menuItem(Icons.ios_share_outlined, context.t('aiChatMenuShare')),
-        ),
-        PopupMenuItem(
-          value: 'delete',
-          child: _menuItem(
-            Icons.delete_outline,
-            context.t('aiChatMenuDelete'),
-            destructive: true,
-          ),
-        ),
-      ],
+      ),
     );
     switch (action) {
       case 'pin':
@@ -1180,7 +1183,7 @@ class _AIChatPageState extends State<AIChatPage> {
                           key: ValueKey('ai_conversation_${conversation.id}'),
                           behavior: HitTestBehavior.opaque,
                           onLongPress: () =>
-                              _showConversationMenu(conversation, context),
+                              _showConversationMenu(conversation),
                           child: ListTile(
                             selected: selected,
                             leading: Icon(
