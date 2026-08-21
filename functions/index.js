@@ -13,9 +13,14 @@ const db = getFirestore();
 // Provider keys are stored as Firebase Secrets (never in source code or the Flutter app).
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 
-// This flag must be true only in the separate development Firebase project.
-// Production must keep it false. The Flutter debug client also sends debugClient=true.
-const DEBUG_AI_BYPASS = process.env.AI_DEBUG_BYPASS === "true";
+// The bypass is available only to the dedicated development project and only
+// when the caller is also a Flutter debug client. The explicit env flag remains
+// supported for local emulators, but a production project can never enable the
+// bypass accidentally by inheriting a shared environment variable.
+const DEVELOPMENT_PROJECT_ID = "nikotin-away-development-eb94d";
+const DEBUG_AI_BYPASS =
+  process.env.AI_DEBUG_BYPASS === "true" ||
+  process.env.GCLOUD_PROJECT === DEVELOPMENT_PROJECT_ID;
 
 // Claims purchaseToken for uid, atomically. A Play purchase token identifies
 // one specific purchase — legitimately it should only ever belong to the
