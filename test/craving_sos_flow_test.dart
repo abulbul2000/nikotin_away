@@ -169,7 +169,15 @@ void main() {
       // _resolveActiveTask kicked off in initState, so it doesn't matter
       // that Dismiss was tapped immediately -- give it real wall-clock
       // time to actually resolve under LiveTestWidgetsFlutterBinding.
-      await tester.pump(const Duration(milliseconds: 300));
+      // FFI database resolution can take longer when the whole widget suite
+      // is running. Wait for the actual state transition instead of assuming
+      // one 300 ms pump is always enough; the timeout still catches a real
+      // routing regression.
+      final resumedButton =
+          find.byKey(const ValueKey('sos_barrier_resumed_button'));
+      for (var i = 0; i < 20 && resumedButton.evaluate().isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       // The barrier was running, so this must land on the "resumed"
       // screen (a single "keep going" continuation), never the
