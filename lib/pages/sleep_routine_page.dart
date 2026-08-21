@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
+import '../services/sleep_intelligence_service.dart';
 import '../services/sleep_routine_flow_engine.dart';
 import '../services/storage_service.dart';
 import '../services/task_assignment_service.dart';
@@ -40,6 +41,7 @@ class _SleepRoutinePageState extends State<SleepRoutinePage> {
 
   List<SleepRoutineStep>? _steps;
   int _currentStepIndex = 0;
+  TimeOfDay? _nextDayWakeTime;
 
   @override
   void initState() {
@@ -62,6 +64,68 @@ class _SleepRoutinePageState extends State<SleepRoutinePage> {
     final steps = _steps;
     if (steps == null || _currentStepIndex >= steps.length - 1) return;
     setState(() => _currentStepIndex += 1);
+  }
+
+  Future<void> _saveNextDayWakeTime() async {
+    final selected = _nextDayWakeTime;
+    if (selected == null) return;
+    final nextDay = DateTime.now().add(const Duration(days: 1));
+    await _storage.saveWakeTimeForDate(date: nextDay, wakeTime: selected);
+    await SleepIntelligenceService(storageService: _storage)
+        .scheduleMorningReportForDate(nextDay);
+    if (!mounted) return;
+    _advanceStep();
+  }
+
+  Future<void> _pickNextDayWakeTime() async {
+    final stored = await _storage.loadWakeTimeForDate(
+      DateTime.now().add(const Duration(days: 1)),
+    );
+    if (!mounted) return;
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: _nextDayWakeTime ?? stored ?? const TimeOfDay(hour: 7, minute: 0),
+      helpText: context.t('wakeTime'),
+    );
+    if (selected != null && mounted) {
+      setState(() => _nextDayWakeTime = selected);
+    }
+  }
+
+  Widget _buildNextDayWakeTimeStep() {
+    final selected = _nextDayWakeTime;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            context.t('wakeTime'),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Yarın ne zaman uyanmayı planlıyorsun?',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 28),
+          OutlinedButton.icon(
+            onPressed: _pickNextDayWakeTime,
+            icon: const Icon(Icons.schedule),
+            label: Text(
+              selected == null ? context.t('wakeTime') : selected.format(context),
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: selected == null ? null : _saveNextDayWakeTime,
+            child: Text(context.t('continue')),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _closeReport() async {
@@ -130,6 +194,8 @@ class _SleepRoutinePageState extends State<SleepRoutinePage> {
         );
       case SleepRoutineStep.coughTest:
         return CoughTestPage(onFinishRequested: _advanceStep);
+      case SleepRoutineStep.nextDayWakeTime:
+        return _buildNextDayWakeTimeStep();
       case SleepRoutineStep.dailyReport:
         return DailyProgressReportView(
           storageService: _storage,

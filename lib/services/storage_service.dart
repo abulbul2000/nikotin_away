@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' show max, min;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -2092,6 +2093,41 @@ class StorageService {
       return null;
     }
     return rows.first['value'] as String;
+  }
+
+  static const String _wakeTimeByDatePrefix = 'sleep_wake_time:';
+
+  String _wakeTimeKey(DateTime date) {
+    final day = DateTime(date.year, date.month, date.day);
+    final isoDay = day.toIso8601String().substring(0, 10);
+    return '$_wakeTimeByDatePrefix$isoDay';
+  }
+
+  /// Stores the planned wake-up time for one calendar day as `HH:mm`.
+  /// Keeping the date in the key allows different weekday/weekend schedules
+  /// without changing the existing settings schema.
+  Future<void> saveWakeTimeForDate({
+    required DateTime date,
+    required TimeOfDay wakeTime,
+  }) async {
+    final normalized = DateTime(2000, 1, 1, wakeTime.hour, wakeTime.minute);
+    await saveSetting(
+      _wakeTimeKey(date),
+      '${normalized.hour.toString().padLeft(2, '0')}:${normalized.minute.toString().padLeft(2, '0')}',
+    );
+  }
+
+  Future<TimeOfDay?> loadWakeTimeForDate(DateTime date) async {
+    final raw = await loadSetting(_wakeTimeKey(date));
+    if (raw == null) return null;
+    final parts = raw.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null || hour > 23 || minute > 59) {
+      return null;
+    }
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   static const String _missedTaskTitleKey = 'missed_task_title';

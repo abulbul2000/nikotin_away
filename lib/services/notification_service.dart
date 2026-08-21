@@ -178,6 +178,9 @@ class NotificationService {
   static const String _typeWeeklySurvey = 'weekly_survey';
   static const String _typeHealthTip = 'health_tip';
   static const String _typeMedicationReminder = 'medication_reminder';
+  static const String _typeSleepReport = 'sleep_report';
+  static const int _sleepReportNotificationId = 1600001;
+  static const String _sleepReportChannelId = 'sleep_report_channel_v1';
 
   /// "Kabul Et" — starts the no-smoking window. Kept under its original id so
   /// notifications already scheduled on a user's device still resolve after
@@ -369,6 +372,56 @@ class NotificationService {
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: jsonEncode({'type': _typeTaskConfirm, 'taskTitle': taskTitle}),
     );
+  }
+
+  /// Schedules the automated morning Sleep Intelligence report one hour after
+  /// the planned wake-up time. A single stable id means the latest evening
+  /// answer replaces an older plan instead of stacking duplicate reports.
+  static Future<void> scheduleSleepReportNotification({
+    required DateTime wakeAt,
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final scheduleMode = await _resolveAndroidScheduleMode();
+    final fireAt = tz.TZDateTime.from(
+      wakeAt.add(const Duration(hours: 1)),
+      tz.local,
+    );
+    if (!fireAt.isAfter(tz.TZDateTime.now(tz.local))) {
+      return;
+    }
+    await _plugin.cancel(_sleepReportNotificationId);
+    await _zonedSchedule(
+      _sleepReportNotificationId,
+      _text(code, 'sleepRoutineReportTitle'),
+      _text(code, 'sleepRoutineCommand'),
+      fireAt,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _sleepReportChannelId,
+          _text(code, 'sleepRoutineReportTitle'),
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          enableVibration: true,
+          category: AndroidNotificationCategory.alarm,
+          visibility: NotificationVisibility.private,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: scheduleMode,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: jsonEncode({
+        'type': _typeSleepReport,
+        'notificationId': '$_sleepReportNotificationId',
+        'reportDate': wakeAt.toIso8601String(),
+      }),
+    );
+  }
+
+  static Future<void> cancelSleepReportNotification() async {
+    await _plugin.cancel(_sleepReportNotificationId);
   }
 
   /// Stable per-task ids so a re-issued prompt replaces its predecessor
@@ -1394,6 +1447,24 @@ class NotificationService {
       await AndroidWatchdogService.showInfoOverlayFromNotification(
         title: _text(code, 'notificationsPageTitle'),
         body: payload['body'] ?? _text(code, 'notificationsEmpty'),
+        dismissLabel: _text(code, 'doneShort'),
+      );
+      return;
+    }
+
+    if (type == _typeSleepReport) {
+      await _openHistoryBeforeOverlay(allowNavigation);
+      final report = await StorageService().buildDailyProgressReport();
+      final body = [
+        'Bugün içilen sigara: ${report.todaySmokedCount}',
+        'Son 7 gün görev başarısı: ${(report.taskSuccessRateLast7Days * 100).round()}%',
+        'Mevcut hedef aralığı: ${report.currentBarrierMinutes} dakika',
+        if (report.breathTrend != null && report.breathTrend!.isNotEmpty)
+          'Nefes eğilimi: ${report.breathTrend}',
+      ].join('\n');
+      await AndroidWatchdogService.showInfoOverlayFromNotification(
+        title: _text(code, 'sleepRoutineReportTitle'),
+        body: body,
         dismissLabel: _text(code, 'doneShort'),
       );
       return;

@@ -1,5 +1,8 @@
+import 'package:flutter/material.dart';
+
 import 'sleep_probe_service.dart';
 import 'snoring_detection_service.dart';
+import 'notification_service.dart';
 import 'storage_service.dart';
 
 /// Orchestrates the opt-in Sleep Intelligence feature: turning it on/off
@@ -54,6 +57,32 @@ class SleepIntelligenceService {
       wakeTime: effective.wakeTime ?? fallbackWake,
       bufferMinutes: learned ? 30 : _windowBufferMinutes,
     );
+    await scheduleMorningReportForDate(DateTime.now().add(const Duration(days: 1)));
+  }
+
+  /// Schedules tomorrow's report from the day-specific answer collected in
+  /// the evening routine. The legacy profile wake time remains a safe fallback
+  /// for existing users who have not completed the new question yet.
+  Future<void> scheduleMorningReportForDate(DateTime date) async {
+    if (!await isEnabled()) return;
+    final stored = await _storageService.loadWakeTimeForDate(date);
+    final rawFallback = await _storageService.loadSetting('wake_time') ?? '07:00';
+    final parts = rawFallback.split(':');
+    final fallbackHour = int.tryParse(parts.first) ?? 7;
+    final fallbackMinute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    final wake = stored ??
+        TimeOfDay(
+          hour: fallbackHour.clamp(0, 23).toInt(),
+          minute: fallbackMinute.clamp(0, 59).toInt(),
+        );
+    final wakeAt = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      wake.hour,
+      wake.minute,
+    );
+    await NotificationService.scheduleSleepReportNotification(wakeAt: wakeAt);
   }
 
   Future<void> enable() async {
@@ -66,6 +95,7 @@ class SleepIntelligenceService {
       wakeTime: wakeTimeRaw,
       bufferMinutes: _windowBufferMinutes,
     );
+    await scheduleMorningReportForDate(DateTime.now().add(const Duration(days: 1)));
     // Horlama ölçümü, Uyku Zekâsı'nın aynı gece penceresinin bir parçasıdır;
     // ayrı bir zamanlayıcı veya bağımsız kullanıcı akışı oluşturmaz.
     await _snoringDetectionService.enable();
@@ -113,6 +143,7 @@ class SleepIntelligenceService {
   Future<void> disable() async {
     await _storageService.saveSetting('sleep_intelligence_enabled', '0');
     await SleepProbeService.cancelNightlyProbing();
+    await NotificationService.cancelSleepReportNotification();
     await _snoringDetectionService.disable();
     await _storageService.recordConsentDecision(
       featureKey: 'sleep_intelligence',
