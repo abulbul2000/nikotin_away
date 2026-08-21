@@ -12,7 +12,9 @@ class DisciplineProtocolService {
   /// How far either side of the week's barrier an individual task may land.
   /// Enough that the user can't time the next one off the last, small enough
   /// that every task still stands for the same weekly commitment.
-  static const double _durationJitter = 0.1;
+  // Keep each day's promise recognisable while allowing the learned plan to
+  // move naturally instead of producing the same minute value repeatedly.
+  static const double _durationJitter = 0.18;
 
   double computeSuccessRate({
     required int successCount,
@@ -355,7 +357,23 @@ class DisciplineProtocolService {
     List<(String, String)> blockedWindows = const [],
   }) {
     final successRate = state.movingSuccessRate.clamp(0, 1);
-    final jitterSpan = max(1, (barrierMinutes * _durationJitter).round());
+    final jitterSpan = max(2, (barrierMinutes * _durationJitter).round());
+    // Three consecutive successes earn a small progression step. A failure
+    // or repeated postponement resets the streak in evolveStateFromOutcome,
+    // so this cannot jump straight to a demanding quit-level barrier.
+    final progressionSteps = (state.successStreak ~/ 3).clamp(0, 5);
+    final progressionBonus =
+        (barrierMinutes * 0.03 * progressionSteps).round();
+    // difficultyLevel is learned from outcomes: successes raise it, while
+    // smoked/deferred outcomes ease it. This makes the same weekly barrier
+    // feel achievable for a struggling user and progressively stronger for a
+    // user who is ready to extend the smoke-free interval.
+    final difficulty = state.difficultyLevel.clamp(1, 10).toDouble();
+    final difficultyFactor = 0.94 + ((difficulty - 1) / 9 * 0.12);
+    final learnedBaseMinutes = max(
+      SmokingIntervalService.minBarrierMinutes,
+      (barrierMinutes * difficultyFactor).round() + progressionBonus,
+    );
 
     final moments = generateUnpredictableMoments(
       now: now,
@@ -407,12 +425,12 @@ class DisciplineProtocolService {
                 ? jitterSpan
                 : 0);
       final duration =
-          (barrierMinutes +
+          (learnedBaseMinutes +
                   strainOffset +
                   (_random.nextInt(jitterSpan * 2 + 1) - jitterSpan))
               .clamp(
                 SmokingIntervalService.minBarrierMinutes,
-                barrierMinutes * 2,
+                max(barrierMinutes * 2, learnedBaseMinutes),
               )
               .toInt();
 
@@ -444,7 +462,7 @@ class DisciplineProtocolService {
 
     return AdaptiveTaskPlan(
       targetTaskCount: items.length,
-      baseDurationMinutes: barrierMinutes,
+      baseDurationMinutes: learnedBaseMinutes,
       items: items,
     );
   }

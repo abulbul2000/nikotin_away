@@ -3287,12 +3287,23 @@ class StorageService {
               : DateTime.tryParse(reliefDateRaw),
           minBarrierMinutes: SmokingIntervalService.minBarrierMinutes,
         );
-    final baseTaskCount = _smokingIntervalService.dailyTaskCount(
+    final measuredTaskCount = _smokingIntervalService.dailyTaskCount(
       input: windowInput,
       movingSuccessRate: state.movingSuccessRate,
       movingFailureRate: state.movingFailureRate,
       postponeRate: state.postponeRate,
     );
+    // Blend the window-based estimate with the learned capacity. This keeps
+    // the programme grounded in the user's waking/risk hours while ensuring
+    // repeated real outcomes change the next day's task load instead of being
+    // stored only as unused dashboard statistics.
+    final learnedCapacity = state.dailyTaskCapacity.round();
+    final baseTaskCount = ((measuredTaskCount + learnedCapacity) / 2)
+        .round()
+        .clamp(
+          SmokingIntervalService.minDailyTasks,
+          SmokingIntervalService.maxDailyTasks,
+        );
     // User-facing control, independent of the duration axis:
     // duration_barrier_frequency_preference only ever shifts how many
     // barrier tasks land in the day, never their length — the length comes
