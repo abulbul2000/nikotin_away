@@ -210,6 +210,7 @@ class _AIChatPageState extends State<AIChatPage> {
   final FlutterTts _tts = FlutterTts();
   bool _sending = false;
   bool _listening = false;
+  bool _speechInitialized = false;
   String _textBeforeListening = '';
 
   @override
@@ -442,26 +443,32 @@ class _AIChatPageState extends State<AIChatPage> {
       return;
     }
 
-    // Re-initialize in case the service was stopped after a previous failure.
-    final available = await _speech.initialize(
-      onStatus: (status) {
-        debugPrint('[AIChat] Speech status: $status');
-        if (!mounted) return;
-        if (status == 'notListening' || status == 'done') {
+    // speech_to_text is initialized once per SpeechToText instance. Repeated
+    // initialize calls can make Android report the recognizer as unavailable.
+    var available = _speechInitialized;
+    if (!available) {
+      available = await _speech.initialize(
+        onStatus: (status) {
+          debugPrint('[AIChat] Speech status: $status');
+          if (!mounted) return;
+          if (status == 'notListening' || status == 'done') {
+            setState(() => _listening = false);
+          }
+        },
+        onError: (error) {
+          debugPrint(
+            '[AIChat] Speech error: ${error.errorMsg}, permanent=${error.permanent}',
+          );
+          if (!mounted) return;
           setState(() => _listening = false);
-        }
-      },
-      onError: (error) {
-        debugPrint(
-          '[AIChat] Speech error: ${error.errorMsg}, permanent=${error.permanent}',
-        );
-        if (!mounted) return;
-        setState(() => _listening = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.t('aiChatMicUnavailable'))),
-        );
-      },
-    ).timeout(const Duration(seconds: 10), onTimeout: () => false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.t('aiChatMicUnavailable'))),
+          );
+        },
+      ).timeout(const Duration(seconds: 10), onTimeout: () => false);
+      _speechInitialized = available;
+    }
+    debugPrint('[AIChat] Speech initialized: $available');
     if (!available) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
