@@ -1176,30 +1176,38 @@ class _AIChatPageState extends State<AIChatPage> {
                       itemBuilder: (context, index) {
                         final conversation = _conversations[index];
                         final selected = conversation.id == _activeConversationId;
-                        return ListTile(
-                          selected: selected,
-                          leading: Icon(
-                            conversation.pinned
-                                ? Icons.push_pin
-                                : selected
-                                    ? Icons.chat
-                                    : Icons.chat_bubble_outline,
+                        return GestureDetector(
+                          key: ValueKey('ai_conversation_${conversation.id}'),
+                          behavior: HitTestBehavior.opaque,
+                          onLongPress: () =>
+                              _showConversationMenu(conversation, context),
+                          child: ListTile(
+                            selected: selected,
+                            leading: Icon(
+                              conversation.pinned
+                                  ? Icons.push_pin
+                                  : selected
+                                      ? Icons.chat
+                                      : Icons.chat_bubble_outline,
+                            ),
+                            title: Text(
+                              conversation.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: Text(
+                              context
+                                  .t('aiChatMessageCount')
+                                  .replaceFirst(
+                                    '{count}',
+                                    '${conversation.turns.length}',
+                                  ),
+                            ),
+                            onTap: () {
+                              _selectConversation(conversation);
+                              Navigator.of(context).pop();
+                            },
                           ),
-                          title: Text(
-                            conversation.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          subtitle: Text(
-                            context
-                                .t('aiChatMessageCount')
-                                .replaceFirst('{count}', '${conversation.turns.length}'),
-                          ),
-                          onTap: () {
-                            _selectConversation(conversation);
-                            Navigator.of(context).pop();
-                          },
-                          onLongPress: () => _showConversationMenu(conversation, context),
                         );
                       },
                     ),
