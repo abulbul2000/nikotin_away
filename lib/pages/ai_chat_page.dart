@@ -1133,17 +1133,6 @@ class _AIChatPageState extends State<AIChatPage> {
     }
   }
 
-  Widget _menuItem(IconData icon, String label, {bool destructive = false}) {
-    final color = destructive ? Theme.of(context).colorScheme.error : null;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 20, color: color),
-        const SizedBox(width: 12),
-        Text(label, style: TextStyle(color: color)),
-      ],
-    );
-  }
 
   Widget _buildConversationDrawer(BuildContext context) {
     return Drawer(
