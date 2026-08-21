@@ -507,6 +507,10 @@ class _AIChatPageState extends State<AIChatPage> {
       debugPrint('[AIChat] Starting speech listen');
       await _speech.listen(
         onResult: (result) {
+          debugPrint(
+            '[AIChat] Speech result: "${result.recognizedWords}" '
+            'final=${result.finalResult}',
+          );
           // Only use final results or non-empty partial results to avoid
           // flickering the input with empty strings.
           if (!result.finalResult && result.recognizedWords.trim().isEmpty) {
@@ -526,7 +530,9 @@ class _AIChatPageState extends State<AIChatPage> {
           pauseFor: const Duration(seconds: 8),
           partialResults: true,
           cancelOnError: true,
-          listenMode: ListenMode.confirmation,
+          // Dictation mode is supported by Android speech engines more
+          // consistently than confirmation mode for free-form chat input.
+          listenMode: ListenMode.dictation,
           localeId: locale,
         ),
       );
