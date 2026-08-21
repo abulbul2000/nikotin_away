@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
+
 import '../models/subscription_state.dart';
 import 'subscription_service.dart';
 
@@ -52,6 +54,11 @@ class FeatureAccess {
   /// `hasCompletedInitialSurvey: true` to [SubscriptionService.resolveAccess]
   /// — a caller reachable from HomePage has necessarily finished it.
   Future<bool> canAccess(PremiumFeature feature) async {
+    // The developer build is the intentional local integration environment for
+    // the AI mentor. Keep production builds on the normal subscription path.
+    if (kDebugMode && feature == PremiumFeature.aiMentor) {
+      return true;
+    }
     if (!requiresSubscription(feature)) {
       return true;
     }

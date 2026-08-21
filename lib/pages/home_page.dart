@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -2280,6 +2281,36 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               MaterialPageRoute(builder: (_) => const NotificationsPage()),
             ),
           ),
+        ),
+        PopupMenuButton<String>(
+          key: const ValueKey('home_more_menu'),
+          tooltip: context.t('aiMentorButton'),
+          onSelected: (value) {
+            if (value == 'ai_mentor' && kDebugMode) {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const AIChatPage()),
+              );
+            }
+          },
+          itemBuilder: (context) => [
+            PopupMenuItem<String>(
+              value: 'ai_mentor',
+              enabled: kDebugMode,
+              child: Row(
+                children: [
+                  const Icon(Icons.smart_toy_outlined),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      kDebugMode
+                          ? context.t('aiMentorButton')
+                          : context.t('aiChatDeveloperOnly'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );
