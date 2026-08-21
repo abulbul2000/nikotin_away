@@ -117,7 +117,10 @@ class _DraggableButterflyButtonState extends State<DraggableButterflyButton> {
                     });
                     await _savePosition(height, snappedTop);
                   },
-                  child: _ButterflyArtwork(isDragging: _isDragging),
+                  child: _ButterflyArtwork(
+                    isDragging: _isDragging,
+                    isRight: _isRight,
+                  ),
                 ),
               ),
             ),
@@ -130,8 +133,12 @@ class _DraggableButterflyButtonState extends State<DraggableButterflyButton> {
 
 class _ButterflyArtwork extends StatelessWidget {
   final bool isDragging;
+  final bool isRight;
 
-  const _ButterflyArtwork({required this.isDragging});
+  const _ButterflyArtwork({
+    required this.isDragging,
+    required this.isRight,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -164,11 +171,14 @@ class _ButterflyArtwork extends StatelessWidget {
       ),
       child: ClipOval(
         child: ClipRect(
-          child: Transform.translate(
-            offset: const Offset(-25, 0),
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.identity()
+              ..translate(isRight ? -96.0 : -20.0)
+              ..scale(isRight ? 1.0 : -1.0, 1.0),
             child: SizedBox(
-              width: 115,
-              height: 64,
+              width: 180,
+              height: 180,
               child: Image.asset(
                 'assets/images/no_smoke_logo_transparent.png',
                 fit: BoxFit.contain,
