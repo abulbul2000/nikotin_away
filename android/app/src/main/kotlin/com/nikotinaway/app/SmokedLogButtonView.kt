@@ -40,14 +40,18 @@ class SmokedLogButtonView(
 
     private val mark = BitmapFactory.decodeResource(resources, R.drawable.smoked_log_mark)
 
-    /// The source asset is a single 1920x1920 bitmap with the butterfly in
-    /// its upper-right region and the broken chain trailing off to the
-    /// lower-left. There is no transparent gap between them to crop on, so
-    /// this rect was picked by eye against the asset's actual pixels: wide
-    /// enough to keep the butterfly's full wingspan, tight enough on the
-    /// left edge (x=1050 of 1920) to exclude the chain and every stray
-    /// fracture particle scattered ahead of it.
-    private val butterflyOnlySrc = Rect(1050, 0, mark.width, mark.height)
+    /// The source asset is a single square bitmap with the butterfly in its
+    /// upper-right region and the broken chain trailing off to the lower-left.
+    /// BitmapFactory may scale a drawable according to the device density, so
+    /// a fixed source-pixel boundary is unsafe: on some phones it includes
+    /// part of the chain again. Keep the crop proportional to the decoded
+    /// bitmap width so every density uses the same visual boundary.
+    private val butterflyOnlySrc = Rect(
+        (mark.width * 0.55f).toInt(),
+        0,
+        mark.width,
+        mark.height,
+    )
 
     private val markPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         alpha = RESTING_ALPHA
