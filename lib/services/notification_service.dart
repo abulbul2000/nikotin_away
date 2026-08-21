@@ -743,6 +743,18 @@ class NotificationService {
         onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
       );
       _pluginInitialized = true;
+
+      // A notification tap that launches a terminated Flutter process is not
+      // delivered through onDidReceiveNotificationResponse. Read the launch
+      // details once, otherwise Android brings MainActivity to the foreground
+      // but the mandatory task page is never requested and the watchdog later
+      // reports an unanswered task.
+      final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+      final launchResponse = launchDetails?.notificationResponse;
+      if (launchDetails?.didNotificationLaunchApp == true &&
+          launchResponse != null) {
+        _handleNotificationResponse(launchResponse);
+      }
     }
 
     await _syncWatchdogViolationsFromNative();
