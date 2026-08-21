@@ -38,6 +38,15 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   static final StreamController<Map<String, String>> _taskActionController =
       StreamController<Map<String, String>>.broadcast();
+  // Signals a task-start notification body-tap to HomePage rather than
+  // pushing MandatoryTaskPage directly from here — HomePage's own
+  // _presentMandatoryTaskIfNeeded also opens that page on its own lifecycle
+  // (resume/foreground), and two independent pushes racing each other left
+  // the tap sometimes doing nothing the user could see (see WORK_LIST.md).
+  // A single always-wins source (HomePage, told to skip its own cooldown)
+  // replaces both.
+  static final StreamController<void> _mandatoryTaskRequestController =
+      StreamController<void>.broadcast();
   static GlobalKey<NavigatorState>? _navigatorKey;
 
   static void _pushNotificationRoute(Widget page) {
@@ -223,58 +232,13 @@ class NotificationService {
   /// neutrally when the home screen next refreshes its metrics.
   static const Duration barrierResolutionDeadline = Duration(hours: 2);
 
-  /// The answers a task offers, minus any the user has used up.
-  ///
-  /// Only SOS opens the app. The other three are recorded in the background
-  /// isolate, because a task prompt that yanks the user out of whatever they
-  /// were doing to answer it is its own small punishment for engaging. SOS is
-  /// the exception on purpose: it leads into a breathing exercise, which is a
-  /// screen by nature.
-  ///
-  /// Exhausted options are dropped rather than shown-and-refused: offering a
-  /// button that answers with "no, not any more" is worse than not offering
-  /// it, and on the third prompt the honest choices really are accept,
-  /// decline, or say nothing.
-  static List<AndroidNotificationAction> _taskTriggerActions(
-    String code, {
-    int postponeCount = 0,
-    int sosCount = 0,
-  }) {
-    return <AndroidNotificationAction>[
-      AndroidNotificationAction(
-        _actionTaskDone,
-        _text(code, 'taskActionDoneLabel'),
-        showsUserInterface: false,
-        cancelNotification: true,
-      ),
-      if (postponeCount < maxPostponesPerTask)
-        AndroidNotificationAction(
-          _actionTaskNotNow,
-          _text(code, 'taskActionNotNowLabel'),
-          showsUserInterface: false,
-          cancelNotification: true,
-        ),
-      AndroidNotificationAction(
-        _actionTaskDecline,
-        _text(code, 'taskActionDeclineLabel'),
-        showsUserInterface: false,
-        cancelNotification: true,
-      ),
-      if (sosCount < maxSosPerTask)
-        AndroidNotificationAction(
-          _actionTaskSos,
-          _text(code, 'taskActionSosLabel'),
-          showsUserInterface: true,
-          cancelNotification: true,
-        ),
-    ];
-  }
-
   /// Reads how much of a task's postpone/SOS allowance is already spent.
   ///
   /// Returns zeroes for anything without a row — tasks issued before the
   /// assignments table existed, and the very first prompt of a new one.
-  static Future<(int postponeCount, int sosCount)> _taskAllowanceFor(
+  /// Public so [MandatoryTaskPage] can show/hide its own Ertele/SOS buttons
+  /// with the same limits the (now action-less) notification used to.
+  static Future<(int postponeCount, int sosCount)> taskAllowanceFor(
     String taskTitle,
   ) async {
     try {
@@ -512,6 +476,37 @@ class NotificationService {
   /// place a blanket cancel is actually correct.
   static Future<void> cancelAll() => _plugin.cancelAll();
 
+  /// Silences whichever task-trigger notification is currently sounding —
+  /// its alarm-stream sound/vibration loops via FLAG_INSISTENT until the
+  /// notification itself is cancelled (see scheduleFirstTaskTriggerNotification).
+  /// Cancelling the notification the user actually tapped already stops it
+  /// (see _processNotificationResponse), but MandatoryTaskPage can also be
+  /// reached without ever tapping the notification — home_page.dart's
+  /// _presentMandatoryTaskIfNeeded opens it on its own the next time the app
+  /// is foregrounded, so the alarm kept sounding underneath the page with
+  /// nothing to stop it. scheduleFirstTaskTriggerNotification's id is a
+  /// throwaway millisecond timestamp with no stored reference to look it up
+  /// by, so this queries Android directly for whatever's actually showing
+  /// on the task-start channel right now instead.
+  static Future<void> cancelActiveTaskTriggerAlarm() async {
+    try {
+      final androidPlugin = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      final active = await androidPlugin?.getActiveNotifications() ?? [];
+      for (final notification in active) {
+        if (notification.channelId != _taskStartChannelId) continue;
+        final id = notification.id;
+        if (id == null) continue;
+        await _plugin.cancel(id);
+      }
+    } catch (_) {
+      // Best-effort: worst case the alarm keeps sounding until its own
+      // timeoutAfter elapses, same as before this existed.
+    }
+  }
+
   static const String _categoryTaskStart = 'task_start_category';
   static const String _categoryTaskFollowUp = 'task_followup_category';
   static const String _categoryPostpone = 'task_postpone_category';
@@ -522,6 +517,11 @@ class NotificationService {
   // a fresh channel on devices that already had the app installed, so the
   // new alarm sound/vibration pattern actually takes effect.
   static const String _taskStartChannelId = 'task_start_channel_v7';
+  // Separate from _taskStartChannelId: this fires right after the user has
+  // already answered the alarm-sound prompt (tapped "Kabul Et"), so it only
+  // needs a normal notification tone, not another alarm-stream sound.
+  static const String _taskTimerStartedChannelId =
+      'task_timer_started_channel_v1';
   static const String _taskFollowUpChannelId = 'task_followup_channel_v7';
   static const String _taskEscalationChannelId = 'task_escalation_channel_v2';
   static const String _breathReminderChannelId = 'breath_reminder_channel_v3';
@@ -626,6 +626,13 @@ class NotificationService {
   }
 
   static const int _notificationTimeoutMs = 15000;
+  // The task-trigger alarm (no notification actions any more — the only way
+  // to answer is to open MandatoryTaskPage) has to ring long enough to
+  // actually be noticed before Android auto-cancels it: 20s, not the shared
+  // 15s default. cancelActiveTaskTriggerAlarm silences it the moment the
+  // user is looking at the page, well before this ceiling in the common
+  // case — this is only how long it rings if they never do.
+  static const int _taskTriggerTimeoutMs = 20000;
   static const String _reservedTimesSettingKey =
       'reserved_notification_fire_times';
   // Retry cadence for a mandatory task alert nobody has answered yet: fire
@@ -660,6 +667,22 @@ class NotificationService {
 
   static Stream<Map<String, String>> get taskActionStream =>
       _taskActionController.stream;
+
+  static Stream<void> get mandatoryTaskRequestStream =>
+      _mandatoryTaskRequestController.stream;
+
+  // Set once _plugin.initialize() has actually run. refreshLocalizedResources
+  // (called from splash/settings/language-selection on every single app
+  // launch, not just a language change) used to call this same initialize()
+  // again, which called _plugin.initialize() a second time moments after
+  // main()'s first call — flutter_local_notifications does not re-attach
+  // onDidReceiveNotificationResponse cleanly on a repeat call, so the
+  // notification body-tap handler silently stopped firing. Proven via
+  // logcat: no _processNotificationResponse activity at all on tap, not
+  // even a failed attempt. This guard keeps _plugin.initialize() to once
+  // per process while still letting the rest of this method's localized
+  // resource sync re-run on every call.
+  static bool _pluginInitialized = false;
 
   static Future<void> initialize({
     GlobalKey<NavigatorState>? navigatorKey,
@@ -713,11 +736,14 @@ class NotificationService {
         ],
       ),
     );
-    await _plugin.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: _handleNotificationResponse,
-      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
-    );
+    if (!_pluginInitialized) {
+      await _plugin.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: _handleNotificationResponse,
+        onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+      );
+      _pluginInitialized = true;
+    }
 
     await _syncWatchdogViolationsFromNative();
     await syncOverlayStateFromNative();
@@ -1457,23 +1483,31 @@ class NotificationService {
 
       final actionId = response.actionId ?? '';
       if (actionId.isEmpty) {
-        await _openHistoryBeforeOverlay(allowNavigation);
-        // A body tap must show the same native overlay over the current app,
-        // rather than navigating to whichever Flutter page was open. This
-        // also works after a cold start because main.dart processes the launch
-        // response after the navigator/engine is ready.
-        final code = await LanguageService.loadSelectedLanguageCode();
-        await AndroidWatchdogService.showTaskOverlayFromNotification(
-          title: _text(code, 'disciplineCommand'),
-          body:
-              '${_text(code, 'disciplineCommandBody')}\n${payload['taskTitle'] ?? ''}',
-          doneLabel: _text(code, 'taskActionDoneLabel'),
-          postponeLabel: _text(code, 'taskActionNotNowLabel'),
-          declineLabel: _text(code, 'taskActionDeclineLabel'),
-          sosLabel: _text(code, 'taskActionSosLabel'),
-          watchdogId: payload['watchdogId'] ?? '',
-          taskTitle: payload['taskTitle'] ?? payload['canonicalTitle'] ?? '',
-        );
+        // A body tap brings the app to the foreground (cold start shows the
+        // regular home screen first) and shows MandatoryTaskPage on top of
+        // it, in-app, rather than the old cross-app WindowManager overlay.
+        // This signals HomePage to show it via its own
+        // _presentMandatoryTaskIfNeeded rather than pushing the route
+        // directly from here: HomePage's resume/foreground lifecycle also
+        // calls that same method independently, and two unrelated pushes
+        // racing each other left the tap sometimes doing nothing visible —
+        // routing both through one path removes the race. Whether the page
+        // was accepted is recorded by MandatoryTaskPage's own caller in
+        // HomePage, same as every other route into it.
+        //
+        // HomePage's listener isn't guaranteed to exist yet the instant this
+        // runs — a cold/backgrounded app brought to the foreground by the
+        // tap needs its widget tree built first, and this callback can beat
+        // that. A single retry loop covers the gap instead of the signal
+        // silently vanishing into a broadcast stream with nobody listening.
+        var attempts = 0;
+        while (!_mandatoryTaskRequestController.hasListener && attempts < 10) {
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+          attempts++;
+        }
+        if (_mandatoryTaskRequestController.hasListener) {
+          _mandatoryTaskRequestController.add(null);
+        }
         return;
       }
 
@@ -1956,9 +1990,13 @@ class NotificationService {
     final title = isFollowUp
         ? _text(code, 'taskFollowUpTitlePush')
         : _text(code, 'taskEscalationTitle');
+    // The task-trigger retry (isFollowUp == false) drops the task detail from
+    // the body for the same reason showFirstTaskTriggerNotification does —
+    // it's a repeat of that same alarm, answerable only by opening
+    // MandatoryTaskPage. The older task_followups retry is untouched.
     final body = isFollowUp
         ? '${_text(code, 'taskFollowUpQuestion')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}'
-        : '${_text(code, 'taskEscalationBodyPrefix')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}';
+        : _text(code, 'taskEscalationBodyPrefix');
     final androidCategory = AndroidNotificationCategory.reminder;
     final iosCategory = isFollowUp ? _categoryTaskFollowUp : _categoryTaskStart;
 
@@ -1991,22 +2029,27 @@ class NotificationService {
           sound: _taskAlarmSound,
           additionalFlags: _insistentFlag,
           audioAttributesUsage: AudioAttributesUsage.alarm,
-          timeoutAfter: _notificationTimeoutMs,
+          timeoutAfter: isFollowUp
+              ? _notificationTimeoutMs
+              : _taskTriggerTimeoutMs,
           category: androidCategory,
-          actions: <AndroidNotificationAction>[
-            AndroidNotificationAction(
-              isFollowUp ? _actionFollowUpDone : _actionTaskDone,
-              _text(code, 'taskActionDoneLabel'),
-              showsUserInterface: false,
-              cancelNotification: true,
-            ),
-            AndroidNotificationAction(
-              isFollowUp ? _actionFollowUpLater : _actionTaskNotNow,
-              _text(code, 'taskActionNotNowLabel'),
-              showsUserInterface: false,
-              cancelNotification: true,
-            ),
-          ],
+          fullScreenIntent: !isFollowUp,
+          actions: isFollowUp
+              ? <AndroidNotificationAction>[
+                  AndroidNotificationAction(
+                    _actionFollowUpDone,
+                    _text(code, 'taskActionDoneLabel'),
+                    showsUserInterface: false,
+                    cancelNotification: true,
+                  ),
+                  AndroidNotificationAction(
+                    _actionFollowUpLater,
+                    _text(code, 'taskActionNotNowLabel'),
+                    showsUserInterface: false,
+                    cancelNotification: true,
+                  ),
+                ]
+              : null,
         ),
         iOS: DarwinNotificationDetails(
           categoryIdentifier: iosCategory,
@@ -2049,10 +2092,6 @@ class NotificationService {
       contextLabel: contextLabel,
       confidence: confidence,
     );
-    final allowance = await _taskAllowanceFor(taskDescription);
-    final adjustedDescription = contextLabel == 'eating'
-        ? _text(code, 'postMealShieldCommand')
-        : AppTexts.localizeCanonicalTextForCode(code, taskDescription);
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
     final reminderId = _deriveReminderId(id);
     final watchdogId = 'wdg_$id';
@@ -2062,10 +2101,15 @@ class NotificationService {
     final dueAt = DateTime.now().add(
       _unansweredReminderDelay * _maxTaskAttempts,
     );
+    // Body carries no task detail any more — just the generic command. The
+    // real description only ever shows on MandatoryTaskPage, which is the
+    // only way left to answer (no notification actions), so there is
+    // nothing to leak by tapping the notification body from the lock
+    // screen either.
     await _show(
       id,
       _text(code, 'disciplineCommand'),
-      '${_text(code, 'disciplineCommandBody')}\n$adjustedDescription',
+      _text(code, 'disciplineCommandBody'),
       NotificationDetails(
         android: AndroidNotificationDetails(
           _taskStartChannelId,
@@ -2081,14 +2125,10 @@ class NotificationService {
           autoCancel: false,
           ongoing: true,
           onlyAlertOnce: false,
-          timeoutAfter: _notificationTimeoutMs,
+          timeoutAfter: _taskTriggerTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
-          actions: _taskTriggerActions(
-            code,
-            postponeCount: allowance.$1,
-            sosCount: allowance.$2,
-          ),
+          fullScreenIntent: true,
         ),
         iOS: const DarwinNotificationDetails(
           categoryIdentifier: _categoryTaskStart,
@@ -2103,6 +2143,7 @@ class NotificationService {
         // be matched back to a task_assignments row — a lookup on them finds
         // nothing and silently does nothing.
         'canonicalTitle': taskDescription,
+        'contextLabel': contextLabel,
         'notificationId': '$id',
         'reminderId': '$reminderId',
         'watchdogId': watchdogId,
@@ -2160,17 +2201,17 @@ class NotificationService {
     // no idea a task alert just went out, the highest-frequency notification
     // kind in the app.
     await _budgetAllows(NotificationKind.taskAlert, at: fireAt);
-    final allowance = await _taskAllowanceFor(taskDescription);
     final adjustedDescription = contextLabel == 'eating'
         ? _text(code, 'postMealShieldCommand')
         : AppTexts.localizeCanonicalTextForCode(code, taskDescription);
     final id = DateTime.now().millisecondsSinceEpoch.remainder(2147483647);
     final reminderId = _deriveReminderId(id);
     final watchdogId = 'wdg_$id';
+    // Body carries no task detail any more — see showFirstTaskTriggerNotification.
     await _zonedSchedule(
       id,
       _text(code, 'disciplineCommand'),
-      '${_text(code, 'disciplineCommandBody')}\n$adjustedDescription',
+      _text(code, 'disciplineCommandBody'),
       fireAt,
       NotificationDetails(
         android: AndroidNotificationDetails(
@@ -2187,14 +2228,10 @@ class NotificationService {
           autoCancel: false,
           ongoing: true,
           onlyAlertOnce: false,
-          timeoutAfter: _notificationTimeoutMs,
+          timeoutAfter: _taskTriggerTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
-          actions: _taskTriggerActions(
-            code,
-            postponeCount: allowance.$1,
-            sosCount: allowance.$2,
-          ),
+          fullScreenIntent: true,
         ),
         iOS: const DarwinNotificationDetails(
           categoryIdentifier: _categoryTaskStart,
@@ -2210,6 +2247,7 @@ class NotificationService {
         // localised, user-facing wording, so the canonical form has to travel
         // alongside it for the task row to be findable.
         'canonicalTitle': taskDescription,
+        'contextLabel': contextLabel,
         'notificationId': '$id',
         'reminderId': '$reminderId',
         'watchdogId': watchdogId,
@@ -2223,19 +2261,18 @@ class NotificationService {
     // hours away the task is — and, because WatchdogStore keeps a single
     // active entry, two tasks scheduled in the same session would overwrite
     // each other's watchdog.
+    //
+    // title/body/doneLabel/postponeLabel/declineLabel/sosLabel travel to
+    // native purely to keep TaskTriggerSnapshot's cache format stable across
+    // a reboot re-arm — TaskTriggerReceiver.onReceive never reads them
+    // (the native overlay they used to back is gone; see its class doc).
     await AndroidWatchdogService.scheduleTaskTrigger(
       title: _text(code, 'disciplineCommand'),
       body: adjustedDescription,
-      // Blank when the allowance is spent, so the overlay shows exactly the
-      // same answers the notification does.
-      doneLabel: _text(code, 'taskActionDoneLabel'),
-      postponeLabel: allowance.$1 < maxPostponesPerTask
-          ? _text(code, 'taskActionNotNowLabel')
-          : '',
-      declineLabel: _text(code, 'taskActionDeclineLabel'),
-      sosLabel: allowance.$2 < maxSosPerTask
-          ? _text(code, 'taskActionSosLabel')
-          : '',
+      doneLabel: '',
+      postponeLabel: '',
+      declineLabel: '',
+      sosLabel: '',
       watchdogId: watchdogId,
       taskTitle: adjustedDescription,
       triggerAt: fireAt,
@@ -2859,14 +2896,13 @@ class NotificationService {
       '${_text(code, 'taskTimerStartedBody')}\n${AppTexts.localizeCanonicalTextForCode(code, taskTitle)}\n${_text(code, 'taskTimerDuration')}: ${duration.inMinutes} ${_text(code, 'minutesShort')}.',
       NotificationDetails(
         android: AndroidNotificationDetails(
-          _taskStartChannelId,
+          _taskTimerStartedChannelId,
           _text(code, 'channelNameTaskTimerStart'),
-          importance: Importance.max,
+          importance: Importance.high,
           visibility: NotificationVisibility.private,
           priority: Priority.high,
           playSound: true,
           enableVibration: true,
-          vibrationPattern: _taskVibrationPattern,
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
           category: AndroidNotificationCategory.reminder,
         ),
@@ -3328,19 +3364,34 @@ class NotificationService {
     );
   }
 
-  /// Called from main() on cold start.
+  // getNotificationAppLaunchDetails() keeps returning the same launch
+  // details on repeat calls within the same Activity/intent (it reads off
+  // the Activity's current Intent, which doesn't clear itself) — tracked so
+  // a resume-triggered re-check below doesn't replay the same tap.
+  static String? _lastHandledColdStartPayload;
+
+  /// Called from main() on cold start, and again on every app resume.
   ///
   /// When the app was fully terminated and a notification tap launched it,
   /// [onDidReceiveNotificationResponse] may never fire because the isolate
-  /// wasn't alive at tap time. This method checks the launch details and
-  /// routes to the correct page (or resolves the action silently) so the
-  /// user always gets the full-screen experience.
+  /// wasn't alive at tap time — main()'s call covers that. But a tap can
+  /// also relaunch MainActivity as a fresh onCreate while the Dart VM (and
+  /// this static state) is still alive from an earlier run, in which case
+  /// main() never runs again either — proven via logcat: ActivityTaskManager
+  /// starts a new task off the tap's SELECT_NOTIFICATION intent, but no
+  /// Flutter-side handler ever fires, not even a failed attempt. Re-running
+  /// this same check on every resume catches that case too.
   static Future<void> handleColdStartIfLaunchedFromNotification() async {
     try {
       final details = await _plugin.getNotificationAppLaunchDetails();
       if (details?.didNotificationLaunchApp != true) return;
       final response = details?.notificationResponse;
       if (response == null) return;
+      if (response.payload != null &&
+          response.payload == _lastHandledColdStartPayload) {
+        return;
+      }
+      _lastHandledColdStartPayload = response.payload;
       // Run after a short delay so the widget tree is built and the
       // navigator is ready to push routes.
       Future.delayed(const Duration(milliseconds: 800), () {

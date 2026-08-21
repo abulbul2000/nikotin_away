@@ -86,6 +86,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int _snoringSummaryCount = 0;
   String? _snoringSummaryWorstSeverity;
   StreamSubscription<Map<String, String>>? _taskActionSubscription;
+  StreamSubscription<void>? _mandatoryTaskRequestSubscription;
   Timer? _mandatoryGateCallRetryTimer;
   Timer? _mandatoryPostponeRetryTimer;
   int _mandatoryTaskPostponeCount = 0;
@@ -159,6 +160,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     _taskActionSubscription = NotificationService.taskActionStream.listen(
       _handleTaskNotificationAction,
     );
+    // A task-start notification body tap — see NotificationService's
+    // mandatoryTaskRequestController for why this goes through the same
+    // path as the app's own resume/foreground check instead of a second,
+    // independent push.
+    _mandatoryTaskRequestSubscription =
+        NotificationService.mandatoryTaskRequestStream.listen((_) {
+          unawaited(_presentMandatoryTaskIfNeeded(isRetry: true));
+        });
     if (widget.mentorCardTestMode) {
       // Widget tests need a deterministic mentor card, not the production
       // startup graph or SQLite timing. The message still uses canonical
@@ -272,6 +281,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(_syncPendingQuickLogOnResume());
+      // main()'s own call to this only ever covers a genuine cold start —
+      // but a notification tap while the engine is already alive can also
+      // relaunch MainActivity as a fresh onCreate without main() running
+      // again (proven via logcat: ActivityTaskManager starts a new task off
+      // the tap's SELECT_NOTIFICATION intent, yet no Flutter-side handler
+      // ever fires). Re-checking here on every resume catches that case:
+      // if the plugin has launch details queued from this tap, it's the
+      // same launch-details codepath main() uses, just run again.
+      NotificationService.handleColdStartIfLaunchedFromNotification();
     }
   }
 
@@ -290,6 +308,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _taskActionSubscription?.cancel();
+    _mandatoryTaskRequestSubscription?.cancel();
     _mandatoryGateCallRetryTimer?.cancel();
     _mandatoryPostponeRetryTimer?.cancel();
     super.dispose();
@@ -1321,9 +1340,26 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   static const int _maxMandatoryPostponeRetries = 5;
 
   Future<void> _presentMandatoryTaskIfNeeded({bool isRetry = false}) async {
-    if (!mounted ||
-        (!isRetry && _mandatoryTaskShown) ||
-        !_registrationCompleted) {
+    if (!mounted || (!isRetry && _mandatoryTaskShown)) {
+      return;
+    }
+
+    // A notification-tap signal can arrive before HomePage's own initState
+    // load finishes — the Activity has just started (cold or from
+    // background) and _registrationCompleted is still the default false
+    // while _loadHomeMetrics is still awaiting its DB reads. Without this
+    // wait the signal was simply dropped here, with nothing left to retry
+    // it: the notification itself is already cancelled by this point, so
+    // the task screen never appeared and looked exactly like an unanswered
+    // notification. Same 300ms-step retry shape already used below for
+    // _mandatoryTaskRequestController.hasListener.
+    var readyWaitAttempts = 0;
+    while (!_registrationCompleted && readyWaitAttempts < 10) {
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      readyWaitAttempts++;
+      if (!mounted) return;
+    }
+    if (!_registrationCompleted) {
       return;
     }
 
@@ -1388,59 +1424,82 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (!mounted) {
       return;
     }
-    final result = await Navigator.of(context).push<bool>(
+    // The notification carries no actions any more, so this page is the only
+    // place any of these choices get made — it pops with a TaskActionId, or
+    // null if it was somehow dismissed without one (it isn't pop-dismissible,
+    // but a hot-reload/route-replace edge case could still surface null).
+    final actionId = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => MandatoryTaskPage(taskTitle: taskTitle!),
       ),
     );
 
-    if (result == true) {
-      _mandatoryTaskPostponeCount = 0;
-      final acceptedTaskTitle = taskTitle;
-      final row = await _storageService.loadLatestTaskAssignmentByTitle(
-        acceptedTaskTitle,
-      );
-      final followUp = await TaskAssignmentService(_storageService)
-          .handleTaskAction(
-            canonicalTitle: acceptedTaskTitle,
-            taskTitle: acceptedTaskTitle,
-            actionId: TaskActionId.done,
-          );
-      if (!mounted) return;
-      if (TaskAssignmentService.isComposite(row?.taskKind ?? '') &&
-          followUp == TaskActionFollowUp.openSleepRoutinePage) {
-        // The pre-sleep routine has no countdown/follow-up of its own —
-        // accepting it on the fake-call screen hands the user straight into
-        // SleepRoutinePage, same as the notification-action path.
-        final packsPerDay = await _resolveLatestPacksPerDay();
-        if (!mounted) return;
-        await Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => SleepRoutinePage(
-              canonicalTitle: acceptedTaskTitle,
-              name: widget.name,
-              packsPerDay: packsPerDay,
-            ),
-          ),
+    // This page can be reached without ever tapping the notification (opened
+    // by this method's own resume/foreground check), so unlike the
+    // notification-action path there is no watchdogId in hand here — without
+    // this, the native "waiting for response" foreground notification stayed
+    // up regardless of what the user chose on the page. It used to be
+    // acknowledged only inside the "accepted" branch below, so declining
+    // left it stuck until the native watchdog's own 15-minute timeout wrote
+    // a violation.
+    unawaited(
+      AndroidWatchdogService.acknowledgeWatchdogByTaskTitle(taskTitle),
+    );
+
+    if (actionId == null) {
+      if (_mandatoryTaskPostponeCount < _maxMandatoryPostponeRetries) {
+        _mandatoryTaskPostponeCount++;
+        _mandatoryTaskShown = false;
+        _mandatoryPostponeRetryTimer?.cancel();
+        _mandatoryPostponeRetryTimer = Timer(
+          _mandatoryPostponeRetryDelay,
+          () => unawaited(_presentMandatoryTaskIfNeeded(isRetry: true)),
         );
-        if (!mounted) return;
       }
-      setState(() {
-        _taskStates[acceptedTaskTitle] = _uiStateFor(TaskActionId.done);
-      });
-      await _loadHomeMetrics();
       return;
     }
 
-    if (_mandatoryTaskPostponeCount < _maxMandatoryPostponeRetries) {
-      _mandatoryTaskPostponeCount++;
-      _mandatoryTaskShown = false;
-      _mandatoryPostponeRetryTimer?.cancel();
-      _mandatoryPostponeRetryTimer = Timer(
-        _mandatoryPostponeRetryDelay,
-        () => unawaited(_presentMandatoryTaskIfNeeded(isRetry: true)),
+    _mandatoryTaskPostponeCount = 0;
+    final row = await _storageService.loadLatestTaskAssignmentByTitle(
+      taskTitle,
+    );
+    final followUp = await TaskAssignmentService(_storageService)
+        .handleTaskAction(
+          canonicalTitle: taskTitle,
+          taskTitle: taskTitle,
+          actionId: actionId,
+        );
+    if (!mounted) return;
+    if (actionId == TaskActionId.done &&
+        TaskAssignmentService.isComposite(row?.taskKind ?? '') &&
+        followUp == TaskActionFollowUp.openSleepRoutinePage) {
+      // The pre-sleep routine has no countdown/follow-up of its own —
+      // accepting it on the fake-call screen hands the user straight into
+      // SleepRoutinePage, same as the notification-action path.
+      final packsPerDay = await _resolveLatestPacksPerDay();
+      if (!mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => SleepRoutinePage(
+            canonicalTitle: taskTitle!,
+            name: widget.name,
+            packsPerDay: packsPerDay,
+          ),
+        ),
       );
+      if (!mounted) return;
+    } else if (followUp == TaskActionFollowUp.openSosPage) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => CravingSosPage(taskCanonicalTitle: taskTitle),
+        ),
+      );
+      if (!mounted) return;
     }
+    setState(() {
+      _taskStates[taskTitle!] = _uiStateFor(actionId);
+    });
+    await _loadHomeMetrics();
   }
 
   /// How late a planned task may be and still be worth firing. Past this the
@@ -2938,22 +2997,39 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       setState(() => _missedTaskTitle = null);
     }
     if (!mounted) return;
-    final result = await Navigator.of(context).push<bool>(
+    final actionId = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => MandatoryTaskPage(taskTitle: taskTitle),
       ),
     );
-    if (result != true) {
+    // Same gap as the mandatory-gate path above: this route into
+    // MandatoryTaskPage never has a watchdogId either, so without this the
+    // native "waiting for response" foreground notification would stay up
+    // regardless of what the user chose on the page — it only used to be
+    // acknowledged on acceptance, so declining (or the page otherwise
+    // closing without a "done" result) left it stuck until the native
+    // watchdog's own 15-minute timeout wrote a violation.
+    unawaited(AndroidWatchdogService.acknowledgeWatchdogByTaskTitle(taskTitle));
+    if (actionId == null) {
       return;
     }
-    await TaskAssignmentService(_storageService).handleTaskAction(
-      canonicalTitle: taskTitle,
-      taskTitle: taskTitle,
-      actionId: TaskActionId.done,
-    );
+    final followUp = await TaskAssignmentService(_storageService)
+        .handleTaskAction(
+          canonicalTitle: taskTitle,
+          taskTitle: taskTitle,
+          actionId: actionId,
+        );
     if (!mounted) return;
+    if (followUp == TaskActionFollowUp.openSosPage) {
+      await Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => CravingSosPage(taskCanonicalTitle: taskTitle),
+        ),
+      );
+      if (!mounted) return;
+    }
     setState(() {
-      _taskStates[taskTitle] = _uiStateFor(TaskActionId.done);
+      _taskStates[taskTitle] = _uiStateFor(actionId);
     });
     await _loadHomeMetrics();
   }

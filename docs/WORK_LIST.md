@@ -4,7 +4,210 @@
 > yanına kısa not düşülür. Kararların gerekçeleri `docs/TASK_ASSIGNMENT_SYSTEM_DESIGN.md`
 > dosyasında.
 >
-> Son güncelleme: 2026-08-13
+> Son güncelleme: 2026-08-20
+
+---
+
+# AKTİF — Bildirim mimarisi yeniden tasarımı + görevlendirme motoru + uyku alarmı
+*(2026-08-20 kullanıcıyla detaylı konuşuldu — kapsam netleşti, uygulama başlıyor)*
+
+## Karar özeti (kullanıcı onaylı)
+
+**Bildirim/overlay mimarisi:**
+- Native "diğer uygulamaların üstüne biner" `TaskOverlayService` (WindowManager overlay)
+  **tamamen kaldırılır**. Yerine: bildirime basınca uygulama öne gelir (soğuksa önce ana ekran
+  kısaca görünür, sonra üstüne biner), ilgili tam ekran **Flutter sayfası** açılır.
+- Tüm bildirimler seslidir — hiçbiri sessiz değil.
+  - Görevlendirme + ilaç hatırlatma → alarm sesi (`USAGE_ALARM`, ısrarcı/FLAG_INSISTENT).
+  - Diğer tüm bildirimler (sağlık ipucu, anket, koç komutu, vb.) → normal bildirim sesi
+    (`USAGE_NOTIFICATION`), alarm gibi değil.
+- Görevlendirme bildirimi: başlık jenerik ("Yeni görevlendirme"), gövdede görev detayı YOK —
+  detay sadece tam ekran sayfada görünür.
+- İlaç hatırlatma bildirimi: **istisna** — ilaç adı bildirimde görünür (tıbbi açıdan kullanıcının
+  uygulamayı açmadan bilmesi gerekiyor).
+- Bildirim/alarm sesi, kullanıcı tam ekran sayfayı gördüğü an susar (şu anki bug: native overlay
+  açılınca bildirim/alarm susmuyor — bu yeni mimariyle kendiliğinden çözülür, ayrı bir yama
+  gerekmez çünkü native overlay yolu tamamen silinir).
+
+**Görevlendirme motoru:**
+- Sıklığı davranış motoru belirler, **günlük minimum 4** (başarı/başarısızlık sayıyı etkilemez).
+- Başlangıç: gün içine eşit dağılım. Kullanıcı tanındıkça (bkz. haftalık analiz): riskli saatlere
+  ağırlık kayar, hem görevlendirme sayısı hem süreler artar.
+- **Haftada bir** büyük program analizi (sıklık/süre/riskli-saat ağırlıkları yeniden hesaplanır).
+- **Gün içi küçük dokunuşlar**: o günkü gerçek sigara sayısı/aralık sürelerine göre küçük
+  ayarlar — haftalık ana programı büyük ölçüde değiştirmez.
+- Denge kuralı: **iyi gidiyorsa sıkılaştır, kötü gidiyorsa gevşet** (ters değil — başarı ödülü
+  daha fazla zorluk, başarısızlık cezası değil esneme).
+- Kullanıcı ayarlardan tavan belirleyebilir (mevcut Nazik/Dengeli/Sıkı intensity ayarı bu tavan
+  rolünü görür — sistem bu seviyeyi aşacak şekilde sıkılaştırmaz) **+** anlık "bugün beni
+  zorlama" düğmesi (yeni, henüz yok).
+
+**Uyku Zekâsı alarmı + raporu (yeni özellik, sıfırdan):**
+- Günlük ankete yeni soru: "Yarın kaçta uyanmak istersiniz?" — kullanıcı saat girer. Bu, gün
+  bazlı farklı uyanma saati desteğinin kaynağı (haftalık anket alanı, günlük anket akışına
+  eklenir — hangi anket olduğu koddan doğrulanmalı).
+- Belirlenen saatte **yüksek alarm** çalar (görevlendirme/ilaç ile aynı ses kategorisi).
+- Alarma basınca: uygulama açılır, tam ekran Uyku Zekâsı raporu (Flutter sayfa, native overlay
+  DEĞİL) gösterilir. Altta **Tamam** + **Ertele** butonları.
+  - Tamam → rapor teslim edilmiş sayılır, alarm/rapor kapanır.
+  - Ertele → 10 dakika sonra aynı şekilde (yüksek alarm + tam ekran rapor) tekrar çalar.
+- Ayarlardan açılıp kapanabilir olmalı.
+- Görevlendirme planı bu gün-bazlı uyanma saatini hesaba katmalı (mevcut `wake_time` sabit
+  ayarının yerini/yanını alacak şekilde).
+- Mevcut `SleepIntelligenceService`/`SleepProbeService` sadece pasif gece ölçümü yapıyor (ekran
+  etkileşimi + şarj durumu örnekleme) — alarm/erteleme/rapor sunumu yok, hepsi sıfırdan yazılacak.
+
+## Uygulama adımları (taslak — ilerledikçe güncellenecek)
+
+- [x] **1.** Native `TaskOverlayService.kt`'nin görevlendirme-overlay kısmı (`ACTION_SHOW`,
+      `showOverlay`, `show()`) tamamen kaldırıldı — `showInfo`/`showConfirm`/`showReminder`
+      (sağlık ipucu, "sigara içtin mi", hatırlatıcı) dokunulmadan kaldı, onlar Parça 4'te ele
+      alınacak. `MainActivity.kt`'deki `showTaskOverlayFromNotification` case'i ve Dart tarafındaki
+      `AndroidWatchdogService.showTaskOverlayFromNotification` de kaldırıldı. Bildirim body-tap'i
+      artık `notification_service.dart`'ın `_typeTaskStart` kolunda `_mandatoryTaskRequestController`
+      sinyali yayınlıyor, `home_page.dart` bunu dinleyip kendi `_presentMandatoryTaskIfNeeded
+      (isRetry: true)`'ini çağırıyor.
+      **Neden sinyal, doğrudan push değil:** İlk denemede body-tap kodu doğrudan
+      `navigator.push(MandatoryTaskPage)` yapıyordu — ama `HomePage`'in kendi resume/foreground
+      lifecycle'ı da bağımsız olarak aynı anda `_presentMandatoryTaskIfNeeded`'i çağırıyor, iki
+      push birbirine çarpıp bazen hiçbiri görünmüyordu (cihazda tekrarlı test edildi, kanıtlandı).
+      Sinyale geçildi ama **yeni bir kanıtlanmış hata daha bulundu**: bildirime dokunulduğu an
+      `HomePage` henüz `initState` çalıştırmamış olabiliyor (soğuk/arka plandan foreground'a
+      geçiş süresi), bu yüzden `_mandatoryTaskRequestController.hasListener` `false` dönüp sinyal
+      kayboluyor — kanıt: `dumpsys notification` bildirimin iptal edildiğini (`cancel` çalıştı)
+      ama hiçbir sayfa açılmadığını gösterdi. Düzeltme: `hasListener` olana kadar 300ms×10 (3sn)
+      retry döngüsü eklendi (`notification_service.dart`, `_processNotificationResponse`).
+      **Cihaz testi bekliyor** — kullanıcı bilgisayar başında değil, telefonu tekrar bağlayınca
+      kurulup test edilecek.
+- [x] **1b.** "Kabul Et" sonrası gelen "zamanlayıcı başladı" bildirimi (`showTaskTimerStartedNotification`)
+      yanlışlıkla `_taskStartChannelId` (alarm sesi) kullanıyordu — kullanıcı onayladı: bu adımda
+      alarm değil normal bildirim sesi istiyor. Yeni `_taskTimerStartedChannelId` eklendi,
+      `AudioAttributesUsage.notificationRingtone` + `Importance.high` (alarm değil). Görev süresi
+      bitince gelen "sigara içtiniz mi?" onay sorusu (`scheduleTaskConfirmationPrompt`,
+      `task_confirm_channel_v2`) zaten alarm sesindeydi — kullanıcı bunu istediğini teyit etti,
+      dokunulmadı. **Cihaz testi bekliyor.**
+- [x] **1c. (kullanıcı cihazda bildirdi, 2026-08-21)** Bildirime dokunulup `MandatoryTaskPage`
+      açıldığında bile native watchdog'un "Görev yanıtı bekleniyor" foreground bildirimi ekranda
+      asılı kalıyordu. **Kök neden:** `home_page.dart`'ta `AndroidWatchdogService.
+      acknowledgeWatchdogByTaskTitle` çağrısı sadece `result == true` (kullanıcı "Kabul Et"e
+      bastığında) dalındaydı — "Reddet" ya da SOS'a gidip dönme durumunda hiç çağrılmıyordu,
+      bildirim native 15 dakikalık zaman aşımına uğrayıp ihlal yazana kadar asılı kalıyordu. İki
+      çağrı noktası da (mandatory-gate yolu ~satır 1401, `_startMissedTask` ~satır 2962) sayfa
+      `Navigator.push` sonucu dönen anda, `result`'tan bağımsız acknowledge edecek şekilde
+      düzeltildi. `flutter analyze` temiz (0 sorun). **Cihaz testi bekliyor.**
+- [x] **2. (kapsam genişledi, kullanıcı talebiyle 2026-08-21)** Görevlendirme bildirimi artık
+      **hiçbir aksiyon butonu içermiyor** — sadece görüntü/ses/titreşim. Kullanıcının talebi:
+      "gelen bildirim ne olursa olsun uygulama tam ekran açılsın, Kabul/Reddet gibi seçimler
+      bildirimde olmasın". Kapsam netleştirildi: SADECE görevlendirme (task trigger) bildirimi,
+      diğer tüm bildirim türleri (ilaç, anket, koç komutu, eski `task_followups` takip sistemi)
+      dokunulmadan aksiyon butonlu kaldı.
+      - `showFirstTaskTriggerNotification`/`scheduleFirstTaskTriggerNotification`
+        (`notification_service.dart`): `_taskTriggerActions` fonksiyonu tamamen kaldırıldı,
+        bildirimler artık `actions` içermiyor, `fullScreenIntent: true` eklendi (kilit ekranında
+        otomatik tam ekran açılış — Android kısıtı: ekran açıkken ve kullanıcı başka bir
+        uygulamadaysa sistem yine de "heads-up" gösterir, dokunma gerekir, bu platform sınırı
+        aşılamaz). Body artık görev detayı içermiyor, sadece jenerik `disciplineCommandBody`.
+      - Görevlendirme retry bildirimi (`_scheduleUnansweredTaskUpdateReminder`, `isFollowUp ==
+        false` dalı) aynı şekilde aksiyonsuz + `fullScreenIntent: true` yapıldı; eski
+        `task_followups` sistemi (`isFollowUp == true`) dokunulmadan kaldı.
+      - Ses/titreşim süresi 15sn → **20sn** (`_taskTriggerTimeoutMs`, sadece görevlendirmeye
+        özel yeni sabit — diğer bildirimlerin 15sn'lik `_notificationTimeoutMs`'ine
+        dokunulmadı). Kullanıcı onayı: "20sn sürsün ama dokunulursa hemen kesilsin, 20sn'nin
+        bitmesini beklemeye gerek yok" — `MandatoryTaskPage.initState`'teki mevcut
+        `cancelActiveTaskTriggerAlarm()` çağrısı zaten bunu sağlıyor (sayfa açılır açılmaz sesi
+        kesiyor), timeout sadece kullanıcı hiç dokunmazsa üst sınır.
+      - **`MandatoryTaskPage` tamamen yeniden tasarlandı**: artık `Navigator.pop(bool)` değil
+        `Navigator.pop(String? actionId)` — `TaskActionId.done/decline/postpone5/10/15/sos`
+        döner. Ertele'ye basınca sayfa içi 3 seçenekli (5/10/15 dk) görünüme geçiyor (eskiden
+        ayrı bir bildirimle soruluyordu, kod yorumu: "aksiyonlar iç içe geçemediği için" — tam
+        ekran sayfada bu kısıt yok). Postpone/SOS limitleri (`maxPostponesPerTask`/
+        `maxSosPerTask`) doluysa ilgili buton hiç gösterilmiyor (`NotificationService.
+        taskAllowanceFor`, eskiden private `_taskAllowanceFor`, şimdi public).
+      - **Ayrı bulunan hata da düzeltildi:** Reddet butonu daha önce gerçekte hiçbir şey
+        yapmıyordu (`TaskActionId.decline` hiç tetiklenmiyordu), sadece sayfayı kapatıp birkaç
+        dakika sonra aynı görevi tekrar soruyordu (retry). Artık gerçekten reddediyor
+        (`failedSmoked` gibi puanlanıyor, bildirimdeki eski doğru davranışla hizalandı).
+      - `home_page.dart`'taki iki `MandatoryTaskPage` çağrı noktası (mandatory-gate yolu,
+        `_startMissedTask`) yeni `String?` dönüş tipine göre yeniden yazıldı — artık
+        `_handleTaskNotificationAction`'daki merkezi `TaskAssignmentService.handleTaskAction`
+        akışını kullanıyorlar (SOS/uyku-rutini yönlendirmesi dahil), kod tekrarı azaldı.
+      - Native tarafta `TaskTriggerReceiver`'a giden title/body/label extra'ları zaten hiç
+        okunmuyordu (`onReceive` sadece taskTitle/watchdogId kullanıyor) — dokunulmadı, sadece
+        Dart tarafında boş string geçiliyor artık (kod yorumuyla açıklandı, temizlik ayrı iş).
+      - `flutter analyze` temiz (0 sorun), `flutter test` tam paket 1285 test — 2 başarısızlık
+        (`craving_sos_flow_test.dart`, `sleep_routine_page_test.dart`) doğrulandı: bu iki dosya
+        birlikte VE benim değişikliklerim olmadan (stash ile) çalıştırıldığında da 9/9 geçiyor —
+        önceden var olan bir test-sıralama/izolasyon sorunu, bu işle ilgisi yok. **Cihaz testi
+        bekliyor** (özellikle `fullScreenIntent` davranışı gerçek cihazda doğrulanmalı).
+- [ ] **3.** İlaç hatırlatma bildirimleri bulunup (ayrı kanal/fonksiyon), ilaç adının bildirimde
+      kaldığı doğrulanır (bunlar İSTİSNA, değişmeyecek).
+- [ ] **4.** Diğer tüm bildirim kanalları (sağlık ipucu, anket, koç komutu vb.) taranıp hepsinin
+      ses ayarı `USAGE_NOTIFICATION` + normal ses olduğu doğrulanır/düzeltilir (alarm sesine
+      kaçanlar varsa düzeltilir).
+- [x] **5.** ~~`NotificationBudget.dailyBudgetFor` gentle=2 → 4~~ **YANLIŞ VARSAYIMDI, kod okunmadan
+      yazılmıştı.** `dailyBudgetFor` yalnızca `NotificationClass.offered` bildirimler için (sağlık
+      ipucu, koç komutu vb.) — görevlendirmeler (`NotificationKind.taskAlert`) `owed` sınıfında,
+      bu bütçeye hiç tabi değil. Gerçek "günlük minimum 4 görevlendirme" sınırı zaten
+      `SmokingIntervalService.minDailyTasks = 4` / `maxDailyTasks = 8` olarak mevcut
+      (`smoking_interval_service.dart:74-75`, `buildAdaptiveNoSmokePlan`'ın `.clamp()` çağrısında
+      kullanılıyor) — kullanıcının istediği kural zaten koddaydı, değişiklik gerekmedi.
+- [x] **6a. (araştırma tamamlandı, kod değişikliği bekliyor)** Explore ajanı ile mevcut adaptif plan
+      motoru tam olarak dosya:satır kanıtıyla incelendi — özet:
+      - **Riskli-saat yerleşimi zaten var**, ama "güven arttıkça artan ağırlık" YOK: `buildDailyAdaptivePlan`
+        (`discipline_protocol_service.dart:347-450`) → `generateUnpredictableMoments` (`:98-187`)
+        slotları sadece riskli-saat pencerelerinden seçiyor (`_resolveCandidateWindows`, `:223-262`),
+        riskyHours boşsa genel 55dk-aralıklı pencerelere düşüyor. Ama pencere içi seçim tamamen
+        rastgele (`:150`) — riski daha yüksek saate ekstra ağırlık yok, ve bu yerleşim ilk günden
+        itibaren tam güçte, kademeli artmıyor.
+      - **Güven/tanıma eşiği YOK**: Tek geçit `isAdaptivePlanningEligible` (`storage_service.dart:2127-2149`)
+        — 24 saat + sonraki uyanma saati şartı, ikili (evet/hayır), kademeli değil. `_dataConfidence`
+        (`behavior_engine.dart:1507-1516`) sadece dashboard'da gösterim için, planlamada hiç okunmuyor.
+      - **Riskli saatte süre artışı YOK**: tek süre ayarı `strainOffset` (`discipline_protocol_service.dart:399-408`),
+        risk değil "strainScore" (saat bazlı başarı/başarısızlık) bazlı küçük ±jitter.
+      - **Haftalık yeniden analiz KISMİ** — sadece bariyer süresi için: `loadCurrentBarrierMinutes`
+        (`storage_service.dart:2828-2877`) → `evolveWeeklyBarrierMinutes`/`isGoodWeek`
+        (`smoking_interval_service.dart:235-261`, `weeklyStep=0.15`) 7 günde bir tetikleniyor (periyodik
+        job değil, çağrı anında tembel kontrol). Görev SAYISI ve riskli-saat ağırlıkları haftalık
+        döngüde YOK — sürekli/her plan üretiminde yeniden hesaplanıyor, "haftada bir büyük analiz"
+        kavramı bunlar için mevcut değil.
+      - **İyi/kötü gidişe göre sıkılaştırma/gevşetme KISMEN var**: `dailyTaskCount`
+        (`smoking_interval_service.dart:280-295`) successRate≥0.75→+1, ≥0.88→+1 daha; failureRate≥0.45→-1;
+        postponeRate≥0.5→-1. `computeUnpredictableDelay`/`computeAdaptiveTaskDuration`
+        (`discipline_protocol_service.dart:28-76`) de successRate'e göre aralık sıkıştırıyor/süre uzatıyor.
+        AMA bariyer süresi tarafı (`evolveWeeklyBarrierMinutes`) simetrik (%15 büyüt/küçült) — kullanıcının
+        istediği "başarı ödülü daha fazla zorluk, başarısızlık cezası değil esneme" asimetrisi yok,
+        şu an iki yön de aynı formülün ayna görüntüsü.
+      - **Gün içi küçük dokunuş YOK**: `buildAdaptiveNoSmokePlan` günün planını bir kere üretip
+        cache'liyor (`_adaptivePlanDateKey`, `:3209-3221`), gün boyu değişmiyor. Tek "esnetme" mekanizması
+        `MentorReliefService` (kullanıcının "Zorlanıyorum" demesiyle tetiklenen), ve bu KASITLI olarak
+        SADECE YARINA etki ediyor, bugüne asla (`storage_service.dart:4635-4639`'daki yorum: bugünü
+        geriye dönük esnetmek ya no-op olur ya da kullanıcının zaten gördüğü görevlerle çakışır).
+- [ ] **6b.** Yukarıdaki bulgulara göre gerçek eksikler: (1) riskli-saat pencere-içi ağırlıklandırma
+      + güven eşiğine bağlı kademeli geçiş (yeni "confidence" kavramı gerekiyor, `_dataConfidence`
+      genişletilip planlamaya bağlanabilir ya da yeni bir sayaç eklenebilir), (2) görev SAYISI ve
+      riskli-saat ağırlıkları için haftalık kadans (mevcut günlük hesaplamanın üstüne haftalık
+      "büyük" katman), (3) bariyer evrimini asimetrik yapma (`evolveWeeklyBarrierMinutes`'daki
+      %15/%15 yerine farklı büyüt/küçült oranları), (4) gün içi küçük dokunuş için YENİ bir mekanizma
+      (bugünün sigara sayısı/aralığını okuyup kalan plan öğelerini hafifçe ayarlayan, `MentorReliefService`'ten
+      bağımsız, "yarına değil bugüne" çalışan bir yol).
+- [ ] **9.** "Bugün beni zorlama" anlık düğmesi — UI + storage flag + motorun bunu okuyup o gün
+      sıkılaştırmayı atlaması.
+- [ ] **10.** Günlük ankete "yarın kaçta uyanmak istersiniz?" sorusu eklenir, gün-bazlı uyanma
+      saati storage'a yazılır.
+- [ ] **11.** Uyku alarmı native alarm (görev tetikleme ile aynı desen: `setExactAndAllowWhileIdle`
+      + yüksek-önem bildirim kanalı, alarm sesi) + Ertele (10 dk yeniden kur) + Tamam (kapat,
+      rapor teslim edildi işaretle).
+- [ ] **12.** Uyku Zekâsı raporu tam ekran Flutter sayfası (yeni) — geceki veriyi
+      `SleepProbeService`/mevcut analiz koduyla özetler, altta Tamam/Ertele.
+- [ ] **13.** Ayarlara Uyku Zekâsı alarmı aç/kapa anahtarı eklenir (mevcut Sleep Intelligence
+      ayarından ayrı ya da onun bir alt seçeneği — koddan karar verilecek).
+- [ ] **14.** Görevlendirme planı, gün-bazlı uyanma saatini hesaba katacak şekilde güncellenir
+      (`sleepAt`/`wakeRaw` sabit `wake_time` yerine o günün anket cevabını okur).
+- [ ] Her adım sonunda `flutter analyze`, ardından cihazda gerçek doğrulama (bkz.
+      [[feedback_root_cause_only]] — tahminle "düzelttim" denmeyecek, `dumpsys`/logcat ile
+      kanıtlanacak).
+
+---
 
 ## Teslim sırası
 

@@ -76,6 +76,19 @@ class AndroidWatchdogService {
     await _channel.invokeMethod('ackWatchdog', {'watchdogId': watchdogId});
   }
 
+  /// For callers that only know the task's title, not its watchdogId —
+  /// HomePage's own mandatory-gate path (opened from its resume/foreground
+  /// check, not from a notification tap) is the one caller in that
+  /// position. Native looks the id up by scanning active watchdogs.
+  static Future<void> acknowledgeWatchdogByTaskTitle(String taskTitle) async {
+    if (!_isAndroid || taskTitle.trim().isEmpty) {
+      return;
+    }
+    await _channel.invokeMethod('ackWatchdogByTaskTitle', {
+      'taskTitle': taskTitle,
+    });
+  }
+
   /// Cancels every currently-active watchdog's native alarm and discards
   /// any already-queued violations, without ever draining them to Dart.
   /// Called from Settings' Reset Data / Delete Account flows so a watchdog
@@ -143,36 +156,6 @@ class AndroidWatchdogService {
     } catch (_) {
       // The regular notification remains available if the overlay is not
       // available on this device.
-    }
-  }
-
-  static Future<void> showTaskOverlayFromNotification({
-    required String title,
-    required String body,
-    required String doneLabel,
-    required String postponeLabel,
-    required String declineLabel,
-    required String sosLabel,
-    required String watchdogId,
-    required String taskTitle,
-  }) async {
-    if (!_isAndroid) {
-      return;
-    }
-    try {
-      await _channel.invokeMethod('showTaskOverlayFromNotification', {
-        'title': title,
-        'body': body,
-        'doneLabel': doneLabel,
-        'postponeLabel': postponeLabel,
-        'declineLabel': declineLabel,
-        'sosLabel': sosLabel,
-        'watchdogId': watchdogId,
-        'taskTitle': taskTitle,
-      });
-    } catch (_) {
-      // The regular notification remains available if overlay permission or
-      // the native service is unavailable.
     }
   }
 

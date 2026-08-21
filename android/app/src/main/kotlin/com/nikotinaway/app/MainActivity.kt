@@ -341,6 +341,24 @@ class MainActivity : FlutterActivity() {
 						result.success(true)
 					}
 
+					// The notification-tap path knows the watchdogId straight from
+					// the payload; HomePage's own mandatory-gate path (opened on its
+					// own resume/foreground check, not from a tap) only ever knew the
+					// task's title, so its "Kabul Et" never acknowledged the watchdog
+					// and the "waiting for response" foreground notification stayed
+					// up forever after acceptance. Looks the id up by title instead.
+					"ackWatchdogByTaskTitle" -> {
+						val taskTitle = call.argument<String>("taskTitle").orEmpty()
+						if (taskTitle.isNotBlank()) {
+							val match = WatchdogStore.loadAllActive(this)
+								.firstOrNull { it.taskTitle == taskTitle }
+							if (match != null) {
+								NoResponseWatchdogService.acknowledge(this, match.watchdogId)
+							}
+						}
+						result.success(true)
+					}
+
 					"showInfoOverlayFromNotification" -> {
 						TaskOverlayService.showInfo(
 							context = this,
@@ -358,21 +376,6 @@ class MainActivity : FlutterActivity() {
 							body = call.argument<String>("body").orEmpty(),
 							yesLabel = call.argument<String>("yesLabel").orEmpty(),
 							noLabel = call.argument<String>("noLabel").orEmpty(),
-							taskTitle = call.argument<String>("taskTitle").orEmpty(),
-						)
-						result.success(true)
-					}
-
-					"showTaskOverlayFromNotification" -> {
-						TaskOverlayService.show(
-							context = this,
-							title = call.argument<String>("title").orEmpty(),
-							body = call.argument<String>("body").orEmpty(),
-							acceptLabel = call.argument<String>("doneLabel").orEmpty(),
-							postponeLabel = call.argument<String>("postponeLabel").orEmpty(),
-							declineLabel = call.argument<String>("declineLabel").orEmpty(),
-							sosLabel = call.argument<String>("sosLabel").orEmpty(),
-							watchdogId = call.argument<String>("watchdogId").orEmpty(),
 							taskTitle = call.argument<String>("taskTitle").orEmpty(),
 						)
 						result.success(true)
