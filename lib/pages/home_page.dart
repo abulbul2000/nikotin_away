@@ -3417,29 +3417,40 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
                 ),
               )
-            else
+            else ...[
+              SizedBox(
+                height: 176,
+                width: double.infinity,
+                child: CustomPaint(
+                  painter: _BreathPathPainter(values: values),
+                ),
+              ),
+              const SizedBox(height: 6),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildTrendBar(
-                    context.t('daily'),
-                    values[0],
-                    _dailyAverage,
-                    _calculateImprovementLabel(_dailyAverage, _weeklyAverage),
-                  ),
-                  _buildTrendBar(
-                    context.t('weekly'),
-                    values[1],
-                    _weeklyAverage,
-                    _weeklyImprovementText,
-                  ),
-                  _buildTrendBar(
-                    context.t('monthly'),
-                    values[2],
-                    _monthlyAverage,
-                    _monthlyImprovementText,
-                  ),
+                  _buildBreathPathLabel(context.t('daily'), false),
+                  _buildBreathPathLabel(context.t('weekly'), false),
+                  _buildBreathPathLabel(context.t('monthly'), true),
                 ],
               ),
+              const SizedBox(height: 18),
+              _buildBreathMetricRow(
+                Icons.air_rounded,
+                context.t('daily'),
+                _formatBreathValue(_dailyAverage),
+              ),
+              _buildBreathMetricRow(
+                Icons.insights_rounded,
+                context.t('weekly'),
+                _formatBreathValue(_weeklyAverage),
+              ),
+              _buildBreathMetricRow(
+                Icons.timeline_rounded,
+                context.t('monthly'),
+                _formatBreathValue(_monthlyAverage),
+              ),
+            ],
             if (hasAnyData) ...[
               const SizedBox(height: 12),
               _buildTrendSummaryRow(
@@ -3477,6 +3488,48 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+
+  Widget _buildBreathPathLabel(String label, bool highlighted) {
+    return Text(
+      label,
+      style: TextStyle(
+        color: highlighted ? AppTheme.ember : AppTheme.inkMuted,
+        fontSize: 11,
+        fontWeight: highlighted ? FontWeight.w800 : FontWeight.w500,
+      ),
+    );
+  }
+
+  Widget _buildBreathMetricRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon, size: 19, color: AppTheme.brandAccent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: AppTheme.ember,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatBreathValue(double value) {
+    if (value <= 0) return '—';
+    return value.toStringAsFixed(1);
   }
 
   Widget _buildTrendBar(
@@ -3620,5 +3673,79 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       ),
     );
+  }
+}
+
+
+class _BreathPathPainter extends CustomPainter {
+  final List<double> values;
+
+  const _BreathPathPainter({required this.values});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (values.isEmpty) return;
+    final lineColor = const Color(0xFF9CCDBB);
+    final ember = const Color(0xFFE6A15C);
+    final guide = const Color(0x149AA9AC);
+    final points = <Offset>[];
+    final chartHeight = size.height - 24;
+    final left = 10.0;
+    final right = size.width - 10.0;
+    final step = values.length == 1
+        ? 0.0
+        : (right - left) / (values.length - 1);
+
+    final guidePaint = Paint()
+      ..color = guide
+      ..strokeWidth = 1;
+    for (var i = 0; i < values.length; i++) {
+      final x = left + step * i;
+      canvas.drawLine(
+        Offset(x, chartHeight * 0.18),
+        Offset(x, chartHeight),
+        guidePaint,
+      );
+    }
+
+    for (var i = 0; i < values.length; i++) {
+      final x = left + step * i;
+      final normalized = values[i].clamp(0.0, 1.0);
+      final y = chartHeight - (normalized * chartHeight * 0.72) - 8;
+      points.add(Offset(x, y));
+    }
+
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (var i = 1; i < points.length; i++) {
+      final previous = points[i - 1];
+      final current = points[i];
+      final midX = (previous.dx + current.dx) / 2;
+      path.cubicTo(midX, previous.dy, midX, current.dy, current.dx, current.dy);
+    }
+
+    final linePaint = Paint()
+      ..color = lineColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(path, linePaint);
+
+    for (var i = 0; i < points.length; i++) {
+      final isLatest = i == points.length - 1;
+      if (isLatest) {
+        final glowPaint = Paint()
+          ..color = ember.withValues(alpha: 0.22)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+        canvas.drawCircle(points[i], 10, glowPaint);
+      }
+      final pointPaint = Paint()..color = isLatest ? ember : lineColor;
+      canvas.drawCircle(points[i], isLatest ? 7 : 5, pointPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BreathPathPainter oldDelegate) {
+    return oldDelegate.values != values;
   }
 }
