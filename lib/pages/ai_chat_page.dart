@@ -425,8 +425,9 @@ class _AIChatPageState extends State<AIChatPage> {
 
   Future<void> _startListening() async {
     if (_listening || _sending) return;
-
+    debugPrint('[AIChat] Microphone button pressed');
     final microphoneStatus = await ph.Permission.microphone.request();
+    debugPrint('[AIChat] Microphone permission: $microphoneStatus');
     if (!microphoneStatus.isGranted) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -444,13 +445,16 @@ class _AIChatPageState extends State<AIChatPage> {
     // Re-initialize in case the service was stopped after a previous failure.
     final available = await _speech.initialize(
       onStatus: (status) {
+        debugPrint('[AIChat] Speech status: $status');
         if (!mounted) return;
         if (status == 'notListening' || status == 'done') {
           setState(() => _listening = false);
         }
       },
       onError: (error) {
-        debugPrint('SpeechToText error: ${error.errorMsg}');
+        debugPrint(
+          '[AIChat] Speech error: ${error.errorMsg}, permanent=${error.permanent}',
+        );
         if (!mounted) return;
         setState(() => _listening = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -478,11 +482,29 @@ class _AIChatPageState extends State<AIChatPage> {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
 
-    final locale = await _resolveListeningLocale();
+    String? locale;
+    try {
+      locale = await _resolveListeningLocale();
+      debugPrint('[AIChat] Selected speech locale: $locale');
+    } catch (error, stackTrace) {
+      debugPrint('[AIChat] Speech locale lookup failed: $error');
+      debugPrintStack(stackTrace: stackTrace);
+      // Let Android choose its default speech locale instead of blocking
+      // voice input when the device language list cannot be queried.
+    }
     if (!mounted) return;
     _textBeforeListening = _controller.text;
     setState(() => _listening = true);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.t('aiChatMicTooltip')),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
     try {
+      debugPrint('[AIChat] Starting speech listen');
       await _speech.listen(
         onResult: (result) {
           // Only use final results or non-empty partial results to avoid
