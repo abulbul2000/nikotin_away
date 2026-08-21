@@ -138,7 +138,7 @@ class _ButterflyArtwork extends StatelessWidget {
     if (isDragging) {
       return DecoratedBox(
         decoration: BoxDecoration(
-          color: const Color(0xFF0D1B2A).withValues(alpha: 0.94),
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.94),
           shape: BoxShape.circle,
           boxShadow: const [
             BoxShadow(color: Colors.black38, blurRadius: 12, spreadRadius: 1),
@@ -156,7 +156,7 @@ class _ButterflyArtwork extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1B2A).withValues(alpha: 0.94),
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.94),
         shape: BoxShape.circle,
         boxShadow: const [
           BoxShadow(color: Colors.black38, blurRadius: 10, spreadRadius: 1),

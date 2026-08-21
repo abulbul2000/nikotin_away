@@ -18,7 +18,7 @@ enum QuickAction { smokedNow, craving, selfChallenge, openApp }
 Future<QuickAction?> showQuickActionMenu(BuildContext context) {
   return showModalBottomSheet<QuickAction>(
     context: context,
-    backgroundColor: const Color(0xFF0D1B2A),
+    backgroundColor: Theme.of(context).colorScheme.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
@@ -74,7 +74,7 @@ const List<int> selfChallengeDurationOptions = [15, 30, 45, 60];
 Future<int?> showSelfChallengeDurationMenu(BuildContext context) {
   return showModalBottomSheet<int>(
     context: context,
-    backgroundColor: const Color(0xFF0D1B2A),
+    backgroundColor: Theme.of(context).colorScheme.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),

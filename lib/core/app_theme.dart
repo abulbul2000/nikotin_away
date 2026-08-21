@@ -11,16 +11,16 @@ class AppTheme {
 
   /// Warm, restrained accents make the app feel intentional rather than
   /// template-generated. The mint remains available for calm/positive states.
-  static const Color brandAccent = Color(0xFF9CCDBB);
-  static const Color ember = Color(0xFFE6A15C);
-  static const Color canvas = Color(0xFF111820);
-  static const Color surface = Color(0xFF1A252D);
-  static const Color surfaceQuiet = Color(0xFF202E35);
-  static const Color inkMuted = Color(0xFF9AA9AC);
+  static const Color brandAccent = Color(0xFF91A996);
+  static const Color ember = Color(0xFFC9825B);
+  static const Color canvas = Color(0xFF202326);
+  static const Color surface = Color(0xFF2A2E32);
+  static const Color surfaceQuiet = Color(0xFF34393D);
+  static const Color inkMuted = Color(0xFFAEB3B0);
 
-  /// Unchanged: already matches the dark slate of the logo's broken chain
-  /// (#002030–#103040).
-  static const Color noSmokeNavy = Color(0xFF0D1B2A);
+  /// Reserved for the focused crisis surface so it feels distinct from the
+  /// everyday charcoal canvas without introducing a bright alarm colour.
+  static const Color noSmokeNavy = Color(0xFF18272B);
 
   static ThemeData get darkTheme {
     final colorScheme = ColorScheme.fromSeed(
@@ -36,9 +36,9 @@ class AppTheme {
       brightness: Brightness.dark,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: canvas,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: canvas,
-        foregroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: canvas,
+          foregroundColor: Color(0xFFF2EEE7),
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -61,8 +61,8 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.white,
-          side: const BorderSide(color: Color(0xFF52636A)),
+          foregroundColor: const Color(0xFFF2EEE7),
+          side: const BorderSide(color: Color(0xFF596066)),
           minimumSize: const Size.fromHeight(54),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
