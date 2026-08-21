@@ -67,38 +67,71 @@ class _MandatoryTaskPageState extends State<MandatoryTaskPage> {
       // to actively answer.
       canPop: false,
       child: Scaffold(
-        backgroundColor: AppTheme.noSmokeNavy,
+        backgroundColor: AppTheme.canvas,
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Spacer(flex: 2),
+                Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.ember,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      context.t('taskStartTitle'),
+                      style: const TextStyle(
+                        color: AppTheme.inkMuted,
+                        fontSize: 12,
+                        letterSpacing: 1.1,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
                 Text(
                   context.t('mandatoryTaskTitle'),
-                  textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 28,
+                    fontSize: 34,
+                    height: 1.05,
+                    letterSpacing: -1.0,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  AppTexts.localizeCanonicalText(context, widget.taskTitle),
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.75),
-                    fontSize: 17,
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.ember.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Text(
+                    AppTexts.localizeCanonicalText(context, widget.taskTitle),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      height: 1.3,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-                const Spacer(flex: 3),
+                const Spacer(),
                 if (_showPostponeChoices)
                   ..._postponeChoiceButtons()
                 else
                   ..._primaryButtons(),
-                const Spacer(),
               ],
             ),
           ),
@@ -189,13 +222,18 @@ class _TaskListButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isPrimary = key == const ValueKey('mandatory_task_start_button');
     return SizedBox(
       width: double.infinity,
-      height: 56,
+      height: 58,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFEEEEEE),
-          foregroundColor: Colors.black87,
+          backgroundColor: isPrimary ? AppTheme.ember : AppTheme.surfaceQuiet,
+          foregroundColor: isPrimary ? const Color(0xFF1B1610) : Colors.white,
+          elevation: 0,
+          side: isPrimary
+              ? null
+              : BorderSide(color: Colors.white.withValues(alpha: 0.12)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -203,7 +241,7 @@ class _TaskListButton extends StatelessWidget {
         onPressed: onPressed,
         child: Text(
           label,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
     );

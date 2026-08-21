@@ -250,14 +250,17 @@ class _CravingSosPageState extends State<CravingSosPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.noSmokeNavy,
+      backgroundColor: AppTheme.canvas,
       appBar: AppBar(
-        title: Text(context.t('sosPageTitle')),
+        title: Text(
+          context.t('sosPageTitle'),
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
         backgroundColor: Colors.transparent,
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
           child: switch (_stage) {
             _SosStage.breathing => _buildBreathing(),
             _SosStage.suggestion => _buildSuggestion(),
@@ -275,20 +278,32 @@ class _CravingSosPageState extends State<CravingSosPage>
 
     return Column(
       children: [
-        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceQuiet,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              context.t('sosCyclesCompleted')
+                  .replaceAll('{count}', '$_cyclesCompleted'),
+              style: const TextStyle(
+                color: AppTheme.inkMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
         Text(
           context.t('sosIntro'),
           textAlign: TextAlign.center,
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(color: Colors.white70),
-        ),
-        const SizedBox(height: 12),
-        Text(
-          context
-              .t('sosCyclesCompleted')
-              .replaceAll('{count}', '$_cyclesCompleted'),
-          style: const TextStyle(color: Colors.white38, fontSize: 12),
         ),
         const Spacer(),
         AnimatedBuilder(
@@ -303,8 +318,8 @@ class _CravingSosPageState extends State<CravingSosPage>
             height: 160,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppTheme.brandPrimary.withValues(alpha: 0.18),
-              border: Border.all(color: AppTheme.brandPrimary, width: 3),
+              color: AppTheme.ember.withValues(alpha: 0.16),
+              border: Border.all(color: AppTheme.ember, width: 2),
             ),
             alignment: Alignment.center,
             child: Column(
@@ -313,9 +328,9 @@ class _CravingSosPageState extends State<CravingSosPage>
                 Text(
                   _phaseLabel,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: AppTheme.ember,
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 Text(
@@ -330,7 +345,11 @@ class _CravingSosPageState extends State<CravingSosPage>
         Text(
           context.t('sosReassurance'),
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.white54, fontSize: 13),
+          style: const TextStyle(
+            color: AppTheme.inkMuted,
+            fontSize: 13,
+            height: 1.45,
+          ),
         ),
         const SizedBox(height: 20),
         Row(

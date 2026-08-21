@@ -2067,37 +2067,122 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   int _selectedTabIndex = 0;
 
-  Widget _buildHomeTab(BuildContext context) {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
-        child: Column(
-          children: [
-            Text(
-              '${context.t('welcome')}, ${widget.name}',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+  Widget _buildDailyPulseHeader(BuildContext context) {
+    final total = _successfulTaskCount + _failedTaskCount;
+    final ratio = total == 0 ? 0.0 : _successfulTaskCount / total;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceQuiet,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${context.t('welcome')}, ${widget.name}',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.t('home'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.ember.withValues(alpha: 0.16),
+                ),
+                child: const Icon(
+                  Icons.wb_sunny_outlined,
+                  color: AppTheme.ember,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                context.t('taskReasonCadence'),
+                style: const TextStyle(color: AppTheme.inkMuted, fontSize: 12),
+              ),
+              Text(
+                '$_successfulTaskCount ${context.t('taskUnit')}',
+                style: const TextStyle(
+                  color: AppTheme.brandAccent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              minHeight: 6,
+              value: ratio,
+              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              valueColor: const AlwaysStoppedAnimation(AppTheme.ember),
             ),
-            const SizedBox(height: 24),
-            if (_latestMentorMessage != null) ...[
-              _buildMentorCard(context),
-              const SizedBox(height: 24),
-            ],
-            if (_snoringSummaryCount > 0) ...[
-              _buildSnoringSummaryCard(context),
-              const SizedBox(height: 24),
-            ],
-            _buildReductionCard(context),
-            const SizedBox(height: 24),
-            _buildHealthMetricsButton(context),
-            const SizedBox(height: 24),
-            _buildSummaryStats(context),
-            const SizedBox(height: 16),
-            _buildBreathTrendCard(),
-            const SizedBox(height: 24),
-            if (!_registrationCompleted)
-              _buildCompleteRegistrationButton(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeTab(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildDailyPulseHeader(context),
+          const SizedBox(height: 18),
+          if (_latestMentorMessage != null) ...[
+            _buildMentorCard(context),
+            const SizedBox(height: 18),
           ],
-        ),
+          if (_snoringSummaryCount > 0) ...[
+            _buildSnoringSummaryCard(context),
+            const SizedBox(height: 18),
+          ],
+          _buildReductionCard(context),
+          const SizedBox(height: 18),
+          _buildHealthMetricsButton(context),
+          const SizedBox(height: 18),
+          _buildSummaryStats(context),
+          const SizedBox(height: 18),
+          _buildBreathTrendCard(),
+          if (!_registrationCompleted) ...[
+            const SizedBox(height: 18),
+            _buildCompleteRegistrationButton(context),
+          ],
+        ],
       ),
     );
   }
@@ -2168,9 +2253,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const NoSmokeLogo(size: 28),
+          const NoSmokeLogo(size: 30),
           const SizedBox(width: 10),
-          Text(context.t('home')),
+          Text(
+            context.t('home'),
+            style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: -0.2),
+          ),
         ],
       ),
       actions: [
