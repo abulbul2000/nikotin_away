@@ -41,11 +41,16 @@ class SmokedLogButtonView(
     // This asset is pre-cropped from the original artwork. Keeping the
     // chain out of the bitmap itself is safer than asking Canvas to stretch
     // a source sub-rectangle at runtime, which distorted the butterfly.
-    private val mark = BitmapFactory.decodeResource(
+    private val compactMark = BitmapFactory.decodeResource(
         resources,
         R.drawable.smoked_log_butterfly,
     )
-    private val butterflyOnlySrc = Rect(0, 0, mark.width, mark.height)
+    private val compactSrc = Rect(0, 0, compactMark.width, compactMark.height)
+    private val chainMark = BitmapFactory.decodeResource(
+        resources,
+        R.drawable.smoked_log_mark,
+    )
+    private val chainSrc = Rect(0, 0, chainMark.width, chainMark.height)
 
     private val markPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         alpha = RESTING_ALPHA
@@ -192,8 +197,10 @@ class SmokedLogButtonView(
 
         val markInset = dp(14f)
         val markRect = RectF(markInset, markInset, width - markInset, height - markInset)
-        val sourceAspect = butterflyOnlySrc.width().toFloat() /
-            butterflyOnlySrc.height().toFloat()
+        val activeMark = if (dragging) chainMark else compactMark
+        val activeSrc = if (dragging) chainSrc else compactSrc
+        val sourceAspect = activeSrc.width().toFloat() /
+            activeSrc.height().toFloat()
         val fittedWidth = minOf(markRect.width(), markRect.height() * sourceAspect)
         val fittedHeight = minOf(markRect.height(), markRect.width() / sourceAspect)
         val markDest = RectF(
@@ -207,18 +214,16 @@ class SmokedLogButtonView(
         // (x=0 or x=screenWidth-buttonWidth, no margin), so the mark is
         // drawn across the view's full area either way — nothing needs to
         // be pushed toward one side or clipped to fake an off-screen half.
-        // The chain is intentionally never drawn in the overlay. It was
-        // useful in the original artwork, but it makes the edge-snapped
-        // control much more intrusive and contradicts the compact-button
-        // behavior. The full chain is therefore excluded while resting and
-        // while dragging; dragging changes only the position, not the art.
-        val markSrc = butterflyOnlySrc
+        // At rest the compact asset keeps the edge-snapped control small.
+        // While dragging, show the original chain so the movement still
+        // carries the complete logo identity. Each source uses its own
+        // aspect ratio, so neither state stretches the artwork.
         if (facingRight) {
-            canvas.drawBitmap(mark, markSrc, markDest, markPaint)
+            canvas.drawBitmap(activeMark, activeSrc, markDest, markPaint)
         } else {
             canvas.save()
             canvas.scale(-1f, 1f, width / 2f, height / 2f)
-            canvas.drawBitmap(mark, markSrc, markDest, markPaint)
+            canvas.drawBitmap(activeMark, activeSrc, markDest, markPaint)
             canvas.restore()
         }
     }
