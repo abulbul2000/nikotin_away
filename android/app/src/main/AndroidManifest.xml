@@ -269,6 +269,10 @@
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
+        <!-- Android 11+ package visibility for speech_to_text. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
         <!-- Required so the app can detect whether the Health Connect app
              is installed (Phase 9 wearable spike). -->
         <package android:name="com.google.android.apps.healthdata" />
