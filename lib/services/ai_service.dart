@@ -220,6 +220,13 @@ AiAction? _parseAndValidateAction(dynamic rawAction) {
 }
 
 Future<AiChatResult> sendMessageToAI(List<AiChatTurn> history) async {
+  // Defense in depth: the page disables its controls in release builds, but
+  // the service must also reject direct or future callers in production.
+  if (!kDebugMode) {
+    throw const AiServiceException(
+      'AI chat is available only in developer builds',
+    );
+  }
   _validateHistory(history);
 
   try {

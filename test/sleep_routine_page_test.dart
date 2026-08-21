@@ -257,6 +257,7 @@ TaskAssignment _sleepRoutineTask({
 Future<void> _dismissMicRationaleIfShown(WidgetTester tester) async {
   final noButton = find.text('Hayır');
   if (noButton.evaluate().isNotEmpty) {
+    await tester.ensureVisible(noButton.first);
     await tester.tap(noButton.first);
     await _pumpRealTime(tester, const Duration(milliseconds: 100));
   }
@@ -265,6 +266,7 @@ Future<void> _dismissMicRationaleIfShown(WidgetTester tester) async {
 Future<void> _tapTimerCircle(WidgetTester tester, Finder circleFinder) async {
   await _pumpUntilFound(tester, circleFinder);
   await _dismissMicRationaleIfShown(tester);
+  await tester.ensureVisible(circleFinder);
   await tester.tap(circleFinder);
   await _pumpRealTime(tester, const Duration(milliseconds: 100));
   await _dismissMicRationaleIfShown(tester);
@@ -340,11 +342,13 @@ Future<void> _completeCoughTestStep(WidgetTester tester) async {
   );
   final elevatedButtonFinder = find.byType(ElevatedButton);
   await _pumpUntilFound(tester, elevatedButtonFinder);
+  await tester.ensureVisible(elevatedButtonFinder.first);
   await tester.tap(elevatedButtonFinder.first);
   await _pumpRealTime(tester, const Duration(milliseconds: 100));
 
   final noButton = find.text('Hayır');
   if (noButton.evaluate().isNotEmpty) {
+    await tester.ensureVisible(noButton);
     await tester.tap(noButton);
     await _pumpRealTime(tester, const Duration(milliseconds: 100));
   }
@@ -360,6 +364,7 @@ Future<void> _completeCoughTestStep(WidgetTester tester) async {
     keepResultButton,
   ], timeout: const Duration(seconds: 35));
   if (keepResultButton.evaluate().isNotEmpty) {
+    await tester.ensureVisible(keepResultButton);
     await tester.tap(keepResultButton);
     await _pumpRealTime(tester, const Duration(milliseconds: 100));
     await _pumpUntilFound(tester, elevatedButtonFinder);
@@ -367,6 +372,7 @@ Future<void> _completeCoughTestStep(WidgetTester tester) async {
 
   // Result screen's "devam" button. What follows (the discrepancy question
   // or DailyProgressReportView) may itself show a loading spinner.
+  await tester.ensureVisible(elevatedButtonFinder.first);
   await tester.tap(elevatedButtonFinder.first);
   for (var i = 0; i < 10; i += 1) {
     await _pumpRealTime(tester, const Duration(milliseconds: 50));
@@ -543,7 +549,9 @@ void main() {
 
     expect(find.byType(DailyProgressReportView), findsOneWidget);
 
-    await tester.tap(find.byType(ElevatedButton).last);
+    final finalButton = find.byType(ElevatedButton).last;
+    await tester.ensureVisible(finalButton);
+    await tester.tap(finalButton);
     for (var i = 0; i < 10; i += 1) {
       await _pumpRealTime(tester, const Duration(milliseconds: 50));
     }
