@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -580,6 +582,14 @@ class _AIChatPageState extends State<AIChatPage> {
   }
 
   Future<void> _send() async {
+    if (!kDebugMode) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.t('aiChatDeveloperOnly'))),
+        );
+      }
+      return;
+    }
     final text = _controller.text.trim();
     if (text.isEmpty || _sending) return;
     // Claim the lock before the first await. It used to be set after
@@ -1049,16 +1059,36 @@ class _AIChatPageState extends State<AIChatPage> {
       position: position,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       items: [
-        PopupMenuItem(value: 'pin', child: _menuItem(Icons.push_pin_outlined, context.t(conversation.pinned ? 'aiChatMenuUnpin' : 'aiChatMenuPin'))),
-        PopupMenuItem(value: 'rename', child: _menuItem(Icons.edit_outlined, context.t('aiChatMenuRename'))),
-        PopupMenuItem(value: 'invite', child: _menuItem(Icons.group_add_outlined, context.t('aiChatMenuInvite'))),
-        PopupMenuItem(value: 'copy', child: _menuItem(Icons.copy_outlined, context.t('aiChatMenuCopy'))),
-        PopupMenuItem(value: 'summary', child: _menuItem(Icons.summarize_outlined, context.t('aiChatMenuSummary'))),
-        PopupMenuItem(value: 'move', child: _menuItem(Icons.folder_outlined, context.t('aiChatMenuMove'))),
-        PopupMenuItem(value: 'report', child: _menuItem(Icons.report_outlined, context.t('aiChatMenuReport'))),
+        PopupMenuItem(
+          value: 'pin',
+          child: _menuItem(
+            Icons.push_pin_outlined,
+            context.t(conversation.pinned ? 'aiChatMenuUnpin' : 'aiChatMenuPin'),
+          ),
+        ),
+        PopupMenuItem(
+          value: 'rename',
+          child: _menuItem(Icons.edit_outlined, context.t('aiChatMenuRename')),
+        ),
+        PopupMenuItem(
+          value: 'copy',
+          child: _menuItem(Icons.copy_outlined, context.t('aiChatMenuCopy')),
+        ),
+        PopupMenuItem(
+          value: 'summary',
+          child: _menuItem(Icons.summarize_outlined, context.t('aiChatMenuSummary')),
+        ),
+        PopupMenuItem(
+          value: 'share',
+          child: _menuItem(Icons.ios_share_outlined, context.t('aiChatMenuShare')),
+        ),
         PopupMenuItem(
           value: 'delete',
-          child: _menuItem(Icons.delete_outline, context.t('aiChatMenuDelete'), destructive: true),
+          child: _menuItem(
+            Icons.delete_outline,
+            context.t('aiChatMenuDelete'),
+            destructive: true,
+          ),
         ),
       ],
     );
@@ -1069,7 +1099,7 @@ class _AIChatPageState extends State<AIChatPage> {
       case 'rename':
         await _renameConversation(conversation);
         break;
-      case 'invite':
+      case 'share':
         await _shareConversation(conversation);
         break;
       case 'copy':
@@ -1117,9 +1147,13 @@ class _AIChatPageState extends State<AIChatPage> {
               child: SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: _newConversation,
+                  onPressed: kDebugMode ? _newConversation : null,
                   icon: const Icon(Icons.add),
-                  label: Text(context.t('aiChatNewConversation')),
+                  label: Text(
+                    kDebugMode
+                        ? context.t('aiChatNewConversation')
+                        : context.t('aiChatDeveloperOnly'),
+                  ),
                 ),
               ),
             ),
@@ -1271,6 +1305,7 @@ class _AIChatPageState extends State<AIChatPage> {
                 Expanded(
                   child: TextField(
                     controller: _controller,
+                    readOnly: !kDebugMode,
                     minLines: 1,
                     maxLines: 4,
                     decoration: InputDecoration(
@@ -1279,14 +1314,14 @@ class _AIChatPageState extends State<AIChatPage> {
                           : context.t('aiChatHint'),
                       border: const OutlineInputBorder(),
                     ),
-                    onSubmitted: (_) => _send(),
+                    onSubmitted: kDebugMode ? (_) => _send() : null,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Tooltip(
                   message: context.t('aiChatMicTooltip'),
                   child: IconButton.filled(
-                    onPressed: _sending
+                    onPressed: !kDebugMode || _sending
                         ? null
                         : () => _listening
                             ? _stopListening()
@@ -1305,7 +1340,7 @@ class _AIChatPageState extends State<AIChatPage> {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
-                  onPressed: _sending ? null : _send,
+                  onPressed: !kDebugMode || _sending ? null : _send,
                   icon: const Icon(Icons.send),
                   tooltip: context.t('aiChatSend'),
                 ),
