@@ -594,15 +594,11 @@ class NotificationService {
   static const String _healthTipChannelId = 'health_tip_channel_v3';
   static const int _healthTipBaseId = 430100;
 
-  /// User-facing optional health-tip limit. The larger cancellation range is
-  /// retained so upgrades from older versions cannot leave stale notifications.
-  static const int _healthTipDailyCountMax = 15;
-  // Keep cancelling the legacy 30-slot range during migration so an upgrade
+  /// Keep cancelling the legacy 30-slot range during migration so an upgrade
   // cannot leave old recurring health-tip alarms behind.
   static const int _healthTipLegacySlotCount = 30;
   static const int _healthTipUserMaxCount = 15;
   static const int _healthTipGeneralCount = 7;
-  static const int _healthTipDiseaseCount = 8;
 
   /// Slots previously used to key the native health-tip-overlay alarm.
   /// Notifications no longer arm that overlay, but the same slot numbers are
@@ -2699,7 +2695,6 @@ class NotificationService {
       } else if (i < _healthTipGeneralCount) {
         tipKey = 'healthTipGeneral${(i % _healthTipsGeneralCount) + 1}';
       } else {
-        final diseaseSlot = i - _healthTipGeneralCount;
         final condition = conditions[conditionCursor % conditions.length];
         final prefix = _healthTipPrefixByCondition[condition]!;
         conditionCursor++;
