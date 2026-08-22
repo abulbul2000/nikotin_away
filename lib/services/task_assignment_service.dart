@@ -459,7 +459,9 @@ class TaskAssignmentService {
   /// ever surfaces the last), so a foreground caller can still update its
   /// own UI state; callers that don't need that (the background isolate)
   /// simply ignore the return value.
-  Future<String?> scheduleTodaysTaskNotifications() async {
+  Future<String?> scheduleTodaysTaskNotifications({
+    bool allowBeforeWakeForBackground = false,
+  }) async {
     await syncDeliveryDeferralsFromNative();
     await enforceDeliveryQueueLimit();
     await syncPendingDeliveryExpirationsFromNative();
@@ -478,21 +480,36 @@ class TaskAssignmentService {
     final sleepHour = int.tryParse(parts.first) ?? 21;
     final sleepMinute = int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0;
     final now = DateTime.now();
-    var sleepAt = DateTime(now.year, now.month, now.day, sleepHour, sleepMinute);
-    if (!sleepAt.isAfter(now)) {
+    final wakeParts = wakeRaw.split(':');
+    final wakeHour = int.tryParse(wakeParts.first) ?? 7;
+    final wakeMinute =
+        int.tryParse(wakeParts.length > 1 ? wakeParts[1] : '0') ?? 0;
+    final wakeAt = DateTime(now.year, now.month, now.day, wakeHour, wakeMinute);
+    final planningNow = allowBeforeWakeForBackground && now.isBefore(wakeAt)
+        ? wakeAt
+        : now;
+
+    var sleepAt = DateTime(
+      planningNow.year,
+      planningNow.month,
+      planningNow.day,
+      sleepHour,
+      sleepMinute,
+    );
+    if (!sleepAt.isAfter(planningNow)) {
       sleepAt = sleepAt.add(const Duration(days: 1));
     }
 
     AdaptiveTaskPlan? adaptivePlan;
     final planningEligible = _storage.isAdaptivePlanningEligible(
-      now: now,
+      now: planningNow,
       observationStartedAt: observationStartedAt,
       wakeTime: wakeRaw,
     );
     if (planningEligible) {
       final behavior = await _storage.loadBehaviorDashboard();
       adaptivePlan = await _storage.buildAdaptiveNoSmokePlan(
-        now: now,
+        now: planningNow,
         sleepAt: sleepAt,
         riskyHours: behavior.riskyHours,
       );
@@ -503,7 +520,7 @@ class TaskAssignmentService {
       return null;
     }
 
-    final planDate = DateTime.now();
+    final planDate = DateTime(now.year, now.month, now.day);
     await planDailyTasks(planDate: planDate, items: planItems);
 
     final notifiedToday = await _storage.loadNotifiedTaskTitlesToday();

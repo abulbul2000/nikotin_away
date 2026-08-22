@@ -594,10 +594,10 @@ class NotificationService {
   static const String _healthTipChannelId = 'health_tip_channel_v3';
   static const int _healthTipBaseId = 430100;
 
-  /// Daily mentor advice quota: 5 general health tips, 15 smoking-related
-  /// tips, and 10 disease-related tips. These are intentionally fixed so the
-  /// phone receives the same complete daily programme in every language.
+  /// User-facing optional health-tip limit. The larger cancellation range is
+  /// retained so upgrades from older versions cannot leave stale notifications.
   static const int _healthTipDailyCountMax = 30;
+  static const int _healthTipUserMaxCount = 5;
   static const int _healthTipGeneralCount = 5;
   static const int _healthTipSmokingCount = 15;
   static const int _healthTipDiseaseCount = 10;
@@ -2602,10 +2602,6 @@ class NotificationService {
       await _plugin.cancel(_healthTipBaseId + i);
       await AndroidWatchdogService.cancelHealthTipTrigger(i);
     }
-    if (healthConditions.isEmpty) {
-      return;
-    }
-
     // The caller passes the static survey/settings window, but the user's
     // actual sleep schedule can drift from that over time. Sleep
     // Intelligence (when enabled) tracks the real window from overnight
@@ -2618,10 +2614,15 @@ class NotificationService {
     final resolvedWakeTime = effectiveWindow.wakeTime ?? wakeTime;
     final resolvedSleepTime = effectiveWindow.sleepTime ?? sleepTime;
 
-    // This mode intentionally delivers the full daily health-tip quota.
-    // The ten slots are distributed across the resolved waking window below;
-    // sleep hours are never used as candidates.
-    final dailyCount = _healthTipDailyCountMax;
+    final requestedCount = await StorageService().loadDailyHealthTipCount();
+    final dailyCount = requestedCount.clamp(0, _healthTipUserMaxCount);
+    if (dailyCount == 0) {
+      return;
+    }
+
+    // Distribute the selected number of optional tips across the resolved
+    // waking window. General and smoking tips remain available even when no
+    // health condition was selected; only disease-specific slots need one.
 
     final scheduleMode = await _resolveAndroidScheduleMode();
     final code = await LanguageService.loadSelectedLanguageCode();

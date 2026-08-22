@@ -28,6 +28,8 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
   DailyProgressReport? _report;
   String? _sleepTime;
   String? _wakeTime;
+  int? _verifiedToday;
+  final TextEditingController _totalController = TextEditingController();
 
   @override
   void initState() {
@@ -35,8 +37,15 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _totalController.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     final report = await widget.storageService.buildDailyProgressReport();
+    final verifiedToday = await widget.storageService.loadVerifiedDailySmokingTotal();
     final fallbackSleep = await widget.storageService.loadSleepTime() ?? '23:00';
     final fallbackWake =
         await widget.storageService.loadSetting('wake_time') ?? '07:00';
@@ -47,9 +56,48 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
     if (!mounted) return;
     setState(() {
       _report = report;
+      _verifiedToday = verifiedToday;
+      if (verifiedToday != null) {
+        _totalController.text = '$verifiedToday';
+      }
       _sleepTime = sleepWindow.sleepTime ?? fallbackSleep;
       _wakeTime = sleepWindow.wakeTime ?? fallbackWake;
     });
+  }
+
+  Future<void> _saveVerificationAndClose() async {
+    final total = int.tryParse(_totalController.text.trim());
+    if (total == null || total < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.t('dailyCheckInSaved'))),
+      );
+      return;
+    }
+    await widget.storageService.saveVerifiedDailySmokingTotal(
+      date: DateTime.now(),
+      total: total,
+    );
+    if (!mounted) return;
+    setState(() => _verifiedToday = total);
+    widget.onClose();
+  }
+
+  Widget _buildVerificationField(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.brandPrimary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: TextField(
+        controller: _totalController,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+          labelText: context.t('reductionLoggedToday').replaceAll('{count}', '?'),
+          helperText: _verifiedToday == null ? context.t('dailyCheckInIntro') : null,
+        ),
+      ),
+    );
   }
 
   @override
@@ -77,6 +125,8 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
                         children: [
                           _buildSleepSummary(context, accent),
                           const SizedBox(height: 12),
+                          _buildVerificationField(context),
+                          const SizedBox(height: 12),
                           _buildReportCard(context, report, accent),
                         ],
                       ),
@@ -87,7 +137,7 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
               width: double.infinity,
               height: 48,
               child: ElevatedButton(
-                onPressed: widget.onClose,
+                onPressed: _saveVerificationAndClose,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.brandPrimary,
                 ),

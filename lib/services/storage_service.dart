@@ -2985,6 +2985,11 @@ class StorageService {
       since: since,
     );
     final taskDays = await _taskSuccessRateByDay(since: since);
+    // A quick-log event is only a lower bound.  It must not be treated as the
+    // day's complete consumption when calculating cigarettes avoided.
+    final verifiedSmokingByDay = await _loadVerifiedDailySmokingTotals(
+      since: since,
+    );
 
     var longestCompletedBarrierMinutes = 0;
     for (final event in await loadRecentAdaptiveTaskEvents()) {
@@ -2997,6 +3002,7 @@ class StorageService {
     var streak = 0;
     var avoided = 0;
     var evidenceDays = 0;
+    var verifiedEvidenceDays = 0;
     var streakOpen = true;
 
     for (var back = 0; back <= lookbackDays; back++) {
@@ -3015,11 +3021,15 @@ class StorageService {
       }
 
       evidenceDays++;
-      if (smoked != null) {
-        avoided += max(0, input.dailyCigarettes - smoked);
+      final verifiedSmoked = verifiedSmokingByDay[day];
+      if (verifiedSmoked != null) {
+        verifiedEvidenceDays++;
+        avoided += max(0, input.dailyCigarettes - verifiedSmoked);
       }
 
-      // A logged count is direct evidence and outranks task outcomes. Task
+      // A logged count is direct evidence and outranks task outcomes for the
+      // target streak, but it is not enough to calculate avoided cigarettes.
+      // That figure requires the user's end-of-day total confirmation. Task
       // outcomes are the fallback for the many users who never press the
       // quick-log button; the 0.6 threshold matches the weekly review's.
       final metTarget = smoked != null ? smoked <= target : successRate! >= 0.6;
@@ -3041,9 +3051,62 @@ class StorageService {
       baselineDaily: input.dailyCigarettes,
       loggedToday: smokedByDay[_dayKey(today)],
       evidenceDays: evidenceDays,
+      verifiedEvidenceDays: verifiedEvidenceDays,
       longestCompletedBarrierMinutes: longestCompletedBarrierMinutes,
     );
   }
+
+  /// Stores the user's confirmed total cigarette count for one calendar day.
+  /// Quick-log events remain immutable evidence of individual cigarettes; this
+  /// separate value is the only source allowed to credit avoided cigarettes.
+  Future<void> saveVerifiedDailySmokingTotal({
+    required DateTime date,
+    required int total,
+  }) async {
+    if (total < 0) {
+      throw ArgumentError.value(total, 'total', 'must not be negative');
+    }
+    await saveSetting(
+      _verifiedDailySmokingKey(_dayKey(date)),
+      total.toString(),
+    );
+  }
+
+  /// Returns the user's explicitly confirmed total for [date]. A null result
+  /// means the day has not been verified yet; it must never be treated as zero.
+  Future<int?> loadVerifiedDailySmokingTotal({DateTime? date}) async {
+    final raw = await loadSetting(
+      _verifiedDailySmokingKey(_dayKey(date ?? DateTime.now())),
+    );
+    final total = int.tryParse(raw ?? '');
+    return total == null || total < 0 ? null : total;
+  }
+
+  Future<Map<String, int>> _loadVerifiedDailySmokingTotals({
+    required DateTime since,
+  }) async {
+    final db = await database;
+    final rows = await db.query(
+      _settingsTable,
+      columns: ['key', 'value'],
+      where: 'key LIKE ?',
+      whereArgs: ['verified_smoking_total_%'],
+    );
+    final totals = <String, int>{};
+    for (final row in rows) {
+      final key = row['key'] as String?;
+      final value = int.tryParse(row['value'] as String? ?? '');
+      if (key == null || value == null || value < 0) continue;
+      final day = key.substring('verified_smoking_total_'.length);
+      final parsed = DateTime.tryParse(day);
+      if (parsed == null || parsed.isBefore(since)) continue;
+      totals[day] = value;
+    }
+    return totals;
+  }
+
+  static String _verifiedDailySmokingKey(String day) =>
+      'verified_smoking_total_$day';
 
   static String _dayKey(DateTime date) =>
       '${date.year.toString().padLeft(4, '0')}-'
@@ -3203,17 +3266,18 @@ class StorageService {
     );
   }
 
-  /// How many health-condition tips the user wants per day.
-  ///
-  /// Defaults to 3 — up from the previous hardcoded 1 — for someone who has
-  /// never opened the setting. Clamped to 1-5 wherever it's used since the
-  /// picker only offers that range.
+  /// How many optional health tips the user wants per day. Zero is a valid
+  /// choice and means that optional health-tip notifications are disabled.
   Future<int> loadDailyHealthTipCount() async {
     final raw = await loadSetting('daily_health_tip_count');
-    return int.tryParse(raw ?? '') ?? 3;
+    final parsed = int.tryParse(raw ?? '') ?? 3;
+    return parsed.clamp(0, 5).toInt();
   }
 
   Future<void> setDailyHealthTipCount(int value) async {
+    if (value < 0 || value > 5) {
+      throw ArgumentError.value(value, 'value', 'must be between 0 and 5');
+    }
     await saveSetting('daily_health_tip_count', value.toString());
   }
 

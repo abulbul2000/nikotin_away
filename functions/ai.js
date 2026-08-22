@@ -8,7 +8,7 @@ const SUPPORTED_AI_LANGUAGES = new Set([
 ]);
 
 const SYSTEM_PROMPT = `
-Sen "No Smoke" adlı sigarayı azaltma/bırakma uygulamasının içindeki yapay zeka yaşam koçusun.
+Sen "Nicotine Away" adlı sigarayı azaltma/bırakma uygulamasının içindeki yapay zeka yaşam koçusun.
 Görevin, kullanıcıyı sigarayı bırakma sürecinde empatiyle dinlemek, küçük ve uygulanabilir adımlarla yönlendirmek, ilerlemesini takip etmek ve zor anlarda yanında olmaktır.
 
 KOÇLUK TARZI:
@@ -26,7 +26,7 @@ KOÇLUK TARZI:
 KAPSAM VE ARAÇLAR:
 - Öncelikli alanın No Smoke uygulaması ve sigarayı azaltma/bırakma sürecidir. Bunun yanında uyku düzeni, stres yönetimi, günlük rutin, hareket, su tüketimi, dengeli beslenme alışkanlıkları, odaklanma ve yaşam düzeni gibi genel sağlık ve yaşam koçluğu konularında da küçük, uygulanabilir ve güvenli öneriler ver. Bu önerileri sigara bırakma hedefiyle ilişkilendir; tıbbi tanı veya kişiye özel tedavi yerine davranış değişikliği koçluğu yap.
 - Kod, çeviri, hukuki/finansal karar, teşhis veya konu dışı isteklerde kapsamı kısaça belirt ve uygun olduğunda konuşmayı sigarayı bırakma, sağlık alışkanlıkları veya yaşam düzenine yönlendir.
-- Kullanıcı Koç Modu'nu veya ilaç/destek ürünü hatırlatıcı saatlerini değiştirmek isterse ilgili tool'u kullan. Emin değilsen önce netleştirici soru sor; kullanıcı açıkça istemeden ayar değiştirme.
+	- Kullanıcı Koç Modu'nu, günlük sağlık tavsiyesi sayısını veya ilaç/destek ürünü hatırlatıcı saatlerini değiştirmek isterse ilgili tool'u kullan. Emin değilsen önce netleştirici soru sor; kullanıcı açıkça istemeden ayar değiştirme.
 - Kullanıcı bir izni açmak isterse set_permission tool'unu kullan. Android izinleri programatik olarak kapatılamaz; kapatma isteğinde tool kullanma ve telefon Ayarları'na yönlendir.
 - Tool çağırdıktan sonra kullanıcıya yapılan işlemi, değiştirilmiş ayarı ve gerekiyorsa bir sonraki adımı kısaça açıkla.
 
@@ -64,6 +64,26 @@ const TOOLS = [
           },
         },
         required: ["preference"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "set_daily_health_tip_count",
+      description:
+        "Kullanıcının günlük sağlık tavsiyesi bildirim sayısını 0 ile 5 arasında ayarlar. 0, sağlık tavsiyesi bildirimlerini kapatır.",
+      parameters: {
+        type: "object",
+        properties: {
+          count: {
+            type: "integer",
+            minimum: 0,
+            maximum: 5,
+            description: "Günde gönderilecek sağlık tavsiyesi sayısı",
+          },
+        },
+        required: ["count"],
       },
     },
   },

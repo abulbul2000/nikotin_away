@@ -730,6 +730,7 @@ class AppTexts {
     'aiChatActionFailed': 'Bu değişiklik uygulanamadı.',
     'aiChatActionAppliedCoachMode': 'Koç Modu ayarı güncellendi.',
     'aiChatActionAppliedMedication': 'İlaç hatırlatma saatleri güncellendi.',
+    'aiChatActionAppliedHealthTipCount': 'Günlük sağlık tavsiyesi sayısı güncellendi.',
     'aiChatActionAppliedPermission': 'İzin isteği açıldı.',
     'aiChatMicTooltip': 'Dokunup konuşun',
     'aiChatListening': 'Dinliyorum...',
@@ -2706,6 +2707,7 @@ class AppTexts {
     'aiChatActionFailed': 'This change could not be applied.',
     'aiChatActionAppliedCoachMode': 'Coach Mode setting updated.',
     'aiChatActionAppliedMedication': 'Medication reminder times updated.',
+    'aiChatActionAppliedHealthTipCount': 'Daily health-tip count updated.',
     'mentorReplySentPrefix': 'Your reply',
     'miuiPermissionTitle': 'One more permission needed',
     'miuiPermissionMessage':

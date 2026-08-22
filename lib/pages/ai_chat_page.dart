@@ -783,6 +783,9 @@ class _AIChatPageState extends State<AIChatPage> {
       case 'set_coach_mode':
         resultKey = await _applyCoachMode(action.arguments);
         break;
+      case 'set_daily_health_tip_count':
+        resultKey = await _applyDailyHealthTipCount(action.arguments);
+        break;
       case 'set_medication_times':
         resultKey = await _applyMedicationTimes(action.arguments);
         break;
@@ -819,6 +822,20 @@ class _AIChatPageState extends State<AIChatPage> {
       coachModeShouldBeEnabled(preference) ? '1' : '0',
     );
     return 'aiChatActionAppliedCoachMode';
+  }
+
+  Future<String> _applyDailyHealthTipCount(Map<String, dynamic> args) async {
+    final rawCount = args['count'];
+    if (rawCount is! int || rawCount < 0 || rawCount > 5) {
+      return 'aiChatActionFailed';
+    }
+    await _storage.setDailyHealthTipCount(rawCount);
+    await NotificationService.scheduleHealthConditionAdviceNotifications(
+      healthConditions: await _storage.loadHealthConditions(),
+      wakeTime: await _storage.loadSetting('wake_time') ?? '07:00',
+      sleepTime: await _storage.loadSleepTime() ?? '23:00',
+    );
+    return 'aiChatActionAppliedHealthTipCount';
   }
 
   Future<String> _applyMedicationTimes(Map<String, dynamic> args) async {

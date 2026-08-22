@@ -93,6 +93,7 @@ const Set<String> _allowedResponseLanguages = {
 const Set<String> _allowedRoles = {'user', 'assistant'};
 const Set<String> _allowedActions = {
   'set_coach_mode',
+  'set_daily_health_tip_count',
   'set_medication_times',
   'set_permission',
 };
@@ -168,6 +169,13 @@ void _validateActionArguments(String name, Map<String, dynamic> args) {
           (frequency is! String ||
               !_allowedCoachFrequencies.contains(frequency))) {
         throw const AiServiceException('Invalid coach frequency action');
+      }
+      return;
+
+    case 'set_daily_health_tip_count':
+      final count = args['count'];
+      if (count is! int || count < 0 || count > 5) {
+        throw const AiServiceException('Invalid daily health tip count action');
       }
       return;
 

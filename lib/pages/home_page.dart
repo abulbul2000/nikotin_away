@@ -654,6 +654,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
     final registrationCompleted = await _storageService
         .loadInitialRegistrationCompleted();
+    // Rebuild and arm today's plan before reading assignment counts. This is
+    // the foreground recovery path for days when the midnight background
+    // callback was delayed, interrupted, or unavailable on an OEM device.
+    if (registrationCompleted) {
+      try {
+        await TaskAssignmentService(_storageService)
+            .scheduleTodaysTaskNotifications();
+      } catch (error, stackTrace) {
+        debugPrint('[HomePage] daily task recovery failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }
     final notificationContextReason = await _storageService.loadSetting(
       'last_notification_context_reason',
     );
@@ -2635,7 +2647,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ),
             ),
             const SizedBox(height: 16),
-            if (progress == null || !progress.hasEvidence) ...[
+            if (progress == null || !progress.hasVerifiedEvidence) ...[
               // Three confident zeros would read as failure to someone who has
               // simply just installed the app. Say what's missing instead.
               Text(

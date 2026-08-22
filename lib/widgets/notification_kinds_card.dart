@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_texts.dart';
 import '../services/notification_budget.dart';
+import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 
 /// Lets the user switch individual notification kinds on or off.
@@ -38,8 +39,8 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
     NotificationKind.sedentary,
   ];
 
-  /// Matches NotificationService's _healthTipDailyCountMax — the picker
-  /// can't offer more than the native side is willing to schedule.
+  /// Matches NotificationService's user-facing maximum. Zero means the user
+  /// explicitly wants no optional health-tip notifications.
   static const _maxDailyHealthTips = 5;
 
   final Map<NotificationKind, bool> _enabled = {};
@@ -65,7 +66,7 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
       _enabled
         ..clear()
         ..addAll(results);
-      _dailyHealthTipCount = dailyCount.clamp(1, _maxDailyHealthTips);
+      _dailyHealthTipCount = dailyCount.clamp(0, _maxDailyHealthTips).toInt();
       _loading = false;
     });
   }
@@ -73,11 +74,23 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
   Future<void> _toggle(NotificationKind kind, bool value) async {
     setState(() => _enabled[kind] = value);
     await _storageService.setNotificationKindEnabled(kind.name, value);
+    if (kind == NotificationKind.healthTip) {
+      await NotificationService.scheduleHealthConditionAdviceNotifications(
+        healthConditions: await _storageService.loadHealthConditions(),
+        wakeTime: await _storageService.loadSetting('wake_time') ?? '07:00',
+        sleepTime: await _storageService.loadSleepTime() ?? '23:00',
+      );
+    }
   }
 
   Future<void> _setDailyHealthTipCount(int value) async {
     setState(() => _dailyHealthTipCount = value);
     await _storageService.setDailyHealthTipCount(value);
+    await NotificationService.scheduleHealthConditionAdviceNotifications(
+      healthConditions: await _storageService.loadHealthConditions(),
+      wakeTime: await _storageService.loadSetting('wake_time') ?? '07:00',
+      sleepTime: await _storageService.loadSleepTime() ?? '23:00',
+    );
   }
 
   String _titleKey(NotificationKind kind) {
@@ -147,7 +160,7 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
                         key: const ValueKey('daily_health_tip_count'),
                         value: _dailyHealthTipCount,
                         items: [
-                          for (var n = 1; n <= _maxDailyHealthTips; n++)
+                          for (var n = 0; n <= _maxDailyHealthTips; n++)
                             DropdownMenuItem(value: n, child: Text('$n')),
                         ],
                         onChanged: (value) {

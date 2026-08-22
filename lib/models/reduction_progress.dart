@@ -14,6 +14,7 @@ class ReductionProgress {
     required this.baselineDaily,
     required this.loggedToday,
     required this.evidenceDays,
+    this.verifiedEvidenceDays = 0,
     this.longestCompletedBarrierMinutes = 0,
   });
 
@@ -41,10 +42,12 @@ class ReductionProgress {
   /// Today's count, or null when nothing has been logged today yet.
   final int? loggedToday;
 
-  /// How many distinct days contributed to these figures. Zero means the
-  /// card has nothing real to show and should say so rather than print
-  /// three confident zeros.
+  /// How many distinct days contributed evidence to the target streak.
   final int evidenceDays;
+
+  /// How many days had an end-of-day total explicitly confirmed by the user.
+  /// Only these days may contribute to cigarettes avoided.
+  final int verifiedEvidenceDays;
 
   /// The longest barrier ever actually completed (a `success` outcome), in
   /// minutes — the natural personal-record figure the "longest interval"
@@ -52,6 +55,7 @@ class ReductionProgress {
   final int longestCompletedBarrierMinutes;
 
   bool get hasEvidence => evidenceDays > 0;
+  bool get hasVerifiedEvidence => verifiedEvidenceDays > 0;
 
   /// How far the barrier has moved from the user's natural gap, as a
   /// fraction. 0.0 on day one; 0.25 once they're waiting a quarter longer

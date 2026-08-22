@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -64,6 +66,7 @@ class DailyPlanRefreshService {
 @pragma('vm:entry-point')
 void _refreshCallback() async {
   WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
   try {
     tz.initializeTimeZones();
     await FlutterLocalNotificationsPlugin().initialize(
@@ -71,11 +74,12 @@ void _refreshCallback() async {
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
       ),
     );
-    await TaskAssignmentService(StorageService()).scheduleTodaysTaskNotifications();
-  } catch (_) {
-    // Best-effort: if this particular midnight run fails (storage locked,
-    // a transient platform-channel error), the app's own foreground path
-    // still covers the user the next time they open it — this background
-    // refresh only exists to cover the days they don't.
+    await TaskAssignmentService(StorageService())
+        .scheduleTodaysTaskNotifications(allowBeforeWakeForBackground: true);
+  } catch (error, stackTrace) {
+    // Keep the callback alive, but leave a diagnostic trail for the next
+    // foreground refresh instead of making a failed background run invisible.
+    debugPrint('[DailyPlanRefresh] background refresh failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
   }
 }

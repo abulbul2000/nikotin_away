@@ -103,25 +103,6 @@ Future<void> main() async {
   // previously only ever triggered from HomePage's own lifecycle.
   unawaited(DailyPlanRefreshService.ensureScheduled());
 
-  // TEMP DEBUG — one-shot 04:40 task-trigger test, silent (no UI), guarded
-  // so it only ever fires once. Remove after verifying the real-scenario
-  // notification/full-screen/sound flow.
-  unawaited(() async {
-    final storage = StorageService();
-    final already = await storage.loadSetting('_debug_0440_test_fired');
-    if (already == '1') return;
-    await storage.saveSetting('_debug_0440_test_fired', '1');
-    final now = DateTime.now();
-    final target = DateTime(now.year, now.month, now.day, 4, 40);
-    final delay = target.isAfter(now)
-        ? target.difference(now)
-        : target.add(const Duration(days: 1)).difference(now);
-    await NotificationService.scheduleFirstTaskTriggerNotification(
-      taskDescription: 'ADAPTIVE_NO_SMOKE:5',
-      delay: delay,
-    );
-  }());
-
   // Cold start: if the app was opened by tapping a notification while
   // fully terminated (not background), route to the correct page now.
   // This handles the case where onDidReceiveNotificationResponse never
