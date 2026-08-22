@@ -8,6 +8,7 @@ import '../core/app_texts.dart';
 import '../core/app_theme.dart';
 import '../core/mentor_command_codes.dart';
 import '../models/adaptive_task_models.dart';
+import '../models/task_assignment.dart';
 import '../models/mentor_message.dart';
 import '../models/reduction_progress.dart';
 import '../models/survey_record.dart';
@@ -131,6 +132,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int _failedTaskCount = 0;
   int _recentSuccessCount = 0;
   int _recentFailureCount = 0;
+  int _plannedTaskCountToday = 0;
+  int _completedTaskCountToday = 0;
+  int _failedTaskCountToday = 0;
   String _nextTaskNotificationText = '...';
   String _notificationContextReasonText = '...';
   int _lastRespiratoryBurden = 25;
@@ -660,6 +664,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     final consecutiveSmokingSummary = await _storageService
         .loadConsecutiveSmokingSummary();
     final taskOutcomeSummary = await _storageService.loadTaskOutcomeSummary();
+    final todaysAssignments = await _storageService.loadTaskAssignmentsForDay(
+      DateTime.now(),
+    );
+    final completedTaskCountToday = todaysAssignments
+        .where((task) => task.state == TaskLifecycleState.succeeded)
+        .length;
+    final failedTaskCountToday = todaysAssignments
+        .where(
+          (task) =>
+              task.state == TaskLifecycleState.failedDeclined ||
+              task.state == TaskLifecycleState.failedSmoked ||
+              task.state == TaskLifecycleState.failedMissed,
+        )
+        .length;
     final missedTaskTitle = await _storageService.loadMissedTaskTitle();
     final undeliveredTaskCount = await _storageService
         .countTodaysUndeliveredTasks();
@@ -797,6 +815,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _failedTaskCount = taskOutcomeSummary['failureCount'] ?? 0;
       _recentSuccessCount = taskOutcomeSummary['recentSuccessCount'] ?? 0;
       _recentFailureCount = taskOutcomeSummary['recentFailureCount'] ?? 0;
+      _plannedTaskCountToday = todaysAssignments.length;
+      _completedTaskCountToday = completedTaskCountToday;
+      _failedTaskCountToday = failedTaskCountToday;
       _notificationContextReasonText =
           (notificationContextReason == null ||
               notificationContextReason.trim().isEmpty)
@@ -2068,8 +2089,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int _selectedTabIndex = 0;
 
   Widget _buildDailyPulseHeader(BuildContext context) {
-    final total = _successfulTaskCount + _failedTaskCount;
-    final ratio = total == 0 ? 0.0 : _successfulTaskCount / total;
+    final plannedCount = _plannedTaskCountToday;
+    final completedCount = _completedTaskCountToday;
+    final failedCount = _failedTaskCountToday;
+    final total = plannedCount;
+    final ratio = total == 0 ? 0.0 : completedCount / total;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
@@ -2116,11 +2140,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                context.t('taskReasonCadence'),
+                context.t('taskCountToday'),
                 style: const TextStyle(color: AppTheme.inkMuted, fontSize: 12),
               ),
               Text(
-                '$_successfulTaskCount ${context.t('taskUnit')}',
+                '$completedCount/$total ${context.t('taskUnit')}',
                 style: const TextStyle(
                   color: AppTheme.brandAccent,
                   fontWeight: FontWeight.w700,
@@ -2133,9 +2157,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               minHeight: 6,
-              value: ratio,
+              value: ratio.clamp(0.0, 1.0),
               backgroundColor: Colors.white.withValues(alpha: 0.08),
               valueColor: const AlwaysStoppedAnimation(AppTheme.ember),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${context.t('successfulTaskCount')}: $completedCount • '
+            '${context.t('failedTaskCount')}: $failedCount',
+            style: const TextStyle(
+              color: AppTheme.inkMuted,
+              fontSize: 11,
             ),
           ),
         ],
