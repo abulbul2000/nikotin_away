@@ -41,6 +41,7 @@ class _SleepRoutinePageState extends State<SleepRoutinePage> {
 
   List<SleepRoutineStep>? _steps;
   int _currentStepIndex = 0;
+  TimeOfDay? _tonightSleepTime;
   TimeOfDay? _nextDayWakeTime;
 
   @override
@@ -64,6 +65,39 @@ class _SleepRoutinePageState extends State<SleepRoutinePage> {
     final steps = _steps;
     if (steps == null || _currentStepIndex >= steps.length - 1) return;
     setState(() => _currentStepIndex += 1);
+  }
+
+  Future<void> _saveTonightSleepTime() async {
+    final selected = _tonightSleepTime;
+    if (selected == null) return;
+    final formatted = '${selected.hour.toString().padLeft(2, '0')}:${selected.minute.toString().padLeft(2, '0')}';
+    await _storage.saveSleepTime(formatted);
+    await SleepIntelligenceService(storageService: _storage)
+        .refreshScheduleIfEnabled();
+    if (!mounted) return;
+    _advanceStep();
+  }
+
+  Future<void> _pickTonightSleepTime() async {
+    final stored = await _storage.loadSleepTime();
+    final selected = await showTimePicker(
+      context: context,
+      initialTime: _tonightSleepTime ?? _parseTime(stored) ?? const TimeOfDay(hour: 23, minute: 0),
+      helpText: context.t('sleepTime'),
+    );
+    if (selected != null && mounted) {
+      setState(() => _tonightSleepTime = selected);
+    }
+  }
+
+  TimeOfDay? _parseTime(String? raw) {
+    if (raw == null) return null;
+    final parts = raw.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null || hour > 23 || minute > 59) return null;
+    return TimeOfDay(hour: hour, minute: minute);
   }
 
   Future<void> _saveNextDayWakeTime() async {
@@ -90,6 +124,37 @@ class _SleepRoutinePageState extends State<SleepRoutinePage> {
     if (selected != null && mounted) {
       setState(() => _nextDayWakeTime = selected);
     }
+  }
+
+  Widget _buildTonightSleepTimeStep() {
+    final selected = _tonightSleepTime;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            context.t('sleepTime'),
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 12),
+          Text(context.t('sleepRoutineIntro'), textAlign: TextAlign.center),
+          const SizedBox(height: 28),
+          OutlinedButton.icon(
+            onPressed: _pickTonightSleepTime,
+            icon: const Icon(Icons.nightlight_outlined),
+            label: Text(selected == null ? context.t('sleepTime') : selected.format(context)),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: selected == null ? null : _saveTonightSleepTime,
+            child: Text(context.t('continue')),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildNextDayWakeTimeStep() {
@@ -194,6 +259,8 @@ class _SleepRoutinePageState extends State<SleepRoutinePage> {
         );
       case SleepRoutineStep.coughTest:
         return CoughTestPage(onFinishRequested: _advanceStep);
+      case SleepRoutineStep.tonightSleepTime:
+        return _buildTonightSleepTimeStep();
       case SleepRoutineStep.nextDayWakeTime:
         return _buildNextDayWakeTimeStep();
       case SleepRoutineStep.dailyReport:

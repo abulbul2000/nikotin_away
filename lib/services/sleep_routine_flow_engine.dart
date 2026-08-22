@@ -2,6 +2,7 @@
 enum SleepRoutineStep {
   breathTest,
   coughTest,
+  tonightSleepTime,
   nextDayWakeTime,
   dailyReport,
 }
@@ -18,6 +19,7 @@ class SleepRoutineFlowEngine {
   List<SleepRoutineStep> buildSteps({bool hasDiscrepancy = false}) => const [
     SleepRoutineStep.breathTest,
     SleepRoutineStep.coughTest,
+    SleepRoutineStep.tonightSleepTime,
     SleepRoutineStep.nextDayWakeTime,
     SleepRoutineStep.dailyReport,
   ];

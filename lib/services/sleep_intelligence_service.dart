@@ -45,12 +45,26 @@ class SleepIntelligenceService {
     if (await _isVacationActive()) {
       await SleepProbeService.cancelNightlyProbing();
       await NotificationService.cancelSleepReportNotification();
+      await cancelConfiguredWakeAlarms();
       return;
     }
 
-    final fallbackSleep = await _storageService.loadSleepTime() ?? '23:00';
-    final fallbackWake =
-        await _storageService.loadSetting('wake_time') ?? '07:00';
+    final scheduleMode = await _storageService.loadSleepScheduleMode();
+    final scheduleDay = scheduleMode == 'daily' ? 1 : DateTime.now().weekday;
+    final configuredSleep = await _storageService.loadSleepScheduleTime(
+      weekday: scheduleDay,
+      wake: false,
+    );
+    final configuredWake = await _storageService.loadSleepScheduleTime(
+      weekday: scheduleDay,
+      wake: true,
+    );
+    final fallbackSleep = configuredSleep == null
+        ? (await _storageService.loadSleepTime() ?? '23:00')
+        : _formatTime(configuredSleep);
+    final fallbackWake = configuredWake == null
+        ? (await _storageService.loadSetting('wake_time') ?? '07:00')
+        : _formatTime(configuredWake);
     final effective = await _storageService.resolveEffectiveSleepWindow(
       fallbackSleepTime: fallbackSleep,
       fallbackWakeTime: fallbackWake,
@@ -63,6 +77,7 @@ class SleepIntelligenceService {
       bufferMinutes: learned ? 30 : _windowBufferMinutes,
     );
     await scheduleMorningReportForDate(DateTime.now().add(const Duration(days: 1)));
+    await scheduleConfiguredWakeAlarms();
   }
 
   /// Schedules tomorrow's report from the day-specific answer collected in
@@ -91,6 +106,48 @@ class SleepIntelligenceService {
     await NotificationService.scheduleSleepReportNotification(wakeAt: wakeAt);
   }
 
+  Future<void> scheduleConfiguredWakeAlarms() async {
+    if (!await _storageService.loadWakeAlarmEnabled()) return;
+    await NotificationService.cancelAllWakeAlarmNotifications();
+    final mode = await _storageService.loadSleepScheduleMode();
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    for (var offset = 0; offset < 7; offset++) {
+      final date = DateTime(tomorrow.year, tomorrow.month, tomorrow.day).add(
+        Duration(days: offset),
+      );
+      final weekday = date.weekday;
+      final configuredWake = await _storageService.loadSleepScheduleTime(
+        weekday: mode == 'daily' ? 1 : weekday,
+        wake: true,
+      );
+      final fallbackRaw = await _storageService.loadSetting('wake_time') ?? '07:00';
+      final fallback = _parseTimeOfDay(fallbackRaw) ?? const TimeOfDay(hour: 7, minute: 0);
+      final wake = configuredWake ?? fallback;
+      await NotificationService.scheduleWakeAlarmNotification(
+        wakeAt: DateTime(date.year, date.month, date.day, wake.hour, wake.minute),
+        weekday: weekday,
+      );
+    }
+  }
+
+  Future<void> cancelConfiguredWakeAlarms() async {
+    await NotificationService.cancelAllWakeAlarmNotifications();
+  }
+
+  String _formatTime(TimeOfDay time) =>
+      '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+
+  TimeOfDay? _parseTimeOfDay(String raw) {
+    final parts = raw.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return null;
+    }
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
   Future<void> enable() async {
     final sleepTimeRaw = await _storageService.loadSleepTime() ?? '23:00';
     final wakeTimeRaw =
@@ -102,6 +159,7 @@ class SleepIntelligenceService {
       bufferMinutes: _windowBufferMinutes,
     );
     await scheduleMorningReportForDate(DateTime.now().add(const Duration(days: 1)));
+    await scheduleConfiguredWakeAlarms();
     // Horlama ölçümü, Uyku Zekâsı'nın aynı gece penceresinin bir parçasıdır;
     // ayrı bir zamanlayıcı veya bağımsız kullanıcı akışı oluşturmaz.
     await _snoringDetectionService.enable();

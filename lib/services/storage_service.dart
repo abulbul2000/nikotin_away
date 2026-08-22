@@ -2129,6 +2129,61 @@ class StorageService {
     return TimeOfDay(hour: hour, minute: minute);
   }
 
+  static const String _sleepScheduleModeKey = 'sleep_schedule_mode';
+  static const String _sleepWakeAlarmEnabledKey = 'sleep_wake_alarm_enabled';
+
+  String _sleepScheduleTimeKey({required int weekday, required bool wake}) {
+    final kind = wake ? 'wake' : 'sleep';
+    return 'sleep_schedule_${kind}_$weekday';
+  }
+
+  Future<void> saveSleepScheduleTime({
+    required int weekday,
+    required bool wake,
+    required TimeOfDay time,
+  }) async {
+    final normalized = DateTime(2000, 1, 1, time.hour, time.minute);
+    await saveSetting(
+      _sleepScheduleTimeKey(weekday: weekday, wake: wake),
+      '${normalized.hour.toString().padLeft(2, '0')}:${normalized.minute.toString().padLeft(2, '0')}',
+    );
+  }
+
+  Future<TimeOfDay?> loadSleepScheduleTime({
+    required int weekday,
+    required bool wake,
+  }) async {
+    final raw = await loadSetting(
+      _sleepScheduleTimeKey(weekday: weekday, wake: wake),
+    );
+    if (raw == null || raw.isEmpty) return null;
+    final parts = raw.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      return null;
+    }
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  Future<void> saveSleepScheduleMode(String mode) async {
+    await saveSetting(_sleepScheduleModeKey, mode == 'weekly' ? 'weekly' : 'daily');
+  }
+
+  Future<String> loadSleepScheduleMode() async {
+    final mode = await loadSetting(_sleepScheduleModeKey);
+    return mode == 'weekly' ? 'weekly' : 'daily';
+  }
+
+  Future<void> saveWakeAlarmEnabled(bool enabled) async {
+    await saveSetting(_sleepWakeAlarmEnabledKey, enabled ? '1' : '0');
+  }
+
+  Future<bool> loadWakeAlarmEnabled() async {
+    return (await loadSetting(_sleepWakeAlarmEnabledKey)) == '1';
+  }
+
   static const String _missedTaskTitleKey = 'missed_task_title';
   static const String _pendingMandatoryTaskKey = 'pending_mandatory_task';
   static const String _adaptiveObservationStartedAtKey =

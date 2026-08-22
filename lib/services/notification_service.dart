@@ -421,6 +421,65 @@ class NotificationService {
     );
   }
 
+  static const int _wakeAlarmBaseId = 1601000;
+
+  /// Schedules a user-approved wake alarm for one concrete calendar date.
+  /// Date-based ids let the weekly schedule be replaced without stacking alarms.
+  static Future<void> scheduleWakeAlarmNotification({
+    required DateTime wakeAt,
+    required int weekday,
+  }) async {
+    final code = await LanguageService.loadSelectedLanguageCode();
+    final fireAt = tz.TZDateTime.from(wakeAt, tz.local);
+    if (!fireAt.isAfter(tz.TZDateTime.now(tz.local))) return;
+    final id = _wakeAlarmBaseId + weekday;
+    await _plugin.cancel(id);
+    await _zonedSchedule(
+      id,
+      _text(code, 'wakeTime'),
+      _text(code, 'sleepIntelligenceTitle'),
+      fireAt,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'wake_alarm_channel_v1',
+          _text(code, 'wakeTime'),
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          enableVibration: true,
+          vibrationPattern: _taskVibrationPattern,
+          sound: _taskAlarmSound,
+          additionalFlags: _insistentFlag,
+          autoCancel: false,
+          ongoing: true,
+          onlyAlertOnce: false,
+          category: AndroidNotificationCategory.alarm,
+          visibility: NotificationVisibility.public,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
+        ),
+        iOS: const DarwinNotificationDetails(presentSound: true),
+      ),
+      androidScheduleMode: await _resolveAndroidScheduleMode(),
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: jsonEncode({
+        'type': 'wake_alarm',
+        'notificationId': '$id',
+        'wakeAt': wakeAt.toIso8601String(),
+      }),
+    );
+  }
+
+  static Future<void> cancelWakeAlarmNotification({required int weekday}) async {
+    await _plugin.cancel(_wakeAlarmBaseId + weekday);
+  }
+
+  static Future<void> cancelAllWakeAlarmNotifications() async {
+    for (var weekday = 1; weekday <= 7; weekday++) {
+      await cancelWakeAlarmNotification(weekday: weekday);
+    }
+  }
+
   static Future<void> cancelSleepReportNotification() async {
     await _plugin.cancel(_sleepReportNotificationId);
   }
