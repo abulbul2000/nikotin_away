@@ -1,7 +1,5 @@
 import 'cough_test_record.dart';
 import 'reduction_progress.dart';
-import 'sleep_probe_event.dart';
-import 'snoring_probe_event.dart';
 
 /// Everything the pre-sleep routine's final step shows, gathered into one
 /// package by `StorageService.buildDailyProgressReport`.

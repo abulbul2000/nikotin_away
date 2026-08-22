@@ -5,20 +5,21 @@ void main() {
   const engine = SleepRoutineFlowEngine();
 
   test(
-    'without a discrepancy the flow is breath, cough, wake time, report — 4 steps',
+    'without a discrepancy the flow is breath, cough, sleep time, wake time, report — 5 steps',
     () {
       final steps = engine.buildSteps(hasDiscrepancy: false);
 
       expect(steps, [
         SleepRoutineStep.breathTest,
         SleepRoutineStep.coughTest,
+        SleepRoutineStep.tonightSleepTime,
         SleepRoutineStep.nextDayWakeTime,
         SleepRoutineStep.dailyReport,
       ]);
     },
   );
 
-  test('with a discrepancy the flow still uses the current four steps', () {
+  test('with a discrepancy the flow still uses the current five steps', () {
     final steps = engine.buildSteps(hasDiscrepancy: true);
 
     expect(steps, [

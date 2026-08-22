@@ -1804,8 +1804,8 @@ class _GreenSuccessCheckPainter extends CustomPainter {
 
     final fill = Paint()
       ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+        begin: AlignmentDirectional.topStart,
+        end: AlignmentDirectional.bottomEnd,
         colors: [Color(0xFFB6FF38), Color(0xFF42D51C), Color(0xFF19A92B)],
         stops: [0.0, 0.45, 1.0],
       ).createShader(Offset.zero & size);

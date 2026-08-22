@@ -322,21 +322,16 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
           ),
           const SizedBox(height: 10),
           Text(
-            context.t('breathTrend').replaceFirst(':', ': ') +
-                ' ${report.breathTrend ?? context.t('unknownValue')}',
+            '${context.t('breathTrend').replaceFirst(':', ': ')} '
+                '${report.breathTrend ?? context.t('unknownValue')}',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: accent.withAlpha((255 * 0.85).toInt())),
           ),
           const SizedBox(height: 6),
           Text(
-            context.t('snoringDetectionLastNightCount').replaceFirst(
-                  ':',
-                  ': ',
-                ) +
-                ' ${report.todayOvernightSnoreCount}' +
-                (report.latestOvernightSnoringSeverity == null
-                    ? ''
-                    : ' (${report.latestOvernightSnoringSeverity})'),
+            '${context.t('snoringDetectionLastNightCount').replaceFirst(':', ': ')} '
+                '${report.todayOvernightSnoreCount}'
+                '${report.latestOvernightSnoringSeverity == null ? '' : ' (${report.latestOvernightSnoringSeverity})'}',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: accent.withAlpha((255 * 0.85).toInt())),
           ),
