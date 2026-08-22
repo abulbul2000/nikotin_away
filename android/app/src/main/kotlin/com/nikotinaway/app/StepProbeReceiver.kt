@@ -11,6 +11,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import java.io.File
@@ -90,11 +91,25 @@ class StepProbeReceiver : BroadcastReceiver() {
 
         fun scheduleNext(context: Context) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                nextProbeMillis(),
-                pendingIntent(context),
-            )
+            val triggerAtMillis = nextProbeMillis()
+            val pending = pendingIntent(context)
+            // A day-boundary step snapshot is not clock-critical. Preserve the
+            // sample on Android 12+ even when exact alarms are unavailable.
+            val canScheduleExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                alarmManager.canScheduleExactAlarms()
+            if (canScheduleExact) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pending,
+                )
+            } else {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pending,
+                )
+            }
         }
 
         fun cancel(context: Context) {
