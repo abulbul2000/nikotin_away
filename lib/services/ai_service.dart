@@ -174,7 +174,7 @@ void _validateActionArguments(String name, Map<String, dynamic> args) {
 
     case 'set_daily_health_tip_count':
       final count = args['count'];
-      if (count is! int || count < 0 || count > 5) {
+      if (count is! int || count < 0 || count > 15) {
         throw const AiServiceException('Invalid daily health tip count action');
       }
       return;

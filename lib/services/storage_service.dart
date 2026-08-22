@@ -3271,12 +3271,12 @@ class StorageService {
   Future<int> loadDailyHealthTipCount() async {
     final raw = await loadSetting('daily_health_tip_count');
     final parsed = int.tryParse(raw ?? '') ?? 3;
-    return parsed.clamp(0, 5).toInt();
+    return parsed.clamp(0, 15).toInt();
   }
 
   Future<void> setDailyHealthTipCount(int value) async {
-    if (value < 0 || value > 5) {
-      throw ArgumentError.value(value, 'value', 'must be between 0 and 5');
+    if (value < 0 || value > 15) {
+      throw ArgumentError.value(value, 'value', 'must be between 0 and 15');
     }
     await saveSetting('daily_health_tip_count', value.toString());
   }

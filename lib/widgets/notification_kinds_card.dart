@@ -41,7 +41,7 @@ class _NotificationKindsCardState extends State<NotificationKindsCard> {
 
   /// Matches NotificationService's user-facing maximum. Zero means the user
   /// explicitly wants no optional health-tip notifications.
-  static const _maxDailyHealthTips = 5;
+  static const _maxDailyHealthTips = 15;
 
   final Map<NotificationKind, bool> _enabled = {};
   int _dailyHealthTipCount = 3;

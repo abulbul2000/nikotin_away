@@ -72,14 +72,14 @@ const TOOLS = [
     function: {
       name: "set_daily_health_tip_count",
       description:
-        "Kullanıcının günlük sağlık tavsiyesi bildirim sayısını 0 ile 5 arasında ayarlar. 0, sağlık tavsiyesi bildirimlerini kapatır.",
+        "Kullanıcının günlük sağlık tavsiyesi bildirim sayısını 0 ile 15 arasında ayarlar. 0, sağlık tavsiyesi bildirimlerini kapatır.",
       parameters: {
         type: "object",
         properties: {
           count: {
             type: "integer",
             minimum: 0,
-            maximum: 5,
+            maximum: 15,
             description: "Günde gönderilecek sağlık tavsiyesi sayısı",
           },
         },

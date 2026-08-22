@@ -596,11 +596,13 @@ class NotificationService {
 
   /// User-facing optional health-tip limit. The larger cancellation range is
   /// retained so upgrades from older versions cannot leave stale notifications.
-  static const int _healthTipDailyCountMax = 30;
-  static const int _healthTipUserMaxCount = 5;
-  static const int _healthTipGeneralCount = 5;
-  static const int _healthTipSmokingCount = 15;
-  static const int _healthTipDiseaseCount = 10;
+  static const int _healthTipDailyCountMax = 15;
+  // Keep cancelling the legacy 30-slot range during migration so an upgrade
+  // cannot leave old recurring health-tip alarms behind.
+  static const int _healthTipLegacySlotCount = 30;
+  static const int _healthTipUserMaxCount = 15;
+  static const int _healthTipGeneralCount = 7;
+  static const int _healthTipDiseaseCount = 8;
 
   /// Slots previously used to key the native health-tip-overlay alarm.
   /// Notifications no longer arm that overlay, but the same slot numbers are
@@ -1087,7 +1089,7 @@ class NotificationService {
             importance: Importance.defaultImportance,
             visibility: NotificationVisibility.private,
             priority: Priority.defaultPriority,
-            playSound: false,
+            playSound: true,
             enableVibration: false,
             audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
             category: AndroidNotificationCategory.reminder,
@@ -1149,7 +1151,7 @@ class NotificationService {
             visibility: NotificationVisibility.private,
             priority: Priority.defaultPriority,
             playSound: true,
-            enableVibration: true,
+            enableVibration: false,
             audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
             category: AndroidNotificationCategory.reminder,
           ),
@@ -1178,7 +1180,7 @@ class NotificationService {
           visibility: NotificationVisibility.private,
           priority: Priority.defaultPriority,
           playSound: true,
-          enableVibration: true,
+          enableVibration: false,
           audioAttributesUsage: AudioAttributesUsage.notificationRingtone,
           category: AndroidNotificationCategory.reminder,
         ),
@@ -1527,17 +1529,18 @@ class NotificationService {
     }
 
     if (type == _typeHealthTip) {
-      if (!allowNavigation) return;
-      await _openHistoryBeforeOverlay(true);
+      await _openHistoryBeforeOverlay(allowNavigation);
       final notificationId = payload['notificationId']?.trim() ?? '';
-      _pushNotificationRoute(
-        HealthTipPage(
-          body: payload['body'] ?? '',
-          onAcknowledged: () => NotificationHistoryService.markAcknowledged(
-            dedupeKey: '$_typeHealthTip:$notificationId',
-          ),
-        ),
+      await AndroidWatchdogService.showInfoOverlayFromNotification(
+        title: payload['title'] ?? _text(code, 'healthTipTitle'),
+        body: payload['body'] ?? '',
+        dismissLabel: _text(code, 'doneShort'),
       );
+      if (notificationId.isNotEmpty) {
+        await NotificationHistoryService.markAcknowledged(
+          dedupeKey: '$_typeHealthTip:$notificationId',
+        );
+      }
       return;
     }
 
@@ -2598,7 +2601,7 @@ class NotificationService {
     required String wakeTime,
     required String sleepTime,
   }) async {
-    for (var i = 0; i < _healthTipDailyCountMax; i++) {
+    for (var i = 0; i < _healthTipLegacySlotCount; i++) {
       await _plugin.cancel(_healthTipBaseId + i);
       await AndroidWatchdogService.cancelHealthTipTrigger(i);
     }
@@ -2615,7 +2618,7 @@ class NotificationService {
     final resolvedSleepTime = effectiveWindow.sleepTime ?? sleepTime;
 
     final requestedCount = await StorageService().loadDailyHealthTipCount();
-    final dailyCount = requestedCount.clamp(0, _healthTipUserMaxCount);
+    final dailyCount = requestedCount.clamp(0, _healthTipUserMaxCount).toInt();
     if (dailyCount == 0) {
       return;
     }
@@ -2657,6 +2660,8 @@ class NotificationService {
         .toList(growable: false);
     var conditionCursor = 0;
     var variantCursor = 0;
+    final progressReport = await StorageService().buildDailyProgressReport();
+    final progress = progressReport.reductionProgress;
     for (var i = 0; i < dailyCount; i++) {
       var fireAt = wakeAt.add(Duration(minutes: intervalMinutes * (i + 1)));
       if (!fireAt.isAfter(now)) {
@@ -2677,30 +2682,61 @@ class NotificationService {
       }
 
       final String tipKey;
-      if (i < _healthTipGeneralCount) {
-        tipKey = 'healthTipGeneral${(i % _healthTipsGeneralCount) + 1}';
-      } else if (i < _healthTipGeneralCount + _healthTipSmokingCount) {
-        final smokingSlot = i - _healthTipGeneralCount;
-        tipKey =
-            'healthTipSmoking${(smokingSlot % _healthTipsSmokingCount) + 1}';
-      } else {
-        final diseaseSlot = i - _healthTipGeneralCount - _healthTipSmokingCount;
-        if (diseaseSlot >= _healthTipDiseaseCount) {
-          continue;
-        }
-        if (conditions.isEmpty) {
-          tipKey =
-              'healthTipGeneralDisease${(diseaseSlot % _healthTipsGeneralDiseaseCount) + 1}';
+      if (conditions.isEmpty) {
+        // Without a selected condition, all 15 slots use general, smoking-
+        // reduction, or condition-neutral wellbeing advice. No disease label
+        // is ever shown to a user who did not select one.
+        final generalSlot = i % (_healthTipsGeneralCount + _healthTipsSmokingCount + _healthTipsGeneralDiseaseCount);
+        if (generalSlot < _healthTipsGeneralCount) {
+          tipKey = 'healthTipGeneral${(generalSlot % _healthTipsGeneralCount) + 1}';
+        } else if (generalSlot < _healthTipsGeneralCount + _healthTipsSmokingCount) {
+          final smokingSlot = generalSlot - _healthTipsGeneralCount;
+          tipKey = 'healthTipSmoking${(smokingSlot % _healthTipsSmokingCount) + 1}';
         } else {
-          final condition = conditions[conditionCursor % conditions.length];
-          final prefix = _healthTipPrefixByCondition[condition]!;
-          conditionCursor++;
-          tipKey = '$prefix${(variantCursor % _healthTipsPerCondition) + 1}';
-          variantCursor++;
+          final neutralSlot = generalSlot - _healthTipsGeneralCount - _healthTipsSmokingCount;
+          tipKey = 'healthTipGeneralDisease${(neutralSlot % _healthTipsGeneralDiseaseCount) + 1}';
+        }
+      } else if (i < _healthTipGeneralCount) {
+        tipKey = 'healthTipGeneral${(i % _healthTipsGeneralCount) + 1}';
+      } else {
+        final diseaseSlot = i - _healthTipGeneralCount;
+        final condition = conditions[conditionCursor % conditions.length];
+        final prefix = _healthTipPrefixByCondition[condition]!;
+        conditionCursor++;
+        tipKey = '$prefix${(variantCursor % _healthTipsPerCondition) + 1}';
+        variantCursor++;
+      }
+      var body =
+          '${_text(code, tipKey)}\n${_text(code, 'medicationAdviceDisclaimer')}';
+      // Add measured reduction context only when the user has supplied
+      // evidence. Silence or an unverified day must never be presented as
+      // lung or nicotine recovery.
+      if (i % 4 == 0 && progress.verifiedEvidenceDays > 0) {
+        final progressLines = <String>[];
+        if (progress.loggedToday != null) {
+          progressLines.add(
+            _text(code, 'reductionLoggedToday')
+                .replaceAll('{count}', '${progress.loggedToday}'),
+          );
+        }
+        if (progress.dailyTarget > 0) {
+          progressLines.add(
+            _text(code, 'reductionTargetToday')
+                .replaceAll('{target}', '${progress.dailyTarget}'),
+          );
+        }
+        if (progress.naturalIntervalMinutes > 0 &&
+            progress.currentBarrierMinutes > 0) {
+          progressLines.add(
+            _text(code, 'reductionIntervalDetail')
+                .replaceAll('{natural}', '${progress.naturalIntervalMinutes}')
+                .replaceAll('{barrier}', '${progress.currentBarrierMinutes}'),
+          );
+        }
+        if (progressLines.isNotEmpty) {
+          body = '$body\n\n${progressLines.join('\n')}';
         }
       }
-      final body =
-          '${_text(code, tipKey)}\n${_text(code, 'medicationAdviceDisclaimer')}';
 
       await _zonedSchedule(
         _healthTipBaseId + i,
@@ -2711,14 +2747,14 @@ class NotificationService {
           android: AndroidNotificationDetails(
             _healthTipChannelId,
             _text(code, 'channelNameHealthTip'),
-            importance: Importance.low,
+            importance: Importance.defaultImportance,
             visibility: NotificationVisibility.private,
-            priority: Priority.low,
-            playSound: false,
+            priority: Priority.defaultPriority,
+            playSound: true,
             enableVibration: false,
             category: AndroidNotificationCategory.status,
           ),
-          iOS: const DarwinNotificationDetails(presentSound: false),
+          iOS: const DarwinNotificationDetails(presentSound: true),
         ),
         androidScheduleMode: scheduleMode,
         matchDateTimeComponents: DateTimeComponents.time,
@@ -2726,6 +2762,7 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: jsonEncode({
           'type': _typeHealthTip,
+          'title': _text(code, 'healthTipTitle'),
           'body': body,
           'notificationId': '${_healthTipBaseId + i}',
         }),
