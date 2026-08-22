@@ -206,9 +206,9 @@ class _BreathTestPageState extends State<BreathTestPage>
     duration: const Duration(milliseconds: 3600),
   );
 
-  // Repeating outward "wind" rings during the exhale step, layered with
-  // the existing one-shot shrinking disc — a visual echo of air actually
-  // moving out toward the microphone, not just a countdown.
+  // Repeating three-stream airflow during the exhale step, layered with
+  // the existing one-shot shrinking disc — a visual echo of air entering
+  // the phone microphone, not just a countdown.
   late final AnimationController _exhaleWaveController = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1000),
@@ -1541,11 +1541,6 @@ class _BreathTestPageState extends State<BreathTestPage>
                 alignment: Alignment.center,
                 clipBehavior: Clip.none,
                 children: [
-                  // Outward "wind" rings while exhaling — three
-                  // staggered rings expanding toward the edge and
-                  // fading out, echoing air actually moving out of
-                  // frame.
-                  if (isExhaling) ..._exhaleWindRings(accentColor),
                   if (isExhaling)
                     Transform.scale(
                       scale: exhaleShrinkScale.clamp(0.12, 1.0),
@@ -1576,7 +1571,7 @@ class _BreathTestPageState extends State<BreathTestPage>
                         ),
                       ),
                     )
-                  else if (isIdle)
+                  else if (isIdle && !_showSuccessCheck)
                     // "BAŞLA" now lives inside the circle itself — the
                     // whole circle is the tappable start control (see the
                     // InkWell wrapper below), so there is exactly one
@@ -1634,17 +1629,12 @@ class _BreathTestPageState extends State<BreathTestPage>
                         child: AnimatedScale(
                           scale: 1.0,
                           duration: const Duration(milliseconds: 180),
-                          child: Icon(
-                            Icons.check_rounded,
-                            color: const Color(0xFF35B94E),
-                            size: diameter * 0.58,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.22),
-                                blurRadius: diameter * 0.025,
-                                offset: Offset(0, diameter * 0.012),
-                              ),
-                            ],
+                          child: SizedBox(
+                            width: diameter * 0.70,
+                            height: diameter * 0.70,
+                            child: const CustomPaint(
+                              painter: _GreenSuccessCheckPainter(),
+                            ),
                           ),
                         ),
                       ),
@@ -1720,33 +1710,11 @@ class _BreathTestPageState extends State<BreathTestPage>
     );
   }
 
-  /// Three rings, evenly staggered a third of a cycle apart so a new one is
-  /// always starting as another fades out — each expands outward from the
-  /// mic icon and fades, standing in for air visibly leaving toward the
-  /// microphone rather than just a countdown ticking.
-  List<Widget> _exhaleWindRings(Color accentColor) {
-    return List.generate(3, (i) {
-      final phase = (_exhaleWaveController.value + (i / 3)) % 1.0;
-      final radius = 40.0 + (phase * 68.0);
-      final opacity = (1.0 - phase).clamp(0.0, 1.0) * 0.5;
-      return Container(
-        width: radius * 2,
-        height: radius * 2,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: accentColor.withValues(alpha: opacity),
-            width: 2,
-          ),
-        ),
-      );
-    });
-  }
 }
 
-/// A phone outline with the microphone at the bottom edge. The airflow starts
-/// above the phone and travels downward into that microphone, making the
-/// required user-to-phone direction visually unambiguous.
+/// A phone outline with three microphone openings at the bottom edge. The
+/// airflow starts below the phone and travels upward into those openings, making
+/// the required user-to-phone direction visually unambiguous.
 class _PhoneMicPainter extends CustomPainter {
   final Color color;
   final double pulse;
@@ -1772,41 +1740,36 @@ class _PhoneMicPainter extends CustomPainter {
     );
     canvas.drawRRect(phoneRect, phoneStroke);
 
-    // Microphone location, pulsing.
-    final micCenter = Offset(w / 2, h * 0.90);
-    canvas.drawCircle(
-      micCenter,
-      w * 0.045 + (pulse * 0.02 * w),
-      Paint()..color = color.withValues(alpha: 0.9),
-    );
-    canvas.drawCircle(
-      micCenter,
-      w * 0.09 + (pulse * 0.06 * w),
-      Paint()
-        ..color = color.withValues(alpha: (1 - pulse) * 0.5)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.02,
-    );
+    // Three microphone openings pulse at the phone's bottom edge.
+    final micY = h * 0.90;
+    final micXs = <double>[w * 0.38, w * 0.50, w * 0.62];
+    for (final micX in micXs) {
+      canvas.drawCircle(
+        Offset(micX, micY),
+        w * 0.035 + (pulse * 0.012 * w),
+        Paint()..color = color.withValues(alpha: 0.95),
+      );
+    }
 
-    // Three large downward airflow arrows begin above the phone and finish
-    // at its bottom microphone. Their staggered motion remains visible in
-    // every exhale attempt, including attempts two and three.
+    // Three airflow arrows rise from below and enter the three microphone
+    // openings. Their staggered motion is identical in all three attempts.
     for (var i = 0; i < 3; i++) {
       final t = (pulse + (i / 3)) % 1.0;
-      final y = h * 0.04 + (t * h * 0.68);
+      final x = micXs[i];
+      final tipY = h * 0.90 - (t * h * 0.52);
       final alpha = (1 - t).clamp(0.0, 1.0) * 0.9;
       final arrowPaint = Paint()
         ..color = color.withValues(alpha: alpha)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.045
+        ..strokeWidth = w * 0.04
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
       final path = Path()
-        ..moveTo(w / 2, y)
-        ..lineTo(w / 2, y + h * 0.11)
-        ..moveTo(w / 2 - w * 0.12, y + h * 0.055)
-        ..lineTo(w / 2, y + h * 0.14)
-        ..lineTo(w / 2 + w * 0.12, y + h * 0.055);
+        ..moveTo(x, tipY + h * 0.12)
+        ..lineTo(x, tipY)
+        ..moveTo(x - w * 0.10, tipY + h * 0.08)
+        ..lineTo(x, tipY)
+        ..lineTo(x + w * 0.10, tipY + h * 0.08);
       canvas.drawPath(path, arrowPaint);
     }
   }
@@ -1815,4 +1778,52 @@ class _PhoneMicPainter extends CustomPainter {
   bool shouldRepaint(covariant _PhoneMicPainter oldDelegate) {
     return oldDelegate.pulse != pulse || oldDelegate.color != color;
   }
+}
+
+/// Large glossy green 3D-style success mark used after every recorded breath.
+class _GreenSuccessCheckPainter extends CustomPainter {
+  const _GreenSuccessCheckPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width * 0.10, size.height * 0.49)
+      ..lineTo(size.width * 0.30, size.height * 0.70)
+      ..lineTo(size.width * 0.87, size.height * 0.12)
+      ..lineTo(size.width * 0.96, size.height * 0.22)
+      ..lineTo(size.width * 0.31, size.height * 0.91)
+      ..lineTo(size.width * 0.02, size.height * 0.59)
+      ..close();
+    final shadow = Paint()
+      ..color = const Color(0xFF126B1C).withValues(alpha: 0.72)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.save();
+    canvas.translate(0, size.height * 0.035);
+    canvas.drawPath(path, shadow);
+    canvas.restore();
+
+    final fill = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFB6FF38), Color(0xFF42D51C), Color(0xFF19A92B)],
+        stops: [0.0, 0.45, 1.0],
+      ).createShader(Offset.zero & size);
+    canvas.drawPath(path, fill);
+
+    final highlight = Paint()
+      ..color = const Color(0xFFD9FF8A).withValues(alpha: 0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width * 0.025
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final highlightPath = Path()
+      ..moveTo(size.width * 0.11, size.height * 0.48)
+      ..lineTo(size.width * 0.30, size.height * 0.67)
+      ..lineTo(size.width * 0.82, size.height * 0.14);
+    canvas.drawPath(highlightPath, highlight);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GreenSuccessCheckPainter oldDelegate) => false;
 }
