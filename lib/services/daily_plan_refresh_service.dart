@@ -2,10 +2,10 @@ import 'dart:ui';
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 
 import 'storage_service.dart';
+import 'notification_service.dart';
 import 'task_assignment_service.dart';
 
 /// Arms/refreshes a once-a-day alarm that builds tomorrow's task plan and
@@ -73,11 +73,13 @@ void _refreshCallback() async {
   DartPluginRegistrant.ensureInitialized();
   try {
     tz.initializeTimeZones();
-    await FlutterLocalNotificationsPlugin().initialize(
-      const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-      ),
-    );
+    // Initialize the same static plugin instance used by
+    // NotificationService.scheduleFirstTaskTriggerNotification. Initializing
+    // a separate FlutterLocalNotificationsPlugin object here leaves the
+    // service's own instance uninitialized in the headless isolate; the
+    // midnight callback then fails silently and tasks only appear after the
+    // user opens the app.
+    await NotificationService.initialize();
     await TaskAssignmentService(StorageService())
         .scheduleTodaysTaskNotifications(allowBeforeWakeForBackground: true);
   } catch (error, stackTrace) {
