@@ -142,12 +142,11 @@ class SleepProbeReceiver : BroadcastReceiver() {
         const val EXTRA_WINDOW_START_MINUTE = "extra_window_start_minute"
         const val EXTRA_WINDOW_END_MINUTE = "extra_window_end_minute"
         const val EXTRA_INTERVAL_MINUTES = "extra_interval_minutes"
-        // Was 45 -- tightened so a user waking up and using their phone
-        // mid-sleep-window gets noticed within a few minutes instead of
-        // up to 45. Each wake only reads two already-cached OS properties
-        // (see onReceive), so the extra wake frequency costs negligible
-        // battery despite firing ~15x more often overnight.
-        const val DEFAULT_INTERVAL_MINUTES = 5
+        // Keep the native boot/recovery fallback aligned with the Dart-side
+        // policy. Sleep learning is not clock-critical, so 15 minutes gives
+        // useful coverage without waking the device roughly one hundred times
+        // during a typical overnight window.
+        const val DEFAULT_INTERVAL_MINUTES = 15
 
         fun isWithinWindow(nowMinute: Int, startMinute: Int, endMinute: Int): Boolean {
             return if (startMinute <= endMinute) {

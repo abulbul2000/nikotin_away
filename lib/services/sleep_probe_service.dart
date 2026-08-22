@@ -8,10 +8,10 @@ import 'package:flutter/services.dart';
 /// (window buffer, interval) lives in one place: SleepIntelligenceService.
 class SleepProbeService {
   static const MethodChannel _channel = MethodChannel('no_smoke/sleep_probe');
-  // Was 45 -- tightened so a user awake mid-sleep-window gets noticed
-  // within a few minutes instead of up to 45 (see
-  // SleepProbeReceiver.DEFAULT_INTERVAL_MINUTES for the native-side reasoning).
-  static const int defaultIntervalMinutes = 5;
+  // A 15-minute interval keeps overnight wake-ups bounded while still
+  // providing enough coverage for sleep-window learning. The probe is not a
+  // clock-critical alarm; notification/task delivery uses its own schedule.
+  static const int defaultIntervalMinutes = 15;
 
   static Future<void> scheduleNightlyProbing({
     required int windowStartMinute,
