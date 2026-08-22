@@ -53,7 +53,7 @@ class NotificationHistoryService {
       final storage = StorageService();
       final db = await storage.database;
       final now = receivedAt ?? DateTime.now();
-            final expiresAt = now.add(_retention);
+      final expiresAt = now.add(_retention);
 
       if (dedupeKey != null && dedupeKey.isNotEmpty) {
         final existing = await db.query(
@@ -129,17 +129,11 @@ class NotificationHistoryService {
         whereArgs: [now],
       );
 
-      // Older app versions could record the same visible notification every
-      // time the scheduler was rebuilt. Keep only the newest copy of each
-      // notification content while retaining genuinely different events.
-      await db.rawDelete('''
-        DELETE FROM notification_history
-        WHERE rowid NOT IN (
-          SELECT MAX(rowid)
-          FROM notification_history
-          GROUP BY type, title, body
-        )
-      ''');
+      // Do not deduplicate by visible content here. Two health tips can
+      // legitimately have the same title/body on different days, and the
+      // product requirement is to archive every delivered notification.
+      // Explicit dedupeKey handling in record() is the only deduplication
+      // allowed, and it is limited to the same active notification event.
 
       final rows = await db.query(
         'notification_history',
