@@ -35,10 +35,16 @@ class SmokedLogOverlayService : Service() {
     private var params: WindowManager.LayoutParams? = null
     private var screenReceiver: BroadcastReceiver? = null
     private var menuView: android.view.View? = null
+    private var explicitlyStopped = false
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_STOP -> {
+                // A deliberate user stop must win over START_STICKY and the
+                // watchdog restart alarm. Otherwise the service comes back
+                // two seconds later and the stop control appears broken.
+                explicitlyStopped = true
+                cancelScheduledRestart()
                 stopSelf()
                 return START_NOT_STICKY
             }
@@ -73,6 +79,7 @@ class SmokedLogOverlayService : Service() {
     }
 
     private fun scheduleRestartIfEnabled() {
+        if (explicitlyStopped) return
         if (!prefs().getBoolean(KEY_ENABLED, false)) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
             !Settings.canDrawOverlays(this)
@@ -93,6 +100,19 @@ class SmokedLogOverlayService : Service() {
             SystemClock.elapsedRealtime() + RESTART_DELAY_MS,
             pendingIntent,
         )
+    }
+
+    private fun cancelScheduledRestart() {
+        val restartIntent = Intent(this, SmokedLogOverlayService::class.java).apply {
+            action = ACTION_RESTART
+        }
+        val pendingIntent = PendingIntent.getService(
+            this,
+            RESTART_REQUEST_CODE,
+            restartIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        (getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pendingIntent)
     }
 
     private fun isScreenOn(): Boolean {
