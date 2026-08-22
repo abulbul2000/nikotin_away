@@ -147,6 +147,24 @@ class GoogleAuthService {
       FirebaseAuth.instance.currentUser != null &&
       !(FirebaseAuth.instance.currentUser?.isAnonymous ?? true);
 
+  /// Waits briefly for FirebaseAuth to restore its persisted session. This is
+  /// important on cold start: Firebase may initially expose the anonymous
+  /// bootstrap user while the Google/email session is still being restored.
+  static Future<bool> waitForCloudUser({
+    Duration timeout = const Duration(seconds: 4),
+  }) async {
+    if (isCloudUser) return true;
+    try {
+      final user = await FirebaseAuth.instance
+          .authStateChanges()
+          .firstWhere((candidate) => candidate != null && !candidate.isAnonymous)
+          .timeout(timeout);
+      return user != null && !user.isAnonymous;
+    } catch (_) {
+      return isCloudUser;
+    }
+  }
+
   /// Whether signed in specifically with Google.
   static bool get isGoogleUser =>
       FirebaseAuth.instance.currentUser?.providerData
