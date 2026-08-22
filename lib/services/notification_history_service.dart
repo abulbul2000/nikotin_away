@@ -40,6 +40,18 @@ class NotificationHistoryEntry {
 class NotificationHistoryService {
   static const Duration _retention = Duration(hours: 24);
 
+  // Mandatory-task and medication events remain persisted in their own
+  // task/medication tables for the behavior engine, but are intentionally not
+  // shown in the user-facing Notifications archive. The archive is reserved
+  // for useful informational content such as health tips and reports.
+  static const Set<String> _archiveExcludedTypes = <String>{
+    'task_start',
+    'task_followup',
+    'task_postpone',
+    'task_confirm',
+    'medication_reminder',
+  };
+
   /// Record a notification that was just shown.
   static Future<void> record({
     required String title,
@@ -49,6 +61,9 @@ class NotificationHistoryService {
     DateTime? receivedAt,
     DateTime? availableAt,
   }) async {
+    if (_archiveExcludedTypes.contains(type)) {
+      return;
+    }
     try {
       final storage = StorageService();
       final db = await storage.database;

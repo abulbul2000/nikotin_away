@@ -238,10 +238,6 @@ class TaskAssignmentService {
       // only meant every accepted task, win or lose, silently added one
       // permanent "not completed" entry to the risk-scoring history.
       await _transitionTask(canonicalTitle, TaskLifecycleState.accepted);
-      await NotificationService.showTaskTimerStartedNotification(
-        taskTitle: canonicalTitle,
-        duration: delay,
-      );
       // The end-of-window question, asked as "did you smoke?".
       await NotificationService.scheduleTaskConfirmationPrompt(
         taskTitle: canonicalTitle,

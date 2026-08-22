@@ -288,19 +288,19 @@ class NotificationService {
             AndroidNotificationAction(
               _actionPostpone5,
               _text(code, 'postpone5Label'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
               _actionPostpone10,
               _text(code, 'postpone10Label'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
               _actionPostpone15,
               _text(code, 'postpone15Label'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
           ],
@@ -353,13 +353,13 @@ class NotificationService {
             AndroidNotificationAction(
               _actionConfirmSmokedYes,
               _text(code, 'taskConfirmYesLabel'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
               _actionConfirmSmokedNo,
               _text(code, 'taskConfirmNoLabel'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
           ],
@@ -488,13 +488,13 @@ class NotificationService {
             AndroidNotificationAction(
               _actionConfirmSmokedYes,
               _text(code, 'taskConfirmYesLabel'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
               _actionConfirmSmokedNo,
               _text(code, 'taskConfirmNoLabel'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
           ],
@@ -1514,12 +1514,18 @@ class NotificationService {
         );
         return;
       }
-      unawaited(
-        handleMedicationReminderAction(
-          actionId: actionId,
-          medicationId: payload['medicationId'] ?? '',
-          medicationName: payload['medicationName'] ?? '',
+      await handleMedicationReminderAction(
+        actionId: actionId,
+        medicationId: payload['medicationId'] ?? '',
+        medicationName: payload['medicationName'] ?? '',
+      );
+      await AndroidWatchdogService.showInfoOverlayFromNotification(
+        title: _text(code, 'medicationReminderTitle'),
+        body: _text(code, 'medicationReminderBody').replaceAll(
+          '{name}',
+          payload['medicationName'] ?? '',
         ),
+        dismissLabel: _text(code, 'doneShort'),
       );
       return;
     }
@@ -1625,6 +1631,17 @@ class NotificationService {
       };
 
       _dispatchTaskAction(event);
+      // Action buttons are configured with showsUserInterface=true. Also show
+      // a native overlay after the action is dispatched, including on a cold
+      // start where HomePage may not yet have subscribed to the stream.
+      await AndroidWatchdogService.showInfoOverlayFromNotification(
+        title: _text(code, 'disciplineCommand'),
+        body: AppTexts.localizeCanonicalTextForCode(
+          code,
+          payload['taskTitle'] ?? _text(code, 'disciplineCommandBody'),
+        ),
+        dismissLabel: _text(code, 'doneShort'),
+      );
     }
   }
 
@@ -1785,10 +1802,6 @@ class NotificationService {
         scheduledAt: now.add(delay),
       );
       await _transitionTask(canonicalTitle, TaskLifecycleState.accepted);
-      await showTaskTimerStartedNotification(
-        taskTitle: canonicalTitle,
-        duration: delay,
-      );
       // The end-of-window question, asked as "did you smoke?". Replaces the
       // old follow-up, which asked whether the task was completed — the same
       // moment, the opposite polarity.
@@ -1984,20 +1997,19 @@ class NotificationService {
           vibrationPattern: _taskVibrationPattern,
           sound: _taskAlarmSound,
           additionalFlags: _insistentFlag,
-          timeoutAfter: _taskTriggerTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
               _actionMedicationTaken,
               _text(code, 'taskActionDoneLabel'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
               _actionMedicationPostpone,
               _text(code, 'taskActionNotNowLabel'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
           ],
@@ -2133,22 +2145,19 @@ class NotificationService {
           sound: _taskAlarmSound,
           additionalFlags: _insistentFlag,
           audioAttributesUsage: AudioAttributesUsage.alarm,
-          timeoutAfter: isFollowUp
-              ? _notificationTimeoutMs
-              : _taskTriggerTimeoutMs,
           category: androidCategory,
           actions: isFollowUp
               ? <AndroidNotificationAction>[
                   AndroidNotificationAction(
                     _actionFollowUpDone,
                     _text(code, 'taskActionDoneLabel'),
-                    showsUserInterface: false,
+                    showsUserInterface: true,
                     cancelNotification: true,
                   ),
                   AndroidNotificationAction(
                     _actionFollowUpLater,
                     _text(code, 'taskActionNotNowLabel'),
-                    showsUserInterface: false,
+                    showsUserInterface: true,
                     cancelNotification: true,
                   ),
                 ]
@@ -2228,9 +2237,34 @@ class NotificationService {
           autoCancel: false,
           ongoing: true,
           onlyAlertOnce: false,
-          timeoutAfter: _taskTriggerTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
+          actions: <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              _actionTaskDone,
+              _text(code, 'taskActionDoneLabel'),
+              showsUserInterface: true,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionTaskNotNow,
+              _text(code, 'taskActionNotNowLabel'),
+              showsUserInterface: true,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionTaskDecline,
+              _text(code, 'taskActionDeclineLabel'),
+              showsUserInterface: true,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionTaskSos,
+              _text(code, 'taskActionSosLabel'),
+              showsUserInterface: true,
+              cancelNotification: true,
+            ),
+          ],
         ),
         iOS: const DarwinNotificationDetails(
           categoryIdentifier: _categoryTaskStart,
@@ -2330,9 +2364,34 @@ class NotificationService {
           autoCancel: false,
           ongoing: true,
           onlyAlertOnce: false,
-          timeoutAfter: _taskTriggerTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
+          actions: <AndroidNotificationAction>[
+            AndroidNotificationAction(
+              _actionTaskDone,
+              _text(code, 'taskActionDoneLabel'),
+              showsUserInterface: true,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionTaskNotNow,
+              _text(code, 'taskActionNotNowLabel'),
+              showsUserInterface: true,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionTaskDecline,
+              _text(code, 'taskActionDeclineLabel'),
+              showsUserInterface: true,
+              cancelNotification: true,
+            ),
+            AndroidNotificationAction(
+              _actionTaskSos,
+              _text(code, 'taskActionSosLabel'),
+              showsUserInterface: true,
+              cancelNotification: true,
+            ),
+          ],
         ),
         iOS: const DarwinNotificationDetails(
           categoryIdentifier: _categoryTaskStart,
@@ -2833,20 +2892,19 @@ class NotificationService {
               vibrationPattern: _taskVibrationPattern,
               sound: _taskAlarmSound,
               additionalFlags: _insistentFlag,
-              timeoutAfter: _taskTriggerTimeoutMs,
               audioAttributesUsage: AudioAttributesUsage.alarm,
               category: AndroidNotificationCategory.reminder,
               actions: <AndroidNotificationAction>[
                 AndroidNotificationAction(
                   _actionMedicationTaken,
                   _text(code, 'taskActionDoneLabel'),
-                  showsUserInterface: false,
+                  showsUserInterface: true,
                   cancelNotification: true,
                 ),
                 AndroidNotificationAction(
                   _actionMedicationPostpone,
                   _text(code, 'taskActionNotNowLabel'),
-                  showsUserInterface: false,
+                  showsUserInterface: true,
                   cancelNotification: true,
                 ),
               ],
@@ -2922,22 +2980,21 @@ class NotificationService {
           vibrationPattern: _taskVibrationPattern,
           sound: _taskAlarmSound,
           additionalFlags: _insistentFlag,
-          autoCancel: true,
+          autoCancel: false,
           onlyAlertOnce: false,
-          timeoutAfter: _notificationTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
           actions: <AndroidNotificationAction>[
             AndroidNotificationAction(
               _actionFollowUpDone,
               _text(code, 'taskActionDoneLabel'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
             AndroidNotificationAction(
               _actionFollowUpLater,
               _text(code, 'taskActionNotNowLabel'),
-              showsUserInterface: false,
+              showsUserInterface: true,
               cancelNotification: true,
             ),
           ],
@@ -3251,13 +3308,13 @@ class NotificationService {
               AndroidNotificationAction(
                 _actionTaskDone,
                 _text(code, 'taskActionDoneLabel'),
-                showsUserInterface: false,
+                showsUserInterface: true,
                 cancelNotification: true,
               ),
               AndroidNotificationAction(
                 _actionTaskNotNow,
                 _text(code, 'taskActionNotNowLabel'),
-                showsUserInterface: false,
+                showsUserInterface: true,
                 cancelNotification: true,
               ),
             ],
