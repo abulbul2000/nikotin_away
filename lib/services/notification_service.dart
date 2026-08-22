@@ -570,14 +570,14 @@ class NotificationService {
   // changes afterward unless the channel ID itself changes — this forces
   // a fresh channel on devices that already had the app installed, so the
   // new alarm sound/vibration pattern actually takes effect.
-  static const String _taskStartChannelId = 'task_start_channel_v7';
+  static const String _taskStartChannelId = 'task_start_channel_v8';
   // Separate from _taskStartChannelId: this fires right after the user has
   // already answered the alarm-sound prompt (tapped "Kabul Et"), so it only
   // needs a normal notification tone, not another alarm-stream sound.
   static const String _taskTimerStartedChannelId =
       'task_timer_started_channel_v1';
-  static const String _taskFollowUpChannelId = 'task_followup_channel_v7';
-  static const String _taskEscalationChannelId = 'task_escalation_channel_v2';
+  static const String _taskFollowUpChannelId = 'task_followup_channel_v8';
+  static const String _taskEscalationChannelId = 'task_escalation_channel_v3';
   static const String _breathReminderChannelId = 'breath_reminder_channel_v3';
   static const String _weeklySurveyChannelId = 'weekly_survey_channel_v1';
   static const String _sedentaryReminderChannelId =
@@ -612,7 +612,7 @@ class NotificationService {
   static const String _routeBreathTest = 'breathTest';
   static const String _routeWeeklySurvey = 'weeklySurvey';
   static const String _medicationReminderChannelId =
-      'medication_reminder_channel_v2';
+      'medication_reminder_channel_v3';
   static const int _medicationReminderBaseId = 440100;
   static const int _medicationReminderMaxSlots = 30;
 
@@ -715,7 +715,7 @@ class NotificationService {
   // what actually makes these sound like a real alarm going off instead
   // of a normal notification ping.
   static const AndroidNotificationSound _taskAlarmSound =
-      UriAndroidNotificationSound('content://settings/system/alarm_alert');
+      RawResourceAndroidNotificationSound('task_alarm');
 
   static Stream<Map<String, String>> get taskActionStream =>
       _taskActionController.stream;
@@ -1983,6 +1983,8 @@ class NotificationService {
           enableVibration: true,
           vibrationPattern: _taskVibrationPattern,
           sound: _taskAlarmSound,
+          additionalFlags: _insistentFlag,
+          timeoutAfter: _taskTriggerTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
           actions: <AndroidNotificationAction>[
@@ -2830,6 +2832,8 @@ class NotificationService {
               enableVibration: true,
               vibrationPattern: _taskVibrationPattern,
               sound: _taskAlarmSound,
+              additionalFlags: _insistentFlag,
+              timeoutAfter: _taskTriggerTimeoutMs,
               audioAttributesUsage: AudioAttributesUsage.alarm,
               category: AndroidNotificationCategory.reminder,
               actions: <AndroidNotificationAction>[
