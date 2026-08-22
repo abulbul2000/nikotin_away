@@ -1,6 +1,5 @@
 import { HttpsError } from "firebase-functions/v2/https";
 
-
 // No I/O — kept separate from index.js so it can be unit-tested without
 // initializing firebase-admin or talking to a real Firestore/App Check
 // backend (see test/auth.test.js).

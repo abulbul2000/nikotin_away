@@ -28,72 +28,6 @@ import 'home_page.dart';
 import 'risk_result_page.dart';
 import 'weekly_survey_page.dart';
 
-class _SuccessCheckPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-
-  const _SuccessCheckPainter({required this.color, required this.strokeWidth});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-
-    // A filled, balanced checkmark rather than the previous thin stroke.
-    // The proportions are deliberately close to the approved visual reference.
-    final path = Path()
-      ..moveTo(w * 0.08, h * 0.40)
-      ..lineTo(w * 0.24, h * 0.24)
-      ..lineTo(w * 0.45, h * 0.52)
-      ..lineTo(w * 0.82, h * 0.10)
-      ..lineTo(w * 0.97, h * 0.24)
-      ..lineTo(w * 0.47, h * 0.86)
-      ..close();
-
-    final shadowPaint = Paint()
-      ..color = const Color(0xFF168B32).withValues(alpha: 0.72)
-      ..style = PaintingStyle.fill
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
-    canvas.save();
-    canvas.translate(0, h * 0.035);
-    canvas.drawPath(path, shadowPaint);
-    canvas.restore();
-
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: AlignmentDirectional.topStart,
-        end: AlignmentDirectional.bottomEnd,
-        colors: [
-          color.withValues(alpha: 1.0),
-          const Color(0xFF27B947),
-          const Color(0xFF0B8E2B),
-        ],
-        stops: const [0.0, 0.48, 1.0],
-      ).createShader(Offset.zero & size)
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(path, fillPaint);
-
-    // A restrained highlight gives the mark the same polished 3D character
-    // as the approved reference without making it visually noisy.
-    final highlight = Path()
-      ..moveTo(w * 0.13, h * 0.39)
-      ..lineTo(w * 0.24, h * 0.29)
-      ..lineTo(w * 0.45, h * 0.57)
-      ..lineTo(w * 0.80, h * 0.17);
-    final highlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.58)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = (strokeWidth * 0.24).clamp(1.2, 4.0)
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(highlight, highlightPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SuccessCheckPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
-}
-
 class BreathTestPage extends StatefulWidget {
   final String name;
   final String packsPerDay;
@@ -1633,8 +1567,8 @@ class _BreathTestPageState extends State<BreathTestPage>
                     // now centered inside the breathing circle itself
                     // instead of a separate small card graphic.
                     SizedBox(
-                      width: diameter * 0.24,
-                      height: diameter * 0.28,
+                      width: diameter * 0.38,
+                      height: diameter * 0.52,
                       child: CustomPaint(
                         painter: _PhoneMicPainter(
                           color: accentColor,
@@ -1700,15 +1634,17 @@ class _BreathTestPageState extends State<BreathTestPage>
                         child: AnimatedScale(
                           scale: 1.0,
                           duration: const Duration(milliseconds: 180),
-                          child: SizedBox(
-                            width: diameter * 0.68,
-                            height: diameter * 0.68,
-                            child: CustomPaint(
-                              painter: _SuccessCheckPainter(
-                                color: const Color(0xFF52D66B),
-                                strokeWidth: diameter * 0.105,
+                          child: Icon(
+                            Icons.check_rounded,
+                            color: const Color(0xFF35B94E),
+                            size: diameter * 0.58,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.22),
+                                blurRadius: diameter * 0.025,
+                                offset: Offset(0, diameter * 0.012),
                               ),
-                            ),
+                            ],
                           ),
                         ),
                       ),
@@ -1808,9 +1744,9 @@ class _BreathTestPageState extends State<BreathTestPage>
   }
 }
 
-/// A phone outline with the microphone location marked at the bottom edge
-/// and small chevrons animating downward toward it, one loop per
-/// [pulse] cycle — a literal "blow here" pointer.
+/// A phone outline with the microphone at the bottom edge. The airflow starts
+/// above the phone and travels downward into that microphone, making the
+/// required user-to-phone direction visually unambiguous.
 class _PhoneMicPainter extends CustomPainter {
   final Color color;
   final double pulse;
@@ -1828,16 +1764,16 @@ class _PhoneMicPainter extends CustomPainter {
 
     final phoneRect = RRect.fromRectAndRadius(
       Rect.fromCenter(
-        center: Offset(w / 2, h / 2),
-        width: w * 0.5,
-        height: h * 0.86,
+        center: Offset(w / 2, h * 0.66),
+        width: w * 0.48,
+        height: h * 0.62,
       ),
       Radius.circular(w * 0.09),
     );
     canvas.drawRRect(phoneRect, phoneStroke);
 
     // Microphone location, pulsing.
-    final micCenter = Offset(w / 2, h * 0.80);
+    final micCenter = Offset(w / 2, h * 0.90);
     canvas.drawCircle(
       micCenter,
       w * 0.045 + (pulse * 0.02 * w),
@@ -1852,22 +1788,26 @@ class _PhoneMicPainter extends CustomPainter {
         ..strokeWidth = w * 0.02,
     );
 
-    // Two chevrons animating downward toward the mic.
-    for (var i = 0; i < 2; i++) {
-      final t = (pulse + (i * 0.5)) % 1.0;
-      final y = h * 0.22 + (t * h * 0.42);
-      final alpha = (1 - t).clamp(0.0, 1.0) * 0.8;
-      final chevronPaint = Paint()
+    // Three large downward airflow arrows begin above the phone and finish
+    // at its bottom microphone. Their staggered motion remains visible in
+    // every exhale attempt, including attempts two and three.
+    for (var i = 0; i < 3; i++) {
+      final t = (pulse + (i / 3)) % 1.0;
+      final y = h * 0.04 + (t * h * 0.68);
+      final alpha = (1 - t).clamp(0.0, 1.0) * 0.9;
+      final arrowPaint = Paint()
         ..color = color.withValues(alpha: alpha)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = w * 0.035
+        ..strokeWidth = w * 0.045
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
       final path = Path()
-        ..moveTo(w / 2 - w * 0.09, y)
-        ..lineTo(w / 2, y + h * 0.06)
-        ..lineTo(w / 2 + w * 0.09, y);
-      canvas.drawPath(path, chevronPaint);
+        ..moveTo(w / 2, y)
+        ..lineTo(w / 2, y + h * 0.11)
+        ..moveTo(w / 2 - w * 0.12, y + h * 0.055)
+        ..lineTo(w / 2, y + h * 0.14)
+        ..lineTo(w / 2 + w * 0.12, y + h * 0.055);
+      canvas.drawPath(path, arrowPaint);
     }
   }
 
