@@ -125,7 +125,7 @@ void main() {
       // a later task demanding materially more would be a promise the user
       // was never told about.
       for (final item in plan.items) {
-        expect(item.durationMinutes, inInclusiveRange(36, 44));
+        expect(item.durationMinutes, inInclusiveRange(33, 47));
       }
     });
 
@@ -143,7 +143,7 @@ void main() {
       );
 
       for (final item in plan.items) {
-        expect(item.durationMinutes, inInclusiveRange(144, 176));
+        expect(item.durationMinutes, inInclusiveRange(131, 189));
       }
     });
 

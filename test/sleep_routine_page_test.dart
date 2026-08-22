@@ -379,6 +379,34 @@ Future<void> _completeCoughTestStep(WidgetTester tester) async {
   }
 }
 
+/// Drives the next-day wake-time step (added after breath+cough, before the
+/// daily report — see SleepRoutineFlowEngine) to completion: opens the time
+/// picker, accepts its pre-filled default time via the "Tamam" (tr) OK
+/// button, then taps "Devam" to advance. sleepIntelligenceEnabled defaults
+/// to off in a freshly cleared test database, so the save this step triggers
+/// (SleepIntelligenceService.scheduleMorningReportForDate) short-circuits on
+/// its own isEnabled() check and never reaches a real platform channel.
+Future<void> _completeNextDayWakeTimeStep(WidgetTester tester) async {
+  final pickButton = find.byIcon(Icons.schedule);
+  await _pumpUntilFound(tester, pickButton);
+  await tester.ensureVisible(pickButton);
+  await tester.tap(pickButton);
+  await _pumpRealTime(tester, const Duration(milliseconds: 300));
+
+  final okButton = find.text('Tamam');
+  await _pumpUntilFound(tester, okButton);
+  await tester.tap(okButton.first);
+  await _pumpRealTime(tester, const Duration(milliseconds: 300));
+
+  final continueButton = find.widgetWithText(FilledButton, 'Devam Et');
+  await _pumpUntilFound(tester, continueButton);
+  await tester.ensureVisible(continueButton);
+  await tester.tap(continueButton);
+  for (var i = 0; i < 10; i += 1) {
+    await _pumpRealTime(tester, const Duration(milliseconds: 50));
+  }
+}
+
 // Previously every test below hung indefinitely on its first pump after
 // SleepRoutinePage's initState-driven _loadSteps future resolved. Root
 // cause (found 2026-08-12): the default TestWidgetsFlutterBinding runs on
@@ -485,6 +513,7 @@ void main() {
       await _completeBreathTestStep(tester);
 
       await _completeCoughTestStep(tester);
+      await _completeNextDayWakeTimeStep(tester);
 
       // Straight to the report — the discrepancy step never appears in
       // between.
@@ -515,6 +544,7 @@ void main() {
 
       await _completeBreathTestStep(tester);
       await _completeCoughTestStep(tester);
+      await _completeNextDayWakeTimeStep(tester);
 
       // The old smoking-hours discrepancy question was removed from the
       // sleep routine. The daily report is now always the next step.
@@ -546,8 +576,18 @@ void main() {
 
     await _completeBreathTestStep(tester);
     await _completeCoughTestStep(tester);
+    await _completeNextDayWakeTimeStep(tester);
 
     expect(find.byType(DailyProgressReportView), findsOneWidget);
+
+    // The close button now saves the user's confirmed daily total first
+    // (see daily_progress_report_view.dart's _saveVerificationAndClose) —
+    // an empty field shows a SnackBar instead of closing, so this must be
+    // filled in before tapping close.
+    final totalField = find.byType(TextField);
+    await tester.ensureVisible(totalField);
+    await tester.enterText(totalField, '5');
+    await _pumpRealTime(tester, const Duration(milliseconds: 100));
 
     final finalButton = find.byType(ElevatedButton).last;
     await tester.ensureVisible(finalButton);

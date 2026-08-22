@@ -4,22 +4,27 @@ import 'package:no_smoke/services/sleep_routine_flow_engine.dart';
 void main() {
   const engine = SleepRoutineFlowEngine();
 
-  test('without a discrepancy the flow is breath, cough, report — 3 steps', () {
-    final steps = engine.buildSteps(hasDiscrepancy: false);
+  test(
+    'without a discrepancy the flow is breath, cough, wake time, report — 4 steps',
+    () {
+      final steps = engine.buildSteps(hasDiscrepancy: false);
 
-    expect(steps, [
-      SleepRoutineStep.breathTest,
-      SleepRoutineStep.coughTest,
-      SleepRoutineStep.dailyReport,
-    ]);
-  });
+      expect(steps, [
+        SleepRoutineStep.breathTest,
+        SleepRoutineStep.coughTest,
+        SleepRoutineStep.nextDayWakeTime,
+        SleepRoutineStep.dailyReport,
+      ]);
+    },
+  );
 
-  test('with a discrepancy the flow still uses the current three steps', () {
+  test('with a discrepancy the flow still uses the current four steps', () {
     final steps = engine.buildSteps(hasDiscrepancy: true);
 
     expect(steps, [
       SleepRoutineStep.breathTest,
       SleepRoutineStep.coughTest,
+      SleepRoutineStep.nextDayWakeTime,
       SleepRoutineStep.dailyReport,
     ]);
   });

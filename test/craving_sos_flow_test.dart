@@ -105,8 +105,15 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('sos_dismiss_button')));
       // _handleDismiss now awaits _resolveActiveTask's own database round
       // trip before setState -- give it real wall-clock time to resolve
-      // under LiveTestWidgetsFlutterBinding rather than a zero-duration pump.
-      await tester.pump(const Duration(milliseconds: 300));
+      // under LiveTestWidgetsFlutterBinding. FFI database resolution can
+      // take longer when the whole widget suite is running, so wait for the
+      // actual state transition instead of assuming one 300 ms pump is
+      // always enough; the timeout still catches a real routing regression
+      // (same pattern as the "barrier-running task" test below).
+      final resumeButton = find.byKey(const ValueKey('sos_resume_30'));
+      for (var i = 0; i < 20 && resumeButton.evaluate().isEmpty; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
 
       // The task is suspended, not finished — cancelling it outright would make
       // SOS the cheapest way to never answer one.

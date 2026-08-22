@@ -140,6 +140,16 @@ void main() {
 
     await logCigarettes(storage, daysAgo: 0, count: baseline - 4);
     await logCigarettes(storage, daysAgo: 1, count: baseline - 6);
+    // Avoided cigarettes are only credited once the user has confirmed the
+    // day's total — a quick-log count alone is just a lower bound.
+    await storage.saveVerifiedDailySmokingTotal(
+      date: today,
+      total: baseline - 4,
+    );
+    await storage.saveVerifiedDailySmokingTotal(
+      date: today.subtract(const Duration(days: 1)),
+      total: baseline - 6,
+    );
     // Days 2..399 have no data and must contribute nothing — otherwise a
     // user who stopped logging would appear to be avoiding a full baseline
     // every single day.
