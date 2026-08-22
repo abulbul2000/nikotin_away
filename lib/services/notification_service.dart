@@ -17,6 +17,7 @@ import '../pages/craving_sos_page.dart';
 import '../pages/health_tip_page.dart';
 import '../pages/medication_reminder_page.dart';
 import '../pages/notifications_page.dart';
+import '../widgets/daily_progress_report_view.dart';
 import '../pages/weekly_survey_page.dart';
 import 'android_watchdog_service.dart';
 import 'behavior_engine.dart';
@@ -1453,7 +1454,17 @@ class NotificationService {
     }
 
     if (type == _typeSleepReport) {
-      await _openHistoryBeforeOverlay(allowNavigation);
+      if (allowNavigation) {
+        _pushNotificationRoute(
+          DailyProgressReportView(
+            storageService: StorageService(),
+            onClose: () {
+              _navigatorKey?.currentState?.pop();
+            },
+          ),
+        );
+        return;
+      }
       final report = await StorageService().buildDailyProgressReport();
       final body = [
         'Bugün içilen sigara: ${report.todaySmokedCount}',

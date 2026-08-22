@@ -1,6 +1,6 @@
 /// Notifications page — shows all recent notifications with timestamps.
 ///
-/// Entries are kept for at least 6 hours after they were received,
+/// Every entry remains in the archive for 24 hours after delivery,
 /// regardless of day boundaries.
 library;
 
@@ -55,6 +55,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
         return Icons.poll_outlined;
       case 'health_tip':
         return Icons.lightbulb_outline;
+      case 'sleep_report':
+        return Icons.bedtime_outlined;
       default:
         return Icons.notifications_outlined;
     }

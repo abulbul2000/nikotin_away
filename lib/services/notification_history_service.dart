@@ -3,10 +3,8 @@
 /// Records every notification shown by the app (with timestamp) so the user
 /// can review missed notifications later in the Notifications page.
 ///
-/// Retention rule: each notification stays visible for at least 6 hours,
-/// then is automatically removed. This means a notification shown at 23:59
-/// will still be visible until 05:59 the next day — day boundaries never
-/// cut off notifications prematurely.
+/// Retention rule: every notification stays in the in-app archive for
+/// 24 hours from its received/scheduled delivery time, then is removed.
 library;
 
 import '../services/storage_service.dart';
@@ -40,7 +38,7 @@ class NotificationHistoryEntry {
 
 /// Manages the in-app notification history.
 class NotificationHistoryService {
-  static const Duration _retention = Duration(hours: 6);
+  static const Duration _retention = Duration(hours: 24);
 
   /// Record a notification that was just shown.
   static Future<void> record({

@@ -26,6 +26,8 @@ class DailyProgressReportView extends StatefulWidget {
 
 class _DailyProgressReportViewState extends State<DailyProgressReportView> {
   DailyProgressReport? _report;
+  String? _sleepTime;
+  String? _wakeTime;
 
   @override
   void initState() {
@@ -35,8 +37,19 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
 
   Future<void> _load() async {
     final report = await widget.storageService.buildDailyProgressReport();
+    final fallbackSleep = await widget.storageService.loadSleepTime() ?? '23:00';
+    final fallbackWake =
+        await widget.storageService.loadSetting('wake_time') ?? '07:00';
+    final sleepWindow = await widget.storageService.resolveEffectiveSleepWindow(
+      fallbackSleepTime: fallbackSleep,
+      fallbackWakeTime: fallbackWake,
+    );
     if (!mounted) return;
-    setState(() => _report = report);
+    setState(() {
+      _report = report;
+      _sleepTime = sleepWindow.sleepTime ?? fallbackSleep;
+      _wakeTime = sleepWindow.wakeTime ?? fallbackWake;
+    });
   }
 
   @override
@@ -60,7 +73,13 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
               child: report == null
                   ? const Center(child: CircularProgressIndicator())
                   : SingleChildScrollView(
-                      child: _buildReportCard(context, report, accent),
+                      child: Column(
+                        children: [
+                          _buildSleepSummary(context, accent),
+                          const SizedBox(height: 12),
+                          _buildReportCard(context, report, accent),
+                        ],
+                      ),
                     ),
             ),
             const SizedBox(height: 12),
@@ -79,6 +98,85 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
         ),
       ),
     );
+  }
+
+  Widget _buildSleepSummary(BuildContext context, Color accent) {
+    final sleep = _parseClock(_sleepTime);
+    final wake = _parseClock(_wakeTime);
+    final duration = sleep == null || wake == null
+        ? null
+        : ((wake - sleep + 24 * 60) % (24 * 60));
+    final durationText = duration == null
+        ? '—'
+        : '${duration ~/ 60}s ${duration % 60}dk';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF153B3B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withAlpha(180)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            context.t('sleepIntelligenceTitle'),
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _sleepMetric(context.t('sleepTime'), _sleepTime ?? '—', accent),
+              _sleepMetric(context.t('wakeTime'), _wakeTime ?? '—', accent),
+              _sleepMetric('Uyku süresi', durationText, accent),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Bu özet gece boyunca öğrenilen ekran ve şarj sinyallerine göre hazırlandı.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: accent.withAlpha(220)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sleepMetric(String label, String value, Color accent) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: accent,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: accent.withAlpha(220)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int? _parseClock(String? value) {
+    if (value == null) return null;
+    final parts = value.split(':');
+    if (parts.length != 2) return null;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return null;
+    return hour * 60 + minute;
   }
 
   Widget _buildReportCard(

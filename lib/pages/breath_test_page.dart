@@ -1701,8 +1701,8 @@ class _BreathTestPageState extends State<BreathTestPage>
                           scale: 1.0,
                           duration: const Duration(milliseconds: 180),
                           child: SizedBox(
-                            width: diameter * 0.52,
-                            height: diameter * 0.52,
+                            width: diameter * 0.68,
+                            height: diameter * 0.68,
                             child: CustomPaint(
                               painter: _SuccessCheckPainter(
                                 color: const Color(0xFF52D66B),
