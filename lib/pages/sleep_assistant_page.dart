@@ -211,7 +211,7 @@ class _SleepAssistantPageState extends State<SleepAssistantPage> {
                   const SizedBox(height: 12),
                   if (_scheduleMode == 'weekly')
                     DropdownButtonFormField<int>(
-                      value: _selectedDay,
+                      initialValue: _selectedDay,
                       decoration: InputDecoration(labelText: context.t('days')),
                       items: [
                         for (var day = 1; day <= 7; day++)
