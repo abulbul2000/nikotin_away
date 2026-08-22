@@ -34,7 +34,11 @@ class DailyPlanRefreshService {
         _alarmId,
         _refreshCallback,
         startAt: _nextRefreshTime(),
-        exact: true,
+        // The daily plan is not clock-critical. Inexact scheduling avoids
+        // requiring SCHEDULE_EXACT_ALARM and lets Android batch this wake-up
+        // with nearby maintenance work, while task notifications keep their
+        // own exact/inexact fallback policy.
+        exact: false,
         wakeup: true,
         rescheduleOnReboot: true,
       );
