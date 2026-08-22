@@ -53,7 +53,12 @@ class NotificationHistoryService {
       final storage = StorageService();
       final db = await storage.database;
       final now = receivedAt ?? DateTime.now();
-      final expiresAt = now.add(_retention);
+      // Scheduled local notifications are inserted before Android displays
+      // them. The archive must remain available for 24 hours from the time
+      // the notification becomes visible, not from the earlier scheduling
+      // call; otherwise late-day scheduling can shorten its retention.
+      final archiveStart = availableAt ?? now;
+      final expiresAt = archiveStart.add(_retention);
 
       if (dedupeKey != null && dedupeKey.isNotEmpty) {
         final existing = await db.query(
