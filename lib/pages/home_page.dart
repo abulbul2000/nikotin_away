@@ -2315,7 +2315,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       _ => Colors.white70,
     };
     final answered = message.userReply != null;
-
+    final statusKey = switch (message.tone) {
+      'coach' => 'riskLow',
+      'supportive' => 'riskHigh',
+      _ => 'riskMedium',
+    };
     return Card(
       color: toneColor.withValues(alpha: 0.08),
       shape: RoundedRectangleBorder(
@@ -2341,10 +2345,39 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               ],
             ),
             const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: toneColor.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: toneColor.withValues(alpha: 0.35)),
+              ),
+              child: Text(
+                '${context.t('riskLevel')}: ${context.t(statusKey)}',
+                style: TextStyle(
+                  color: toneColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
             Text(
               AppTexts.localizeMentorMessage(languageCode, message.text),
               style: const TextStyle(fontSize: 14, height: 1.5),
             ),
+            if (!answered && message.tone == 'supportive') ...[
+              const SizedBox(height: 8),
+              Text(
+                context.t('mentorFollowupStrugglingQ'),
+                style: const TextStyle(
+                  color: AppTheme.inkMuted,
+                  fontSize: 12,
+                  height: 1.4,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
             if (message.quickReplies.isNotEmpty) ...[
               const SizedBox(height: 12),
               _buildMentorReplyArea(context, message, languageCode, answered),
