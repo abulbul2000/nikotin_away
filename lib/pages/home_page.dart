@@ -2110,18 +2110,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ],
                 ),
               ),
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.ember.withValues(alpha: 0.16),
-                ),
-                child: const Icon(
-                  Icons.wb_sunny_outlined,
-                  color: AppTheme.ember,
-                ),
-              ),
             ],
           ),
           const SizedBox(height: 24),
@@ -2281,36 +2269,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               MaterialPageRoute(builder: (_) => const NotificationsPage()),
             ),
           ),
-        ),
-        PopupMenuButton<String>(
-          key: const ValueKey('home_more_menu'),
-          tooltip: context.t('aiMentorButton'),
-          onSelected: (value) {
-            if (value == 'ai_mentor' && kDebugMode) {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AIChatPage()),
-              );
-            }
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem<String>(
-              value: 'ai_mentor',
-              enabled: kDebugMode,
-              child: Row(
-                children: [
-                  const Icon(Icons.smart_toy_outlined),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      kDebugMode
-                          ? context.t('aiMentorButton')
-                          : context.t('aiChatDeveloperOnly'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ),
       ],
     );
