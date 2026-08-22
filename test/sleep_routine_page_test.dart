@@ -379,6 +379,32 @@ Future<void> _completeCoughTestStep(WidgetTester tester) async {
   }
 }
 
+/// Drives the tonight-sleep-time step (added after breath+cough, before the
+/// next-day wake-time question — see SleepRoutineFlowEngine) to completion:
+/// opens the time picker via its `Icons.nightlight_outlined` button, accepts
+/// the pre-filled default time via the "Tamam" (tr) OK button, then taps
+/// "Devam Et" to advance.
+Future<void> _completeTonightSleepTimeStep(WidgetTester tester) async {
+  final pickButton = find.byIcon(Icons.nightlight_outlined);
+  await _pumpUntilFound(tester, pickButton);
+  await tester.ensureVisible(pickButton);
+  await tester.tap(pickButton);
+  await _pumpRealTime(tester, const Duration(milliseconds: 300));
+
+  final okButton = find.text('Tamam');
+  await _pumpUntilFound(tester, okButton);
+  await tester.tap(okButton.first);
+  await _pumpRealTime(tester, const Duration(milliseconds: 300));
+
+  final continueButton = find.widgetWithText(FilledButton, 'Devam Et');
+  await _pumpUntilFound(tester, continueButton);
+  await tester.ensureVisible(continueButton);
+  await tester.tap(continueButton);
+  for (var i = 0; i < 10; i += 1) {
+    await _pumpRealTime(tester, const Duration(milliseconds: 50));
+  }
+}
+
 /// Drives the next-day wake-time step (added after breath+cough, before the
 /// daily report — see SleepRoutineFlowEngine) to completion: opens the time
 /// picker, accepts its pre-filled default time via the "Tamam" (tr) OK
@@ -513,6 +539,7 @@ void main() {
       await _completeBreathTestStep(tester);
 
       await _completeCoughTestStep(tester);
+      await _completeTonightSleepTimeStep(tester);
       await _completeNextDayWakeTimeStep(tester);
 
       // Straight to the report — the discrepancy step never appears in
@@ -544,6 +571,7 @@ void main() {
 
       await _completeBreathTestStep(tester);
       await _completeCoughTestStep(tester);
+      await _completeTonightSleepTimeStep(tester);
       await _completeNextDayWakeTimeStep(tester);
 
       // The old smoking-hours discrepancy question was removed from the
@@ -576,6 +604,7 @@ void main() {
 
     await _completeBreathTestStep(tester);
     await _completeCoughTestStep(tester);
+    await _completeTonightSleepTimeStep(tester);
     await _completeNextDayWakeTimeStep(tester);
 
     expect(find.byType(DailyProgressReportView), findsOneWidget);

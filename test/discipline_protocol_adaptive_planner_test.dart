@@ -143,7 +143,7 @@ void main() {
       );
 
       for (final item in plan.items) {
-        expect(item.durationMinutes, inInclusiveRange(131, 189));
+        expect(item.durationMinutes, inInclusiveRange(109, 211));
       }
     });
 

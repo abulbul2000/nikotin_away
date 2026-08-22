@@ -80,12 +80,11 @@ class _SleepRoutinePageState extends State<SleepRoutinePage> {
 
   Future<void> _pickTonightSleepTime() async {
     final stored = await _storage.loadSleepTime();
-    if (!mounted) return;
-    final pageContext = context;
+    if (!mounted || !context.mounted) return;
     final selected = await showTimePicker(
-      context: pageContext,
+      context: context,
       initialTime: _tonightSleepTime ?? _parseTime(stored) ?? const TimeOfDay(hour: 23, minute: 0),
-      helpText: pageContext.t('sleepTime'),
+      helpText: context.t('sleepTime'),
     );
     if (selected != null && mounted) {
       setState(() => _tonightSleepTime = selected);

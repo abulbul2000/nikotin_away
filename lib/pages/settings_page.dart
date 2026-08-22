@@ -600,21 +600,21 @@ class _SettingsPageState extends State<SettingsPage> {
       );
       return;
     }
-    final pageContext = context;
+    if (!mounted || !context.mounted) return;
     final confirmed = await showDialog<bool>(
-      context: pageContext,
+      context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(pageContext.t('cloudRestoreRow')),
-        content: Text(pageContext.t('cloudRestoreConfirmMessage')),
+        title: Text(context.t('cloudRestoreRow')),
+        content: Text(context.t('cloudRestoreConfirmMessage')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: Text(pageContext.t('no')),
+            child: Text(context.t('no')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: Text(pageContext.t('cloudRestoreRow')),
+            child: Text(context.t('cloudRestoreRow')),
           ),
         ],
       ),

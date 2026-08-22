@@ -11,6 +11,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 import 'core/app_texts.dart';
 import 'core/app_theme.dart';
+import 'core/unsupported_locale_fallback.dart';
 import 'pages/splash_page.dart';
 import 'pages/subscription_gate_page.dart';
 import 'services/daily_plan_refresh_service.dart';
@@ -240,6 +241,17 @@ class _NoSmokeAppState extends State<NoSmokeApp> with WidgetsBindingObserver {
         growable: false,
       ),
       localizationsDelegates: const [
+        // Ahead of the Global*Localizations delegates: Kurdish has no
+        // translation in flutter_localizations, so without a delegate that
+        // claims to support it, Localizations._loadAll finds nothing and
+        // every AppBar (and other Material/Cupertino widget) throws "No
+        // MaterialLocalizations found" for a user who picked Kurdish. These
+        // are real Kurdish translations for what this app can actually
+        // surface, not a stand-in language — see
+        // unsupported_locale_fallback.dart.
+        KurdishMaterialLocalizationsDelegate(),
+        KurdishCupertinoLocalizationsDelegate(),
+        KurdishWidgetsLocalizationsDelegate(),
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:no_smoke/core/app_texts.dart';
+import 'package:no_smoke/core/unsupported_locale_fallback.dart';
 import 'package:no_smoke/core/mentor_command_codes.dart';
 import 'package:no_smoke/models/survey_record.dart';
 import 'package:no_smoke/pages/breath_spirometry_result_page.dart';
@@ -66,10 +67,17 @@ const _testNames = [
 ];
 
 Widget _wrapWithLocale(String code, Widget child) {
+  final locale = LanguageService.supportedLanguages[code] ?? Locale(code);
   return MaterialApp(
-    locale: Locale(code),
-    supportedLocales: [Locale(code)],
+    locale: locale,
+    supportedLocales: [locale],
     localizationsDelegates: const [
+      // Matches main.dart: Kurdish ('ku' / 'ku-arab') has no translation in
+      // flutter_localizations, so without these ahead of the Global*
+      // delegates every AppBar throws "No MaterialLocalizations found".
+      KurdishMaterialLocalizationsDelegate(),
+      KurdishCupertinoLocalizationsDelegate(),
+      KurdishWidgetsLocalizationsDelegate(),
       GlobalMaterialLocalizations.delegate,
       GlobalWidgetsLocalizations.delegate,
       GlobalCupertinoLocalizations.delegate,
