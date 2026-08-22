@@ -2,7 +2,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../core/app_texts.dart';
 
-/// Shares the public Nikotin Away installation link without exposing user data.
+/// Shares the public Nicotine Away installation link without exposing user data.
 class AppShareService {
   AppShareService._();
 

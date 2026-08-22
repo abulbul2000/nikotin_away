@@ -1,6 +1,6 @@
 # COPD-Like Breath Monitoring Design (Non-diagnostic)
 
-This design defines a COPD-like breathing monitoring flow for Nikotin Away.
+This design defines a COPD-like breathing monitoring flow for Nicotine Away.
 It is intentionally non-diagnostic and must not claim COPD diagnosis.
 
 ## 1) Clinical Boundaries

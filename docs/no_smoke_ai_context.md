@@ -1,17 +1,17 @@
-# Nikotin Away - AI Context Pack
+# Nicotine Away - AI Context Pack
 
-Bu dokuman, Nikotin Away projesini herhangi bir yapay zeka araci ile hizli ve dogru analiz ettirmek icin hazirlanmis teknik ozet dosyasidir.
+Bu dokuman, Nicotine Away projesini herhangi bir yapay zeka araci ile hizli ve dogru analiz ettirmek icin hazirlanmis teknik ozet dosyasidir.
 
 ## 1) Proje Kimligi
 
-- Proje adi: Nikotin Away
+- Proje adi: Nicotine Away
 - Platform: Flutter (Android agirlikli, iOS/web/desktop klasorleri mevcut)
 - Amac: Sigara birakma surecini davranissal olarak yonetmek
 - Ana yaklasim: Risk puani + gorev tabanli mudahale + takip + ihlal eskalasyonu
 
 ## 2) Kisa Urun Ozeti
 
-Nikotin Away, kullanicinin sigara icme aliskanligini azaltmak ve birakma surecini disipline etmek icin tasarlanmis bir mobil uygulamadir.
+Nicotine Away, kullanicinin sigara icme aliskanligini azaltmak ve birakma surecini disipline etmek icin tasarlanmis bir mobil uygulamadir.
 
 Temel akis:
 - Ilk kurulumda dil secimi ve anket
@@ -161,7 +161,7 @@ Bu projeyi inceleyen yapay zekadan su tip ciktilar alinmasi onerilir:
 
 Asagidaki sablon herhangi bir AI aracta kullanilabilir:
 
-"Bu dokumani temel alarak Nikotin Away uygulamasini teknik olarak analiz et. Once yonetici ozeti ver, sonra katmanli mimariyi acikla, sonra kritik riskleri severity seviyeleriyle listele (Critical/High/Medium/Low). Ardindan P0/P1/P2 aksiyon plani ve 30-60-90 gun yol haritasi cikar. Onerilerin her biri icin beklenen etkiyi ve tahmini eforu (S/M/L) belirt."
+"Bu dokumani temel alarak Nicotine Away uygulamasini teknik olarak analiz et. Once yonetici ozeti ver, sonra katmanli mimariyi acikla, sonra kritik riskleri severity seviyeleriyle listele (Critical/High/Medium/Low). Ardindan P0/P1/P2 aksiyon plani ve 30-60-90 gun yol haritasi cikar. Onerilerin her biri icin beklenen etkiyi ve tahmini eforu (S/M/L) belirt."
 
 ## 13) Hedeflenen Cikti Kalitesi
 

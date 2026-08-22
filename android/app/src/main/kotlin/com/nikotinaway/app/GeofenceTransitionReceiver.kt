@@ -82,7 +82,7 @@ class GeofenceTransitionReceiver : BroadcastReceiver() {
         }
         val channel = NotificationChannel(
             CHANNEL_ID,
-            channelName.ifBlank { "Nikotin Away Location Reminder" },
+            channelName.ifBlank { "Nicotine Away Location Reminder" },
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
             description = channelDescription.ifBlank {

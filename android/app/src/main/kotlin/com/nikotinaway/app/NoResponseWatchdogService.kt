@@ -173,7 +173,7 @@ class NoResponseWatchdogService : Service() {
         }
         val notification = NotificationCompat.Builder(this, FOREGROUND_CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Nikotin Away")
+            .setContentTitle("Nicotine Away")
             .setContentText(body)
             .setOngoing(true)
             .setSilent(true)
@@ -440,13 +440,13 @@ object WatchdogStore {
             foregroundBody = prefs.getString(KEY_TEXT_FOREGROUND_BODY, null)
                 ?.takeIf { it.isNotBlank() } ?: "Waiting for task response",
             violationTitle = prefs.getString(KEY_TEXT_VIOLATION_TITLE, null)
-                ?.takeIf { it.isNotBlank() } ?: "Nikotin Away Violation",
+                ?.takeIf { it.isNotBlank() } ?: "Nicotine Away Violation",
             violationBody = prefs.getString(KEY_TEXT_VIOLATION_BODY, null)
                 ?.takeIf { it.isNotBlank() } ?: "No response for 10 minutes. Task violation recorded: {taskTitle}",
             foregroundChannelName = prefs.getString(KEY_TEXT_FOREGROUND_CHANNEL, null)
                 ?.takeIf { it.isNotBlank() } ?: "Background service",
             violationChannelName = prefs.getString(KEY_TEXT_VIOLATION_CHANNEL, null)
-                ?.takeIf { it.isNotBlank() } ?: "Nikotin Away Violation Alerts",
+                ?.takeIf { it.isNotBlank() } ?: "Nicotine Away Violation Alerts",
         )
     }
 
@@ -581,7 +581,7 @@ object WatchdogViolationNotifier {
         }
         val channel = NotificationChannel(
             NoResponseWatchdogService.VIOLATION_CHANNEL_ID,
-            channelName.ifBlank { "Nikotin Away Violation Alerts" },
+            channelName.ifBlank { "Nicotine Away Violation Alerts" },
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = "10-minute unanswered task violation"

@@ -1,6 +1,6 @@
-# Nikotin Away - Claude Prompt (Kısa Sürüm)
+# Nicotine Away - Claude Prompt (Kısa Sürüm)
 
-Nikotin Away Flutter uygulamasını teknik olarak analiz et ve tek dokümanda aşağıdakileri kısa ve net şekilde ver:
+Nicotine Away Flutter uygulamasını teknik olarak analiz et ve tek dokümanda aşağıdakileri kısa ve net şekilde ver:
 
 1. Uygulamanın amacı ve ana değer önerisi
 2. Katmanlı mimari özeti (Presentation, Business Logic, Service, Data, Native Bridge)

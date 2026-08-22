@@ -252,7 +252,7 @@ class _NoSmokeAppState extends State<NoSmokeApp> with WidgetsBindingObserver {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
-      title: 'Nikotin Away',
+      title: 'Nicotine Away',
       theme: AppTheme.darkTheme,
       locale: _locale,
       supportedLocales: LanguageService.supportedLanguages.values.toList(

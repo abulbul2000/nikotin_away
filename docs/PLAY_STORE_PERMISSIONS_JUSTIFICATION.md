@@ -12,7 +12,7 @@ Play Console → App content (Uygulama içeriği) → Permissions declaration / 
 
 ## İngilizce metin (doğrudan yapıştır)
 
-> Nikotin Away is a smoking-cessation app built around scheduled, time-sensitive intervention prompts (e.g. "don't smoke in the next N minutes," breathing exercises, medication reminders). The app's core mechanism depends on the user actually seeing and responding to these prompts at the moment they're scheduled — a missed prompt during a craving window defeats the app's entire purpose.
+> Nicotine Away is a smoking-cessation app built around scheduled, time-sensitive intervention prompts (e.g. "don't smoke in the next N minutes," breathing exercises, medication reminders). The app's core mechanism depends on the user actually seeing and responding to these prompts at the moment they're scheduled — a missed prompt during a craving window defeats the app's entire purpose.
 >
 > Android notifications with `fullScreenIntent` only auto-present when the device is locked. When the phone is unlocked and another app is in the foreground (the exact situation a craving is most likely to happen — mid-conversation, mid-browsing, mid-drive), the same notification only shows as a dismissible heads-up banner that the user can miss or swipe away without ever seeing the full prompt.
 >

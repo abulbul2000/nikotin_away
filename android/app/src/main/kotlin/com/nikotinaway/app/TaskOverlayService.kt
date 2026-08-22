@@ -90,7 +90,7 @@ class TaskOverlayService : Service() {
         }
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle("Nikotin Away")
+            .setContentTitle("Nicotine Away")
             .setContentText(texts.foregroundBody)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
@@ -514,7 +514,7 @@ object TaskOverlayStore {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return TaskOverlayChannelInfo(
             channelName = prefs.getString(KEY_CHANNEL_NAME, null)
-                ?.takeIf { it.isNotBlank() } ?: "Nikotin Away Task Screen",
+                ?.takeIf { it.isNotBlank() } ?: "Nicotine Away Task Screen",
             channelDescription = prefs.getString(KEY_CHANNEL_DESCRIPTION, null)
                 ?.takeIf { it.isNotBlank() } ?: "Active while the mandatory task screen is showing",
             foregroundBody = prefs.getString(KEY_FOREGROUND_BODY, null)

@@ -1,4 +1,4 @@
-# Nikotin Away — Proje Kuralları
+# Nicotine Away — Proje Kuralları
 
 Bu dosya her oturumda otomatik yüklenir. Kalıcı proje kuralları burada durur.
 

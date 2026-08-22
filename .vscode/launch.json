@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Nikotin Away - Flutter Emulator",
+      "name": "Nicotine Away - Flutter Emulator",
       "type": "dart",
       "request": "launch",
       "program": "lib/main.dart",

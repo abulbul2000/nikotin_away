@@ -2,10 +2,10 @@
 
 Kaynak: https://console.firebase.google.com/project/nikotin-away-development-eb94d/settings/general/android:com.nikotinaway.app
 
-- Firebase projesi: Nikotin Away Development
+- Firebase projesi: Nicotine Away Development
 - Project ID: nikotin-away-development-eb94d
 - Project number: 204994363768
-- Android uygulaması: Nikotin Away Development Android
+- Android uygulaması: Nicotine Away Development Android
 - Package name: com.nikotinaway.app
 - App ID: 1:204994363768:android:57fe83151d02bdc61c088d
 - Firebase Console oturumu: abulbul2000@gmail.com ile açık.

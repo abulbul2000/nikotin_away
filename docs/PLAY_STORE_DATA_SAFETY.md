@@ -1,4 +1,4 @@
-# Google Play Data Safety — Nikotin Away
+# Google Play Data Safety — Nicotine Away
 
 Bu belge, Play Console Data Safety ve Health Apps beyanlarını doldurmak için kod tabanına göre hazırlanmış çalışma taslağıdır. Play Console formu gönderilmeden önce gerçek Firebase yapılandırması, kullanılan AI sağlayıcısının saklama politikası ve geliştirici bilgileriyle son kez doğrulanmalıdır.
 
@@ -6,7 +6,7 @@ Bu belge, Play Console Data Safety ve Health Apps beyanlarını doldurmak için 
 
 Uygulama varsayılan olarak cihaz-yerel çalışır. Kullanıcı Google veya e-posta hesabıyla giriş yaparsa, uygulama yedeği kullanıcı UID'si altında Firebase Firestore'a senkronize edilebilir. Kullanıcı parola tabanlı şifreli yedekleme seçerse yedek cihazda AES-256-GCM ile şifrelenir ve kullanıcı UID'si altındaki Firebase Storage yoluna yüklenir.
 
-Uygulama Gmail, Drive, Fotoğraflar, rehber, takvim veya web geçmişine erişmez. Google girişi yalnızca Firebase kimlik doğrulama ve Nikotin Away hesabı eşleştirmesi içindir.
+Uygulama Gmail, Drive, Fotoğraflar, rehber, takvim veya web geçmişine erişmez. Google girişi yalnızca Firebase kimlik doğrulama ve Nicotine Away hesabı eşleştirmesi içindir.
 
 ## 2. Toplanan veya işlenen veri türleri
 

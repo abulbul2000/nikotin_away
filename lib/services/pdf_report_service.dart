@@ -49,7 +49,7 @@ class PdfReportService {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                labels['title'] ?? 'Nikotin Away',
+                labels['title'] ?? 'Nicotine Away',
                 style: pw.TextStyle(
                   fontSize: 22,
                   fontWeight: pw.FontWeight.bold,

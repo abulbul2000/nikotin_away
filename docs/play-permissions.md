@@ -63,7 +63,7 @@ bildirimi bilgisi eklendiği için `v1`'den bump'landı) ve karar
 
 ## İngilizce metin (Play Console'a doğrudan yapıştırılabilir taslak)
 
-> Nikotin Away includes an optional, off-by-default "Snoring Test" feature (nested
+> Nicotine Away includes an optional, off-by-default "Snoring Test" feature (nested
 > under an already-optional "Sleep Intelligence" feature) that briefly samples raw
 > microphone audio a few times during the user's configured sleep window, purely to
 > detect a rhythmic, snore-like sound pattern on-device.

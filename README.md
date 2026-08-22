@@ -1,6 +1,6 @@
-# Nikotin Away
+# Nicotine Away
 
-Nikotin Away, sigara bırakma yolculuğunu desteklemek için geliştirilmiş bir Flutter mobil uygulamasıdır. Uygulama;
+Nicotine Away, sigara bırakma yolculuğunu desteklemek için geliştirilmiş bir Flutter mobil uygulamasıdır. Uygulama;
 
 - başlangıç anketi
 - nefes testi

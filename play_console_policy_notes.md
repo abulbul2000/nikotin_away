@@ -16,7 +16,7 @@
 3. Google Play sağlık uygulaması kategorileri: https://support.google.com/googleplay/android-developer/answer/13996367?hl=tr
    - Sağlık ve fitness uygulamaları, tıbbi yönetimi veya fiziksel/mental sağlığı destekleyen uygulamalar sağlık uygulaması kapsamına girebilir.
    - Sağlık uygulaması beyanı App content > Health apps altında doldurulmalı.
-   - Nikotin bırakma koçluğu, uyku/horlama analizi, nefes/öksürük ölçümü ve AI sağlık tavsiyesi nedeniyle Nikotin Away sağlık uygulaması olarak değerlendirilmelidir.
+   - Nikotin bırakma koçluğu, uyku/horlama analizi, nefes/öksürük ölçümü ve AI sağlık tavsiyesi nedeniyle Nicotine Away sağlık uygulaması olarak değerlendirilmelidir.
 
 ## Proje manifestinden ilk risk adayları
 

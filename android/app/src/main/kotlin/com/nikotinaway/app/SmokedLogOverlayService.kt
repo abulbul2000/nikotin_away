@@ -438,7 +438,7 @@ class SmokedLogOverlayService : Service() {
             manager.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    prefs().getString(KEY_CHANNEL_NAME, "Nikotin Away Quick Log"),
+                    prefs().getString(KEY_CHANNEL_NAME, "Nicotine Away Quick Log"),
                     NotificationManager.IMPORTANCE_MIN,
                 ).apply {
                     description = prefs().getString(
@@ -465,7 +465,7 @@ class SmokedLogOverlayService : Service() {
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_menu_edit)
-            .setContentTitle(prefs().getString(KEY_NOTIF_TITLE, "Nikotin Away"))
+            .setContentTitle(prefs().getString(KEY_NOTIF_TITLE, "Nicotine Away"))
             .setOngoing(true)
             .setSilent(true)
             .setShowWhen(false)

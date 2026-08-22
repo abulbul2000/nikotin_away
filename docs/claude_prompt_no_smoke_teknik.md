@@ -1,6 +1,6 @@
-# Nikotin Away - Claude Prompt (Teknik Ekip Detay Sürümü)
+# Nicotine Away - Claude Prompt (Teknik Ekip Detay Sürümü)
 
-Nikotin Away projesi için senior seviyede bir teknik değerlendirme raporu üretmeni istiyorum. Bu rapor bir mimari inceleme + iyileştirme taslağı olacak.
+Nicotine Away projesi için senior seviyede bir teknik değerlendirme raporu üretmeni istiyorum. Bu rapor bir mimari inceleme + iyileştirme taslağı olacak.
 
 ## Kapsam
 

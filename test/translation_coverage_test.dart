@@ -83,7 +83,7 @@ void main() {
     final wrong = <String>[];
     for (final code in supported) {
       final name = AppTexts.textForCode(code, 'appName');
-      if (name != 'NIKOTIN AWAY') {
+      if (name != 'NICOTINE AWAY') {
         wrong.add('$code: $name');
       }
     }

@@ -1,4 +1,4 @@
-# Nikotin Away fiyatlandırma araştırması
+# Nicotine Away fiyatlandırma araştırması
 
 ## Resmi kaynaklar
 

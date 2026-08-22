@@ -1,4 +1,4 @@
-# Nikotin Away i18n Validation Report
+# Nicotine Away i18n Validation Report
 
 - Parsed languages: **40/40**
 - Source keys: **1525**

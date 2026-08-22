@@ -1,6 +1,6 @@
 {
   "name": "no-smoke-functions",
-  "description": "Cloud Functions for Nikotin Away (AI mentor chat proxy)",
+  "description": "Cloud Functions for Nicotine Away (AI mentor chat proxy)",
   "type": "module",
   "main": "index.js",
   "engines": {

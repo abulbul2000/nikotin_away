@@ -278,7 +278,7 @@ object SnoringCaptureTextStore {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return SnoringCaptureTexts(
             title = prefs.getString(KEY_TITLE, null)?.takeIf { it.isNotBlank() }
-                ?: "Nikotin Away",
+                ?: "Nicotine Away",
             body = prefs.getString(KEY_BODY, null)?.takeIf { it.isNotBlank() }
                 ?: "Taking a brief sound sample to check for snoring",
             channelName = prefs.getString(KEY_CHANNEL_NAME, null)?.takeIf { it.isNotBlank() }

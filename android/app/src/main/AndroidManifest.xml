@@ -40,7 +40,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
 <application
-   android:label="Nikotin Away"
+   android:label="Nicotine Away"
 
     android:name="${applicationName}"
     android:icon="@mipmap/ic_launcher"

@@ -6,14 +6,14 @@ import 'mentor_command_codes.dart';
 class AppTexts {
   // Turkish - Full translation
   static const Map<String, String> _tr = {
-    'appName': 'NIKOTIN AWAY',
+    'appName': 'NICOTINE AWAY',
     'appTagline': 'Kişisel Sigara Bırakma Rehberin',
     'watchdogForegroundBody': 'Görev yanıtı bekleniyor',
-    'watchdogViolationTitle': 'Nikotin Away Hatırlatma',
+    'watchdogViolationTitle': 'Nicotine Away Hatırlatma',
     'watchdogViolationBody':
         '10 dakika yanıt alamadık. {taskTitle} görevini kaçırmış olabilirsin, sorun değil.',
     'watchdogForegroundChannel': 'Arka plan servisi',
-    'watchdogViolationChannel': 'Nikotin Away Hatırlatmaları',
+    'watchdogViolationChannel': 'Nicotine Away Hatırlatmaları',
     'selectLanguage': 'Dil Seç',
     'continue': 'Devam Et',
     'back': 'Geri',
@@ -83,7 +83,7 @@ class AppTexts {
     'smokedLogButtonDisabled': 'Sigara İçtim butonu kapatıldı.',
     'smokedLogButtonNeedsOverlay':
         'Bu buton için "diğer uygulamaların üstünde göster" izni gerekiyor.',
-    'smokedLogButtonNotificationTitle': 'Nikotin Away',
+    'smokedLogButtonNotificationTitle': 'Nicotine Away',
     'smokedLogButtonNotificationBody':
         'Yüzen butona 1 saniye başılı tutun, seçenekler açılsın',
     'smokedLogButtonAction': 'Sigara İçtim',
@@ -182,10 +182,10 @@ class AppTexts {
     'shareProgressSkip': 'Geç',
     'shareProgressAction': 'Paylaş',
     'shareProgressText':
-        'Nikotin Away ile sigarayı bırakma sürecimi takip ediyorum. Güncel risk skorum: {score}/100 ({level}).',
+        'Nicotine Away ile sigarayı bırakma sürecimi takip ediyorum. Güncel risk skorum: {score}/100 ({level}).',
     'shareAppTitle': 'Sosyal Medyada Paylaş',
     'shareAppMessage':
-        'Nikotin Away uygulamasını keşfet: sigarayı bırakma sürecini takip et, tetikleyicilerini tanı ve kişisel koçluğundan yararlan.\n\n{url}',
+        'Nicotine Away uygulamasını keşfet: sigarayı bırakma sürecini takip et, tetikleyicilerini tanı ve kişisel koçluğundan yararlan.\n\n{url}',
     'saveErrorRetry': 'Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.',
     'loadErrorRetry':
         'Veriler yüklenirken bir hata oluştu. Lütfen tekrar deneyin.',
@@ -310,7 +310,7 @@ class AppTexts {
     'breathBadgePersonalRecordDesc': 'Kendi en iyi skorunu geçtin.',
     'disciplineDisclosureTitle': 'Nasıl destek oluyoruz?',
     'disciplineDisclosureMessage':
-        'Nikotin Away, seni sigarayı bırakma sürecinde desteklemek için bazı arka plan mekanizmaları kullanır:\n\n'
+        'Nicotine Away, seni sigarayı bırakma sürecinde desteklemek için bazı arka plan mekanizmaları kullanır:\n\n'
         '- Bir görev hatırlatmasina zamanında yanit vermezsen, bunu cihazında bir uyum kaydı olarak not ederiz.\n'
         '- Aktif bir görev sırasında, telefon hareketi ve kullanım oruntülerinden (hareket sensörleri ve mikrofon aracılığıyla) olası riskli anları tahmin etmeye çalışırız. Ses kaydedilmez veya saklanmaz; yalnızca ortam ses seviyesi ölçülür.\n'
         '- Bazı görev hatırlatmaları dikkatini çekmek için tam ekran uyarı olarak görünebilir.\n'
@@ -517,17 +517,17 @@ class AppTexts {
     'channelNameDurationBarrierCall': 'Süre engeli araması',
     'channelNameMovementReminder': 'Hareket hatırlatıcı',
     'channelNameCoachSuggestion': 'Koç önerisi',
-    'channelNameLocationReminder': 'Nikotin Away Konum Hatırlatıcı',
+    'channelNameLocationReminder': 'Nicotine Away Konum Hatırlatıcı',
     'channelDescriptionLocationReminder':
         'Sık gidilen bir yere varıldığında gösterilen hatırlatma',
-    'taskOverlayChannelName': 'Nikotin Away Görev Ekranı',
+    'taskOverlayChannelName': 'Nicotine Away Görev Ekranı',
     'taskOverlayChannelDescription': 'Odak ekranı gösterilirken aktif',
     'taskOverlayForegroundBody': 'Görev ekranı gösteriliyor',
-    'snoringCaptureChannelName': 'Nikotin Away Uyku Zekası',
-    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureChannelName': 'Nicotine Away Uyku Zekası',
+    'snoringCaptureNotificationTitle': 'Nicotine Away',
     'snoringCaptureNotificationBody':
         'Horlama tespiti için kısa bir ses örneği alınıyor',
-    'channelNameSmokedLogQuickAction': 'Nikotin Away Hızlı Kayıt',
+    'channelNameSmokedLogQuickAction': 'Nicotine Away Hızlı Kayıt',
     'channelDescriptionSmokedLogQuickAction':
         'Sigara içtim butonu ekranda dururken aktif',
     'registrationMissingFields': 'Lütfen eksik alanları doldurun.',
@@ -1376,7 +1376,7 @@ class AppTexts {
     'reportsMonthlyTab': 'Aylık',
     'reportsPreviewButton': 'Önizle / Yazdır',
     'reportsShareButton': 'PDF Olarak Paylaş',
-    'reportsPdfTitle': 'Nikotin Away Raporu',
+    'reportsPdfTitle': 'Nicotine Away Raporu',
     'reportsCigarettesLogged': 'Kaydedilen sigara sayısı',
     'reportsAvgPerDay': 'Günlük ortalama',
     'reportsRiskScore': 'Risk skoru',
@@ -1399,7 +1399,7 @@ class AppTexts {
     'locationIntelligencePurpose':
         'Neden: Bildirim göstermek ve risk değerlendirmene katki sağlamak için. Ayarlar > Verilerimi Sıfırla ile bu veriler de silinir.',
     'locationIntelligenceBackgroundWarning':
-        'Ana izin verildi ama arka plan izni verilmedi. Uygulama kapalıyken vardığın yerler algılanamaz. Ayarlar > Uygulamalar > Nikotin Away > Izinler > Konum bölümünden "Her zaman izin ver" seçebilirsin.',
+        'Ana izin verildi ama arka plan izni verilmedi. Uygulama kapalıyken vardığın yerler algılanamaz. Ayarlar > Uygulamalar > Nicotine Away > Izinler > Konum bölümünden "Her zaman izin ver" seçebilirsin.',
     'locationIntelligenceEnabledConfirmation': 'Konum zekası açıldı.',
     'locationIntelligenceDisabledConfirmation': 'Konum zekası kapatıldı.',
     'locationIntelligencePlacesTitle': 'Öğrenilen Yerler',
@@ -1897,7 +1897,7 @@ class AppTexts {
         'Risk skorunu güncellemek için haftalık anketi doldurman gerekiyor.',
     'trialInfoTitle': '14 Günlük Ücretsiz Deneme',
     'trialInfoMessage':
-        'Nikotin Away uygulamasını 14 gün boyunca, Yapay Zeka Mentoru dahil tüm özellikleriyle ücretsiz deneyebilirsin. 14 gün sonunda devam etmek için abonelik gerekir.',
+        'Nicotine Away uygulamasını 14 gün boyunca, Yapay Zeka Mentoru dahil tüm özellikleriyle ücretsiz deneyebilirsin. 14 gün sonunda devam etmek için abonelik gerekir.',
     'subscriptionGateTitle': 'Deneme Süresi Doldu',
     'subscriptionGateMessage':
         '14 günlük ücretsiz deneme süren sona erdi. Yapay Zeka Mentoru, görev sistemi, nefes/öksürük testleri ve konum/uyku zekası gibi özellikler için abonelik gerekir; temel özelliklerle ücretsiz devam edebilirsin.',
@@ -2048,14 +2048,14 @@ class AppTexts {
 
   // English - Full translation
   static const Map<String, String> _en = {
-    'appName': 'NIKOTIN AWAY',
+    'appName': 'NICOTINE AWAY',
     'appTagline': 'Your Personal Quit Smoking Mentor',
     'watchdogForegroundBody': 'Waiting for task response',
-    'watchdogViolationTitle': 'Nikotin Away Reminder',
+    'watchdogViolationTitle': 'Nicotine Away Reminder',
     'watchdogViolationBody':
         'No response for 10 minutes. You may have missed the {taskTitle} task — that\'s okay.',
     'watchdogForegroundChannel': 'Background service',
-    'watchdogViolationChannel': 'Nikotin Away Reminders',
+    'watchdogViolationChannel': 'Nicotine Away Reminders',
     'selectLanguage': 'Select language',
     'continue': 'Continue',
     'back': 'Back',
@@ -2135,7 +2135,7 @@ class AppTexts {
     'smokedLogButtonDisabled': 'I Smoked button is off.',
     'smokedLogButtonNeedsOverlay':
         'This button needs the "display over other apps" permission.',
-    'smokedLogButtonNotificationTitle': 'Nikotin Away',
+    'smokedLogButtonNotificationTitle': 'Nicotine Away',
     'smokedLogButtonNotificationBody':
         'Hold the floating button for 1 second to open the options',
     'smokedLogButtonAction': 'I Smoked',
@@ -2245,10 +2245,10 @@ class AppTexts {
     'shareProgressSkip': 'Skip',
     'shareProgressAction': 'Share',
     'shareProgressText':
-        'I\'m tracking my quit-smoking journey with Nikotin Away. My current risk score: {score}/100 ({level}).',
+        'I\'m tracking my quit-smoking journey with Nicotine Away. My current risk score: {score}/100 ({level}).',
     'shareAppTitle': 'Share on Social Media',
     'shareAppMessage':
-        'Discover Nikotin Away: track your quit-smoking journey, understand your triggers, and get personal coaching.\n\n{url}',
+        'Discover Nicotine Away: track your quit-smoking journey, understand your triggers, and get personal coaching.\n\n{url}',
     'saveErrorRetry': 'An error occurred while saving. Please try again.',
     'loadErrorRetry':
         'Something went wrong loading this data. Please try again.',
@@ -2375,7 +2375,7 @@ class AppTexts {
     'breathBadgePersonalRecordDesc': 'Beat your own best score.',
     'disciplineDisclosureTitle': 'How do we support you?',
     'disciplineDisclosureMessage':
-        'Nikotin Away uses a few background mechanisms to support you through quitting:\n\n'
+        'Nicotine Away uses a few background mechanisms to support you through quitting:\n\n'
         '- If you don\'t respond to a task reminder in time, we note it on your device as a compliance record.\n'
         '- During an active task, we try to estimate possible risky moments from phone motion and usage patterns (via motion sensors and the microphone). Audio is never recorded or stored — only the ambient sound level is measured.\n'
         '- Some task reminders may appear as full-screen alerts to get your attention.\n'
@@ -2491,17 +2491,17 @@ class AppTexts {
     'channelNameDurationBarrierCall': 'Duration barrier call',
     'channelNameMovementReminder': 'Movement reminder',
     'channelNameCoachSuggestion': 'Coach suggestion',
-    'channelNameLocationReminder': 'Nikotin Away Location Reminder',
+    'channelNameLocationReminder': 'Nicotine Away Location Reminder',
     'channelDescriptionLocationReminder':
         'Reminder shown on arrival at a frequently visited place',
-    'taskOverlayChannelName': 'Nikotin Away Task Screen',
+    'taskOverlayChannelName': 'Nicotine Away Task Screen',
     'taskOverlayChannelDescription': 'Active while the focus screen is showing',
     'taskOverlayForegroundBody': 'Task screen showing',
-    'snoringCaptureChannelName': 'Nikotin Away Sleep Intelligence',
-    'snoringCaptureNotificationTitle': 'Nikotin Away',
+    'snoringCaptureChannelName': 'Nicotine Away Sleep Intelligence',
+    'snoringCaptureNotificationTitle': 'Nicotine Away',
     'snoringCaptureNotificationBody':
         'Taking a brief sound sample to check for snoring',
-    'channelNameSmokedLogQuickAction': 'Nikotin Away Quick Log',
+    'channelNameSmokedLogQuickAction': 'Nicotine Away Quick Log',
     'channelDescriptionSmokedLogQuickAction':
         'Active while the "I Smoked" button is on screen',
     'registrationMissingFields': 'Please fill in the missing fields.',
@@ -3334,7 +3334,7 @@ class AppTexts {
     'reportsMonthlyTab': 'Monthly',
     'reportsPreviewButton': 'Preview / Print',
     'reportsShareButton': 'Share as PDF',
-    'reportsPdfTitle': 'Nikotin Away Report',
+    'reportsPdfTitle': 'Nicotine Away Report',
     'reportsCigarettesLogged': 'Cigarettes logged',
     'reportsAvgPerDay': 'Daily average',
     'reportsRiskScore': 'Risk score',
@@ -3357,7 +3357,7 @@ class AppTexts {
     'locationIntelligencePurpose':
         'Why: to show the reminder and contribute to your risk assessment. Settings > Reset My Data also clears this data.',
     'locationIntelligenceBackgroundWarning':
-        'The main permission was granted but background permission was not. Arrivals can\'t be detected while the app is closed. You can choose "Allow all the time" from Settings > Apps > Nikotin Away > Permissions > Location.',
+        'The main permission was granted but background permission was not. Arrivals can\'t be detected while the app is closed. You can choose "Allow all the time" from Settings > Apps > Nicotine Away > Permissions > Location.',
     'locationIntelligenceEnabledConfirmation':
         'Location intelligence turned on.',
     'locationIntelligenceDisabledConfirmation':
@@ -3953,7 +3953,7 @@ class AppTexts {
         'Please complete the weekly survey to refresh your risk score.',
     'trialInfoTitle': '14-Day Free Trial',
     'trialInfoMessage':
-        'You can use Nikotin Away free for 14 days, including the AI Mentor and every other feature. A subscription is required to continue after that.',
+        'You can use Nicotine Away free for 14 days, including the AI Mentor and every other feature. A subscription is required to continue after that.',
     'subscriptionGateTitle': 'Your Trial Has Ended',
     'subscriptionGateMessage':
         'Your 14-day free trial is over. Features like the AI Mentor, the task system, breath/cough tests, and location/sleep intelligence need a subscription; you can keep using the core features for free.',

@@ -32,7 +32,7 @@ void main() {
     // the title literal plus the English fallback string for the old wording.
     final title = RegExp(r'setContentTitle\("([^"]*)"\)').firstMatch(source);
     expect(title, isNotNull);
-    // "Nikotin Away Watchdog" / "10 dakika yanit takibi aktif" read as a
+    // "Nicotine Away Watchdog" / "10 dakika yanit takibi aktif" read as a
     // second countdown competing with the task alert it exists to support.
     expect(title!.group(1), isNot(contains('Watchdog')));
     expect(source, isNot(contains('10 dakika yanit takibi aktif')));

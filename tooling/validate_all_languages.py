@@ -22,7 +22,7 @@ LANGUAGES = {
 STRING_RE = re.compile(r"(['\"])([^'\"]+)\1\s*:\s*(['\"])((?:\\.|(?!\3).)*)\3", re.S)
 PLACEHOLDER_RE = re.compile(r"\{[^{}]+\}")
 PRESERVED = {
-    'NIKOTIN AWAY', 'Nikotin Away', 'AI Mentor', 'COPD', 'NVIDIA', 'Google',
+    'NICOTINE AWAY', 'Nicotine Away', 'AI Mentor', 'COPD', 'NVIDIA', 'Google',
     'Firebase', 'SQLite', 'Flutter', 'Dart', 'JSON', 'URL', 'API', 'OK',
 }
 EN_HINTS = re.compile(r"\b(the|and|or|your|you|with|from|this|that|test|start|save|settings|notifications|data|result|failed|warning|minutes|seconds|today|tomorrow|week|month|year)\b", re.I)
@@ -92,7 +92,7 @@ def main():
         'total_english_hint_candidates': sum(len(x['english_hint_candidates']) for x in report['languages'].values()),
     }
     OUT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
-    lines = ['# Nikotin Away i18n Validation Report', '', f"- Parsed languages: **{len(maps)}/{len(LANGUAGES)}**", f"- Source keys: **{len(all_keys)}**", '']
+    lines = ['# Nicotine Away i18n Validation Report', '', f"- Parsed languages: **{len(maps)}/{len(LANGUAGES)}**", f"- Source keys: **{len(all_keys)}**", '']
     lines += ['| Dil | Anahtar | Eksik | Fazla | Boş | Placeholder | EN fallback adayı | TR karışım adayı |', '|---|---:|---:|---:|---:|---:|---:|---:|']
     for code, data in report['languages'].items():
         lines.append(f"| {code} ({data['name']}) | {data['keys']} | {len(data['missing'])} | {len(data['extra'])} | {len(data['empty'])} | {len(data['placeholder_errors'])} | {len(data['english_fallback_candidates'])} | {len(data['turkish_mix_candidates'])} |")

@@ -1,4 +1,4 @@
-# Nikotin Away — Gizlilik Politikası
+# Nicotine Away — Gizlilik Politikası
 
 **Son güncelleme:** 20 Ağustos 2026
 
@@ -6,7 +6,7 @@
 
 ## 1. Kapsam
 
-Bu Gizlilik Politikası, **Nikotin Away** mobil uygulamasının kişisel verileri nasıl işlediğini açıklar. Uygulama Nikotin Away geliştiricisi tarafından geliştirilmiştir. Sorular için `abulbul2000@gmail.com` adresi kullanılabilir.
+Bu Gizlilik Politikası, **Nicotine Away** mobil uygulamasının kişisel verileri nasıl işlediğini açıklar. Uygulama Nicotine Away geliştiricisi tarafından geliştirilmiştir. Sorular için `abulbul2000@gmail.com` adresi kullanılabilir.
 
 ## 2. Verilerin saklandığı yer
 
@@ -14,7 +14,7 @@ Uygulama temel olarak verileri Android uygulamasının korumalı alanındaki SQL
 
 Google veya e-posta hesabıyla giriş yapan kullanıcının uygulama yedeği, Firebase Authentication tarafından verilen kullanıcı UID'si altında Firebase Firestore'da tutulur. Parola tabanlı şifreli yedekler ise `backups/{kullanıcı UID}/{parola özeti}.enc` yolunda Firebase Storage'da tutulur. Yedek içeriği cihazda AES-256-GCM ile şifrelenir; parola sunucuya gönderilmez.
 
-Uygulama Gmail, Google Drive, Google Fotoğraflar, rehber veya takvim verilerine erişmez. Google hesabı yalnızca kullanıcı kimliği ve Nikotin Away hesabına ait bulut yedeğini eşleştirmek için kullanılır.
+Uygulama Gmail, Google Drive, Google Fotoğraflar, rehber veya takvim verilerine erişmez. Google hesabı yalnızca kullanıcı kimliği ve Nicotine Away hesabına ait bulut yedeğini eşleştirmek için kullanılır.
 
 ## 3. İşlenen veri türleri ve amaçları
 

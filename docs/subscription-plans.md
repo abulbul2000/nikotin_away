@@ -1,14 +1,14 @@
-# Nikotin Away abonelik planları
+# Nicotine Away abonelik planları
 
 ## Ürün planları
 
-Nikotin Away, ücretsiz temel özellikler ve üç ücretli AI planı kullanır. Ücretli planlar otomatik yenilenen aylık abonelik olarak Play Console'da oluşturulmalıdır.
+Nicotine Away, ücretsiz temel özellikler ve üç ücretli AI planı kullanır. Ücretli planlar otomatik yenilenen aylık abonelik olarak Play Console'da oluşturulmalıdır.
 
 | Ürün kimliği | Mağaza adı | Aylık fiyat | Günlük AI limiti | Aylık AI limiti |
 | --- | --- | ---: | ---: | ---: |
-| `no_smoke_starter` | Nikotin Away Starter | 4.99 USD | 10 mesaj | 300 mesaj |
-| `no_smoke_plus` | Nikotin Away Plus | 9.99 USD | 30 mesaj | 900 mesaj |
-| `no_smoke_pro` | Nikotin Away Pro | 19.99 USD | 60 mesaj | 1.800 mesaj |
+| `no_smoke_starter` | Nicotine Away Starter | 4.99 USD | 10 mesaj | 300 mesaj |
+| `no_smoke_plus` | Nicotine Away Plus | 9.99 USD | 30 mesaj | 900 mesaj |
+| `no_smoke_pro` | Nicotine Away Pro | 19.99 USD | 60 mesaj | 1.800 mesaj |
 
 Fiyatlar Google Play'de USD temel fiyatı olarak belirlenebilir; Play Console'un ülke ve bölge fiyat ayarlarıyla kullanıcıya yerel para birimi gösterilir. Ürün kimlikleri yayınlandıktan sonra değiştirilmemelidir.
 
