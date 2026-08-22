@@ -1,0 +1,4 @@
+ku: 1521 keys, 435 values identical to English
+sample: appName, watchdogViolationBody, reportsDisclaimer, medicationDeleteConfirmMessage, overlayPermissionMessage, smokedLogButtonDescription, smokedLogButtonPurpose, smokedLogButtonNeedsOverlay, smokedLogButtonNotificationTitle, smokedLogButtonNotificationBody, dailyBreathPromptContent, dailyBreathOverdueNotificationBody, smokedLogConsentDataBody, smokedLogConsentStorageBody, permissionSetupIntro, permissionOverlayDescription, permissionOemDescription, firstCigaretteWhen, weeklySurveyPromptAsk, shareProgressMessage
+ku-arab: 1521 keys, 1506 values identical to English
+sample: howItWorksTitle, howItWorksSubtitle, watchdogForegroundBody, watchdogViolationTitle, watchdogViolationBody, watchdogForegroundChannel, watchdogViolationChannel, selectLanguage, continue, back, yes, no, save, home, tabTests, tabTracking, weeklySurvey, riskAnalysis, retry, iBreathed

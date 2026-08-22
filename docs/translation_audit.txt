@@ -1,0 +1,78 @@
+english_reference_keys=1564
+generated_languages=38
+de: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+ar: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+fr: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+es: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+pt: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+it: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+pl: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+ru: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+ja: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+zh: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+ko: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+hi: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+bn: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+pa: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+te: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+mr: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+ta: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+gu: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+kn: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+ml: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+th: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+vi: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+id: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+ms: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+be: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+cs: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+da: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+el: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+fi: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+fil: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+hr: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+hu: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+nl: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+no: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+ro: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+sr: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+sv: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount
+uk: keys=1563 missing=1 extra=0
+  missing: aiChatActionAppliedHealthTipCount

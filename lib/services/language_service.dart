@@ -164,8 +164,12 @@ class LanguageService {
     }
 
     // Geriye dönük uyumluluk: locales listesi boşsa tekil locale'e bak.
-    final fallbackCode = PlatformDispatcher.instance.locale.languageCode
-        .toLowerCase();
+    final fallbackLocale = PlatformDispatcher.instance.locale;
+    final fallbackBaseCode = fallbackLocale.languageCode.toLowerCase();
+    final fallbackCode = fallbackBaseCode == 'ku' &&
+            fallbackLocale.scriptCode == 'Arab'
+        ? 'ku-arab'
+        : fallbackBaseCode;
     if (supportedLanguages.containsKey(fallbackCode)) {
       return fallbackCode;
     }

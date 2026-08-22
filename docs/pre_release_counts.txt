@@ -1,0 +1,24 @@
+supported_language_count= 40
+supported_language_codes= tr,en,de,ar,fr,es,pt,it,pl,ru,ja,zh,ko,hi,bn,pa,te,mr,ta,gu,kn,ml,th,vi,id,ms,fil,uk,ro,el,hu,cs,sv,da,no,fi,nl,be,sr,hr
+
+PATTERN _generalHealthTips
+
+PATTERN _conditionSpecificHealthTips
+
+PATTERN generalHealthTips
+
+PATTERN conditionSpecificHealthTips
+
+PATTERN 15
+191   /// "Ertele" — opens the 5/10/15 choice below rather than snoozing by a
+200   static const String _actionPostpone15 = 'task_postpone_15';
+219   static const Duration _medicationPostponeDelay = Duration(minutes: 15);
+301               _actionPostpone15,
+302               _text(code, 'postpone15Label'),
+600   static const int _healthTipUserMaxCount = 15;
+647   static const int _healthTipsSmokingCount = 15;
+680   static const int _notificationTimeoutMs = 15000;
+684   // 15s default. cancelActiveTaskTriggerAlarm silences it the moment the
+697   // A rhythmic buzz-pause-buzz pattern (not one flat 15s vibration) so it
+1820       _actionPostpone15: 15,
+2682         // Without a selected condition, all 15 slots use general, smoking-

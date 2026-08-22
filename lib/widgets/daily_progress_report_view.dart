@@ -182,12 +182,15 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
             children: [
               _sleepMetric(context.t('sleepTime'), _sleepTime ?? '—', accent),
               _sleepMetric(context.t('wakeTime'), _wakeTime ?? '—', accent),
-              _sleepMetric('Uyku süresi', durationText, accent),
+              _sleepMetric(context.t('sleepRoutineReportSleepDuration'), durationText, accent),
             ],
           ),
           const SizedBox(height: 10),
           Text(
-            'Bu özet gece boyunca öğrenilen ekran ve şarj sinyallerine göre hazırlandı.',
+            context.t('sleepRoutineReportEvidence').replaceAll(
+              '{probes}',
+              '${_report?.todaySleepProbeCount ?? 0}',
+            ),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: accent.withAlpha(220)),
           ),
@@ -316,6 +319,35 @@ class _DailyProgressReportViewState extends State<DailyProgressReportView> {
               fontSize: 12,
               color: accent.withAlpha((255 * 0.85).toInt()),
             ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            context.t('breathTrend').replaceFirst(':', ': ') +
+                ' ${report.breathTrend ?? context.t('unknownValue')}',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: accent.withAlpha((255 * 0.85).toInt())),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            context.t('snoringDetectionLastNightCount').replaceFirst(
+                  ':',
+                  ': ',
+                ) +
+                ' ${report.todayOvernightSnoreCount}' +
+                (report.latestOvernightSnoringSeverity == null
+                    ? ''
+                    : ' (${report.latestOvernightSnoringSeverity})'),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: accent.withAlpha((255 * 0.85).toInt())),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            context.t('sleepRoutineReportChargingProbes').replaceAll(
+              '{count}',
+              '${report.todayChargingProbeCount}',
+            ),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: accent.withAlpha((255 * 0.85).toInt())),
           ),
           if (report.latestCoughTest != null) ...[
             const SizedBox(height: 10),

@@ -1,0 +1,1192 @@
+=== android/app/src/main/kotlin/com/nikotinaway/app/StepProbeReceiver.kt ===
+package com.nikotinaway.app
+
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.database.sqlite.SQLiteDatabase
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.Handler
+import android.os.Looper
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import java.util.TimeZone
+
+/// Reads the device's hardware step-counter sensor (TYPE_STEP_COUNTER) --
+/// a single cumulative count since last reboot that the OS batches at the
+/// hardware level, so registering a listener costs essentially nothing
+/// (no continuous polling, no GPS/radio use). Delivers the last-known value
+/// near-instantly on registration, which is all callers here ever want.
+object StepCounterReader {
+    private const val TIMEOUT_MS = 5000L
+
+    fun readOnce(context: Context, callback: (Int?) -> Unit) {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        val sensor = sensorManager?.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+        if (sensorManager == null || sensor == null) {
+            callback(null)
+            return
+        }
+
+        val handler = Handler(Looper.getMainLooper())
+        var finished = false
+
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                if (finished) return
+                finished = true
+                val value = event.values.getOrNull(0)?.toInt()
+                sensorManager.unregisterListener(this)
+                handler.removeCallbacksAndMessages(null)
+                callback(value)
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+
+        sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+
+        handler.postDelayed({
+            if (!finished) {
+                finished = true
+                sensorManager.unregisterListener(listener)
+                callback(null)
+            }
+        }, TIMEOUT_MS)
+    }
+}
+
+/// Wakes once daily, shortly after local midnight, so a day-boundary
+/// cumulative-step snapshot exists even on days the app is never opened --
+/// StepTrendEngine (Dart) needs one sample near each midnight to compute
+/// clean daily deltas from the raw cumulative counter.
+class StepProbeReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent?) {
+        if (intent?.action != ACTION_PROBE) {
+            return
+        }
+        val pendingResult = goAsync()
+        StepCounterReader.readOnce(context) { steps ->
+            if (steps != null) {
+                StepProbeStore.insertSample(context, steps)
+            }
+            scheduleNext(context)
+            pendingResult.finish()
+        }
+    }
+
+    companion object {
+        const val ACTION_PROBE = "com.nikotinaway.app.stepprobe.PROBE"
+        private const val REQUEST_CODE = 87001
+        private const val PROBE_HOUR = 0
+        private const val PROBE_MINUTE = 5
+
+        fun scheduleNext(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                nextProbeMillis(),
+                pendingIntent(context),
+            )
+        }
+
+        fun cancel(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.cancel(pendingIntent(context))
+        }
+
+        private fun nextProbeMillis(): Long {
+            val calendar = Calendar.getInstance()
+            calendar.set(Calendar.HOUR_OF_DAY, PROBE_HOUR)
+            calendar.set(Calendar.MINUTE, PROBE_MINUTE)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            if (calendar.timeInMillis <= System.currentTimeMillis()) {
+                calendar.add(Calendar.DAY_OF_YEAR, 1)
+            }
+            return calendar.timeInMillis
+        }
+
+        private fun pendingIntent(context: Context): PendingIntent {
+            val intent = Intent(context, StepProbeReceiver::class.java).apply {
+                action = ACTION_PROBE
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                REQUEST_CODE,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+    }
+}
+
+/// SharedPreferences enabled-flag (read by the boot receiver) + a small
+/// direct-SQLite sample log -- mirrors SleepProbeStore/WatchdogStore.
+object StepProbeStore {
+    private const val PREFS = "no_smoke_step_probe"
+    private const val KEY_ENABLED = "enabled"
+    private const val TABLE = "step_counter_samples"
+    private const val RETENTION_DAYS = 400
+
+    fun setEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_ENABLED, enabled)
+            .apply()
+    }
+
+    fun isEnabled(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ENABLED, false)
+    }
+
+    fun insertSample(context: Context, cumulativeSteps: Int) {
+        val dbFile = File(File(context.applicationInfo.dataDir, "app_flutter"), "no_smoke.db")
+        if (!dbFile.exists()) {
+            return
+        }
+        try {
+            SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+                val now = System.currentTimeMillis()
+                val values = ContentValues().apply {
+                    put("id", "stepsample_${now}")
+                    put("createdAt", formatIsoUtc(now))
+                    put("cumulativeSteps", cumulativeSteps)
+                }
+                db.insert(TABLE, null, values)
+
+                // A little over a year of daily+per-open samples is still
+                // small; trimmed mainly so the table doesn't grow forever.
+                val cutoff = now - RETENTION_DAYS * 24 * 60 * 60 * 1000L
+                db.delete(TABLE, "createdAt < ?", arrayOf(formatIsoUtc(cutoff)))
+            }
+        } catch (_: Throwable) {
+            // Best-effort, same posture as the other native writers.
+        }
+    }
+
+    private fun formatIsoUtc(millis: Long): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+        formatter.timeZone = TimeZone.getTimeZone("UTC")
+        return formatter.format(millis)
+    }
+}
+=== android/app/src/main/kotlin/com/nikotinaway/app/SleepProbeReceiver.kt ===
+package com.nikotinaway.app
+
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
+import android.database.sqlite.SQLiteDatabase
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.BatteryManager
+import android.os.Handler
+import android.os.Looper
+import android.os.PowerManager
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import java.util.TimeZone
+
+/// Wakes briefly on an AlarmManager tick to record two free, already-cached
+/// OS signals (screen-interactive state, charging state) as one row, then
+/// reschedules itself for as long as the current time stays inside the
+/// configured window. Stops once past the window end; SleepProbeBootReceiver
+/// re-arms after a reboot, and SleepIntelligenceEngine (Dart side) treats a
+/// night with too few rows as "insufficient coverage" and falls back to the
+/// user's static survey sleep time rather than guessing.
+class SleepProbeReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent?) {
+        if (intent?.action != ACTION_PROBE) {
+            return
+        }
+
+        val windowStartMinute = intent.getIntExtra(EXTRA_WINDOW_START_MINUTE, -1)
+        val windowEndMinute = intent.getIntExtra(EXTRA_WINDOW_END_MINUTE, -1)
+        val intervalMinutes = intent.getIntExtra(EXTRA_INTERVAL_MINUTES, DEFAULT_INTERVAL_MINUTES)
+        if (windowStartMinute < 0 || windowEndMinute < 0) {
+            return
+        }
+
+        val isAwake = isInteractive(context)
+        SleepProbeStore.insertProbe(context, isScreenOff = !isAwake, isCharging = isCharging(context))
+        val inWindow = isWithinWindow(currentMinuteOfDay(), windowStartMinute, windowEndMinute)
+
+        if (isAwake && inWindow) {
+            // Screen-on alone used to be enough to count as "awake", which is
+            // wrong for exactly the case that matters most here: someone who
+            // fell asleep with a video playing. Playback keeps the screen on
+            // and blocks the auto-lock timer, so the phone reads as "in use"
+            // for as long as the video runs, whether anyone is watching it or
+            // not. A brief accelerometer read (a few hundred milliseconds,
+            // registered and unregistered on the spot — no listener kept
+            // alive) tells the two apart: a phone actually being held or
+            // touched moves; a phone left running video on a nightstand does
+            // not.
+            readMotionThenDecide(context, windowStartMinute, windowEndMinute, intervalMinutes)
+            return
+        }
+
+        finishProbeCycle(context, isAwake, inWindow, windowStartMinute, windowEndMinute, intervalMinutes)
+    }
+
+    private fun readMotionThenDecide(
+        context: Context,
+        windowStartMinute: Int,
+        windowEndMinute: Int,
+        intervalMinutes: Int,
+    ) {
+        val pendingResult = goAsync()
+        MotionSampler.sample(context) { isMoving ->
+            if (isMoving) {
+                // The user is awake (screen on, phone moving) during what
+                // should be their sleep window -- queue this so the Dart side
+                // can decide, next time it runs, whether to fire a full
+                // mandatory task or just a small advisory tip (see
+                // StorageService.isDailyTaskQuotaMet). Detection granularity
+                // is however often this probe fires (intervalMinutes,
+                // tightened specifically during the sleep window -- see
+                // SleepIntelligenceService) rather than truly instant, since
+                // acting on it needs Dart-side business logic this native
+                // receiver deliberately doesn't duplicate.
+                SleepActivityStore.enqueueActivity(context)
+            }
+            finishProbeCycle(context, true, true, windowStartMinute, windowEndMinute, intervalMinutes)
+            pendingResult.finish()
+        }
+    }
+
+    private fun finishProbeCycle(
+        context: Context,
+        isAwake: Boolean,
+        inWindow: Boolean,
+        windowStartMinute: Int,
+        windowEndMinute: Int,
+        intervalMinutes: Int,
+    ) {
+        // Opt-in, separate from Sleep Intelligence itself (see
+        // SnoringProbeStore/SnoringDetectionService) -- only runs while the
+        // screen is off (the user is presumably actually asleep, not just
+        // in the configured window) and piggybacks on this same alarm tick
+        // rather than running its own schedule. The actual capture happens in
+        // SnoringCaptureService, not here: Android 11+ blocks microphone
+        // access from a plain BroadcastReceiver once the app isn't in the
+        // foreground, and Android 14+ additionally requires a declared
+        // foregroundServiceType="microphone" service for any microphone
+        // capture -- neither of which a receiver can satisfy on its own.
+        if (!isAwake &&
+            SleepProbeStore.isSnoringDetectionEnabled(context) &&
+            inWindow
+        ) {
+            SnoringCaptureService.start(context)
+        }
+
+        if (!inWindow) {
+            return
+        }
+        scheduleFireInMinutes(context, windowStartMinute, windowEndMinute, intervalMinutes, intervalMinutes)
+    }
+
+    private fun isInteractive(context: Context): Boolean {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        return powerManager?.isInteractive ?: true
+    }
+
+    private fun isCharging(context: Context): Boolean {
+        val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+        val status = batteryManager?.getIntProperty(BatteryManager.BATTERY_PROPERTY_STATUS) ?: -1
+        return status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+    }
+
+    private fun currentMinuteOfDay(): Int {
+        val calendar = Calendar.getInstance()
+        return calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+    }
+
+    companion object {
+        const val ACTION_PROBE = "com.nikotinaway.app.sleepprobe.PROBE"
+        const val EXTRA_WINDOW_START_MINUTE = "extra_window_start_minute"
+        const val EXTRA_WINDOW_END_MINUTE = "extra_window_end_minute"
+        const val EXTRA_INTERVAL_MINUTES = "extra_interval_minutes"
+        // Was 45 -- tightened so a user waking up and using their phone
+        // mid-sleep-window gets noticed within a few minutes instead of
+        // up to 45. Each wake only reads two already-cached OS properties
+        // (see onReceive), so the extra wake frequency costs negligible
+        // battery despite firing ~15x more often overnight.
+        const val DEFAULT_INTERVAL_MINUTES = 5
+
+        fun isWithinWindow(nowMinute: Int, startMinute: Int, endMinute: Int): Boolean {
+            return if (startMinute <= endMinute) {
+                nowMinute in startMinute..endMinute
+            } else {
+                // Window crosses midnight, e.g. 22:30-08:00.
+                nowMinute >= startMinute || nowMinute <= endMinute
+            }
+        }
+
+        /// Arms (or re-arms after boot) the next probe: soon if we're
+        /// currently inside the window, otherwise at the window's next
+        /// start. Used for the initial schedule call and boot recovery.
+        fun scheduleWindowAware(context: Context, windowStartMinute: Int, windowEndMinute: Int, intervalMinutes: Int) {
+            val calendar = Calendar.getInstance()
+            val nowMinute = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
+            val delayMinutes = if (isWithinWindow(nowMinute, windowStartMinute, windowEndMinute)) {
+                1
+            } else {
+                val diff = windowStartMinute - nowMinute
+                if (diff <= 0) diff + 24 * 60 else diff
+            }
+            scheduleFireInMinutes(context, windowStartMinute, windowEndMinute, intervalMinutes, delayMinutes)
+        }
+
+        private fun scheduleFireInMinutes(
+            context: Context,
+            windowStartMinute: Int,
+            windowEndMinute: Int,
+            intervalMinutes: Int,
+            delayMinutes: Int,
+        ) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val fireAt = System.currentTimeMillis() + delayMinutes * 60_000L
+            val pending = pendingIntent(context, windowStartMinute, windowEndMinute, intervalMinutes)
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pending)
+        }
+
+        fun cancel(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.cancel(pendingIntent(context, 0, 0, DEFAULT_INTERVAL_MINUTES))
+        }
+
+        private fun pendingIntent(
+            context: Context,
+            windowStartMinute: Int,
+            windowEndMinute: Int,
+            intervalMinutes: Int,
+        ): PendingIntent {
+            val intent = Intent(context, SleepProbeReceiver::class.java).apply {
+                action = ACTION_PROBE
+                putExtra(EXTRA_WINDOW_START_MINUTE, windowStartMinute)
+                putExtra(EXTRA_WINDOW_END_MINUTE, windowEndMinute)
+                putExtra(EXTRA_INTERVAL_MINUTES, intervalMinutes)
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                REQUEST_CODE,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        private const val REQUEST_CODE = 84001
+    }
+}
+
+/// Shared SharedPreferences-backed schedule config, read by the boot
+/// receiver to re-arm probing without needing the Dart side to run first.
+/// A brief, one-shot accelerometer read used only to tell "phone actually
+/// being held" apart from "phone lying still with the screen kept on by
+/// video playback" — the two situations `PowerManager.isInteractive` alone
+/// cannot distinguish, since both report the screen as on.
+///
+/// Registered and unregistered within one probe tick; no listener is ever
+/// left running, so this costs nothing between sleep-window probes.
+object MotionSampler {
+    private const val SAMPLE_DURATION_MS = 600L
+    private const val TIMEOUT_MS = 1500L
+
+    /// A phone resting on a nightstand still picks up gravity's ~9.8 m/s² and
+    /// a little sensor noise; this threshold is comfortably above that noise
+    /// floor but well below what a hand holding or a screen tap produces.
+    private const val MOVEMENT_THRESHOLD = 1.2f
+
+    fun sample(context: Context, callback: (Boolean) -> Unit) {
+        val sensorManager =
+            context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        val sensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        if (sensorManager == null || sensor == null) {
+            // No accelerometer to read — fail toward the old behaviour
+            // (treat screen-on as awake) rather than silently going quiet
+            // for a whole night on a device that can't support this check.
+            callback(true)
+            return
+        }
+
+        val handler = Handler(Looper.getMainLooper())
+        var finished = false
+        var maxDeviation = 0f
+
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                val x = event.values.getOrNull(0) ?: return
+                val y = event.values.getOrNull(1) ?: return
+                val z = event.values.getOrNull(2) ?: return
+                val magnitude = kotlin.math.sqrt(x * x + y * y + z * z)
+                val deviation = kotlin.math.abs(magnitude - SensorManager.GRAVITY_EARTH)
+                if (deviation > maxDeviation) {
+                    maxDeviation = deviation
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+
+        fun finish() {
+            if (finished) return
+            finished = true
+            sensorManager.unregisterListener(listener)
+            handler.removeCallbacksAndMessages(null)
+            callback(maxDeviation > MOVEMENT_THRESHOLD)
+        }
+
+        sensorManager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
+        handler.postDelayed(::finish, SAMPLE_DURATION_MS)
+        // Belt-and-suspenders timeout in case the sensor never delivers an
+        // event on some OEM's power-saving profile.
+        handler.postDelayed(::finish, TIMEOUT_MS)
+    }
+}
+
+object SleepProbeStore {
+    private const val PREFS = "no_smoke_sleep_probe"
+    private const val KEY_ENABLED = "enabled"
+    private const val KEY_WINDOW_START = "window_start_minute"
+    private const val KEY_WINDOW_END = "window_end_minute"
+    private const val KEY_INTERVAL = "interval_minutes"
+    private const val KEY_SNORING_ENABLED = "snoring_detection_enabled"
+    private const val TABLE = "sleep_probe_events"
+    private const val RETENTION_DAYS = 14
+
+    fun setSnoringDetectionEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_SNORING_ENABLED, enabled)
+            .apply()
+    }
+
+    fun isSnoringDetectionEnabled(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_SNORING_ENABLED, false)
+    }
+
+    fun saveSchedule(context: Context, windowStartMinute: Int, windowEndMinute: Int, intervalMinutes: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_ENABLED, true)
+            .putInt(KEY_WINDOW_START, windowStartMinute)
+            .putInt(KEY_WINDOW_END, windowEndMinute)
+            .putInt(KEY_INTERVAL, intervalMinutes)
+            .apply()
+    }
+
+    fun clearSchedule(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_ENABLED, false)
+            .apply()
+    }
+
+    fun readSchedule(context: Context): Triple<Int, Int, Int>? {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_ENABLED, false)) {
+            return null
+        }
+        val start = prefs.getInt(KEY_WINDOW_START, -1)
+        val end = prefs.getInt(KEY_WINDOW_END, -1)
+        val interval = prefs.getInt(KEY_INTERVAL, SleepProbeReceiver.DEFAULT_INTERVAL_MINUTES)
+        if (start < 0 || end < 0) {
+            return null
+        }
+        return Triple(start, end, interval)
+    }
+
+    fun insertProbe(context: Context, isScreenOff: Boolean, isCharging: Boolean) {
+        val dbFile = File(File(context.applicationInfo.dataDir, "app_flutter"), "no_smoke.db")
+        if (!dbFile.exists()) {
+            return
+        }
+        try {
+            SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+                val now = System.currentTimeMillis()
+                val values = ContentValues().apply {
+                    put("id", "sleepprobe_${now}")
+                    put("createdAt", formatIsoUtc(now))
+                    put("screenOff", if (isScreenOff) 1 else 0)
+                    put("charging", if (isCharging) 1 else 0)
+                }
+                db.insert(TABLE, null, values)
+
+                val cutoff = now - RETENTION_DAYS * 24 * 60 * 60 * 1000L
+                db.delete(TABLE, "createdAt < ?", arrayOf(formatIsoUtc(cutoff)))
+            }
+        } catch (_: Throwable) {
+            // Best-effort: a missed probe just lowers this night's coverage,
+            // which SleepIntelligenceEngine already treats as "no estimate".
+        }
+    }
+
+    private fun formatIsoUtc(millis: Long): String {
+=== android/app/src/main/kotlin/com/nikotinaway/app/SnoringCaptureService.kt ===
+package com.nikotinaway.app
+
+import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import android.os.Build
+import android.os.IBinder
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import kotlin.concurrent.thread
+import kotlin.math.sqrt
+
+/// Short-lived foreground service that captures and analyzes one snoring
+/// probe's audio sample. Android 11+ blocks microphone access from a plain
+/// BroadcastReceiver once the app isn't in the foreground, and Android 14+
+/// additionally requires any microphone-capturing foreground service to
+/// declare foregroundServiceType="microphone" (see AndroidManifest.xml) and
+/// show a notification for as long as it runs -- both are why this used to
+/// silently fail to capture anything overnight on recent Android versions
+/// when run straight from SleepProbeReceiver.onReceive (see git history:
+/// captureAndAnalyzeSnoring used to live there).
+///
+/// SleepProbeReceiver starts this, it runs the capture on a background
+/// thread (never the main thread -- AudioRecord.read blocks), reports the
+/// result back via ContentValues the same direct-SQLite-write SnoringProbeStore
+/// always used, and stops itself. Never binds, never lingers.
+class SnoringCaptureService : Service() {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        ensureForeground()
+        thread(name = "snoring-capture") {
+            try {
+                val result = captureAndAnalyze()
+                SnoringProbeStore.insertProbe(this, result, captureSucceeded = result != null)
+            } finally {
+                stopSelf(startId)
+            }
+        }
+        return START_NOT_STICKY
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+
+    /// Notification text is honest about what's happening -- the user should
+    /// be able to see the microphone turned on overnight, not just infer it
+    /// from a generic "background service" line. Localized strings are
+    /// pushed from Dart (see AndroidWatchdogService.setSnoringCaptureChannelInfo)
+    /// the same way TaskOverlayService's channel info is, with an
+    /// English-default fallback for the same reason (docs/TRANSLATION_GAP.md).
+    private fun ensureForeground() {
+        val texts = SnoringCaptureTextStore.load(this)
+        createChannelIfNeeded(texts.channelName)
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle(texts.title)
+            .setContentText(texts.body)
+            .setOngoing(true)
+            .setSilent(true)
+            .setShowWhen(false)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .build()
+        startForeground(FOREGROUND_NOTIFICATION_ID, notification)
+    }
+
+    private fun createChannelIfNeeded(channelName: String) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return
+        }
+        val manager = getSystemService(NotificationManager::class.java)
+        if (manager.getNotificationChannel(CHANNEL_ID) != null) {
+            return
+        }
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            channelName.ifBlank { "Sleep intelligence" },
+            NotificationManager.IMPORTANCE_MIN,
+        ).apply {
+            description = "Brief overnight microphone sample for snoring detection"
+            setShowBadge(false)
+        }
+        manager.createNotificationChannel(channel)
+    }
+
+    /// Captures a short (3s) raw audio sample via AudioRecord (not
+    /// MediaRecorder -- no file is ever written, the PCM buffer lives only
+    /// in memory for the few hundred milliseconds it takes to compute an
+    /// energy envelope, then is discarded) and looks for a rhythmic
+    /// loud/quiet pattern in the ~0.3-1.5s cycle range typical of snoring.
+    /// VOICE_RECOGNITION disables the platform's automatic gain control,
+    /// same reasoning as the breath test's acoustic detection: AGC would
+    /// otherwise flatten exactly the energy swings this heuristic looks for.
+    /// Returns null on any failure to start/read (permission revoked mid-call,
+    /// device busy, etc.) -- the caller records that as a failed capture
+    /// rather than silently treating it as "no snoring", which is what an
+    /// empty severity result used to be indistinguishable from.
+    private fun captureAndAnalyze(): SnoreDetectionResult? {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO,
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return null
+        }
+
+        val sampleRate = 16000
+        val channelConfig = AudioFormat.CHANNEL_IN_MONO
+        val audioFormat = AudioFormat.ENCODING_PCM_16BIT
+        val minBufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+        if (minBufferSize <= 0) {
+            return null
+        }
+
+        var audioRecord: AudioRecord? = null
+        try {
+            audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                sampleRate,
+                channelConfig,
+                audioFormat,
+                minBufferSize * 2,
+            )
+            if (audioRecord.state != AudioRecord.STATE_INITIALIZED) {
+                return null
+            }
+            audioRecord.startRecording()
+
+            val windowMs = 100
+            val windowSamples = sampleRate * windowMs / 1000
+            val windowCount = SNORING_CAPTURE_DURATION_MS / windowMs
+            val buffer = ShortArray(windowSamples)
+            val energies = DoubleArray(windowCount)
+
+            for (i in 0 until windowCount) {
+                val read = audioRecord.read(buffer, 0, windowSamples)
+                if (read > 0) {
+                    var sumSquares = 0.0
+                    for (j in 0 until read) {
+                        val normalized = buffer[j] / 32768.0
+                        sumSquares += normalized * normalized
+                    }
+                    energies[i] = sqrt(sumSquares / read)
+                }
+            }
+
+            audioRecord.stop()
+            return detectSnoreSeverity(energies, windowMs)
+        } catch (_: Exception) {
+            return null
+        } finally {
+            audioRecord?.release()
+        }
+    }
+
+    /// Simple rule-based heuristic (energy envelope + periodicity), same
+    /// spirit as BreathAcousticEngine: finds windows loud enough relative to
+    /// this clip's own median to count as a "burst", collapses adjacent
+    /// loud windows into single events, then checks whether consecutive
+    /// events repeat at a snore-typical interval.
+    ///
+    /// Beyond the plain detected/not-detected call, also scores how
+    /// pronounced this probe's pattern was -- combining how far events
+    /// cleared the threshold (intensity) with how consistently consecutive
+    /// events landed inside the snore-cycle window (continuity), same
+    /// two-component-weighted-sum shape as WheezeDetectionEngine's severity
+    /// score on the Dart side. Not device-calibrated -- see this file's
+    /// other detection heuristics for the same caveat.
+    private fun detectSnoreSeverity(energies: DoubleArray, windowMs: Int): SnoreDetectionResult {
+        if (energies.isEmpty()) {
+            return SnoreDetectionResult(snoreLikely = false, severityScore = 0, severityLevel = "none")
+        }
+        val sorted = energies.sorted()
+        val median = sorted[sorted.size / 2]
+        val threshold = median * 2.0 + 0.01
+
+        val events = mutableListOf<Int>()
+        var lastEventIndex = -10
+        for (i in energies.indices) {
+            if (energies[i] > threshold && i - lastEventIndex > 2) {
+                events.add(i)
+                lastEventIndex = i
+            }
+        }
+        if (events.size < 2) {
+            return SnoreDetectionResult(snoreLikely = false, severityScore = 0, severityLevel = "none")
+        }
+
+        var inCycleGapCount = 0
+        var intensityRatioSum = 0.0
+        for (i in 1 until events.size) {
+            val gapMs = (events[i] - events[i - 1]) * windowMs
+            if (gapMs in SNORE_MIN_CYCLE_MS..SNORE_MAX_CYCLE_MS) {
+                inCycleGapCount++
+            }
+        }
+        for (index in events) {
+            intensityRatioSum += energies[index] / threshold
+        }
+
+        val snoreLikely = inCycleGapCount > 0
+        if (!snoreLikely) {
+            return SnoreDetectionResult(snoreLikely = false, severityScore = 0, severityLevel = "none")
+        }
+
+        // Continuity: what fraction of consecutive event pairs actually fell
+        // inside the snore-cycle window -- a single lucky pair among many
+        // unrelated bursts scores low, a clip that's snore-cycle end to end
+        // scores near 1.
+        val continuityScore = (inCycleGapCount.toDouble() / (events.size - 1)).coerceIn(0.0, 1.0)
+        // Intensity: how far above the threshold events cleared, on
+        // average, anchored the same way WheezeDetectionEngine anchors its
+        // ratio score (a event right at the threshold scores 0, one at 2x+
+        // the threshold scores 1).
+        val averageIntensityRatio = intensityRatioSum / events.size
+        val intensityScore = ((averageIntensityRatio - 1.0) / 1.0).coerceIn(0.0, 1.0)
+
+        val combined = intensityScore * 0.5 + continuityScore * 0.5
+        val score = (combined * 100).toInt().coerceIn(0, 100)
+        val level = when {
+            score <= 0 -> "none"
+            score < 35 -> "mild"
+            score < 65 -> "moderate"
+            else -> "severe"
+        }
+        return SnoreDetectionResult(snoreLikely = true, severityScore = score, severityLevel = level)
+    }
+
+    companion object {
+        const val CHANNEL_ID = "snoring_capture_channel"
+        const val FOREGROUND_NOTIFICATION_ID = 84101
+        private const val SNORING_CAPTURE_DURATION_MS = 3000
+        private const val SNORE_MIN_CYCLE_MS = 300
+        private const val SNORE_MAX_CYCLE_MS = 1500
+
+        fun start(context: Context) {
+            val intent = Intent(context, SnoringCaptureService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+    }
+}
+
+/// Localized notification text for [SnoringCaptureService]'s required
+/// foreground-service notification -- pushed from Dart the same way
+/// WatchdogStore.saveLocalizedText/loadLocalizedText is, English-default
+/// fallback for the same reason (docs/TRANSLATION_GAP.md).
+data class SnoringCaptureTexts(
+    val title: String,
+    val body: String,
+    val channelName: String,
+)
+
+object SnoringCaptureTextStore {
+    private const val PREFS = "no_smoke_snoring_capture"
+    private const val KEY_TITLE = "title"
+    private const val KEY_BODY = "body"
+    private const val KEY_CHANNEL_NAME = "channel_name"
+
+    fun save(context: Context, title: String, body: String, channelName: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_TITLE, title)
+            .putString(KEY_BODY, body)
+            .putString(KEY_CHANNEL_NAME, channelName)
+            .apply()
+    }
+
+    fun load(context: Context): SnoringCaptureTexts {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return SnoringCaptureTexts(
+            title = prefs.getString(KEY_TITLE, null)?.takeIf { it.isNotBlank() }
+                ?: "Nicotine Away",
+            body = prefs.getString(KEY_BODY, null)?.takeIf { it.isNotBlank() }
+                ?: "Taking a brief sound sample to check for snoring",
+            channelName = prefs.getString(KEY_CHANNEL_NAME, null)?.takeIf { it.isNotBlank() }
+                ?: "Sleep intelligence",
+        )
+    }
+}
+=== android/app/src/main/kotlin/com/nikotinaway/app/TaskTriggerReceiver.kt ===
+package com.nikotinaway.app
+
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+
+/// Fires at the moment a planned task is actually due.
+///
+/// The scheduled notification alone was never enough: `TaskOverlayService`
+/// has to be started from code running at fire time, and when the app is
+/// closed there is no Dart running then to start it. Scheduling this
+/// receiver alongside the notification gives the overlay (and the watchdog)
+/// a native wake-up that works with the app dead and the phone in Doze.
+///
+/// This is also what makes per-task watchdogs correct: the watchdog is
+/// started here, when the task fires, rather than at schedule time — so its
+/// timeout window is the 15 minutes after the user was actually asked, and
+/// two tasks scheduled hours apart no longer overwrite each other's state.
+class TaskTriggerReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent?) {
+        if (intent?.action != ACTION_TRIGGER) {
+            return
+        }
+        val taskTitle = intent.getStringExtra(EXTRA_TASK_TITLE).orEmpty()
+        val watchdogId = intent.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty()
+        if (taskTitle.isBlank() || watchdogId.isBlank()) {
+            return
+        }
+
+        // Is now a sensible moment to interrupt? If not the task is pushed
+        // back rather than dropped — see requeue below.
+        val deferredForMs = intent.getLongExtra(EXTRA_DEFERRED_FOR_MILLIS, 0L)
+        val blockedBy = DeliveryGateEvaluator.blockingReason(context)
+        if (blockedBy != DeliveryGateEvaluator.REASON_NONE &&
+            deferredForMs < MAX_TOTAL_DEFERRAL_MS
+        ) {
+            // A queue limit alongside the existing per-task 90-minute cap:
+            // without it, every task whose moment falls during one long DND/
+            // gaming stretch waits independently, and a user re-opening the
+            // app hours later gets hit with all of them stacked at once —
+            // the exact overlap this queue exists to prevent. Only the two
+            // most recently blocked survive; anything older is closed out
+            // as expired (never scored) rather than left to also queue.
+            val evicted = PendingDeliveryQueue.registerBlocked(context, watchdogId)
+            for (evictedWatchdogId in evicted) {
+                cancel(context, evictedWatchdogId)
+                PendingDeliveryQueue.enqueueExpired(context, evictedWatchdogId)
+            }
+            requeue(context, intent, deferredForMs, blockedBy)
+            return
+        }
+        PendingDeliveryQueue.clearBlocked(context, watchdogId)
+        // This one-shot alarm has now done its job — nothing left to re-arm
+        // on a future reboot for this watchdogId.
+        TaskTriggerStore.remove(context, watchdogId)
+
+        val watchdogWindowMillis =
+            intent.getLongExtra(EXTRA_WATCHDOG_WINDOW_MILLIS, DEFAULT_WATCHDOG_WINDOW_MILLIS)
+        NoResponseWatchdogService.start(
+            context = context,
+            taskTitle = taskTitle,
+            watchdogId = watchdogId,
+            dueAtMillis = System.currentTimeMillis() + watchdogWindowMillis,
+            foregroundBody = intent.getStringExtra(EXTRA_WATCHDOG_FOREGROUND_BODY).orEmpty(),
+            violationTitle = intent.getStringExtra(EXTRA_WATCHDOG_VIOLATION_TITLE).orEmpty(),
+            violationBody = intent.getStringExtra(EXTRA_WATCHDOG_VIOLATION_BODY).orEmpty(),
+            foregroundChannelName = intent.getStringExtra(EXTRA_WATCHDOG_FOREGROUND_CHANNEL_NAME).orEmpty(),
+            violationChannelName = intent.getStringExtra(EXTRA_WATCHDOG_VIOLATION_CHANNEL_NAME).orEmpty(),
+        )
+
+        // The native full-screen overlay (phone-call-style Ertele/Kabul Et)
+        // is intentionally not shown here anymore — the scheduled
+        // notification's full-screen intent already surfaces
+        // MandatoryTaskPage in Dart, and showing both stacked two
+        // differently-styled task prompts on top of each other.
+    }
+
+    /// Pushes the task back and remembers how long it has been waiting.
+    ///
+    /// Re-arms the same alarm with the same extras, so nothing about the task
+    /// is lost — only its timing moves. Once the accumulated deferral passes
+    /// [MAX_TOTAL_DEFERRAL_MS] the gate is ignored and the task is delivered
+    /// anyway: a user who games all evening should still hear from the app
+    /// that evening, and an indefinitely-deferred task is the same as no task.
+    private fun requeue(
+        context: Context,
+        original: Intent,
+        alreadyDeferredMs: Long,
+        reason: String,
+    ) {
+        // Small jitter so a blocked task doesn't come back on a clock the
+        // user could set their watch by.
+        val jitterMs = ((Math.random() * 2 - 1) * RETRY_JITTER_MS).toLong()
+        val waitMs = (RETRY_INTERVAL_MS + jitterMs).coerceAtLeast(60_000L)
+        val watchdogId = original.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty()
+
+        DeliveryGateStore.noteDeferral(context, watchdogId, reason)
+
+        val extras = Bundle(original.extras ?: Bundle()).apply {
+            putLong(EXTRA_DEFERRED_FOR_MILLIS, alreadyDeferredMs + waitMs)
+        }
+        val intent = Intent(context, TaskTriggerReceiver::class.java).apply {
+            action = ACTION_TRIGGER
+            putExtras(extras)
+        }
+        val pending = PendingIntent.getBroadcast(
+            context,
+            watchdogId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val newTriggerAtMillis = System.currentTimeMillis() + waitMs
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            newTriggerAtMillis,
+            pending,
+        )
+        // Keep the boot-recovery snapshot's triggerAtMillis current — a
+        // reboot mid-requeue should resume waiting for the new time, not
+        // fire immediately against the original (already-past) one.
+        TaskTriggerStore.updateTriggerAtMillis(context, watchdogId, newTriggerAtMillis)
+    }
+
+    companion object {
+        const val ACTION_TRIGGER = "com.nikotinaway.app.task.TRIGGER"
+        const val EXTRA_TITLE = "extra_title"
+        const val EXTRA_BODY = "extra_body"
+        const val EXTRA_DONE_LABEL = "extra_done_label"
+        const val EXTRA_POSTPONE_LABEL = "extra_postpone_label"
+        const val EXTRA_DECLINE_LABEL = "extra_decline_label"
+        const val EXTRA_SOS_LABEL = "extra_sos_label"
+        const val EXTRA_WATCHDOG_ID = "extra_watchdog_id"
+        const val EXTRA_TASK_TITLE = "extra_task_title"
+        const val EXTRA_WATCHDOG_WINDOW_MILLIS = "extra_watchdog_window_millis"
+        const val EXTRA_DEFERRED_FOR_MILLIS = "extra_deferred_for_millis"
+        const val EXTRA_WATCHDOG_FOREGROUND_BODY = "extra_watchdog_foreground_body"
+        const val EXTRA_WATCHDOG_VIOLATION_TITLE = "extra_watchdog_violation_title"
+        const val EXTRA_WATCHDOG_VIOLATION_BODY = "extra_watchdog_violation_body"
+        const val EXTRA_WATCHDOG_FOREGROUND_CHANNEL_NAME = "extra_watchdog_foreground_channel_name"
+        const val EXTRA_WATCHDOG_VIOLATION_CHANNEL_NAME = "extra_watchdog_violation_channel_name"
+
+        /// How long to wait before trying a blocked task again, and how much
+        /// random slack to add so the retry isn't on a predictable clock.
+        private const val RETRY_INTERVAL_MS = 10L * 60L * 1000L
+        private const val RETRY_JITTER_MS = 3L * 60L * 1000L
+
+        /// Past this the gate is ignored and the task goes out regardless.
+        /// A task deferred forever is the same as no task at all.
+        private const val MAX_TOTAL_DEFERRAL_MS = 90L * 60L * 1000L
+
+        /// 3 retry attempts, 5 minutes apart — kept in sync with
+        /// NotificationService's _unansweredReminderDelay * _maxTaskAttempts.
+        const val DEFAULT_WATCHDOG_WINDOW_MILLIS = 15L * 60L * 1000L
+
+        private fun pendingIntent(
+            context: Context,
+            watchdogId: String,
+            extras: Intent.() -> Unit = {},
+        ): PendingIntent {
+            val intent = Intent(context, TaskTriggerReceiver::class.java).apply {
+                action = ACTION_TRIGGER
+                extras()
+            }
+            return PendingIntent.getBroadcast(
+                context,
+                watchdogId.hashCode(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
+
+        fun schedule(
+            context: Context,
+            title: String,
+            body: String,
+            acceptLabel: String,
+            postponeLabel: String,
+            declineLabel: String,
+            sosLabel: String,
+            watchdogId: String,
+            taskTitle: String,
+            triggerAtMillis: Long,
+            watchdogWindowMillis: Long,
+            watchdogForegroundBody: String,
+            watchdogViolationTitle: String,
+            watchdogViolationBody: String,
+            watchdogForegroundChannelName: String,
+            watchdogViolationChannelName: String,
+        ) {
+            val pending = pendingIntent(context, watchdogId) {
+                putExtra(EXTRA_TITLE, title)
+                putExtra(EXTRA_BODY, body)
+                putExtra(EXTRA_DONE_LABEL, acceptLabel)
+                putExtra(EXTRA_POSTPONE_LABEL, postponeLabel)
+                putExtra(EXTRA_DECLINE_LABEL, declineLabel)
+                putExtra(EXTRA_SOS_LABEL, sosLabel)
+                putExtra(EXTRA_WATCHDOG_ID, watchdogId)
+                putExtra(EXTRA_TASK_TITLE, taskTitle)
+                putExtra(EXTRA_WATCHDOG_WINDOW_MILLIS, watchdogWindowMillis)
+                putExtra(EXTRA_WATCHDOG_FOREGROUND_BODY, watchdogForegroundBody)
+                putExtra(EXTRA_WATCHDOG_VIOLATION_TITLE, watchdogViolationTitle)
+                putExtra(EXTRA_WATCHDOG_VIOLATION_BODY, watchdogViolationBody)
+                putExtra(EXTRA_WATCHDOG_FOREGROUND_CHANNEL_NAME, watchdogForegroundChannelName)
+                putExtra(EXTRA_WATCHDOG_VIOLATION_CHANNEL_NAME, watchdogViolationChannelName)
+            }
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+            // Android 12+ can revoke exact-alarm scheduling. An inexact
+            // wake-up still fires (just with OS-chosen slack), which is far
+            // better than dropping the task entirely.
+            val canScheduleExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                alarmManager.canScheduleExactAlarms()
+            if (canScheduleExact) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pending,
+                )
+            } else {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    triggerAtMillis,
+                    pending,
+                )
+            }
+
+            // Reboot wipes every AlarmManager entry (see
+            // TaskTriggerBootReceiver), so the full set of extras this alarm
+            // needs to re-arm itself is cached here too, keyed by watchdogId.
+            TaskTriggerStore.save(
+                context,
+                watchdogId,
+                TaskTriggerSnapshot(
+                    title = title,
+                    body = body,
+                    acceptLabel = acceptLabel,
+                    postponeLabel = postponeLabel,
+                    declineLabel = declineLabel,
+                    sosLabel = sosLabel,
+                    watchdogId = watchdogId,
+                    taskTitle = taskTitle,
+                    triggerAtMillis = triggerAtMillis,
+                    watchdogWindowMillis = watchdogWindowMillis,
+                    watchdogForegroundBody = watchdogForegroundBody,
+                    watchdogViolationTitle = watchdogViolationTitle,
+                    watchdogViolationBody = watchdogViolationBody,
+                    watchdogForegroundChannelName = watchdogForegroundChannelName,
+                    watchdogViolationChannelName = watchdogViolationChannelName,
+                ),
+            )
+        }
+
+        fun cancel(context: Context, watchdogId: String) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarmManager.cancel(pendingIntent(context, watchdogId))
+            TaskTriggerStore.remove(context, watchdogId)
+        }
+
+        /// Re-arms [snapshot]'s alarm without touching the persisted cache —
+        /// used by [TaskTriggerBootReceiver], which is re-arming from that
+        /// same cache and would otherwise just rewrite what it already read.
+        fun rearm(context: Context, snapshot: TaskTriggerSnapshot) {
+            val pending = pendingIntent(context, snapshot.watchdogId) {
+                putExtra(EXTRA_TITLE, snapshot.title)
+                putExtra(EXTRA_BODY, snapshot.body)
+                putExtra(EXTRA_DONE_LABEL, snapshot.acceptLabel)
+                putExtra(EXTRA_POSTPONE_LABEL, snapshot.postponeLabel)
+                putExtra(EXTRA_DECLINE_LABEL, snapshot.declineLabel)
+                putExtra(EXTRA_SOS_LABEL, snapshot.sosLabel)
+                putExtra(EXTRA_WATCHDOG_ID, snapshot.watchdogId)
+                putExtra(EXTRA_TASK_TITLE, snapshot.taskTitle)
+                putExtra(EXTRA_WATCHDOG_WINDOW_MILLIS, snapshot.watchdogWindowMillis)
+                putExtra(EXTRA_WATCHDOG_FOREGROUND_BODY, snapshot.watchdogForegroundBody)
+                putExtra(EXTRA_WATCHDOG_VIOLATION_TITLE, snapshot.watchdogViolationTitle)
+                putExtra(EXTRA_WATCHDOG_VIOLATION_BODY, snapshot.watchdogViolationBody)
+                putExtra(
+                    EXTRA_WATCHDOG_FOREGROUND_CHANNEL_NAME,
+                    snapshot.watchdogForegroundChannelName,
+                )
+                putExtra(
+                    EXTRA_WATCHDOG_VIOLATION_CHANNEL_NAME,
+                    snapshot.watchdogViolationChannelName,
+                )
+            }
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val canScheduleExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                alarmManager.canScheduleExactAlarms()
+            if (canScheduleExact) {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    snapshot.triggerAtMillis,
+                    pending,
+                )
+            } else {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    snapshot.triggerAtMillis,
+                    pending,
+                )
+            }
+        }
+    }
+}
+
+/// Tracks tasks currently stuck waiting on [DeliveryGateEvaluator] (DND,
+/// gaming, a call) — the "not yet delivered" half of the two-task queue
+/// limit. The other half (already-delivered, awaiting an answer) is
+/// [WatchdogStore]'s own [WatchdogStore.MAX_ACTIVE_WATCHDOGS] limit; this
+/// object exists because a task can spend its entire life in this state
+/// without [NoResponseWatchdogService] ever seeing it, so that store alone
+/// can't catch a backlog of blocked-but-undelivered tasks.
+object PendingDeliveryQueue {
+    private const val PREFS = "no_smoke_pending_delivery_queue"
+    private const val KEY_BLOCKED_IDS = "blocked_watchdog_ids"
+    private const val KEY_EXPIRED = "queued_expired"
+
+    /// Same limit as [WatchdogStore.MAX_ACTIVE_WATCHDOGS] — one shared
+    /// budget across "blocked" and "delivered, awaiting answer" would need
+    /// the two objects to coordinate on every write, which is more coupling
+    /// than the two-task rule is worth; a task only ever occupies one of the
+    /// two queues at a time; in practice a blocked task also being an active
+    /// watchdog never happens; keeping the constant duplicated locally is
+    /// simpler than exporting it.
+    private const val MAX_BLOCKED = 2
+
+    /// Registers [watchdogId] as currently blocked, evicting the
+    /// oldest-registered blocked watchdogId(s) if this pushes the count past
+    /// [MAX_BLOCKED]. Returns everything evicted — the caller cancels each
+    /// one's alarm and reports it to Dart as expired.
+    fun registerBlocked(context: Context, watchdogId: String): List<String> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ids = (prefs.getStringSet(KEY_BLOCKED_IDS, emptySet())?.toList() ?: emptyList())
+            .toMutableList()
+        ids.remove(watchdogId)
+        ids.add(watchdogId)
+        val evicted = mutableListOf<String>()
+        while (ids.size > MAX_BLOCKED) {
+            evicted.add(ids.removeAt(0))
+        }
+        prefs.edit().putStringSet(KEY_BLOCKED_IDS, ids.toSet()).apply()
+        return evicted
+    }
+
+    /// A task that made it past the gate (delivered, or answered before that
+    /// could happen) is no longer "blocked" — remove it so it can't later be
+    /// counted as a stale entry against the queue limit.
+    fun clearBlocked(context: Context, watchdogId: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val ids = (prefs.getStringSet(KEY_BLOCKED_IDS, emptySet())?.toList() ?: emptyList())
+            .toMutableList()
+        if (ids.remove(watchdogId)) {
+            prefs.edit().putStringSet(KEY_BLOCKED_IDS, ids.toSet()).apply()
+        }
+    }
+

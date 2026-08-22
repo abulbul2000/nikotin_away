@@ -2016,6 +2016,10 @@ class StorageService {
       json,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    // This user-facing trend record is also a behavior input. Without the
+    // dirty flag, a cached behavior snapshot could remain stale until some
+    // unrelated survey/task event happened.
+    await markBehaviorDirty();
   }
 
   /// Chronological (ASC) order — BreathTrendEngine.summarize expects
@@ -4597,6 +4601,8 @@ class StorageService {
   /// or engines each figure comes from.
   Future<DailyProgressReport> buildDailyProgressReport({DateTime? now}) async {
     final today = now ?? DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
     final results = await Future.wait([
       loadReductionProgress(now: today),
       taskSuccessRateSince(today.subtract(const Duration(days: 7))),
@@ -4605,11 +4611,24 @@ class StorageService {
       loadBehaviorDashboard(),
       loadLatestCoughTestRecord(),
       loadSmokingEventsForDay(today),
+      loadSleepProbeEventsBetween(startAt: startOfDay, endAt: endOfDay),
+      loadSnoringProbeEventsBetween(start: startOfDay, end: endOfDay),
     ]);
 
     final breathRecord = results[3] as SurveyRecord?;
     final dashboard = results[4] as BehaviorDashboard;
     final smokedToday = results[6] as List<SmokingEvent>;
+    final sleepProbes = results[7] as List<SleepProbeEvent>;
+    final snoringProbes = (results[8] as List<SnoringProbeEvent>)
+        .where(
+          (probe) =>
+              (probe.source ?? SnoringProbeEvent.sourceOvernight) ==
+                  SnoringProbeEvent.sourceOvernight &&
+              (probe.captureSucceeded ?? true),
+        )
+        .toList();
+    final validSnoring = snoringProbes
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
     return DailyProgressReport(
       reductionProgress: results[0] as ReductionProgress,
@@ -4619,6 +4638,12 @@ class StorageService {
       breathTrend: dashboard.breathTrendLast3,
       todaySmokedCount: smokedToday.length,
       latestCoughTest: results[5] as CoughTestRecord?,
+      todaySleepProbeCount: sleepProbes.length,
+      todayChargingProbeCount: sleepProbes.where((probe) => probe.charging).length,
+      todayOvernightSnoreCount: validSnoring.where((probe) => probe.snoreLikely).length,
+      latestOvernightSnoringSeverity: validSnoring.isEmpty
+          ? null
+          : validSnoring.last.severityLevel,
     );
   }
 
