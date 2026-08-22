@@ -6,6 +6,16 @@ import 'mentor_command_codes.dart';
 class AppTexts {
   // Turkish - Full translation
   static const Map<String, String> _tr = {
+    'sleepScheduleTitle': 'Uyku ve Uyanma Saatleri',
+    'sleepScheduleDescription': 'Her gün veya haftanın günlerine göre uyku ve uyanma saatlerini planla.',
+    'scheduleDaily': 'Her gün',
+    'scheduleByDay': 'Gün seçerek',
+    'wakeAlarmTitle': 'Uyandırma alarmı',
+    'wakeAlarmBody': 'Belirlediğin uyanma saatinde seni uyandırmak için alarm çalacak.',
+    'wakeAlarmEnabledTitle': 'Uyanma alarmını etkinleştir',
+    'wakeAlarmEnabledDescription': 'Onaylarsan alarm, seçtiğin uyanma saatinde çalar.',
+    'sleepRoutineTonightTitle': 'Bu gece uyku saatin',
+    'sleepRoutineTonightBody': 'Bu gece gerçekten uyumayı planladığın saati seç.',
     'appName': 'NICOTINE AWAY',
     'appTagline': 'Kişisel Sigara Bırakma Rehberin',
     'howItWorksTitle': 'Kullanım Rehberi',
@@ -2051,6 +2061,16 @@ class AppTexts {
 
   // English - Full translation
   static const Map<String, String> _en = {
+    'sleepScheduleTitle': 'Sleep and Wake Times',
+    'sleepScheduleDescription': 'Plan sleep and wake times for every day or for selected days of the week.',
+    'scheduleDaily': 'Every day',
+    'scheduleByDay': 'Select days',
+    'wakeAlarmTitle': 'Wake-up alarm',
+    'wakeAlarmBody': 'The alarm will ring at your chosen wake-up time.',
+    'wakeAlarmEnabledTitle': 'Enable wake-up alarm',
+    'wakeAlarmEnabledDescription': 'If you agree, the alarm will ring at your selected wake-up time.',
+    'sleepRoutineTonightTitle': 'Tonight’s sleep time',
+    'sleepRoutineTonightBody': 'Choose the time you actually plan to go to sleep tonight.',
     'appName': 'NICOTINE AWAY',
     'appTagline': 'Your Personal Quit Smoking Mentor',
     'howItWorksTitle': 'User Guide',

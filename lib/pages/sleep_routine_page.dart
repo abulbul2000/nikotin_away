@@ -135,17 +135,17 @@ class _SleepRoutinePageState extends State<SleepRoutinePage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            context.t('sleepTime'),
+            context.t('sleepRoutineTonightTitle'),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 12),
-          Text(context.t('sleepRoutineIntro'), textAlign: TextAlign.center),
+          Text(context.t('sleepRoutineTonightBody'), textAlign: TextAlign.center),
           const SizedBox(height: 28),
           OutlinedButton.icon(
             onPressed: _pickTonightSleepTime,
             icon: const Icon(Icons.nightlight_outlined),
-            label: Text(selected == null ? context.t('sleepTime') : selected.format(context)),
+            label: Text(selected == null ? context.t('sleepRoutineTonightTitle') : selected.format(context)),
           ),
           const SizedBox(height: 16),
           FilledButton(

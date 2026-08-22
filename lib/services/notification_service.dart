@@ -436,8 +436,8 @@ class NotificationService {
     await _plugin.cancel(id);
     await _zonedSchedule(
       id,
-      _text(code, 'wakeTime'),
-      _text(code, 'sleepIntelligenceTitle'),
+      _text(code, 'wakeAlarmTitle'),
+      _text(code, 'wakeAlarmBody'),
       fireAt,
       NotificationDetails(
         android: AndroidNotificationDetails(

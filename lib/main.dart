@@ -245,8 +245,13 @@ class _NoSmokeAppState extends State<NoSmokeApp> with WidgetsBindingObserver {
         GlobalCupertinoLocalizations.delegate,
       ],
       builder: (context, child) {
-        return Stack(
-          children: [
+        final isSorani = _locale.languageCode == 'ku' &&
+            _locale.scriptCode == 'Arab';
+        return Directionality(
+          textDirection:
+              isSorani ? TextDirection.rtl : TextDirection.ltr,
+          child: Stack(
+            children: [
             ?child,
             const Positioned.fill(
               child: IgnorePointer(
@@ -268,7 +273,8 @@ class _NoSmokeAppState extends State<NoSmokeApp> with WidgetsBindingObserver {
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         );
       },
       home: const SplashPage(),

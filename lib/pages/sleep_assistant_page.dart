@@ -150,7 +150,7 @@ class _SleepAssistantPageState extends State<SleepAssistantPage> {
       firstDate: now,
       lastDate: now.add(const Duration(days: 180)),
       initialDate: _vacationUntil ?? now.add(const Duration(days: 7)),
-      helpText: context.t('sleepIntelligenceTitle'),
+      helpText: context.t('sleepScheduleTitle'),
     );
     if (selected == null) return;
     final until = DateTime(selected.year, selected.month, selected.day, 23, 59, 59);
@@ -176,7 +176,7 @@ class _SleepAssistantPageState extends State<SleepAssistantPage> {
     final vacationActive = _vacationUntil != null && _vacationUntil!.isAfter(DateTime.now());
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.t('sleepIntelligenceTitle'))),
+      appBar: AppBar(title: Text(context.t('sleepScheduleTitle'))),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -184,8 +184,8 @@ class _SleepAssistantPageState extends State<SleepAssistantPage> {
             child: SwitchListTile.adaptive(
               value: _enabled,
               onChanged: _toggle,
-              title: Text(context.t('sleepIntelligenceTitle')),
-              subtitle: Text(context.t('sleepIntelligenceDescription')),
+              title: Text(context.t('sleepScheduleTitle')),
+              subtitle: Text(context.t('sleepScheduleDescription')),
               secondary: Icon(Icons.bedtime_outlined, color: colors.primary),
             ),
           ),
@@ -196,14 +196,14 @@ class _SleepAssistantPageState extends State<SleepAssistantPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(context.t('sleepIntelligenceTitle'), style: Theme.of(context).textTheme.titleMedium),
+                  Text(context.t('sleepScheduleTitle'), style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
-                  Text(context.t('sleepIntelligencePurpose')),
+                  Text(context.t('sleepScheduleDescription')),
                   const SizedBox(height: 12),
                   SegmentedButton<String>(
                     segments: [
-                      ButtonSegment(value: 'daily', label: Text(context.t('daily'))),
-                      ButtonSegment(value: 'weekly', label: Text(context.t('workDaysLabel'))),
+                      ButtonSegment(value: 'daily', label: Text(context.t('scheduleDaily'))),
+                      ButtonSegment(value: 'weekly', label: Text(context.t('scheduleByDay'))),
                     ],
                     selected: {_scheduleMode},
                     onSelectionChanged: (value) => setState(() => _scheduleMode = value.first),
@@ -235,8 +235,8 @@ class _SleepAssistantPageState extends State<SleepAssistantPage> {
                     contentPadding: EdgeInsets.zero,
                     value: _wakeAlarmEnabled,
                     onChanged: _setWakeAlarm,
-                    title: Text(context.t('wakeTime')),
-                    subtitle: Text(context.t('sleepIntelligenceDescription')),
+                    title: Text(context.t('wakeAlarmEnabledTitle')),
+                    subtitle: Text(context.t('wakeAlarmEnabledDescription')),
                     secondary: const Icon(Icons.alarm_outlined),
                   ),
                   const SizedBox(height: 8),
@@ -256,9 +256,9 @@ class _SleepAssistantPageState extends State<SleepAssistantPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(context.t('sleepIntelligenceTitle'), style: Theme.of(context).textTheme.titleMedium),
+                  Text(context.t('sleepScheduleTitle'), style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 8),
-                  Text(context.t('sleepIntelligenceDescription')),
+                  Text(context.t('sleepScheduleDescription')),
                   const SizedBox(height: 14),
                   OutlinedButton.icon(
                     onPressed: _pickVacationEnd,

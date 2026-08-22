@@ -50,6 +50,8 @@ class LanguageService {
     'be': Locale('be'),
     'sr': Locale('sr'),
     'hr': Locale('hr'),
+    'ku': Locale('ku', 'Latn'),
+    'ku-arab': Locale('ku', 'Arab'),
   };
 
   // Dil adları (UI'da gösterilecek)
@@ -94,6 +96,8 @@ class LanguageService {
     'be': 'Беларуская',
     'sr': 'Српски',
     'hr': 'Hrvatski',
+    'ku': 'Kurmancî',
+    'ku-arab': 'سۆرانی',
   };
 
   // Primary 6 dilleri (ilk seçenekler)
@@ -150,7 +154,10 @@ class LanguageService {
   /// bakar), böylece "telefonunda hangi dil varsa" en iyi eşleşme bulunur.
   static String? getDeviceLanguageCode() {
     for (final locale in PlatformDispatcher.instance.locales) {
-      final code = locale.languageCode.toLowerCase();
+      final baseCode = locale.languageCode.toLowerCase();
+      final code = baseCode == 'ku' && locale.scriptCode == 'Arab'
+          ? 'ku-arab'
+          : baseCode;
       if (supportedLanguages.containsKey(code)) {
         return code;
       }
