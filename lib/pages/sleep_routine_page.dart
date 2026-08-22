@@ -106,8 +106,8 @@ class _SleepRoutinePageState extends State<SleepRoutinePage> {
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Yarın ne zaman uyanmayı planlıyorsun?',
+          Text(
+            context.t('sleepRoutineIntro'),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 28),

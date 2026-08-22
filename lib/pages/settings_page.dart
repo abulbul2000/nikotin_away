@@ -17,6 +17,8 @@ import '../widgets/share_app_sheet.dart';
 import '../services/notification_service.dart';
 import '../models/wearable_health_snapshot.dart';
 import '../services/health_connect_service.dart';
+import 'how_it_works_page.dart';
+import 'sleep_assistant_page.dart';
 import '../services/sleep_intelligence_service.dart';
 import '../services/smoked_log_button_service.dart';
 import '../services/storage_service.dart';
@@ -312,6 +314,24 @@ class _SettingsPageState extends State<SettingsPage> {
       context,
       MaterialPageRoute(builder: (_) => const NotificationsPage()),
     );
+  }
+
+  Future<void> _openSleepAssistant() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SleepAssistantPage()),
+    );
+    if (!mounted) return;
+    await _loadSleepIntelligenceState();
+  }
+
+  Future<void> _openUsageGuide() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const HowItWorksPage(returnToPrevious: true),
+      ),
+    );
+    if (!mounted) return;
+    setState(() {});
   }
 
   Future<void> _openLanguageSettings() async {
@@ -708,16 +728,30 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ),
         const SizedBox(height: 20),
+        _SectionLabel(context.t('howItWorksTitle')),
+        Card(
+          child: ListTile(
+            leading: const Icon(Icons.menu_book_outlined),
+            title: Text(context.t('howItWorksTitle')),
+            subtitle: Text(context.t('howItWorksSubtitle')),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _openUsageGuide,
+          ),
+        ),
+        const SizedBox(height: 20),
         _SectionLabel(context.t('settingsSleepIntelligenceRow')),
         Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.bedtime_outlined, color: Colors.white70),
+          child: InkWell(
+            onTap: _openSleepAssistant,
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.bedtime_outlined, color: Colors.white70),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -755,8 +789,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     color: Colors.white.withValues(alpha: 0.72),
                     fontSize: 13,
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

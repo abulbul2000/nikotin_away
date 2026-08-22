@@ -42,6 +42,11 @@ class SleepIntelligenceService {
   /// sleep/wake times remain the fallback.
   Future<void> refreshScheduleIfEnabled() async {
     if (!await isEnabled()) return;
+    if (await _isVacationActive()) {
+      await SleepProbeService.cancelNightlyProbing();
+      await NotificationService.cancelSleepReportNotification();
+      return;
+    }
 
     final fallbackSleep = await _storageService.loadSleepTime() ?? '23:00';
     final fallbackWake =
@@ -65,6 +70,7 @@ class SleepIntelligenceService {
   /// for existing users who have not completed the new question yet.
   Future<void> scheduleMorningReportForDate(DateTime date) async {
     if (!await isEnabled()) return;
+    if (await _isVacationActive()) return;
     final stored = await _storageService.loadWakeTimeForDate(date);
     final rawFallback = await _storageService.loadSetting('wake_time') ?? '07:00';
     final parts = rawFallback.split(':');
@@ -150,6 +156,16 @@ class SleepIntelligenceService {
       granted: false,
       consentTextVersion: consentTextVersion,
     );
+  }
+
+  Future<bool> _isVacationActive() async {
+    final raw = await _storageService.loadSetting('sleep_vacation_until');
+    if (raw == null || raw.isEmpty) return false;
+    final until = DateTime.tryParse(raw);
+    if (until == null) return false;
+    if (until.isAfter(DateTime.now())) return true;
+    await _storageService.saveSetting('sleep_vacation_until', '');
+    return false;
   }
 
   int? _parseMinuteOfDay(String value) {

@@ -4,12 +4,13 @@ import '../core/app_texts.dart';
 import '../services/storage_service.dart';
 import 'survey_page.dart';
 
-/// A short, skippable first-use guide shown before the initial survey.
-/// Each topic is a separate step so the user can move back and forth.
+/// A short, skippable first-use guide shown before the initial survey and
+/// available again from Settings.
 class HowItWorksPage extends StatefulWidget {
-  const HowItWorksPage({super.key});
+  const HowItWorksPage({super.key, this.returnToPrevious = false});
 
   static const seenSettingKey = 'how_it_works_guide_seen';
+  final bool returnToPrevious;
 
   @override
   State<HowItWorksPage> createState() => _HowItWorksPageState();
@@ -67,6 +68,10 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
       '1',
     );
     if (!context.mounted) return;
+    if (widget.returnToPrevious) {
+      Navigator.of(context).pop();
+      return;
+    }
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const SurveyPage()),
@@ -91,8 +96,17 @@ class _HowItWorksPageState extends State<HowItWorksPage> {
     return Scaffold(
       backgroundColor: colors.surface,
       appBar: AppBar(
-        title: Text(context.t('appName')),
-        automaticallyImplyLeading: false,
+        title: Text(context.t('howItWorksTitle')),
+        automaticallyImplyLeading: widget.returnToPrevious,
+        actions: widget.returnToPrevious
+            ? [
+                IconButton(
+                  tooltip: context.t('back'),
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ]
+            : null,
       ),
       body: SafeArea(
         child: Column(

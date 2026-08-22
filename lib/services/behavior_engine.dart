@@ -941,16 +941,28 @@ class BehaviorEngine {
     required List<SurveyRecord> breathRecords,
     required List<SurveyRecord> surveyRecords,
   }) {
-    final recentTasks = taskHistory.length > 7
-        ? taskHistory.sublist(taskHistory.length - 7)
-        : taskHistory;
-    final failureCount = recentTasks.where((item) => !item.completed).length;
-    final taskCount = recentTasks.length;
-    final failureRate = taskCount == 0 ? 0.0 : failureCount / taskCount;
+    // Recalculate from a bounded but meaningful history window on every
+    // profile refresh. The old seven-record slice could make one bad day
+    // rewrite the profile and ignored slower progress entirely.
+    final orderedTasks = [...taskHistory]
+      ..sort((a, b) => a.date.compareTo(b.date));
+    final recentTasks = orderedTasks.length > 30
+        ? orderedTasks.sublist(orderedTasks.length - 30)
+        : orderedTasks;
+    var failureWeight = 0.0;
+    var taskWeight = 0.0;
+    for (var i = 0; i < recentTasks.length; i++) {
+      final weight = 0.92 * (i + 1);
+      taskWeight += weight;
+      if (!recentTasks[i].completed) failureWeight += weight;
+    }
+    final failureRate = taskWeight == 0 ? 0.0 : failureWeight / taskWeight;
 
-    final recentBreath = breathRecords.length > 7
-        ? breathRecords.sublist(breathRecords.length - 7)
-        : breathRecords;
+    final orderedBreath = [...breathRecords]
+      ..sort((a, b) => a.completedAt.compareTo(b.completedAt));
+    final recentBreath = orderedBreath.length > 30
+        ? orderedBreath.sublist(orderedBreath.length - 30)
+        : orderedBreath;
     final breathValues = recentBreath
         .map(
           (item) => ((item.exhaleTestSeconds + item.inhaleTestSeconds) / 2)
@@ -959,9 +971,11 @@ class BehaviorEngine {
         .toList();
     final breathVolatility = _stdDev(breathValues);
 
-    final recentSurvey = surveyRecords.length > 7
-        ? surveyRecords.sublist(surveyRecords.length - 7)
-        : surveyRecords;
+    final orderedSurvey = [...surveyRecords]
+      ..sort((a, b) => a.completedAt.compareTo(b.completedAt));
+    final recentSurvey = orderedSurvey.length > 30
+        ? orderedSurvey.sublist(orderedSurvey.length - 30)
+        : orderedSurvey;
     final packLevels = recentSurvey
         .map((item) => _packLevel(item.packsPerDay))
         .toList();

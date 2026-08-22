@@ -2219,6 +2219,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       body: Stack(
         fit: StackFit.expand,
         children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: 0.12,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: NoSmokeLogo(
+                    size: 300,
+                    showLabel: true,
+                    showTagline: true,
+                    labelColor: AppTheme.brandPrimary,
+                  ),
+                ),
+              ),
+            ),
+          ),
           IndexedStack(
             index: _selectedTabIndex,
             children: widget.mentorCardTestMode
