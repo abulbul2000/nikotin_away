@@ -38,6 +38,19 @@ class TaskOverlayService : Service() {
                     dismissLabel = intent.getStringExtra(EXTRA_DONE_LABEL).orEmpty(),
                 )
             }
+            ACTION_SHOW_TASK -> {
+                ensureForeground()
+                showTaskOverlay(
+                    title = intent.getStringExtra(EXTRA_TITLE).orEmpty(),
+                    body = intent.getStringExtra(EXTRA_BODY).orEmpty(),
+                    acceptLabel = intent.getStringExtra(EXTRA_DONE_LABEL).orEmpty(),
+                    postponeLabel = intent.getStringExtra(EXTRA_POSTPONE_LABEL).orEmpty(),
+                    declineLabel = intent.getStringExtra(EXTRA_DECLINE_LABEL).orEmpty(),
+                    sosLabel = intent.getStringExtra(EXTRA_SOS_LABEL).orEmpty(),
+                    watchdogId = intent.getStringExtra(EXTRA_WATCHDOG_ID).orEmpty(),
+                    taskTitle = intent.getStringExtra(EXTRA_TASK_TITLE).orEmpty(),
+                )
+            }
             ACTION_SHOW_CONFIRM -> {
                 ensureForeground()
                 showConfirmOverlay(
@@ -165,6 +178,89 @@ class TaskOverlayService : Service() {
             PixelFormat.TRANSLUCENT,
         )
 
+        try {
+            wm.addView(container, params)
+            overlayView = container
+        } catch (e: Exception) {
+            stopSelf()
+        }
+    }
+
+    // Mandatory task-start overlay. This is the reliable application-closed
+    // delivery path: it is raised by TaskTriggerReceiver at due time rather
+    // than waiting for Dart or a notification full-screen intent to succeed.
+    private fun showTaskOverlay(
+        title: String,
+        body: String,
+        acceptLabel: String,
+        postponeLabel: String,
+        declineLabel: String,
+        sosLabel: String,
+        watchdogId: String,
+        taskTitle: String,
+    ) {
+        if (!Settings.canDrawOverlays(this) || watchdogId.isBlank()) {
+            stopSelf()
+            return
+        }
+        removeOverlay()
+
+        val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        windowManager = wm
+        val density = resources.displayMetrics.density
+        fun dp(value: Int) = (value * density).toInt()
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(Color.parseColor("#F20B1F2B"))
+            setPadding(dp(32), dp(64), dp(32), dp(48))
+            gravity = Gravity.CENTER
+        }
+        val titleView = TextView(this).apply {
+            text = title
+            setTextColor(Color.WHITE)
+            textSize = 22f
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(16))
+        }
+        val bodyView = TextView(this).apply {
+            text = body
+            setTextColor(Color.parseColor("#E0E0E0"))
+            textSize = 16f
+            gravity = Gravity.CENTER
+            setPadding(0, 0, 0, dp(32))
+        }
+        fun finish(outcome: String) {
+            TaskOverlayOutcomeStore.enqueue(this@TaskOverlayService, watchdogId, taskTitle, outcome)
+            removeOverlay()
+            stopSelf()
+        }
+        fun button(label: String, outcome: String) = Button(this).apply {
+            text = label.ifBlank { outcome }
+            minHeight = dp(56)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setOnClickListener { finish(outcome) }
+        }
+        container.addView(titleView)
+        container.addView(bodyView)
+        container.addView(button(acceptLabel, OUTCOME_ACCEPTED))
+        container.addView(button(postponeLabel, OUTCOME_POSTPONED))
+        container.addView(button(declineLabel, OUTCOME_DECLINED))
+        if (sosLabel.isNotBlank()) {
+            container.addView(button(sosLabel, OUTCOME_SOS))
+        }
+        val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        } else {
+            @Suppress("DEPRECATION")
+            WindowManager.LayoutParams.TYPE_PHONE
+        }
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            overlayType,
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT,
+        )
         try {
             wm.addView(container, params)
             overlayView = container
@@ -383,12 +479,15 @@ class TaskOverlayService : Service() {
 
     companion object {
         const val ACTION_SHOW_INFO = "com.nikotinaway.app.overlay.SHOW_INFO"
+        const val ACTION_SHOW_TASK = "com.nikotinaway.app.overlay.SHOW_TASK"
         const val ACTION_SHOW_CONFIRM = "com.nikotinaway.app.overlay.SHOW_CONFIRM"
         const val ACTION_SHOW_REMINDER = "com.nikotinaway.app.overlay.SHOW_REMINDER"
         const val ACTION_DISMISS = "com.nikotinaway.app.overlay.DISMISS"
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_BODY = "extra_body"
         const val EXTRA_DONE_LABEL = "extra_done_label"
+        const val EXTRA_POSTPONE_LABEL = "extra_postpone_label"
+        const val EXTRA_SOS_LABEL = "extra_sos_label"
         const val EXTRA_DECLINE_LABEL = "extra_decline_label"
         const val EXTRA_YES_LABEL = "extra_yes_label"
         const val EXTRA_NO_LABEL = "extra_no_label"
@@ -400,7 +499,12 @@ class TaskOverlayService : Service() {
         /// this task?", and the two must never be interchangeable.
         const val OUTCOME_SMOKED_YES = "smoked_yes"
         const val OUTCOME_SMOKED_NO = "smoked_no"
+        const val OUTCOME_ACCEPTED = "accepted"
+        const val OUTCOME_POSTPONED = "postponed"
+        const val OUTCOME_DECLINED = "declined"
+        const val OUTCOME_SOS = "sos"
         const val EXTRA_TASK_TITLE = "extra_task_title"
+        const val EXTRA_WATCHDOG_ID = "extra_watchdog_id"
         const val CHANNEL_ID = "task_overlay_foreground_channel"
         const val FOREGROUND_NOTIFICATION_ID = 73101
 
@@ -442,6 +546,37 @@ class TaskOverlayService : Service() {
                 putExtra(EXTRA_BODY, body)
                 putExtra(EXTRA_YES_LABEL, yesLabel)
                 putExtra(EXTRA_NO_LABEL, noLabel)
+                putExtra(EXTRA_TASK_TITLE, taskTitle)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        /// Mandatory task-start overlay. It stays visible until the user
+        /// chooses an outcome and is safe to call from a BroadcastReceiver.
+        fun showTask(
+            context: Context,
+            title: String,
+            body: String,
+            acceptLabel: String,
+            postponeLabel: String,
+            declineLabel: String,
+            sosLabel: String,
+            watchdogId: String,
+            taskTitle: String,
+        ) {
+            val intent = Intent(context, TaskOverlayService::class.java).apply {
+                action = ACTION_SHOW_TASK
+                putExtra(EXTRA_TITLE, title)
+                putExtra(EXTRA_BODY, body)
+                putExtra(EXTRA_DONE_LABEL, acceptLabel)
+                putExtra(EXTRA_POSTPONE_LABEL, postponeLabel)
+                putExtra(EXTRA_DECLINE_LABEL, declineLabel)
+                putExtra(EXTRA_SOS_LABEL, sosLabel)
+                putExtra(EXTRA_WATCHDOG_ID, watchdogId)
                 putExtra(EXTRA_TASK_TITLE, taskTitle)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

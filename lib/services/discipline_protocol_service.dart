@@ -14,7 +14,11 @@ class DisciplineProtocolService {
   /// that every task still stands for the same weekly commitment.
   // Keep each day's promise recognisable while allowing the learned plan to
   // move naturally instead of producing the same minute value repeatedly.
-  static const double _durationJitter = 0.18;
+  // The old 18% span was too narrow around short barriers: after clamping,
+  // several independently sampled tasks collapsed to the same user-facing
+  // minute value (commonly 21). Keep the learned barrier as the centre, but
+  // give each task enough room to remain visibly variable.
+  static const double _durationJitter = 0.32;
 
   double computeSuccessRate({
     required int successCount,
@@ -409,6 +413,7 @@ class DisciplineProtocolService {
     final plannedCount = min(targetTaskCount, scheduled.length);
 
     final items = <AdaptiveTaskPlanItem>[];
+    int? previousDuration;
     for (var i = 0; i < plannedCount; i++) {
       final scheduledAt = scheduled[i];
       final hourEntry = _findProfileEntry(
@@ -426,7 +431,7 @@ class DisciplineProtocolService {
                 : hourEntry.strainScore <= 35
                 ? jitterSpan
                 : 0);
-      final duration =
+      var duration =
           (learnedBaseMinutes +
                   strainOffset +
                   (_random.nextInt(jitterSpan * 2 + 1) - jitterSpan))
@@ -435,6 +440,26 @@ class DisciplineProtocolService {
                 max(barrierMinutes * 2, learnedBaseMinutes),
               )
               .toInt();
+
+      // Do not present an apparently fixed programme when the random sample
+      // happens to hit the same minute repeatedly. This is a presentation
+      // guard only: the learned centre, bounds and outcome feedback remain
+      // unchanged. If the valid range has only one value, repetition is
+      // unavoidable and should be accepted rather than inventing a value.
+      final upperBound = max(barrierMinutes * 2, learnedBaseMinutes);
+      if (previousDuration != null &&
+          duration == previousDuration &&
+          upperBound > SmokingIntervalService.minBarrierMinutes) {
+        final direction = i.isEven ? 1 : -1;
+        final alternative = duration + direction;
+        if (alternative >= SmokingIntervalService.minBarrierMinutes &&
+            alternative <= upperBound) {
+          duration = alternative;
+        } else {
+          duration = duration - direction;
+        }
+      }
+      previousDuration = duration;
 
       items.add(
         AdaptiveTaskPlanItem(

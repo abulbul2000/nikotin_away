@@ -106,6 +106,14 @@ object DeliveryGateEvaluator {
         return REASON_NONE
     }
 
+    /// Mandatory task delivery has a deliberately narrower policy than
+    /// informational health tips: another app, video, game, transit context,
+    /// or DND inference must not make a task disappear. Only an active phone
+    /// call is an explicit, unambiguous reason to defer it.
+    fun taskBlockingReason(context: Context): String {
+        return if (isInPhoneCall(context)) REASON_CALL else REASON_NONE
+    }
+
     /// Stores a short-lived transit context received from the Dart sensor
     /// layer. This is intentionally separate from [blockingReason]: the
     /// receiver may run with no Flutter engine alive.

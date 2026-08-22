@@ -34,7 +34,7 @@ class TaskTriggerReceiver : BroadcastReceiver() {
         // Is now a sensible moment to interrupt? If not the task is pushed
         // back rather than dropped — see requeue below.
         val deferredForMs = intent.getLongExtra(EXTRA_DEFERRED_FOR_MILLIS, 0L)
-        val blockedBy = DeliveryGateEvaluator.blockingReason(context)
+        val blockedBy = DeliveryGateEvaluator.taskBlockingReason(context)
         if (blockedBy != DeliveryGateEvaluator.REASON_NONE &&
             deferredForMs < MAX_TOTAL_DEFERRAL_MS
         ) {
@@ -72,11 +72,23 @@ class TaskTriggerReceiver : BroadcastReceiver() {
             violationChannelName = intent.getStringExtra(EXTRA_WATCHDOG_VIOLATION_CHANNEL_NAME).orEmpty(),
         )
 
-        // The native full-screen overlay (phone-call-style Ertele/Kabul Et)
-        // is intentionally not shown here anymore — the scheduled
-        // notification's full-screen intent already surfaces
-        // MandatoryTaskPage in Dart, and showing both stacked two
-        // differently-styled task prompts on top of each other.
+        // Deliver the task outside the app as soon as it is due. The native
+        // overlay is only gated by the phone-call check above; video, games,
+        // social apps and the home screen do not defer it. The notification
+        // remains as the system fallback when overlay permission is unavailable.
+        if (android.provider.Settings.canDrawOverlays(context)) {
+            TaskOverlayService.showTask(
+                context = context,
+                title = intent.getStringExtra(EXTRA_TITLE).orEmpty(),
+                body = intent.getStringExtra(EXTRA_BODY).orEmpty(),
+                acceptLabel = intent.getStringExtra(EXTRA_DONE_LABEL).orEmpty(),
+                postponeLabel = intent.getStringExtra(EXTRA_POSTPONE_LABEL).orEmpty(),
+                declineLabel = intent.getStringExtra(EXTRA_DECLINE_LABEL).orEmpty(),
+                sosLabel = intent.getStringExtra(EXTRA_SOS_LABEL).orEmpty(),
+                watchdogId = watchdogId,
+                taskTitle = taskTitle,
+            )
+        }
     }
 
     /// Pushes the task back and remembers how long it has been waiting.
