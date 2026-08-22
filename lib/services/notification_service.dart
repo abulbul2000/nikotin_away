@@ -677,14 +677,9 @@ class NotificationService {
     }
   }
 
-  static const int _notificationTimeoutMs = 15000;
-  // The task-trigger alarm (no notification actions any more — the only way
-  // to answer is to open MandatoryTaskPage) has to ring long enough to
-  // actually be noticed before Android auto-cancels it: 20s, not the shared
-  // 15s default. cancelActiveTaskTriggerAlarm silences it the moment the
-  // user is looking at the page, well before this ceiling in the common
-  // case — this is only how long it rings if they never do.
-  static const int _taskTriggerTimeoutMs = 20000;
+  // Mandatory task and medication alerts remain visible until the user acts.
+  // Their explicit action buttons and body taps cancel them; no timeout is
+  // applied to these attention-critical channels.
   static const String _reservedTimesSettingKey =
       'reserved_notification_fire_times';
   // Retry cadence for a mandatory task alert nobody has answered yet: fire
