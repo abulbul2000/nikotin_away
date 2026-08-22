@@ -2135,7 +2135,6 @@ class NotificationService {
               ? _notificationTimeoutMs
               : _taskTriggerTimeoutMs,
           category: androidCategory,
-          fullScreenIntent: !isFollowUp,
           actions: isFollowUp
               ? <AndroidNotificationAction>[
                   AndroidNotificationAction(
@@ -2230,7 +2229,6 @@ class NotificationService {
           timeoutAfter: _taskTriggerTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
-          fullScreenIntent: true,
         ),
         iOS: const DarwinNotificationDetails(
           categoryIdentifier: _categoryTaskStart,
@@ -2333,7 +2331,6 @@ class NotificationService {
           timeoutAfter: _taskTriggerTimeoutMs,
           audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.reminder,
-          fullScreenIntent: true,
         ),
         iOS: const DarwinNotificationDetails(
           categoryIdentifier: _categoryTaskStart,
