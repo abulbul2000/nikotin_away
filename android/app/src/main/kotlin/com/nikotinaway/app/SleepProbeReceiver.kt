@@ -43,7 +43,8 @@ class SleepProbeReceiver : BroadcastReceiver() {
         }
 
         val isAwake = isInteractive(context)
-        SleepProbeStore.insertProbe(context, isScreenOff = !isAwake, isCharging = isCharging(context))
+        val charging = isCharging(context)
+        SleepProbeStore.insertProbe(context, isScreenOff = !isAwake, isCharging = charging)
         val inWindow = isWithinWindow(currentMinuteOfDay(), windowStartMinute, windowEndMinute)
 
         if (isAwake && inWindow) {
@@ -57,11 +58,25 @@ class SleepProbeReceiver : BroadcastReceiver() {
             // alive) tells the two apart: a phone actually being held or
             // touched moves; a phone left running video on a nightstand does
             // not.
-            readMotionThenDecide(context, windowStartMinute, windowEndMinute, intervalMinutes)
+            readMotionThenDecide(
+                context,
+                windowStartMinute,
+                windowEndMinute,
+                intervalMinutes,
+                charging,
+            )
             return
         }
 
-        finishProbeCycle(context, isAwake, inWindow, windowStartMinute, windowEndMinute, intervalMinutes)
+        finishProbeCycle(
+            context,
+            isAwake,
+            inWindow,
+            windowStartMinute,
+            windowEndMinute,
+            intervalMinutes,
+            charging,
+        )
     }
 
     private fun readMotionThenDecide(
@@ -69,6 +84,7 @@ class SleepProbeReceiver : BroadcastReceiver() {
         windowStartMinute: Int,
         windowEndMinute: Int,
         intervalMinutes: Int,
+        charging: Boolean,
     ) {
         val pendingResult = goAsync()
         MotionSampler.sample(context) { isMoving ->
@@ -85,7 +101,15 @@ class SleepProbeReceiver : BroadcastReceiver() {
                 // receiver deliberately doesn't duplicate.
                 SleepActivityStore.enqueueActivity(context)
             }
-            finishProbeCycle(context, true, true, windowStartMinute, windowEndMinute, intervalMinutes)
+            finishProbeCycle(
+                context,
+                true,
+                true,
+                windowStartMinute,
+                windowEndMinute,
+                intervalMinutes,
+                charging,
+            )
             pendingResult.finish()
         }
     }
@@ -97,6 +121,7 @@ class SleepProbeReceiver : BroadcastReceiver() {
         windowStartMinute: Int,
         windowEndMinute: Int,
         intervalMinutes: Int,
+        charging: Boolean,
     ) {
         // Opt-in, separate from Sleep Intelligence itself (see
         // SnoringProbeStore/SnoringDetectionService) -- only runs while the
@@ -118,7 +143,21 @@ class SleepProbeReceiver : BroadcastReceiver() {
         if (!inWindow) {
             return
         }
-        scheduleFireInMinutes(context, windowStartMinute, windowEndMinute, intervalMinutes, intervalMinutes)
+        // Capture cadence follows charging state. The capture itself remains
+        // short and silent; unplugged devices still check overnight, only less
+        // often to reduce battery impact.
+        val nextIntervalMinutes = if (charging) {
+            CHARGING_INTERVAL_MINUTES
+        } else {
+            UNPLUGGED_INTERVAL_MINUTES
+        }
+        scheduleFireInMinutes(
+            context,
+            windowStartMinute,
+            windowEndMinute,
+            nextIntervalMinutes,
+            nextIntervalMinutes,
+        )
     }
 
     private fun isInteractive(context: Context): Boolean {
@@ -143,10 +182,11 @@ class SleepProbeReceiver : BroadcastReceiver() {
         const val EXTRA_WINDOW_END_MINUTE = "extra_window_end_minute"
         const val EXTRA_INTERVAL_MINUTES = "extra_interval_minutes"
         // Keep the native boot/recovery fallback aligned with the Dart-side
-        // policy. Sleep learning is not clock-critical, so 15 minutes gives
-        // useful coverage without waking the device roughly one hundred times
-        // during a typical overnight window.
+        // policy. The first tick uses 15 minutes; subsequent ticks adapt to
+        // charging state (5 minutes charging, 20 minutes unplugged).
         const val DEFAULT_INTERVAL_MINUTES = 15
+        const val CHARGING_INTERVAL_MINUTES = 5
+        const val UNPLUGGED_INTERVAL_MINUTES = 20
 
         fun isWithinWindow(nowMinute: Int, startMinute: Int, endMinute: Int): Boolean {
             return if (startMinute <= endMinute) {

@@ -2,15 +2,16 @@ import 'package:flutter/services.dart';
 
 /// Thin wrapper around the native `no_smoke/sleep_probe` channel, which arms
 /// an AlarmManager-driven chain (see SleepProbeReceiver.kt) that samples
-/// free OS signals (screen-interactive + charging state) every ~5 minutes
+/// free OS signals (screen-interactive + charging state) every 5 minutes while charging or every 20 minutes while unplugged
 /// overnight and writes them straight to SQLite — no Dart isolate needs to
 /// be alive for it to work. Kept as a plain wrapper so all scheduling policy
 /// (window buffer, interval) lives in one place: SleepIntelligenceService.
 class SleepProbeService {
   static const MethodChannel _channel = MethodChannel('no_smoke/sleep_probe');
-  // A 15-minute interval keeps overnight wake-ups bounded while still
-  // providing enough coverage for sleep-window learning. The probe is not a
-  // clock-critical alarm; notification/task delivery uses its own schedule.
+  // This is the safe initial/recovery cadence. After the first overnight
+  // tick, native code adapts to charging state: 5 minutes while charging and
+  // 20 minutes while unplugged. The probe is not a clock-critical alarm;
+  // notification/task delivery uses its own schedule.
   static const int defaultIntervalMinutes = 15;
 
   static Future<void> scheduleNightlyProbing({
