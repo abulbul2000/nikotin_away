@@ -12,6 +12,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.BatteryManager
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
@@ -182,7 +183,16 @@ class SleepProbeReceiver : BroadcastReceiver() {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             val fireAt = System.currentTimeMillis() + delayMinutes * 60_000L
             val pending = pendingIntent(context, windowStartMinute, windowEndMinute, intervalMinutes)
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pending)
+            // Android 12+ may deny exact alarms. Sleep intelligence is not
+            // a clock-critical feature, so keep probing with an inexact idle
+            // alarm instead of throwing or silently losing the whole window.
+            val canScheduleExact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+                alarmManager.canScheduleExactAlarms()
+            if (canScheduleExact) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pending)
+            } else {
+                alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAt, pending)
+            }
         }
 
         fun cancel(context: Context) {
