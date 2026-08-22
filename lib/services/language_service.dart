@@ -50,8 +50,8 @@ class LanguageService {
     'be': Locale('be'),
     'sr': Locale('sr'),
     'hr': Locale('hr'),
-    'ku': Locale('ku', 'Latn'),
-    'ku-arab': Locale('ku', 'Arab'),
+    'ku': Locale.fromSubtags(languageCode: 'ku', scriptCode: 'Latn'),
+    'ku-arab': Locale.fromSubtags(languageCode: 'ku', scriptCode: 'Arab'),
   };
 
   // Dil adları (UI'da gösterilecek)
